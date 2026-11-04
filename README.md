@@ -85,13 +85,21 @@ or shell expressions.
 
 ## Play
 
-- Select a resident with their portrait. Click a floor or lawn tile to walk;
+- Select a resident in the household list or click their visible body. Click a floor or lawn tile to walk;
   click a furnishing to use it. Their needs and current action appear in the UI.
 - Open **Neighborhood** to choose a lot. **Visit lot** sends the
   selected resident there; **Go home** returns them to their own lot.
 - On your home lot, choose **Build & buy**, choose a tool or furnishing, then click a
-  tile. **Demolish** removes something; **R** rotates placement. Choose
+  tile. **Sell** removes something; **R** rotates placement. **Move** rearranges
+  furniture for free. Choose
   **Finish building** to resume life on the lot.
+- **Room** builds floors, perimeter walls, and a doorway from two opposite corners.
+  The preview shows the full price; **R** changes the doorway side. Existing
+  floors, walls, and doors are preserved where possible and only new pieces cost
+  money. **Escape** cancels the first corner. Rooms need at least 3 × 3 tiles.
+- **Plan** shows the selected resident's actions, individual cancel buttons, and
+  autonomy switch. **Wishes** gives optional activities, rewards, and a saved
+  personal journal. Wishes never expire; completed sets can renew on a later day.
 - The world fills the window behind the HUD. **Activities** opens the optional
   action tray; construction opens the catalog. **Escape** closes either tray.
 - Scroll to zoom and middle-drag to pan. **F11** toggles fullscreen.
@@ -100,8 +108,10 @@ or shell expressions.
 Construction shelters that home's residents, sends visitors home, and closes the
 lot to new visits. Other lots continue normally. The first build tools edit the
 visible construction draft. Finish construction commits it; disconnecting or
-restarting restores the last committed layout. **Discard changes** restores it
-explicitly. There is no per-action undo tool yet. Each
+restarting restores the last committed layout. **Discard draft** restores it
+explicitly. **Undo/Redo** reverses up to 32 edits, with exact prices restored;
+a whole room counts as one edit. **Ctrl/Cmd+Z** undoes, **Ctrl/Cmd+Shift+Z** or
+**Ctrl+Y** redoes. Each
 household receives a prototype $600 allowance per simulated day.
 
 ## Share a neighborhood

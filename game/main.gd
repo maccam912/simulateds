@@ -5,6 +5,7 @@ signal save_menu_requested
 
 const Style = preload("res://game/style.gd")
 const Catalog = preload("res://game/catalog.gd")
+const RoomPlan = preload("res://game/room_plan.gd")
 const Wishes = preload("res://game/wishes.gd")
 const LotView = preload("res://game/lot_view.gd")
 var viewed_lot := ""
@@ -62,6 +63,8 @@ var undo_button: Button
 var redo_button: Button
 var _moving_object := ""
 var _move_request: Dictionary = {}
+var _room_anchor := Vector2i(-1,-1)
+var _room_request: Dictionary = {}
 
 func _ready() -> void:
 	if "--native-smoke" in OS.get_cmdline_user_args():
@@ -277,7 +280,7 @@ func _refresh() -> void:
 		_view_context = view_context
 		viewed_lot = str(family.home_lot)
 		_selected_object = ""
-		_moving_object = ""; _move_request.clear(); _wish_seen.clear()
+		_moving_object = ""; _move_request.clear(); _wish_seen.clear(); _room_anchor=Vector2i(-1,-1); _room_request.clear()
 	if viewed_lot.is_empty() or not state.get("lots",{}).has(viewed_lot):
 		viewed_lot = str(family.get("home_lot","lot_1"))
 	if selected_member.is_empty() and not family.get("members",[]).is_empty():
@@ -294,6 +297,12 @@ func _refresh() -> void:
 		for object: Dictionary in lot.objects:
 			if object.id==_move_request.object_id and int(object.x)==int(_move_request.x) and int(object.y)==int(_move_request.y) and int(object.rotation)==int(_move_request.rotation):
 				_moving_object=""; _move_request.clear(); break
+	if not building or not mine or selected_tool!="room":
+		_room_anchor=Vector2i(-1,-1); _room_request.clear()
+	elif not _room_request.is_empty() and int(lot.revision)>int(_room_request.revision) and RoomPlan.is_applied(lot,_room_request.plan):
+		_room_anchor=Vector2i(-1,-1); _room_request.clear()
+	lot_view.room_anchor=_room_anchor
+	lot_view.room_pending=not _room_request.is_empty()
 	lot_view.world=state; lot_view.lot_id=viewed_lot; lot_view.selected_member=selected_member
 	lot_view.build_object_id=_moving_object
 	lot_view.building=building and mine; lot_view.build_kind=selected_tool; lot_view.build_rotation=build_rotation
@@ -352,13 +361,14 @@ func _refresh() -> void:
 		if build_mode: plan_panel.hide()
 		if hud.visible: Soundscape.set_context("build" if build_mode else "live")
 	palette_button.text = "Catalog" if build_mode else "Activities"
-	var tools_signature := str(building and mine)+selected_tool+_moving_object+str(_move_request.is_empty())+_selected_object+str(build_rotation)+viewed_lot+str(lot.get("revision",0))+_context_page+selected_member
+	var tools_signature := str(building and mine)+selected_tool+_moving_object+str(_move_request.is_empty())+_selected_object+str(build_rotation)+viewed_lot+str(lot.get("revision",0))+_context_page+selected_member+str(_room_anchor)+str(_room_request.is_empty())
 	if _context_page=="wishes" and not build_mode:
 		tools_signature+=str(member.get("wishes",{}))+str(day)+str(member.get("task",{}).get("id",""))+str(member.get("queue",[]))
 	if tools_signature!=_tools_signature:
 		_tools_signature=tools_signature
 		_rebuild_context(building and mine,lot)
 	help_label.text="Click to place · " + Preferences.action_label("rotate") + " rotates · Ctrl/Cmd+Z undoes" if building and mine else "Click an object to use it · Click the ground to walk · Scroll to zoom"
+	if building and mine and selected_tool=="room": help_label.text="Click two opposite corners · " + Preferences.action_label("rotate") + " changes door side · Escape cancels"
 	if room_label!=null:
 		room_label.text=Session.status+("\nRoom code: "+Rooms.code if not Rooms.code.is_empty() else "")
 		if Session.role=="host": ticket_input.text=Session.ticket()
@@ -433,9 +443,14 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 				"Structure": keys=["floor","wall","door"]
 				"Everyday essentials": keys=["bed","fridge","shower","toilet"]
 				_: keys=["sofa","tv","bookshelf","plant","table"]
+			if heading=="Structure":
+				var room_button := _button(("•" if selected_tool=="room" else "+")+"  Room · choose two corners",func(): _select_build_tool("room"),selected_tool=="room")
+				room_button.alignment=HORIZONTAL_ALIGNMENT_LEFT; room_button.add_theme_font_size_override("font_size",12)
+				room_button.tooltip_text="Floors, perimeter walls, and a doorway in one edit. Preview the total before building."
+				tools_box.add_child(room_button)
 			for kind in keys:
 				var item: Dictionary=Catalog.ITEMS.get(kind,{})
-				var b:=_button("%s  %s   § %d" % ["•" if selected_tool==kind else "+",item.get("name",kind),int(item.get("cost",0))],func(): selected_tool=kind; _moving_object=""; _move_request.clear(); _refresh())
+				var b:=_button("%s  %s   § %d" % ["•" if selected_tool==kind else "+",item.get("name",kind),int(item.get("cost",0))],func(): _select_build_tool(kind))
 				b.alignment=HORIZONTAL_ALIGNMENT_LEFT
 				b.add_theme_font_size_override("font_size",12)
 				b.tooltip_text=str(item.get("description",""))
@@ -444,11 +459,11 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 		var edit_row := HBoxContainer.new(); context_box.add_child(edit_row)
 		var move_label := "Move" if _moving_object.is_empty() else "Cancel move"
 		var move_button := _button(move_label,func():
-			selected_tool="move"; _moving_object=""; _move_request.clear(); _refresh(),selected_tool=="move")
+			_select_build_tool("move"),selected_tool=="move")
 		move_button.disabled=not _move_request.is_empty()
 		move_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; edit_row.add_child(move_button)
 		move_button.tooltip_text="Choose existing furniture to rearrange at no cost."
-		var sell_button := _button("Sell",func(): selected_tool="erase"; _moving_object=""; _move_request.clear(); _refresh(),selected_tool=="erase")
+		var sell_button := _button("Sell",func(): _select_build_tool("erase"),selected_tool=="erase")
 		sell_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; edit_row.add_child(sell_button)
 		sell_button.tooltip_text="Demolish tiles or sell furniture for 60% of its price."
 		var history_row := HBoxContainer.new(); context_box.add_child(history_row)
@@ -459,14 +474,15 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 		undo_button.tooltip_text="Undo the last building edit, including its price. Ctrl/Cmd+Z"
 		redo_button.tooltip_text="Redo a building edit. Ctrl/Cmd+Shift+Z or Ctrl+Y"
 		var finish_row := HBoxContainer.new(); context_box.add_child(finish_row)
-		var rotation_button := _button("Rotate %d°" % (build_rotation*90),_rotate)
+		var rotation_button := _button(("Door side %d" % (build_rotation+1)) if selected_tool=="room" else "Rotate %d°" % (build_rotation*90),_rotate)
 		rotation_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; finish_row.add_child(rotation_button)
-		rotation_button.tooltip_text="Rotate furnishing · " + Preferences.action_label("rotate")
+		rotation_button.tooltip_text=("Change the room doorway side" if selected_tool=="room" else "Rotate furnishing") + " · " + Preferences.action_label("rotate")
 		var discard_button := _button("Discard draft",func(): _send({"type":"build_cancel","lot_id":viewed_lot}))
 		discard_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; finish_row.add_child(discard_button)
 		discard_button.tooltip_text="Restore the whole house and budget from before construction."
 		var selected: Dictionary=Catalog.ITEMS.get(selected_tool,{})
 		var help := str(selected.get("description","Remove an object or tile. A partial refund returns to your household."))
+		if selected_tool=="room": help="Floors, walls, and a doorway. Existing doors stay."
 		if selected_tool=="move": help="Click furniture, then a new spot. " + Preferences.action_label("rotate") + " rotates · Escape cancels."
 		var description:=_label(help,12,Style.MUTED)
 		description.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; description.custom_minimum_size.x=200; context_box.add_child(description)
@@ -525,14 +541,14 @@ func _announce_wishes(family: Dictionary) -> void:
 		_wish_seen[resident.id]=count
 
 func _select_lot(id: String) -> void:
-	viewed_lot=id; _selected_object=""; neighborhood_panel.hide(); _refresh()
+	viewed_lot=id; _selected_object=""; _room_anchor=Vector2i(-1,-1); _room_request.clear(); neighborhood_panel.hide(); _refresh()
 
 func _send(command: Dictionary) -> void:
 	if command.get("type")=="move_object":
 		_move_request=command.duplicate()
 		_move_request.revision=Session.state.lots[viewed_lot].revision
 	Session.command(command)
-	if Session.is_authority() and Session.last_action_ok and command.get("type")=="place": Soundscape.play_ui("build")
+	if Session.is_authority() and Session.last_action_ok and command.get("type") in ["place","build_room"]: Soundscape.play_ui("build")
 	_refresh()
 
 func _entity_clicked(target: Dictionary) -> void:
@@ -546,6 +562,10 @@ func _entity_clicked(target: Dictionary) -> void:
 	else:
 		_send({"type":"interact","member_id":selected_member,"lot_id":viewed_lot,"target_id":str(target.id)})
 
+func _select_build_tool(kind: String) -> void:
+	selected_tool=kind; _moving_object=""; _move_request.clear()
+	_room_anchor=Vector2i(-1,-1); _room_request.clear(); _refresh()
+
 func _select_moving_object(id: String) -> void:
 	for object: Dictionary in Session.state.lots[viewed_lot].objects:
 		if object.id==id:
@@ -555,6 +575,21 @@ func _tile_clicked(cell: Vector2i) -> void:
 	var lot: Dictionary=Session.state.get("lots",{}).get(viewed_lot,{})
 	if lot.is_empty(): return
 	if bool(lot.building) and str(lot.owner)==str(Session.profile_id):
+		if selected_tool=="room":
+			if not _room_request.is_empty(): return
+			if _room_anchor.x<0:
+				_room_anchor=cell; _refresh(); return
+			var command := {"type":"build_room","lot_id":viewed_lot,"x":_room_anchor.x,"y":_room_anchor.y,"end_x":cell.x,"end_y":cell.y,"rotation":build_rotation,"revision":lot.revision}
+			var residents: Array=[]
+			for family: Dictionary in Session.state.families.values():
+				for member: Dictionary in family.members:
+					if member.lot_id==viewed_lot: residents.append(Vector2i(int(member.x),int(member.y)))
+			var plan := RoomPlan.inspect(lot,command,residents)
+			if not plan.ok:
+				_notice(str(plan.message)); Soundscape.play_ui("error"); return
+			_room_request={"revision":lot.revision,"plan":plan}
+			_send(command)
+			return
 		if selected_tool=="move":
 			if not _move_request.is_empty(): return
 			if _moving_object.is_empty():
@@ -633,7 +668,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		if lot_view.building and (event.ctrl_pressed or event.meta_pressed) and event.keycode in [KEY_Z,KEY_Y]:
 			_build_history(event.shift_pressed or event.keycode==KEY_Y)
 		elif event.is_action_pressed("pause") or event.keycode==KEY_ESCAPE:
-			if not _moving_object.is_empty() and _move_request.is_empty():
+			if _room_anchor.x>=0 and _room_request.is_empty():
+				_room_anchor=Vector2i(-1,-1); _refresh()
+			elif not _moving_object.is_empty() and _move_request.is_empty():
 				_moving_object=""; _refresh()
 			elif neighborhood_panel.visible or context_panel.visible or plan_panel.visible:
 				neighborhood_panel.hide(); context_panel.hide(); plan_panel.hide()
@@ -652,7 +689,7 @@ func _notice(message: String) -> void:
 		_notice_time=7.0
 		notice_panel.show()
 		if not Session.last_action_ok:
-			_move_request.clear()
+			_move_request.clear(); _room_request.clear()
 			Soundscape.play_ui("error")
 
 func _open_connection() -> void:

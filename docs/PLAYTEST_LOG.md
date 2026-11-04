@@ -162,3 +162,27 @@ Fresh assessment: the world now conveys both activity and time. The largest
 remaining friction in the core loop is construction speed: extending a house
 requires many isolated tile clicks. Next: room-sized construction with an upfront
 price and one undo step, preserving authoritative placement validation.
+
+## 2026-11-03 · Build a room in two clicks
+
+The Room tool previews a rectangle of floors, perimeter walls, and a doorway.
+Rotate changes the door side; Escape cancels the first corner. The quoted price
+charges only for new pieces and existing doors remain in place. Host revision
+checks reject stale room requests. The complete edit is atomic and one undo
+restores every piece and the exact budget. Cutaway walls now follow the actual
+floor layout rather than assuming the starter home's coordinates.
+
+Validation: thirteen local suites and the real Iroh host/two-client checks passed.
+Coverage includes malformed/obstructed/unaffordable rooms without partial edits,
+reversed corners, all four doorway sides, ownership, stale requests, single-step
+undo/redo, save round-trips, and reconnect. Mouse-driven HUD checks exercise the
+catalog, both corners, Escape, and undo. Graphical playtesting at 1440×900 and
+1280×720/125% UI scale built an extension, rotated its door into the existing house,
+moved a bed inside, and sent a resident through the doorway to sleep. The preview
+quoted §505 and the accepted extension charged exactly that amount. Red previews
+explain obstructed edges. This is automated agent playtesting, not a family test.
+
+Fresh assessment: building an extra usable bedroom is now quick and affordable.
+The household itself still feels generic: the second resident is always Robin,
+and there are no appearance choices. Next: an in-game household editor for names
+and a small set of visible appearance choices, saved and synchronized normally.

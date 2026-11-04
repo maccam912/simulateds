@@ -3,6 +3,7 @@ extends RefCounted
 ## Commands are the only external mutations; the whole state is JSON-compatible.
 const Catalog = preload("res://game/catalog.gd")
 const BuildRules = preload("res://game/build_rules.gd")
+const RoomPlan = preload("res://game/room_plan.gd")
 const Wishes = preload("res://game/wishes.gd")
 const GRID_SIZE := 16
 const SCHEMA := 1
@@ -98,7 +99,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 	if not lot_id is String or not state.lots.has(lot_id):
 		return _result(false, "That lot does not exist.")
 	var lot: Dictionary = state.lots[lot_id]
-	if type in ["build_begin", "build_end", "build_cancel", "build_undo", "build_redo", "place", "erase", "move_object"]:
+	if type in ["build_begin", "build_end", "build_cancel", "build_undo", "build_redo", "place", "erase", "move_object", "build_room"]:
 		if lot.owner != profile_id:
 			return _result(false, "Only the owner can build on this lot.")
 		if type == "build_begin":
@@ -120,10 +121,10 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 			return _result(true, "Construction started. Your family is paused; neighbors keep living.")
 		if not lot.building:
 			return _result(false, "Enter construction mode first.")
-		if type in ["build_undo", "build_redo"]:
+		if type in ["build_undo", "build_redo", "build_room"]:
 			if not _integer(command.get("revision")) or int(command.revision) != int(lot.revision):
-				return _result(false, "The building draft changed. Try undo or redo again.")
-			return _history_step(lot,type == "build_redo")
+				return _result(false, "The building draft changed. Review the preview and try again.")
+			if type!="build_room": return _history_step(lot,type == "build_redo")
 		if type == "build_cancel":
 			if _build_backups.has(lot_id):
 				_restore_build(lot)
@@ -293,6 +294,11 @@ func _build(lot: Dictionary, command: Dictionary) -> Dictionary:
 	for family: Dictionary in state.families.values():
 		for member: Dictionary in family.members:
 			if member.lot_id==lot.id: residents.append(_position(member))
+	if command.type=="build_room":
+		var plan := RoomPlan.inspect(lot,command,residents)
+		if not plan.ok: return plan
+		RoomPlan.apply(lot,plan)
+		return _result(true,"Room built for § %d. Undo restores the whole room." % int(plan.cost))
 	var preview := BuildRules.inspect(lot,command,residents)
 	if not preview.ok: return preview
 	var kind: String=preview.kind

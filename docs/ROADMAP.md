@@ -23,13 +23,16 @@ which of these were verified by model tests, live processes, or human play.
 Recent implemented increments include editable resident plans and autonomy,
 exclusive private furnishings, shape-based picking, free furniture moves,
 placement validation previews, 32-edit construction undo/redo, and persistent
-personal wishes/journals. See [the playtest log](PLAYTEST_LOG.md) for evidence
+personal wishes/journals, resident movement/activity presentation, day/night
+lighting, and two-corner room construction with a shared cost/obstruction preview.
+See [the playtest log](PLAYTEST_LOG.md) for evidence
 and current usability priorities.
 
 ## 1. Make homebuilding dependable
 
 - Edge-based walls, room detection, window and door orientation, and roofs.
-- Drag tools, previews, selection/move, undo/redo, and sensible refunds.
+- Drag painting and richer selection; placement previews, furniture moves,
+  two-corner rooms, undo/redo, and exact undo refunds are implemented.
 - Room blueprints and reusable layouts on the existing draft/commit boundary.
 - Stronger routing checks and helpful "cannot reach this" presentation.
 - Camera pan/zoom/rotation and a clear cutaway-wall policy.

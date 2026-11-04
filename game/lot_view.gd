@@ -6,6 +6,7 @@ signal entity_clicked(target: Dictionary)
 
 const Catalog = preload("res://game/catalog.gd")
 const BuildRules = preload("res://game/build_rules.gd")
+const RoomPlan = preload("res://game/room_plan.gd")
 const ResidentMotion = preload("res://game/resident_motion.gd")
 const Daylight = preload("res://game/daylight.gd")
 var motion = ResidentMotion.new()
@@ -16,6 +17,8 @@ var selected_member := ""
 var build_kind := "floor"
 var build_rotation := 0
 var build_object_id := ""
+var room_anchor := Vector2i(-1,-1)
+var room_pending := false
 var preview_result: Dictionary = {}
 var _preview_signature := ""
 var building := false
@@ -200,7 +203,8 @@ func _draw() -> void:
 			if y < 0 or y > 15: continue
 			var cell := Vector2i(x,y)
 			if walls.has(cell):
-				var h := (39.0 if y <= 3 or x <= 3 else 8.0)*scale_factor
+				var rear := (floors.has(cell+Vector2i.RIGHT) and not floors.has(cell+Vector2i.LEFT)) or (floors.has(cell+Vector2i.DOWN) and not floors.has(cell+Vector2i.UP))
+				var h := (39.0 if rear else 8.0)*scale_factor
 				_block(x,y,1,1,h,Color("e6e2c6").lerp(Color("f3dfb6"),float(light.night)*0.45))
 				if h > 20*scale_factor:
 					_diamond(x+0.04,y+0.04,0.92,0.92,Color("f6efd7"),h)
@@ -227,7 +231,9 @@ func _draw() -> void:
 	_draw_street_lights(scale_factor)
 	hover_target = hit_target(_pointer)
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if not building and not hover_target.is_empty() else Control.CURSOR_ARROW
-	if _in_bounds(hover_cell) and (building or hover_target.is_empty()):
+	if building and build_kind=="room":
+		_draw_room_preview(lot)
+	elif _in_bounds(hover_cell) and (building or hover_target.is_empty()):
 		var tint := Color(0.96,0.99,0.81,0.32)
 		var outline := Color("f8f3c7")
 		var footprint := Vector2i.ONE
@@ -546,3 +552,35 @@ func _draw_street_lights(s: float) -> void:
 			for ring in range(12,0,-1):
 				draw_circle(bulb,float(ring)*1.33*s,Color(1.0,0.86,0.55,night*0.014))
 		draw_rect(Rect2(bulb-Vector2(4,2)*s,Vector2(8,5)*s),Color("fbe5a3") if night>0.2 else Color("a4ae91"))
+
+func _draw_room_preview(lot: Dictionary) -> void:
+	if not _in_bounds(hover_cell): return
+	if room_pending:
+		_draw_preview_label("Building room…",true)
+		return
+	if room_anchor.x<0:
+		_diamond(hover_cell.x,hover_cell.y,1,1,Color(0.85,0.94,0.65,0.2),3,Color("f8edb7"))
+		_draw_preview_label("Room · Click the first corner",true)
+		return
+	var signature := str(["room",lot_id,lot.revision,lot.funds,hover_cell,room_anchor,build_rotation])
+	if signature!=_preview_signature:
+		_preview_signature=signature
+		var residents: Array=[]
+		for family: Dictionary in world.families.values():
+			for member: Dictionary in family.members:
+				if member.lot_id==lot_id: residents.append(Vector2i(int(member.x),int(member.y)))
+		preview_result=RoomPlan.inspect(lot,{"x":room_anchor.x,"y":room_anchor.y,"end_x":hover_cell.x,"end_y":hover_cell.y,"rotation":build_rotation},residents)
+	var low := Vector2i(mini(room_anchor.x,hover_cell.x),mini(room_anchor.y,hover_cell.y))
+	var high := Vector2i(maxi(room_anchor.x,hover_cell.x),maxi(room_anchor.y,hover_cell.y))
+	var valid := bool(preview_result.get("ok",false))
+	var tint := Color(0.64,0.9,0.49,0.23) if valid else Color(0.94,0.36,0.3,0.3)
+	var outline := Color("d8f1b2") if valid else Color("ffab8f")
+	_diamond(low.x,low.y,high.x-low.x+1,high.y-low.y+1,tint,3,outline)
+	if valid:
+		var s := _cell.x/48.0
+		for cell: Array in preview_result.walls:
+			_block(int(cell[0]),int(cell[1]),1,1,14*s,Color(0.68,0.88,0.54,0.36))
+		for cell: Array in preview_result.doors:
+			_diamond(int(cell[0]),int(cell[1]),1,1,Color(1.0,0.81,0.4,0.75),5,Color("fff0ba"))
+	_diamond(room_anchor.x,room_anchor.y,1,1,Color(1,0.94,0.65,0.25),4,Color("fff0ba"))
+	_draw_preview_label(str(preview_result.get("message","")),valid)

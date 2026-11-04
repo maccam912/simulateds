@@ -112,6 +112,22 @@ func _client(index: String) -> void:
 	for object: Dictionary in session.state.lots[home].objects:
 		if object.kind=="fridge": moved_id=str(object.id)
 	await _command({"type":"move_object","lot_id":home,"object_id":moved_id,"x":9,"y":4,"rotation":0})
+	for _attempt in range(50):
+		if int(session.world._object(session.state.lots[home],moved_id).x)==9: break
+		await create_timer(0.1).timeout
+	var room_command := {"type":"build_room","lot_id":home,"x":13,"y":0,"end_x":15,"end_y":2,"rotation":0,"revision":session.state.lots[home].revision}
+	await _command(room_command)
+	for _attempt in range(50):
+		if [14,1] in session.state.lots[home].floors: break
+		await create_timer(0.1).timeout
+	assert([14,2] in session.state.lots[home].doors,"Room doorway was not replicated")
+	await _command(room_command,false)
+	await _command({"type":"build_undo","lot_id":home,"revision":session.state.lots[home].revision})
+	for _attempt in range(50):
+		if not [14,1] in session.state.lots[home].floors: break
+		await create_timer(0.1).timeout
+	assert(not [14,2] in session.state.lots[home].doors,"Single undo did not remove the whole room")
+	await _command({"type":"build_redo","lot_id":home,"revision":session.state.lots[home].revision})
 	await _command({"type": "build_end", "lot_id": home})
 	await _command({"type":"autonomy","member_id":member_id,"enabled":false})
 	await _command({"type":"cancel","member_id":member_id})
@@ -154,6 +170,7 @@ func _client(index: String) -> void:
 	await create_timer(0.7).timeout
 	await _connect()
 	assert(session.home_lot() == home, "Reconnect changed lot ownership")
+	assert([14,1] in session.state.lots[home].floors and [14,2] in session.state.lots[home].doors,"Reconnect lost the new room")
 	assert(int(session.world._object(session.state.lots[home],moved_id).x)==9, "Reconnect lost furnishing move")
 	assert(session.state.families[identity].members[0].wishes.journal.size()==1,"Reconnect lost wish journal")
 	assert(not session.state.families[identity].members[0].autonomy, "Reconnect lost autonomy preference")

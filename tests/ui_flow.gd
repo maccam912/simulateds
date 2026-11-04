@@ -136,6 +136,25 @@ func _run() -> void:
 	_check(game.wishes_button.text=="Wishes · 1/3","HUD shows completed wish count")
 	_check(session.state.lots.lot_1.funds==wish_funds+40,"Wish UI leads to authoritative reward")
 	_check(game.tools_box.get_child(0).disabled,"Completed wish card cannot be repeated")
+	game._toggle_build()
+	await process_frame
+	var room_button: Button=game.tools_box.get_child(1)
+	_check("Room" in room_button.text,"Room tool appears in the structure catalog")
+	await _click(room_button.get_global_rect().get_center())
+	var room_funds: int=session.state.lots.lot_1.funds
+	await _click(game.lot_view.grid_point(0.5,0.5))
+	_check(game._room_anchor==Vector2i(0,0) and session.state.lots.lot_1.funds==room_funds,"First corner only starts a preview")
+	var cancel_room := InputEventKey.new(); cancel_room.keycode=KEY_ESCAPE; cancel_room.pressed=true
+	root.push_input(cancel_room,true)
+	await process_frame
+	_check(game._room_anchor.x<0 and game.context_panel.visible,"Escape cancels the room before closing its catalog")
+	await _click(game.lot_view.grid_point(0.5,0.5))
+	await _click(game.lot_view.grid_point(2.5,2.5))
+	_check(session.state.lots.lot_1.floors.has([1,1]) and session.state.lots.lot_1.doors.has([1,2]),"Second corner builds a room through real canvas input")
+	_check(session.state.lots.lot_1.funds==room_funds-373 and game._room_anchor.x<0 and game._room_request.is_empty(),"Accepted room charges once and releases selection")
+	await _click(game.undo_button.get_global_rect().get_center())
+	_check(not session.state.lots.lot_1.floors.has([1,1]) and session.state.lots.lot_1.funds==room_funds,"One HUD undo reverses the room")
+	game._send({"type":"build_cancel","lot_id":"lot_1"})
 	game.context_panel.hide()
 	game._open_connection()
 	_check(game.connection_dialog.visible,"Multiplayer dialog opens")
