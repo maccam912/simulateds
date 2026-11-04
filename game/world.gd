@@ -20,6 +20,7 @@ const Leisure = preload("res://game/shared_leisure.gd")
 const Courtesy = preload("res://game/courtesy.gd")
 const BuildAccess = preload("res://game/build_access.gd")
 const Routines = preload("res://game/routines.gd")
+const ArtAdmiration = preload("res://game/art_admiration.gd")
 const WallArt = preload("res://game/wall_art.gd")
 const Paintings = preload("res://game/paintings.gd")
 const Gardens = preload("res://game/gardens.gd")
@@ -330,7 +331,12 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 		var result := apply_command(profile_id,{"type":"interact","member_id":member.id,"lot_id":lot_id,"target_id":option.target_id})
 		if result.ok: result.message="Dancing added to your plan." if type=="join_dance" else "Tabletop game added to your plan."
 		return result
-	if type=="painting":
+	if type=="admire_art":
+		var option := admire_option(profile_id,str(member.id),str(lot_id),command.get("target_id"))
+		if not option.ok: return option
+		if not _integer(command.get("x")) or not _integer(command.get("y")) or int(command.x)!=int(option.x) or int(command.y)!=int(option.y): return _result(false,"This painting moved. Choose it again on the wall.")
+		_queue_action(member,{"type":"interact","target_kind":"art","target_id":command.target_id,"art_x":int(option.x),"art_y":int(option.y)})
+	elif type=="painting":
 		var option := painting_option(profile_id,str(member.id),str(lot_id),command.get("target_id"),command.get("action"),command.get("subject",""))
 		if not option.ok: return option
 		if not _integer(command.get("revision")) or int(command.revision)!=int(option.revision): return _result(false,"This canvas changed. Choose from its current activities.")
@@ -375,6 +381,25 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 	if member.task.is_empty():
 		_start_next(member, lot)
 	return _result(true, "Action queued.")
+
+func admire_option(profile_id: String,member_id: String,lot_id: String,target_id: Variant) -> Dictionary:
+	var family: Dictionary=state.families.get(profile_id,{})
+	var member := _member(family,member_id) if not family.is_empty() else {}
+	if member.is_empty(): return _result(false,"Choose one of your own residents.")
+	var lot: Dictionary=state.lots.get(lot_id,{})
+	if lot.is_empty(): return _result(false,"Choose a painting on a household wall.")
+	if state.lots[family.home_lot].building or lot.building: return _result(false,"Finish construction before admiring artwork.")
+	if member.lot_id!=lot_id: return _result(false,"Visit this home with "+str(member.name)+" to admire its paintings.")
+	if not target_id is String: return _result(false,"Choose a painting on the wall.")
+	var entry: Dictionary=lot.get("artworks",{}).get(target_id,{})
+	if entry.is_empty() or int(entry.x)<0: return _result(false,"This painting is no longer on the wall.")
+	var tasks: Array=member.queue.duplicate(); tasks.append(member.task)
+	for task: Dictionary in tasks:
+		if task.get("target_kind")=="art" and task.get("target_id")==target_id: return _result(false,"Already in "+str(member.name)+"'s plan.")
+	if member.queue.size()>=MAX_QUEUE: return _result(false,"The action queue is full (8 actions).")
+	var cells := ArtAdmiration.cells(lot,entry,_walkable)
+	if not cells.has(_position(member)) and _path(lot,_position(member),cells).is_empty(): return _result(false,"No path to view this painting. Leave a clear space in front of it.")
+	return {"ok":true,"message":"18 game minutes · Restores fun and comfort","x":int(entry.x),"y":int(entry.y),"label":ArtAdmiration.title(entry)}
 
 func painting_option(profile_id: String,member_id: String,lot_id: String,target_id: Variant,action: Variant,subject: Variant="") -> Dictionary:
 	var family: Dictionary=state.families.get(profile_id,{})
@@ -646,6 +671,8 @@ func _tick_member(member: Dictionary, lot: Dictionary, delta: float) -> void:
 		member.action = "Taking it easy"
 		return
 	var task: Dictionary = member.task
+	if task.get("target_kind")=="art" and not ArtAdmiration.current(lot,task):
+		_end_task(member,"failed","The painting moved or left this home."); return
 	if not task.path.is_empty():
 		member.action = str(task.title) if task.get("courtesy",false) else "Walking" + (" · " + str(task.get("label", "")) if task.type == "interact" else "")
 		member.walk_clock += delta
@@ -683,6 +710,16 @@ func _tick_member(member: Dictionary, lot: Dictionary, delta: float) -> void:
 			_finish_wish(member,task,"chat")
 			_finish_conversation(member,neighbor,task)
 			_end_task(member,"done","Conversation finished.")
+		return
+	if task.get("target_kind")=="art":
+		var entry: Dictionary=lot.artworks[task.target_id]
+		if not ArtAdmiration.cells(lot,entry,_walkable).has(_position(member)):
+			_end_task(member,"failed","The viewing spot is no longer available."); return
+		var enjoyed := minf(delta,float(task.remaining))
+		task.elapsed=float(task.get("elapsed",0.0))+enjoyed; task.remaining-=enjoyed
+		member.action="Admiring a painting"
+		for need: String in ArtAdmiration.RATES: member.needs[need]=minf(100.0,float(member.needs[need])+float(ArtAdmiration.RATES[need])*enjoyed)
+		if float(task.remaining)<=0.000001: _end_task(member,"done","Enjoyed the painting · Fun and comfort restored.")
 		return
 	task.elapsed = float(task.get("elapsed",0.0)) + delta
 	var object := _object(lot, str(task.get("target_id", "")))
@@ -725,6 +762,7 @@ func task_activity(task: Dictionary, lot_id: String) -> String:
 	if task.get("paint_action")=="sell": return ""
 	if task.get("type")!="interact": return ""
 	if task.get("target_kind")=="member": return "chat"
+	if task.get("target_kind")=="art": return "admire_art"
 	return str(_object(state.lots[lot_id],str(task.get("target_id",""))).get("kind",""))
 
 static func personal_activity_rates(member: Dictionary, kind: String) -> Dictionary:
@@ -1013,6 +1051,11 @@ func _start_next(member: Dictionary, lot: Dictionary) -> void:
 	var goals: Array = []
 	if task.type == "move":
 		goals = [Vector2i(int(task.x), int(task.y))]
+	elif task.get("target_kind")=="art":
+		if not ArtAdmiration.current(lot,task):
+			_record_activity(member,task,"failed","The painting moved or left this home."); return
+		goals=ArtAdmiration.cells(lot,lot.artworks[task.target_id],_walkable)
+		task.remaining=ArtAdmiration.DURATION; task.label="Admire painting"
 	elif task.get("target_kind", "object") == "member":
 		var neighbor := _find_member(str(task.target_id))
 		if neighbor.is_empty() or neighbor.lot_id != member.lot_id:
@@ -1125,6 +1168,7 @@ func _free_entry(lot: Dictionary) -> Vector2i:
 
 func _activity_title(member: Dictionary, task: Dictionary) -> String:
 	if task.has("title"): return str(task.title)
+	if task.get("target_kind")=="art": return ArtAdmiration.title(state.lots[member.lot_id].get("artworks",{}).get(task.get("target_id",""),{}))
 	if task.get("type")=="move": return "Walk to %d, %d" % [int(task.x),int(task.y)]
 	if task.get("target_kind")=="member":
 		return ActivityLog.clean("Chat with "+str(_find_member(str(task.get("target_id",""))).get("name","neighbor")),100)
@@ -1351,6 +1395,7 @@ func _normalize_numbers() -> void:
 			if not member.task.is_empty():
 				tasks.append(member.task)
 			for task: Dictionary in tasks:
+				if task.get("target_kind")=="art": task.art_x=int(task.art_x); task.art_y=int(task.art_y)
 				if not task.has("title"): task.title=ActivityLog.clean(_activity_title(member,task),100)
 				if not task.has("id"):
 					task.id = str(member.id) + ":" + str(member.next_action)
@@ -1487,6 +1532,9 @@ func _adjust_funds(lot_id: String, amount: int) -> bool:
 func _valid_task(value: Variant, active: bool) -> bool:
 	if not value is Dictionary or not value.get("type") in ["move", "interact"]:
 		return false
+	if value.get("target_kind")=="art":
+		if not ArtAdmiration.valid_task(value,active): return false
+	elif value.has("art_x") or value.has("art_y"): return false
 	if value.has("paint_action") or value.has("paint_revision") or value.has("subject"):
 		if not Paintings.valid_task(value): return false
 	if value.has("garden_action") or value.has("garden_revision") or value.has("crop"):
@@ -1501,7 +1549,7 @@ func _valid_task(value: Variant, active: bool) -> bool:
 	if value.has("automatic") and not value.automatic is bool:
 		return false
 	if value.has("courtesy") and (not value.courtesy is bool or not value.courtesy or value.type!="move" or not value.get("automatic",false) or not active): return false
-	if value.has("target_kind") and not value.target_kind in ["member", "object"]:
+	if value.has("target_kind") and not value.target_kind in ["member", "object", "art"]:
 		return false
 	if value.type == "move":
 		if not _valid_coord(value.get("x")) or not _valid_coord(value.get("y")):

@@ -182,6 +182,12 @@ or shell expressions.
   entire transfer. Removing a wall or fitting a window stores its painting safely.
   Up to 64 pictures retain their subject, completion day, and artists through
   saves and reconnects. Room copies leave earned art with the original household.
+- Click a mounted picture, then **Admire painting** to queue a quiet 18 game
+  minutes for the selected resident. They walk to the visible side, face the art,
+  and regain fun and comfort. This works at home and on visits; the picture stays
+  with its household. Leave a clear viewing space in front of the wall. Stored
+  pictures must be hung first. Gifting or moving the original interrupts the
+  activity politely, and construction recalls visitors as usual.
 - Residents with a pressing need show a small thought cue above the house. Click
   it to select that resident and plan useful care. Needs already being handled
   or queued stay quiet, and cues belong only to your household. The selected

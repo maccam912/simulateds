@@ -960,14 +960,18 @@ func _resident(member: Dictionary, family: Dictionary,s: float) -> void:
 	# A quiet collar makes the body turn legible without enlarging the resident.
 	if facing.y> -0.2:
 		draw_line(p+(Vector2(0,-25)+forward*2-lateral*2)*s+Vector2(0,bob),p+(Vector2(0,-25)+forward*2+lateral*2)*s+Vector2(0,bob),shirt.lightened(0.22),1.5*s,true)
-	_resident_arm(p,s,lateral,forward,-far_side,stride,skin,dancing)
+	_resident_arm(p,s,lateral,forward,-far_side,stride,skin,dancing,kind=="admire_art")
 	Appearance.draw_head(self,p+Vector2(0,-31)*s+Vector2(0,bob),s,look,facing)
 	if not behind: _activity_prop(p+forward*6*s,kind,s,reduced,facing,skin)
 
-func _resident_arm(p: Vector2,s: float,lateral: Vector2,forward: Vector2,side: float,stride: float,skin: Color,dancing: bool=false) -> void:
+func _resident_arm(p: Vector2,s: float,lateral: Vector2,forward: Vector2,side: float,stride: float,skin: Color,dancing: bool=false,admiring: bool=false) -> void:
 	var shoulder := p+(Vector2(0,-23)+lateral*side*6)*s
 	var hand := p+(Vector2(0,-14)+lateral*side*7-forward*stride*side*3)*s
-	if dancing:
+	if admiring:
+		var elbow := p+(Vector2(0,-18)+lateral*side*8+forward*4)*s
+		hand=p+(Vector2(0,-29)+forward*5+lateral*side*2)*s
+		draw_line(shoulder,elbow,skin,3*s,true); draw_line(elbow,hand,skin,3*s,true)
+	elif dancing:
 		var elbow := p+(Vector2(0,-22)+lateral*side*9+forward*stride*side*2)*s
 		hand=p+(Vector2(0,-29-absf(stride)*3)+lateral*side*8)*s
 		draw_line(shoulder,elbow,skin,3*s,true); draw_line(elbow,hand,skin,3*s,true)

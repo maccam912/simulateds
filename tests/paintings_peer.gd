@@ -179,6 +179,29 @@ func _client(index: String) -> void:
 	await _art_edit(home,{"type":"build_undo"})
 	assert(session.state.lots[home].artworks.is_empty() and _easel(home,id).painting==completed)
 	await _art_edit(home,{"type":"build_redo"})
+	await _construction(home,false)
+	_flag(".gallery-ready"+index)
+	await _wait_flag(".gallery-ready"+("2" if index=="1" else "1"))
+	var neighbor_home := "lot_3" if home=="lot_2" else "lot_2"
+	for attempt in range(60):
+		if not session.state.lots[neighbor_home].building and session.state.lots[neighbor_home].artworks.size()==1: break
+		await create_timer(0.1).timeout
+	var neighbor_art: String=session.state.lots[neighbor_home].artworks.keys()[0]
+	await _command({"type":"visit","member_id":member,"lot_id":neighbor_home})
+	for attempt in range(60):
+		if session.state.families[identity].members[0].lot_id==neighbor_home: break
+		await create_timer(0.1).timeout
+	var admire := {"type":"admire_art","lot_id":neighbor_home,"member_id":member,"target_id":neighbor_art,"x":8,"y":3}
+	await _command(admire); await _command(admire,false)
+	for attempt in range(140):
+		var recent: Array=session.state.families[identity].members[0].activity_log
+		if not recent.is_empty() and str(recent[0].title).begins_with("Admire") and recent[0].outcome=="done": break
+		await create_timer(0.1).timeout
+	var result: Dictionary=session.state.families[identity].members[0].activity_log[0]
+	assert(str(result.title).begins_with("Admire") and result.outcome=="done" and session.state.lots[neighbor_home].artworks.has(neighbor_art),"Guests enjoy the original without taking ownership")
+	_flag(".admired"+index); await _wait_flag(".admired"+("2" if index=="1" else "1"))
+	await _command({"type":"go_home","member_id":member,"lot_id":home})
+	await _construction(home,true)
 	await _art_edit(home,{"type":"art_store","source":"art:"+art_id})
 	assert(session.state.lots[home].artworks[art_id].x==-1)
 	await _art_edit(home,{"type":"art_hang","source":"art:"+art_id,"x":3,"y":8})

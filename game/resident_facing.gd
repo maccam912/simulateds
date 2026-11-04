@@ -14,6 +14,8 @@ static func activity(world: Dictionary, member: Dictionary) -> Dictionary:
 		if task.get("target_kind")=="member":
 			var partner := _member(world,str(task.get("target_id","")))
 			if _near(member,partner) and _available(partner,member): return {"kind":"chat","partner":partner}
+		elif task.get("target_kind")=="art":
+			if preload("res://game/art_admiration.gd").current(lot,task): return {"kind":"admire_art","art":lot.artworks[task.target_id]}
 		else:
 			for object: Dictionary in lot.objects:
 				if object.id==task.get("target_id"): return {"kind":object.kind,"object":object}
@@ -27,6 +29,7 @@ static func activity(world: Dictionary, member: Dictionary) -> Dictionary:
 
 static func direction(pose: Dictionary, member: Dictionary, positions: Dictionary) -> Vector2:
 	var here := _position(member,positions)+Vector2(0.5,0.5)
+	if pose.has("art"): return (Vector2(float(pose.art.x)+0.5,float(pose.art.y)+0.5)-here).normalized()
 	if pose.has("partner"):
 		return (_position(pose.partner,positions)+Vector2(0.5,0.5)-here).normalized()
 	if pose.has("object"):

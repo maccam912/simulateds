@@ -624,7 +624,7 @@ func _refresh() -> void:
 	if tools_signature!=_tools_signature:
 		_tools_signature=tools_signature
 		_rebuild_context(building and mine,lot)
-	if ((build_mode and selected_tool=="wall_art" and _context_page!="access") or (_context_page=="wall_art_inspect" and not build_mode)) and is_instance_valid(wall_art_panel): wall_art_panel.refresh(lot,_art_source,not _art_request.is_empty() or not _art_entry.is_empty(),build_mode)
+	if ((build_mode and selected_tool=="wall_art" and _context_page!="access") or (_context_page=="wall_art_inspect" and not build_mode)) and is_instance_valid(wall_art_panel): wall_art_panel.refresh(lot,_art_source,not _art_request.is_empty() or not _art_entry.is_empty(),build_mode,selected_member)
 	if _context_page=="painting" and not build_mode and is_instance_valid(painting_panel):
 		painting_panel.display_pending=not _art_entry.is_empty()
 		painting_panel.refresh(viewed_lot,_selected_object,selected_member)
@@ -750,7 +750,7 @@ func _update_plan_feedback(member: Dictionary) -> void:
 	var status := ActivityStatus.sample(member,Session.state.lots[member.lot_id])
 	_plan_detail.text=str(status.detail)
 	_plan_detail.tooltip_text=str(status.detail)
-	if status.phase=="activity": _plan_detail.tooltip_text+="\nEstimated time on the neighborhood clock. "+("Painting finishes its work even when needs are full." if member.get("task",{}).has("paint_action") else "Gardening finishes its work even when needs are full." if member.get("task",{}).has("garden_action") else "A fulfilled need can shorten an activity.")
+	if status.phase=="activity": _plan_detail.tooltip_text+="\nEstimated time on the neighborhood clock. "+("Admiring takes 18 game minutes, even when needs are full." if member.get("task",{}).get("target_kind")=="art" else "Painting finishes its work even when needs are full." if member.get("task",{}).has("paint_action") else "Gardening finishes its work even when needs are full." if member.get("task",{}).has("garden_action") else "A fulfilled need can shorten an activity.")
 	_plan_progress.visible=float(status.progress)>=0.0
 	if _plan_progress.visible: _plan_progress.value=float(status.progress)
 
@@ -1734,6 +1734,7 @@ func _build_art_panel() -> void:
 	wall_art_panel=WallArtPanel.new(); tools_box.add_child(wall_art_panel)
 	wall_art_panel.source_selected.connect(func(source): _art_source=source; _refresh())
 	wall_art_panel.command_requested.connect(_art_command); wall_art_panel.arrange_requested.connect(_open_art)
+	wall_art_panel.admire_requested.connect(_send)
 	if lot_view.building:
 		context_box.add_child(_button("‹ Catalog",func(): _select_build_tool("floor")))
 	else: context_box.add_child(_button("‹ Activities",func(): _context_page="activities"; _refresh()))

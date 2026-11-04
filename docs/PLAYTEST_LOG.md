@@ -1604,3 +1604,43 @@ actually enjoy the pictures in their homes and on visits: a clear, queued admire
 activity with visible feedback and appropriate need recovery. That should use
 real reachable wall positions, preserve household ownership, and stop safely
 when construction begins. It is proposed next work, not implemented behavior.
+
+## A quiet moment with a painting
+
+Residents can now admire a mounted picture at home or on a visit. The selected
+resident queues an 18-game-minute activity, walks to a reachable spot in front
+of the visible wall face, looks at the original with a quiet hand-to-chin pose,
+and recovers fun and comfort. The plan names the picture, shows time remaining,
+and leaves a readable result. It grants no money or painting practice, changes
+no ownership, and does not end immediately just because needs are already full.
+
+Model checks covered horizontal and vertical wall faces, furniture blocking the
+view, duplicate/full plans, stored and missing pictures, malformed orders and
+snapshot fields, active JSON snapshots, ordinary cancellation, gifts leaving
+while walking or queued, visits, and construction recall. Existing future plans
+stay intact when an individual art activity fails. Specific paintings are
+explained as omitted when saving reusable routines.
+
+Both native layouts passed inspection, exact reply handling, an early reply
+before accepted state, walking, need recovery, Recent results, visiting, and
+construction. Review found the compact tray hiding Arrange artwork below the
+fold. A shorter live preview and removal of a redundant ownership sentence now
+keep the preview, credit, Admire, benefit, and Arrange visible together. A
+construction notice replaces the misleading empty-collection prompt. Both final
+native layouts passed again with bounds checks for both actions and the benefit.
+Captures are in ignored `build/art-admiration-*.png`.
+
+Fresh assessment: original artwork now has a complete small loop: make it,
+improve at painting, decorate with it, share it, and enjoy it during ordinary
+life. The next useful work is shared meals, connecting cooking, hunger, family
+company, and visiting around a familiar daily activity. Start with explicit
+preparation and servings, clear table access, and guest ownership rules. Avoid
+absence penalties or making another player's family participate without their
+choice. This is proposed next work, not implemented behavior in this checkpoint.
+
+Checkpoint validation: all 78 local suites, the original Iroh scenario, the
+expanded painting scenario, and dedicated-server startup passed. The painting
+scenario has both independent clients visit and finish admiring one another's
+original before returning home to rearrange and sell it. The prior art-gift
+checkpoint passed all four platform CI jobs. Human-family play, physical-device
+checks, and an overnight persistence soak remain open.

@@ -810,3 +810,31 @@ also passed the original Iroh scenario, the expanded painting scenario, and
 dedicated-server startup. The preceding painting-hobby
 checkpoint passed all four platform CI jobs. Human-family, physical-device, and
 overnight-hosting checks remain open.
+
+## Admiring mounted artwork
+
+`tests/art_admiration.gd` checks real front-facing viewing paths on both wall
+orientations, obstruction, full and duplicate plans, stored and missing art,
+owned-resident authorization, malformed coordinates and task fields, bounded
+need recovery, full-need duration, unchanged ownership/funds/hobbies, and
+ordinary cancellation. Runtime snapshots validate and complete after JSON
+round-trip; malformed snapshots reject atomically. Gifting an original ends a
+walking viewer's current action and a later queued viewer's action without
+substituting a different painting. Construction recalls visiting viewers safely.
+
+The native `art_admiration_ui` flow passed at 1440×900 and at 1280×720 with the
+compact preference profile. It checks actual wall and button clicks, the named
+plan, activity feedback, Recent, visit-first explanation, visiting recreation,
+construction recall, and a blocked-view explanation. Pending state ignores an
+unrelated rejection and remains pending after an early matching success until
+accepted state arrives. Screenshot review led to a shorter compact live preview
+and note; both actions and their benefit now fit without scrolling. Both final
+layouts passed again. `build/art-admiration-*.png` contains the ignored captures.
+These are native automated playtests, not human-family observation.
+
+The full run passed all 78 local suites, both real Iroh scenarios, and dedicated
+startup. `paintings_peer` now coordinates two open homes, reciprocal visits,
+queued admiration and duplicate rejection, host-confirmed completion, preserved
+art ownership, and return home before the existing arrangement/reconnect/sale
+checks. The preceding original-art gift checkpoint passed all four CI jobs.
+Physical-device, human-family, and overnight-soak evidence remains open.

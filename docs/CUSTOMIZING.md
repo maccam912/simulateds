@@ -14,7 +14,8 @@ household or an absent player.
 | `game/painting_art.gd` | Original vector miniatures rendered in stages on the easel and in its inspection tray |
 | `game/painting_panel.gd` | Subject previews, progress/credit, resumable activity controls, and correlated host feedback |
 | `game/wall_art.gd` | Bounded household collection, pure transfer previews, save validation, and safe storage when a wall changes |
-| `game/wall_art_panel.gd` | Collection selection, wall display, storage, empty-easel return, and visitor inspection |
+| `game/wall_art_panel.gd` | Collection selection, wall display, storage, empty-easel return, and correlated admire controls for residents and visitors |
+| `game/art_admiration.gd` | Wall-facing viewing positions, original/mount identity, bounded activity duration and needs, and task validation |
 | `game/art_gifts.gd` | Validated original-art transfers through mail, collection capacity, and unique custody across canvases, collections, and unclaimed gifts |
 | `game/mailbox.gd` | Bounded postcard delivery, money/art gift escrow, collection, receipts, and save validation |
 | `game/mail_panel.gd` | Local postcard drafts, gift previews, fixed action footer, and exact command acknowledgements |

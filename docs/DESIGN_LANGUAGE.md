@@ -624,3 +624,24 @@ Use the existing soft confirmation cue. Construction and full collections explai
 why the original will wait safely; they do not discard it. Pending controls wait
 for the exact reply and accepted state. Repeated collection never creates another
 picture, and giving it onward preserves its creators.
+
+
+## Enjoying a picture
+
+Mounted artwork is an activity as well as an object to inspect. Keep the subject,
+original credit, preview, Admire painting, and the selected resident's benefit
+visible together. In the compact live tray, shorten the preview and redundant
+ownership note so Arrange artwork remains visible too. Admiring is available to
+visitors who have actually arrived; camera travel alone does not move a resident.
+
+Use a quiet hand-to-chin pose, attention toward the visible wall face, and the
+existing walking and UI audio. There is no applause or extra reward fanfare.
+Reduced motion keeps the pose legible without animation. The plan names the
+specific picture and shows fun, comfort, and remaining neighborhood minutes.
+Completion appears in Recent; it does not interrupt with a modal or grant money
+or painting practice. Full needs do not instantly dismiss the chosen activity.
+
+Explain a blocked viewing spot, an existing plan, a required visit, and a changed
+picture inline. Bind the order to the original and its mounted coordinates.
+Losing the picture ends this activity, preserving later plans and the artwork's
+actual owner. A construction notice explains why visitors returned home.
