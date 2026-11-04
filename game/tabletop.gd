@@ -4,14 +4,20 @@ extends RefCounted
 const CAPACITY := 4
 const SOCIAL_RATE := 5.0
 
+static func activity(world: Dictionary, member: Dictionary) -> Dictionary:
+	var task: Dictionary=member.get("task",{})
+	if task.get("type")!="interact" or task.get("target_kind","object")!="object": return {}
+	var lot: Dictionary=world.get("lots",{}).get(member.get("lot_id",""),{})
+	if lot.get("building",false): return {}
+	for object: Dictionary in lot.get("objects",[]):
+		if object.id==task.get("target_id") and object.kind=="game_table": return object
+	return {}
+
 static func is_shared(world: Dictionary, member: Dictionary) -> bool:
 	var task: Dictionary=member.get("task",{})
 	if not task.get("path",[]).is_empty() or float(task.get("elapsed",0.0))<=0.0: return false
-	var lot: Dictionary=world.get("lots",{}).get(member.get("lot_id",""),{})
-	for object: Dictionary in lot.get("objects",[]):
-		if object.id==task.get("target_id") and object.kind=="game_table":
-			return players(world,str(lot.id),str(object.id)).size()>1
-	return false
+	var object := activity(world,member)
+	return not object.is_empty() and players(world,str(member.lot_id),str(object.id)).size()>1
 
 static func players(world: Dictionary, lot_id: String, object_id: String, arrived_only: bool=true) -> Array[Dictionary]:
 	var result: Array[Dictionary]=[]

@@ -197,6 +197,13 @@ social thought quiets while they are actually playing with someone. Every player
 chooses their own resident's participation, and leaving never cancels a companion.
 Keep the shared activity in the house rather than opening a separate minigame.
 
+People cards expose ongoing games with their place count. Keep Visit and joining
+as distinct choices: a visit changes location, while joining appends a personal
+activity. Use Join game, Queue game, In your plan, and Playing here to describe
+the accepted state. A stale card reports that the game changed. Preserve keyboard
+focus on the same person as their card updates, and reveal their name together
+with the focused action when the card fits in the scroll area.
+
 ## Coming home
 
 Return news belongs with postcards in Mail. A small badge offers an invitation;

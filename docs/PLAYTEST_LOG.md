@@ -762,3 +762,40 @@ Fresh assessment: visiting now offers an activity beyond conversation, but its
 discovery depends on spotting and clicking the table. Next: help a visiting
 player find and join an ongoing game from People, using their selected resident
 and preserving each household's ownership and existing plans.
+
+## 2026-11-04 · Find company through People
+
+People now shows ongoing tabletop games and their occupied places. A remote card
+explains that you can visit to join. Once there, Join game adds the table to your
+selected resident's plan; Queue game offers an explicit wait when all four places
+are reserved. Cards distinguish In your plan from Playing here. Existing directed
+work stays ahead of the game, and companion plans remain untouched. The tooltip
+explains that a companion may finish before you arrive.
+
+The host checks the particular companion activity shown on the card. A delayed
+click on a completed/replaced game is rejected without changing any resident;
+malformed, foreign, duplicate, inaccessible, and full-plan requests are also
+rejected. Accepted joins use the existing activity scheduler and derived place
+reservations, with no additional saved state.
+
+Validation: all 34 local suites, real Iroh host/two-client checks, and server
+startup passed. The second actual client discovered the first client's game,
+exercised stale/duplicate rejection, and joined before construction recalled
+them. Native checks at standard and compact/125% UI sizes covered mouse/keyboard
+discovery, visiting, joining behind current work, active participation, a full
+table, releasing a waiting place, ending games, and construction. Snapshot
+replacement preserved focused controls. Related checks passed after final label
+polish. The preceding tabletop checkpoint passed all four platform CI jobs.
+
+The screen review caught focused action buttons remaining visible while their
+person's name scrolled out of view after card reordering. Focus restoration now
+waits for layout and reveals the whole card when it fits. The final compact
+native check asserts that visibility and passed. An initial blocked-table test
+used the wrong wall fixture representation; correcting the fixture exercised
+the intended rejection without changing product behavior.
+
+Fresh assessment: shared recreation is now discoverable and can be planned
+without taking over a companion. Housebuilding is the next usability opportunity:
+Finish building rejects inaccessible furniture, but identifies the problem only
+in text. Next: a construction access view that locates unreachable furnishings
+and trapped residents, so a player can repair a layout before reopening the lot.

@@ -254,7 +254,24 @@ func _client(index: String) -> void:
 	for object: Dictionary in session.state.lots[host_home].objects:
 		if object.kind=="game_table": game_table_id=str(object.id)
 	assert(not game_table_id.is_empty())
-	await _command({"type":"interact","member_id":member_id,"lot_id":host_home,"target_id":game_table_id})
+	if index=="1":
+		await _command({"type":"interact","member_id":member_id,"lot_id":host_home,"target_id":game_table_id})
+	else:
+		var join_intent: Dictionary={}
+		for _attempt in range(100):
+			for family: Dictionary in session.state.families.values():
+				if family.id==identity or family.home_lot==host_home: continue
+				var companion: Dictionary=family.members[0]
+				var option: Dictionary=session.world.tabletop_option(session.state.families[identity].members[0],str(companion.id))
+				if not option.is_empty() and option.available:
+					join_intent={"type":"join_game","member_id":member_id,"lot_id":host_home,"companion_id":companion.id,"activity_id":option.activity_id}
+			if not join_intent.is_empty(): break
+			await create_timer(0.1).timeout
+		assert(not join_intent.is_empty(),"The replicated People option discovers an actual client's game")
+		var stale: Dictionary=join_intent.duplicate(); stale.activity_id="finished-activity"
+		await _command(stale,false)
+		await _command(join_intent)
+		await _command(join_intent,false)
 	var shared := false
 	for _attempt in range(150):
 		var guest: Dictionary=session.state.families[identity].members[0]

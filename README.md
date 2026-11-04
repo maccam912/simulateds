@@ -134,6 +134,10 @@ or shell expressions.
   Two completed catch-ups per pair per day build a shared friendship when both
   households are online. Milestones appear in both journals. Busy residents finish
   their own plans first, and friendships never decay while someone is away.
+  Ongoing tabletop games show their occupied places. Visit the home, then use
+  **Join game** to add it after your resident's planned activities, or **Queue
+  game** to wait at a full table. The card distinguishes planned and active
+  participation. A changed or finished game gets a clear response to stale clicks.
 - **Mail** leaves a postcard for another household, even while they are away.
   Send one per household per game day, with an optional §100 or §250 gift. Gifts
   are charged on delivery and collected once by the recipient. The inbox holds

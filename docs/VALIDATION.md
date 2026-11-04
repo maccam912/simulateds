@@ -83,7 +83,7 @@ service mode was not repeated for this update.
 ## Still open
 
 The subsequent feature checks are recorded in [PLAYTEST_LOG.md](PLAYTEST_LOG.md).
-The current local suite contains thirty-two model/application suites, plus real Iroh
+The current local suite contains thirty-four model/application suites, plus real Iroh
 host/two-client reconnect and dedicated-server startup. The room-construction
 checkpoint passed Linux, Windows, macOS, and Android CI builds/exports. The later
 household checkpoint passed the three desktop jobs; Android built, tested,
@@ -210,6 +210,20 @@ for purchasing, undo/redo, four rotations, joining, leaving, and recall. Actual
 mixer recordings included the new wooden piece texture with nonzero, unclipped
 output (peak about 0.015); this is not a human listening assessment. Protocol 2
 rejects old peers before adding their household; world schema 1 remains readable.
+
+The tabletop checkpoint passed all four platform CI jobs. Game-discovery checks
+cover read-only People options, malformed/foreign/self/stale joins, completed and
+replacement activities, duplicate prevention, existing-plan preservation,
+full-table waiting/release, full plans, inaccessible tables, and construction.
+All 34 suites and Iroh/server checks passed. In the real Iroh test one client
+discovered the other client's game, rejected stale/duplicate joins, and joined
+through the same command used by People. Native standard/compact mouse and
+keyboard checks covered discovery, visiting, joining, active status, full tables,
+ending games, and construction recall. Focus survived snapshot replacement and
+remained on the same person after joining. A compact screen review led to a
+post-layout scroll correction that keeps the person's name with their focused
+button when the card fits; the final compact native and related model/UI checks
+passed. Human interaction and cross-device play remain separate gates.
 
 Physical Android operation, cross-OS multiplayer, exported game packages,
 production authentication, public matchmaking abuse resistance, long-term

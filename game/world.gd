@@ -291,6 +291,18 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 		return _result(false, "This lot is under construction.")
 	if member.queue.size() >= MAX_QUEUE:
 		return _result(false, "The action queue is full (8 actions).")
+	if type=="join_game":
+		var companion_id: Variant=command.get("companion_id")
+		var activity_id: Variant=command.get("activity_id")
+		if not companion_id is String or not activity_id is String or activity_id.is_empty():
+			return _result(false,"Choose a resident's current game from People.")
+		var option := tabletop_option(member,companion_id)
+		if option.is_empty() or option.activity_id!=activity_id:
+			return _result(false,"That game has changed. Choose a current game from People.")
+		if not option.available: return _result(false,str(option.detail))
+		var result := apply_command(profile_id,{"type":"interact","member_id":member.id,"lot_id":lot_id,"target_id":option.target_id})
+		if result.ok: result.message="Tabletop game added to your plan."
+		return result
 	if type == "move":
 		if not _valid_coord(command.get("x")) or not _valid_coord(command.get("y")):
 			return _result(false, "Choose a tile inside the lot.")
@@ -517,6 +529,39 @@ func care_status(member: Dictionary, need: String) -> String:
 	for task: Dictionary in member.queue:
 		if Wellbeing.restores(task_activity(task,str(member.lot_id)),need): return "In your plan"
 	return ""
+
+func tabletop_option(member: Dictionary, companion_id: String) -> Dictionary:
+	var companion := _find_member(companion_id)
+	if companion.is_empty() or companion.id==member.id: return {}
+	var object := Tabletop.activity(state,companion)
+	if object.is_empty(): return {}
+	var count := Tabletop.players(state,str(companion.lot_id),str(object.id),false).size()
+	var option := {"available":false,"label":"Join game","detail":"Adds a game after your planned activities. Companions may finish before you arrive.","summary":"Tabletop game · %d/%d places" % [count,Tabletop.CAPACITY],"target_id":str(object.id),"activity_id":str(companion.task.id),"lot_id":str(companion.lot_id)}
+	if member.lot_id!=companion.lot_id:
+		option.label="Visit to join"; option.detail="Visit this home, then choose Join game."
+		return option
+	for family: Dictionary in state.families.values():
+		if state.lots[family.home_lot].building and not _member(family,str(member.id)).is_empty():
+			option.label="Under construction"; option.detail="Finish construction before directing your family."
+			return option
+	var tasks: Array=member.queue.duplicate()
+	if not member.task.is_empty(): tasks.push_front(member.task)
+	for task: Dictionary in tasks:
+		if task.get("type")=="interact" and task.get("target_kind","object")=="object" and task.get("target_id")==object.id:
+			option.label="In your plan"; option.detail="This game is already in your plan."
+			if task==member.task and task.get("path",[]).is_empty() and float(task.get("elapsed",0.0))>0.0:
+				option.label="Playing here"; option.detail="You are already playing at this table."
+			return option
+	if member.queue.size()>=MAX_QUEUE:
+		option.label="Plan full"; option.detail="Make room in your plan before joining."
+		return option
+	if not _can_reach_object(state.lots[member.lot_id],_position(member),object):
+		option.label="No path to game"; option.detail="There is no path to reach this table."
+		return option
+	option.available=true
+	if count>=Tabletop.CAPACITY:
+		option.label="Queue game"; option.detail="All four places are reserved. Wait for a place after your current plans."
+	return option
 
 func care_option(member: Dictionary, need: String) -> Dictionary:
 	var status := care_status(member,need)

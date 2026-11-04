@@ -43,6 +43,8 @@ Resident names now stay in front of furniture, with quiet actionable thought
 cues for unplanned pressing needs.
 The checkered game table now supports solo puzzles and voluntary shared games
 with separate places, fun/social restoration, and a tabletop pastime preference.
+People cards discover ongoing games and let a visiting resident join or wait,
+preserving their existing planned activities.
 See [the playtest log](PLAYTEST_LOG.md) for evidence
 and current usability priorities.
 
@@ -68,8 +70,8 @@ understandable result. Fuzz placement and reopening around residents/visitors.
   controls, actionable need thoughts, and resident camera focus are implemented.
   Travel/waiting feedback and estimated activity progress are implemented.
 - Object reservations, shared activities, conversations, basic relationships,
-  and voluntary tabletop games are implemented. Make ongoing games easier to
-  discover when visiting and add richer recreation.
+  voluntary tabletop games, and discovery/joining from People are implemented.
+  Add richer recreation and shared activities.
 - Activity poses and sparse positional sounds are implemented. Improve resident
   readability, thoughtful need cues, richer animation, and the original art pass.
 

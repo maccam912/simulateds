@@ -55,6 +55,8 @@ var _hobby_options: Dictionary = {}
 var _hobby_seen: Dictionary = {}
 var people_button: Button
 var social_buttons: Dictionary = {}
+var game_buttons: Dictionary = {}
+var _tabletop_options: Dictionary = {}
 var _social_focus := ""
 var _friend_seen: Dictionary = {}
 var _context_page := "activities"
@@ -488,10 +490,14 @@ func _refresh() -> void:
 	if _context_page=="wishes" and not build_mode:
 		tools_signature+=str(member.get("wishes",{}))+str(day)+str(member.get("task",{}).get("id",""))+str(member.get("queue",[]))
 	if _context_page=="people" and not build_mode:
+		_tabletop_options.clear()
 		tools_signature+=str(state.get("friendships",{}))+str(day)+str(member.get("task",{}).get("id",""))+str(member.get("queue",[]))
 		for household: Dictionary in state.families.values():
 			tools_signature+=str(household.get("identity_revision",0))+str(household.online)+str(state.lots[household.home_lot].building)
-			for resident: Dictionary in household.members: tools_signature+=str([resident.id,resident.lot_id,resident.task.get("id",""),resident.action])
+			for resident: Dictionary in household.members:
+				tools_signature+=str([resident.id,resident.lot_id,resident.task.get("id",""),resident.action])
+				if not member.is_empty(): _tabletop_options[resident.id]=Session.world.tabletop_option(member,str(resident.id))
+		tools_signature+=str(_tabletop_options)
 	if _context_page=="hobbies" and not build_mode:
 		_hobby_options.clear()
 		if not member.is_empty():
@@ -635,6 +641,10 @@ func _clear(node: Node) -> void:
 
 func _rebuild_context(building: bool, lot: Dictionary) -> void:
 	var follow_social := false
+	var people_focus: Dictionary={}
+	var focused := get_viewport().gui_get_focus_owner()
+	if _context_page=="people" and focused!=null and tools_box.is_ancestor_of(focused) and focused.has_meta("person_id"):
+		people_focus={"target":str(focused.get_meta("person_id")),"action":str(focused.get_meta("people_action")),"member":selected_member}
 	if _context_page=="people" and social_buttons.has(_social_focus) and is_instance_valid(social_buttons[_social_focus]):
 		var card: Control=social_buttons[_social_focus].get_parent().get_parent()
 		follow_social=tools_box.get_parent().get_global_rect().intersects(card.get_global_rect())
@@ -649,6 +659,7 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 	elif _context_page=="people":
 		_rebuild_people()
 		if follow_social: call_deferred("_follow_social",_social_focus)
+		if not people_focus.is_empty(): call_deferred("_restore_people_focus",people_focus)
 	elif _context_page=="care": _rebuild_care()
 	elif _context_page=="hobbies": _rebuild_hobbies()
 	else:
@@ -1007,6 +1018,7 @@ func _rebuild_people() -> void:
 	if member.is_empty(): return
 	activity_label.text=str(member.name)+"’s people"
 	social_buttons.clear()
+	game_buttons.clear()
 	var rows: Array=[]
 	for family: Dictionary in Session.state.families.values():
 		for other: Dictionary in family.members:
@@ -1040,7 +1052,19 @@ func _rebuild_people() -> void:
 		var building: bool=Session.state.lots[other.lot_id].building
 		var text := "Under construction" if building else status if not status.is_empty() else ("Queue chat" if Session.world._chat_busy(other,member) else "Chat") if here else "Visit"
 		var button := _button(text,func(): _social_action(str(other.id)))
+		button.set_meta("person_id",str(other.id)); button.set_meta("people_action","chat")
 		button.disabled=building or not status.is_empty(); body.add_child(button); social_buttons[other.id]=button
+		var game_option: Dictionary=_tabletop_options.get(other.id,{})
+		if not game_option.is_empty():
+			var game_summary := _label(str(game_option.summary),12,Style.GREEN)
+			game_summary.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; game_summary.custom_minimum_size.x=200; body.add_child(game_summary)
+			if here:
+				var join := _button(str(game_option.label),func(): _join_game(str(other.id),str(game_option.activity_id)))
+				join.disabled=not game_option.available; join.tooltip_text=str(game_option.detail)
+				join.set_meta("person_id",str(other.id)); join.set_meta("people_action","game")
+				body.add_child(join); game_buttons[other.id]=join
+			else:
+				var visit_hint := _label("Visit this home to join.",11,Style.MUTED); body.add_child(visit_hint)
 		var detail := ""
 		if not family.online: detail="Household away · Progress waits"
 		elif int(bond.get("score",0))>=100: detail="A lasting friendship"
@@ -1048,7 +1072,7 @@ func _rebuild_people() -> void:
 		elif int(bond.get("last_chat_day",0))>0: detail="Last catch-up: day %d" % int(bond.last_chat_day)
 		if not detail.is_empty():
 			var hint := _label(detail,11,Style.MUTED); hint.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; hint.custom_minimum_size.x=200; body.add_child(hint)
-	var note := _label("Two catch-ups a day. No decay while away.",12,Style.MUTED)
+	var note := _label("Chat builds friendship. Join a game for fun and company; your current plans come first.",12,Style.MUTED)
 	note.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; note.custom_minimum_size.x=200; context_box.add_child(note)
 
 func _social_action(target_id: String) -> void:
@@ -1061,6 +1085,29 @@ func _social_action(target_id: String) -> void:
 	else:
 		_send({"type":"visit","member_id":member.id,"lot_id":other.lot_id})
 		viewed_lot=str(other.lot_id); _refresh()
+
+func _join_game(target_id: String, activity_id: String) -> void:
+	_social_focus=target_id
+	var member := _member()
+	if member.is_empty(): return
+	_send({"type":"join_game","member_id":member.id,"lot_id":member.lot_id,"companion_id":target_id,"activity_id":activity_id})
+
+func _restore_people_focus(previous: Dictionary) -> void:
+	await get_tree().process_frame
+	if _context_page!="people" or selected_member!=previous.member or not context_panel.visible: return
+	if get_viewport().gui_get_focus_owner()!=null: return
+	var choices: Dictionary=game_buttons if previous.action=="game" else social_buttons
+	var button: Button=choices.get(previous.target)
+	if button==null or not is_instance_valid(button) or button.disabled: button=social_buttons.get(previous.target)
+	if button==null or not is_instance_valid(button) or button.disabled: return
+	button.grab_focus()
+	# Focus scrolling happens after layout; reveal the person's name along with
+	# the action once that scroll has settled, when their whole card can fit.
+	await get_tree().process_frame
+	if not is_instance_valid(button) or not button.has_focus(): return
+	var card: Control=button.get_parent().get_parent()
+	var scroll: ScrollContainer=tools_box.get_parent()
+	scroll.ensure_control_visible(card if card.size.y<=scroll.size.y else button)
 
 func _announce_friendships(family: Dictionary) -> void:
 	var own_ids: Array=[]
