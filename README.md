@@ -101,6 +101,11 @@ or shell expressions.
   The preview shows the full price; **R** changes the doorway side. Existing
   floors, walls, and doors are preserved where possible and only new pieces cost
   money. **Escape** cancels the first corner. Rooms need at least 3 × 3 tiles.
+- **Floor finishes** and **Wall finishes** in the catalog offer wood, tile, carpet,
+  and paint palettes. Choose a finish and two corners to decorate an area; click
+  the same tile twice for a single tile. The preview shows the look and exact
+  price. Only changed existing surfaces cost money (§4 per floor tile, §3 per
+  wall tile), and one Undo restores the whole area. Finishes have no resale bonus.
 - **Plan** shows the selected resident's actions, individual cancel buttons, and
   autonomy switch. **Wishes** gives optional activities, rewards, and a saved
   personal journal. Wishes never expire; completed sets can renew on a later day.

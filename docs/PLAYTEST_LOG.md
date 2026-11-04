@@ -313,3 +313,39 @@ building and visits. The homes still share the same cream walls and oak floors,
 which weakens the pleasure of making each lot one's own. Next: floor and wall
 finishes with clear previews, per-tile costs, and the existing undo/save/network
 boundaries, followed by a decorating playtest in differently shaped rooms.
+
+## 2026-11-04 · A home with its own colors
+
+Construction now includes six floor finishes and six wall paints. Two corners
+select existing surfaces; the on-house preview shows the chosen texture/color,
+changed tile count, and exact price. A floor tile costs §4 to refinish and a wall
+tile §3. Unchanged tiles and empty ground add no cost. One Undo restores the whole
+area. Finishes are sparse appearance data, independent of routing. Erasing a
+surface or replacing a painted wall with a door removes the obsolete finish.
+Draft, discard, undo/redo, and save behavior use deep copies of the finish maps.
+
+Validation: eighteen local suites, the real Iroh host/two-client checks, and
+dedicated startup passed. Model coverage includes reversed corners, furniture
+under a finish, exact spending, atomic rejection, no-op paint, stale commands,
+ownership, nested history independence, room doorway replacement, legacy saves,
+JSON round-trips, and draft cleanup on disconnect. Multiplayer checks paint an
+added room, reject a repeated stale request, and retain its finish on reconnect.
+
+Graphical input checks passed at 1440×900 and 1280×720/125% UI scale. They previewed
+and bought 21 slate floor tiles for §84, painted an elevated visible wall face,
+repainted the perimeter, built an extension, and carpeted nine interior tiles for
+§36 with exact undo/redo. The first wall fixture aimed at a neighboring top face;
+the corrected point tests the intended visible side face. An area-selection
+fixture was also moved onto unobstructed lawn so it selected the intended bounds.
+Visual review prompted a two-column palette, reset scroll on entry, and removal
+of redundant footer controls so all six finishes fit at compact size. Night tint
+was reduced to keep selected hues recognizable while keeping interiors readable.
+
+The preceding care checkpoint completed all four CI platform jobs. These are
+agent playtests and build results, not physical Android or family playtests.
+
+Fresh assessment: the household loop and decorating now offer useful choices,
+but recreation still mostly ends when a need bar fills. Next: small persistent
+hobby progress from deliberately completed activities, with readable milestones,
+bounded rewards, and no loss from being away. Keep autonomy useful without making
+an unattended household earn unlimited progress.

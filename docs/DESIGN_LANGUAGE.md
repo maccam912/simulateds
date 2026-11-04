@@ -46,6 +46,12 @@ Use the world for richer color: oak, worn painted wood, cream plaster, terracott
 green planting, and soft blue upholstery. Increase detail around objects that
 residents use. Avoid decorative UI noise that competes with those objects.
 
+The decorating palette uses six floor finishes and six wall paints. Woods use
+board seams, tiles use grout/checkers, and carpet uses restrained flecks. Swatches
+show names as well as colors. Preview surfaces directly on the house before
+purchase, with an exact price and an area outline. Night lighting warms finishes
+gently enough to preserve the player's chosen hues.
+
 ## Typography and layout
 
 Use one legible interface family and a system monospace face for development

@@ -28,6 +28,8 @@ lighting, two-corner room construction with a shared cost/obstruction preview,
 household names/appearance, persistent friendships with a People panel, and
 household postcards with optional gifts for asynchronous play. Needs now offer
 care shortcuts and a derived mood summary, backed by host-selected activities.
+Floor/wall finish palettes now support priced rectangle painting, preview, and
+whole-area undo alongside room construction.
 See [the playtest log](PLAYTEST_LOG.md) for evidence
 and current usability priorities.
 
@@ -35,7 +37,8 @@ and current usability priorities.
 
 - Edge-based walls, room detection, window and door orientation, and roofs.
 - Drag painting and richer selection; placement previews, furniture moves,
-  two-corner rooms, undo/redo, and exact undo refunds are implemented.
+  two-corner rooms, rectangle decoration, undo/redo, and exact undo refunds are
+  implemented. Add room-aware fill and broader architectural options.
 - Room blueprints and reusable layouts on the existing draft/commit boundary.
 - Stronger routing checks and helpful "cannot reach this" presentation.
 - Camera pan/zoom/rotation and a clear cutaway-wall policy.

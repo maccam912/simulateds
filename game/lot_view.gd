@@ -7,6 +7,7 @@ signal entity_clicked(target: Dictionary)
 const Catalog = preload("res://game/catalog.gd")
 const BuildRules = preload("res://game/build_rules.gd")
 const RoomPlan = preload("res://game/room_plan.gd")
+const Finishes = preload("res://game/finishes.gd")
 const ResidentMotion = preload("res://game/resident_motion.gd")
 const Appearance = preload("res://game/appearance.gd")
 const Daylight = preload("res://game/daylight.gd")
@@ -20,6 +21,12 @@ var build_rotation := 0
 var build_object_id := ""
 var room_anchor := Vector2i(-1,-1)
 var room_pending := false
+var paint_anchor := Vector2i(-1,-1)
+var paint_pending := false
+var paint_plan: Dictionary = {}
+var finish_choice := ""
+var _paint_cells: Dictionary = {}
+var _preview_finish := ""
 var preview_result: Dictionary = {}
 var _preview_signature := ""
 var building := false
@@ -93,6 +100,7 @@ func _gui_input(event: InputEvent) -> void:
 			elif event.button_index == MOUSE_BUTTON_LEFT:
 				var target := hit_target(event.position)
 				var cell := cell_at(event.position)
+				if building and build_kind=="finish_wall" and target.get("type")=="wall": cell=Vector2i(int(target.x),int(target.y))
 				if building and build_kind=="move" and build_object_id.is_empty() and target.get("type")=="object":
 					entity_clicked.emit(target)
 				elif not building and not target.is_empty():
@@ -108,6 +116,7 @@ func _gui_input(event: InputEvent) -> void:
 		_pointer = event.position
 		hover_cell = cell_at(event.position)
 		hover_target = hit_target(event.position)
+		if building and build_kind=="finish_wall" and hover_target.get("type")=="wall": hover_cell=Vector2i(int(hover_target.x),int(hover_target.y))
 		hovered.emit(hover_cell)
 
 func hit_target(point: Vector2) -> Dictionary:
@@ -167,6 +176,7 @@ func _draw() -> void:
 	for cell in lot.get("floors", []): floors[Vector2i(int(cell[0]),int(cell[1]))] = true
 	for cell in lot.get("walls", []): walls[Vector2i(int(cell[0]),int(cell[1]))] = true
 	for cell in lot.get("doors", []): doors[Vector2i(int(cell[0]),int(cell[1]))] = true
+	_update_finish_preview(lot)
 	# Planting sits along the property edges without boxing the entire view in.
 	for y in [1,3,5,7,9,11]:
 		_bush(0.35,float(y),scale_factor)
@@ -191,12 +201,7 @@ func _draw() -> void:
 			if x == 8 and y >= 11:
 				_diamond(x,y,1,1,Daylight.outside(Color("c5c4a5"),light),0,Daylight.outside(Color("b1b496"),light))
 			if floors.has(cell):
-				var floor_color := Color("d9bd93") if (x+y)%2==0 else Color("d5b58c")
-				floor_color=floor_color.lerp(Color("e8c38c"),float(light.night)*0.35)
-				_diamond(x,y,1,1,floor_color,1,Color("b59b7c"))
-				var a := grid_point(x+0.5,y)+Vector2(0,-1)
-				var b := grid_point(x+0.5,y+1)+Vector2(0,-1)
-				draw_line(a,b,Color("c6a880"),0.7,true)
+				_draw_floor_finish(x,y,Finishes.PALETTES.floor[_surface_finish(lot,"floor",x,y)])
 	# Paint rear walls first. Near walls use a low cutaway for readable interiors.
 	for depth in range(31):
 		for x in range(16):
@@ -206,9 +211,12 @@ func _draw() -> void:
 			if walls.has(cell):
 				var rear := (floors.has(cell+Vector2i.RIGHT) and not floors.has(cell+Vector2i.LEFT)) or (floors.has(cell+Vector2i.DOWN) and not floors.has(cell+Vector2i.UP))
 				var h := (39.0 if rear else 8.0)*scale_factor
-				_block(x,y,1,1,h,Color("e6e2c6").lerp(Color("f3dfb6"),float(light.night)*0.45))
+				var color := Color(Finishes.PALETTES.wall[_surface_finish(lot,"wall",x,y)].color).lerp(Color("f3dfb6"),float(light.night)*0.22)
+				if building and build_kind=="finish_wall": _drawing_target={"type":"wall","x":x,"y":y}
+				_block(x,y,1,1,h,color)
 				if h > 20*scale_factor:
-					_diamond(x+0.04,y+0.04,0.92,0.92,Color("f6efd7"),h)
+					_diamond(x+0.04,y+0.04,0.92,0.92,color.lightened(0.12),h)
+				_drawing_target={}
 			if doors.has(cell):
 				_diamond(x,y,1,1,Color("8f6c50"),2*scale_factor)
 				_block(x,y,0.12,0.12,33*scale_factor,Color("c7a376"))
@@ -234,6 +242,7 @@ func _draw() -> void:
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if not building and not hover_target.is_empty() else Control.CURSOR_ARROW
 	if building and build_kind=="room":
 		_draw_room_preview(lot)
+	elif building and build_kind in ["finish_floor","finish_wall"]: _draw_finish_preview()
 	elif _in_bounds(hover_cell) and (building or hover_target.is_empty()):
 		var tint := Color(0.96,0.99,0.81,0.32)
 		var outline := Color("f8f3c7")
@@ -552,6 +561,53 @@ func _draw_street_lights(s: float) -> void:
 			for ring in range(12,0,-1):
 				draw_circle(bulb,float(ring)*1.33*s,Color(1.0,0.86,0.55,night*0.014))
 		draw_rect(Rect2(bulb-Vector2(4,2)*s,Vector2(8,5)*s),Color("fbe5a3") if night>0.2 else Color("a4ae91"))
+
+func _update_finish_preview(lot: Dictionary) -> void:
+	_paint_cells.clear(); _preview_finish=""
+	if not building or not build_kind in ["finish_floor","finish_wall"]: return
+	var plan: Dictionary={}
+	if paint_pending: plan=paint_plan
+	elif _in_bounds(hover_cell):
+		var anchor := hover_cell if paint_anchor.x<0 else paint_anchor
+		var signature := str(["finish",lot_id,lot.revision,lot.funds,anchor,hover_cell,build_kind,finish_choice])
+		if signature!=_preview_signature:
+			_preview_signature=signature
+			preview_result=Finishes.inspect(lot,{"surface":build_kind.trim_prefix("finish_"),"finish":finish_choice,"x":anchor.x,"y":anchor.y,"end_x":hover_cell.x,"end_y":hover_cell.y})
+		plan=preview_result
+	if plan.get("ok",false):
+		_preview_finish=str(plan.finish)
+		for cell: Array in plan.cells: _paint_cells[Finishes.key(int(cell[0]),int(cell[1]))]=true
+
+func _surface_finish(lot: Dictionary, surface: String, x: int, y: int) -> String:
+	if build_kind=="finish_"+surface and _paint_cells.has(Finishes.key(x,y)): return _preview_finish
+	return Finishes.at(lot,surface,x,y)
+
+func _draw_floor_finish(x: int, y: int, definition: Dictionary) -> void:
+	var color := Color(definition.color)
+	if definition.pattern=="checkers" and (x+y)%2==1: color=Color("e4dfca")
+	elif (x+y)%2==1: color=color.darkened(0.02)
+	color=color.lerp(Color("e8c38c"),float(light.night)*0.18)
+	var edge := color.darkened(0.10 if definition.pattern=="carpet" else 0.17)
+	_diamond(x,y,1,1,color,1,edge)
+	if definition.pattern=="boards":
+		draw_line(grid_point(x+0.5,y)+Vector2(0,-1),grid_point(x+0.5,y+1)+Vector2(0,-1),edge,0.7,true)
+	elif definition.pattern=="tiles":
+		_diamond(x+0.05,y+0.05,0.9,0.9,color.lightened(0.04),1)
+	elif definition.pattern=="carpet":
+		for offset: Vector2 in [Vector2(0.25,0.25),Vector2(0.75,0.75)]:
+			draw_circle(grid_point(x+offset.x,y+offset.y)+Vector2(0,-1),0.5*_cell.x/48.0,edge)
+
+func _draw_finish_preview() -> void:
+	if paint_pending:
+		_draw_preview_label("Decorating…",true); return
+	if not _in_bounds(hover_cell): return
+	var anchor := hover_cell if paint_anchor.x<0 else paint_anchor
+	var low := Vector2i(mini(anchor.x,hover_cell.x),mini(anchor.y,hover_cell.y))
+	var high := Vector2i(maxi(anchor.x,hover_cell.x),maxi(anchor.y,hover_cell.y))
+	var valid := bool(preview_result.get("ok",false))
+	_diamond(low.x,low.y,high.x-low.x+1,high.y-low.y+1,Color.TRANSPARENT if valid else Color(0.94,0.36,0.3,0.22),3,Color("d8f1b2") if valid else Color("ffab8f"))
+	var hint := "Click first corner · " if paint_anchor.x<0 else "Click to apply · "
+	_draw_preview_label((hint if valid else "")+str(preview_result.get("message","")),valid)
 
 func _draw_room_preview(lot: Dictionary) -> void:
 	if not _in_bounds(hover_cell): return

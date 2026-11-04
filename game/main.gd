@@ -13,6 +13,7 @@ const Friendships = preload("res://game/friendships.gd")
 const Portrait = preload("res://game/resident_portrait.gd")
 const Appearance = preload("res://game/appearance.gd")
 const Wellbeing = preload("res://game/wellbeing.gd")
+const Finishes = preload("res://game/finishes.gd")
 const LotView = preload("res://game/lot_view.gd")
 var viewed_lot := ""
 var selected_member := ""
@@ -82,6 +83,10 @@ var _moving_object := ""
 var _move_request: Dictionary = {}
 var _room_anchor := Vector2i(-1,-1)
 var _room_request: Dictionary = {}
+var _paint_anchor := Vector2i(-1,-1)
+var _paint_request: Dictionary = {}
+var finish_choice := {"floor":"walnut","wall":"sage"}
+var finish_buttons: Dictionary = {}
 
 func _ready() -> void:
 	if "--native-smoke" in OS.get_cmdline_user_args():
@@ -320,6 +325,7 @@ func _refresh() -> void:
 		viewed_lot = str(family.home_lot)
 		_selected_object = ""
 		_moving_object = ""; _move_request.clear(); _wish_seen.clear(); _friend_seen.clear(); _room_anchor=Vector2i(-1,-1); _room_request.clear()
+		_paint_anchor=Vector2i(-1,-1); _paint_request.clear()
 	if viewed_lot.is_empty() or not state.get("lots",{}).has(viewed_lot):
 		viewed_lot = str(family.get("home_lot","lot_1"))
 	if selected_member.is_empty() and not family.get("members",[]).is_empty():
@@ -347,6 +353,13 @@ func _refresh() -> void:
 		_room_anchor=Vector2i(-1,-1); _room_request.clear()
 	lot_view.room_anchor=_room_anchor
 	lot_view.room_pending=not _room_request.is_empty()
+	if not building or not mine or _paint_surface().is_empty():
+		_paint_anchor=Vector2i(-1,-1); _paint_request.clear()
+	elif not _paint_request.is_empty() and int(lot.revision)>int(_paint_request.revision) and Finishes.is_applied(lot,_paint_request.plan):
+		_paint_anchor=Vector2i(-1,-1); _paint_request.clear()
+	lot_view.paint_anchor=_paint_anchor; lot_view.paint_pending=not _paint_request.is_empty()
+	lot_view.paint_plan=_paint_request.get("plan",{})
+	lot_view.finish_choice=str(finish_choice.get(_paint_surface(),""))
 	lot_view.world=state; lot_view.lot_id=viewed_lot; lot_view.selected_member=selected_member
 	lot_view.build_object_id=_moving_object
 	lot_view.building=building and mine; lot_view.build_kind=selected_tool; lot_view.build_rotation=build_rotation
@@ -421,6 +434,7 @@ func _refresh() -> void:
 		if hud.visible: Soundscape.set_context("build" if build_mode else "live")
 	palette_button.text = "Catalog" if build_mode else "Activities"
 	var tools_signature := str(building and mine)+selected_tool+_moving_object+str(_move_request.is_empty())+_selected_object+str(build_rotation)+viewed_lot+str(lot.get("revision",0))+_context_page+selected_member+str(_room_anchor)+str(_room_request.is_empty())
+	tools_signature+=str(_paint_anchor)+str(_paint_request.is_empty())+str(finish_choice)
 	if _context_page=="wishes" and not build_mode:
 		tools_signature+=str(member.get("wishes",{}))+str(day)+str(member.get("task",{}).get("id",""))+str(member.get("queue",[]))
 	if _context_page=="people" and not build_mode:
@@ -434,6 +448,7 @@ func _refresh() -> void:
 		_rebuild_context(building and mine,lot)
 	help_label.text="Click to place · " + Preferences.action_label("rotate") + " rotates · Ctrl/Cmd+Z undoes" if building and mine else "Click a need to care for it · Click the ground to walk"
 	if building and mine and selected_tool=="room": help_label.text="Click two opposite corners · " + Preferences.action_label("rotate") + " changes door side · Escape cancels"
+	if building and mine and not _paint_surface().is_empty(): help_label.text="Click two corners to decorate · Same tile twice for one · Escape cancels"
 	help_label.tooltip_text=help_label.text
 	if room_label!=null:
 		room_label.text=Session.status+("\nRoom code: "+Rooms.code if not Rooms.code.is_empty() else "")
@@ -506,27 +521,10 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 	_clear(tools_box); _clear(context_box)
 	if building:
 		activity_label.text="Build & buy"
-		for heading in ["Structure","Everyday essentials","A little recreation"]:
-			tools_box.add_child(_label(heading.to_upper(),10,Style.MUTED))
-			var keys: Array=[]
-			match heading:
-				"Structure": keys=["floor","wall","door"]
-				"Everyday essentials": keys=["bed","fridge","shower","toilet"]
-				_: keys=["sofa","tv","bookshelf","plant","table"]
-			if heading=="Structure":
-				var room_button := _button(("•" if selected_tool=="room" else "+")+"  Room · choose two corners",func(): _select_build_tool("room"),selected_tool=="room")
-				room_button.alignment=HORIZONTAL_ALIGNMENT_LEFT; room_button.add_theme_font_size_override("font_size",12)
-				room_button.tooltip_text="Floors, perimeter walls, and a doorway in one edit. Preview the total before building."
-				tools_box.add_child(room_button)
-			for kind in keys:
-				var item: Dictionary=Catalog.ITEMS.get(kind,{})
-				var b:=_button("%s  %s   § %d" % ["•" if selected_tool==kind else "+",item.get("name",kind),int(item.get("cost",0))],func(): _select_build_tool(kind))
-				b.alignment=HORIZONTAL_ALIGNMENT_LEFT
-				b.add_theme_font_size_override("font_size",12)
-				b.tooltip_text=str(item.get("description",""))
-				if kind==selected_tool: b.add_theme_stylebox_override("normal",Style.box(Color("3b514b"),9,Style.GREEN))
-				tools_box.add_child(b)
+		if _paint_surface().is_empty(): _build_catalog()
+		else: _build_finish_palette(_paint_surface())
 		var edit_row := HBoxContainer.new(); context_box.add_child(edit_row)
+		edit_row.visible=_paint_surface().is_empty()
 		var move_label := "Move" if _moving_object.is_empty() else "Cancel move"
 		var move_button := _button(move_label,func():
 			_select_build_tool("move"),selected_tool=="move")
@@ -547,6 +545,10 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 		var rotation_button := _button(("Door side %d" % (build_rotation+1)) if selected_tool=="room" else "Rotate %d°" % (build_rotation*90),_rotate)
 		rotation_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; finish_row.add_child(rotation_button)
 		rotation_button.tooltip_text=("Change the room doorway side" if selected_tool=="room" else "Rotate furnishing") + " · " + Preferences.action_label("rotate")
+		if not _paint_surface().is_empty():
+			rotation_button.text="Cancel area"; rotation_button.tooltip_text="Cancel the first painting corner · Escape"
+			rotation_button.pressed.disconnect(_rotate); rotation_button.pressed.connect(func(): _paint_anchor=Vector2i(-1,-1); _refresh())
+			rotation_button.disabled=_paint_anchor.x<0 or not _paint_request.is_empty()
 		var discard_button := _button("Discard draft",func(): _send({"type":"build_cancel","lot_id":viewed_lot}))
 		discard_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; finish_row.add_child(discard_button)
 		discard_button.tooltip_text="Restore the whole house and budget from before construction."
@@ -554,8 +556,10 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 		var help := str(selected.get("description","Remove an object or tile. A partial refund returns to your household."))
 		if selected_tool=="room": help="Floors, walls, and a doorway. Existing doors stay."
 		if selected_tool=="move": help="Click furniture, then a new spot. " + Preferences.action_label("rotate") + " rotates · Escape cancels."
+		if not _paint_surface().is_empty(): help="Two corners select an area. Only existing "+("floors" if _paint_surface()=="floor" else "walls")+" with a different finish are charged."
 		var description:=_label(help,12,Style.MUTED)
 		description.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; description.custom_minimum_size.x=200; context_box.add_child(description)
+		description.visible=_paint_surface().is_empty()
 	elif _context_page=="wishes":
 		_rebuild_wishes()
 	elif _context_page=="people":
@@ -615,6 +619,7 @@ func _announce_wishes(family: Dictionary) -> void:
 		_wish_seen[resident.id]=count
 
 func _select_lot(id: String) -> void:
+	_paint_anchor=Vector2i(-1,-1); _paint_request.clear()
 	viewed_lot=id; _selected_object=""; _room_anchor=Vector2i(-1,-1); _room_request.clear(); neighborhood_panel.hide(); _refresh()
 
 func _send(command: Dictionary) -> void:
@@ -622,7 +627,7 @@ func _send(command: Dictionary) -> void:
 		_move_request=command.duplicate()
 		_move_request.revision=Session.state.lots[viewed_lot].revision
 	Session.command(command)
-	if Session.is_authority() and Session.last_action_ok and command.get("type") in ["place","build_room"]: Soundscape.play_ui("build")
+	if Session.is_authority() and Session.last_action_ok and command.get("type") in ["place","build_room","paint"]: Soundscape.play_ui("build")
 	_refresh()
 
 func _entity_clicked(target: Dictionary) -> void:
@@ -637,8 +642,15 @@ func _entity_clicked(target: Dictionary) -> void:
 		_send({"type":"interact","member_id":selected_member,"lot_id":viewed_lot,"target_id":str(target.id)})
 
 func _select_build_tool(kind: String) -> void:
+	var reset_scroll := kind.begins_with("finish_") or not _paint_surface().is_empty()
 	selected_tool=kind; _moving_object=""; _move_request.clear()
+	_paint_anchor=Vector2i(-1,-1); _paint_request.clear()
 	_room_anchor=Vector2i(-1,-1); _room_request.clear(); _refresh()
+	if reset_scroll: call_deferred("_reset_catalog_scroll")
+
+func _reset_catalog_scroll() -> void:
+	await get_tree().process_frame
+	tools_box.get_parent().scroll_vertical=0
 
 func _select_moving_object(id: String) -> void:
 	for object: Dictionary in Session.state.lots[viewed_lot].objects:
@@ -649,6 +661,15 @@ func _tile_clicked(cell: Vector2i) -> void:
 	var lot: Dictionary=Session.state.get("lots",{}).get(viewed_lot,{})
 	if lot.is_empty(): return
 	if bool(lot.building) and str(lot.owner)==str(Session.profile_id):
+		if not _paint_surface().is_empty():
+			if not _paint_request.is_empty(): return
+			if _paint_anchor.x<0: _paint_anchor=cell; _refresh(); return
+			var surface := _paint_surface()
+			var command := {"type":"paint","lot_id":viewed_lot,"surface":surface,"finish":finish_choice[surface],"x":_paint_anchor.x,"y":_paint_anchor.y,"end_x":cell.x,"end_y":cell.y,"revision":lot.revision}
+			var plan := Finishes.inspect(lot,command)
+			if not plan.ok: _notice(str(plan.message)); Soundscape.play_ui("error"); return
+			_paint_request={"revision":lot.revision,"plan":plan}; _send(command)
+			return
 		if selected_tool=="room":
 			if not _room_request.is_empty(): return
 			if _room_anchor.x<0:
@@ -715,6 +736,7 @@ func _build_history(redo: bool) -> void:
 	_send({"type":"build_redo" if redo else "build_undo","lot_id":viewed_lot,"revision":lot.get("revision",-1)})
 
 func _rotate() -> void:
+	if not _paint_surface().is_empty(): return
 	build_rotation=(build_rotation+1)%4; _refresh()
 
 func _toggle_fullscreen() -> void:
@@ -742,7 +764,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		if lot_view.building and (event.ctrl_pressed or event.meta_pressed) and event.keycode in [KEY_Z,KEY_Y]:
 			_build_history(event.shift_pressed or event.keycode==KEY_Y)
 		elif event.is_action_pressed("pause") or event.keycode==KEY_ESCAPE:
-			if _room_anchor.x>=0 and _room_request.is_empty():
+			if _paint_anchor.x>=0 and _paint_request.is_empty():
+				_paint_anchor=Vector2i(-1,-1); _refresh()
+			elif _room_anchor.x>=0 and _room_request.is_empty():
 				_room_anchor=Vector2i(-1,-1); _refresh()
 			elif not _moving_object.is_empty() and _move_request.is_empty():
 				_moving_object=""; _refresh()
@@ -764,6 +788,7 @@ func _notice(message: String) -> void:
 		notice_panel.show()
 		if not Session.last_action_ok:
 			_move_request.clear(); _room_request.clear()
+			_paint_request.clear()
 			Soundscape.play_ui("error")
 
 func _open_connection() -> void:
@@ -800,6 +825,36 @@ func _open_connection() -> void:
 
 func _open_people() -> void:
 	_context_page="people"; _refresh(); _show_tray(context_panel,true)
+
+func _paint_surface() -> String:
+	return selected_tool.trim_prefix("finish_") if selected_tool in ["finish_floor","finish_wall"] else ""
+
+func _build_finish_palette(surface: String) -> void:
+	activity_label.text=surface.capitalize()+" finishes"
+	finish_buttons.clear()
+	var tabs := HBoxContainer.new(); tools_box.add_child(tabs)
+	tabs.add_theme_constant_override("separation",4)
+	var back := _button("‹ Catalog",func(): _select_build_tool("floor")); tabs.add_child(back)
+	for layer: String in ["floor","wall"]:
+		var tab := _button(layer.capitalize()+"s",func(): _select_build_tool("finish_"+layer),surface==layer); tab.size_flags_horizontal=Control.SIZE_EXPAND_FILL; tabs.add_child(tab)
+	for tab: Button in tabs.get_children():
+		tab.add_theme_font_size_override("font_size",11)
+		for part: String in ["normal","hover","pressed","disabled"]:
+			var style := tab.get_theme_stylebox(part).duplicate(); style.content_margin_left=6; style.content_margin_right=6; style.content_margin_top=6; style.content_margin_bottom=6; tab.add_theme_stylebox_override(part,style)
+	tools_box.add_child(_label("§%d per changed %s tile" % [Finishes.COST[surface],surface],11,Style.MUTED))
+	var swatches := GridContainer.new(); swatches.columns=2; swatches.add_theme_constant_override("h_separation",6); swatches.add_theme_constant_override("v_separation",6); tools_box.add_child(swatches)
+	for id: String in Finishes.PALETTES[surface]:
+		var definition: Dictionary=Finishes.PALETTES[surface][id]
+		var title: String=definition.name; var split := title.rfind(" ")
+		if split>=0: title=title.substr(0,split)+"\n"+title.substr(split+1)
+		var button := _button(title,func(): finish_choice[surface]=id; _paint_anchor=Vector2i(-1,-1); _refresh(),finish_choice[surface]==id)
+		button.alignment=HORIZONTAL_ALIGNMENT_LEFT; button.add_theme_font_size_override("font_size",12)
+		button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; button.custom_minimum_size.y=50
+		for part: String in ["normal","hover","pressed","disabled"]:
+			var style := button.get_theme_stylebox(part).duplicate(); style.content_margin_left=6; style.content_margin_right=6; style.content_margin_top=5; style.content_margin_bottom=5; button.add_theme_stylebox_override(part,style)
+		button.disabled=not _paint_request.is_empty(); button.tooltip_text="§%d per changed tile · Choose two corners" % int(Finishes.COST[surface])
+		var swatch := Image.create(14,24,false,Image.FORMAT_RGBA8); swatch.fill(Color(definition.color))
+		button.icon=ImageTexture.create_from_image(swatch); swatches.add_child(button); finish_buttons[id]=button
 
 func _mood_color(tone: String) -> Color:
 	return Color("df9785") if tone=="low" else Style.GOLD if tone=="warm" else Style.GREEN
@@ -910,3 +965,30 @@ func _follow_social(target_id: String) -> void:
 	if _context_page!="people" or target_id!=_social_focus or not context_panel.visible: return
 	if social_buttons.has(target_id) and is_instance_valid(social_buttons[target_id]):
 		tools_box.get_parent().ensure_control_visible(social_buttons[target_id].get_parent().get_parent())
+
+func _build_catalog() -> void:
+	for heading in ["Structure","Decorate","Everyday essentials","A little recreation"]:
+		tools_box.add_child(_label(heading.to_upper(),10,Style.MUTED))
+		var keys: Array=[]
+		match heading:
+			"Structure": keys=["floor","wall","door"]
+			"Decorate": keys=[]
+			"Everyday essentials": keys=["bed","fridge","shower","toilet"]
+			_: keys=["sofa","tv","bookshelf","plant","table"]
+		if heading=="Decorate":
+			for surface: String in ["floor","wall"]:
+				var button := _button(surface.capitalize()+" finishes",func(): _select_build_tool("finish_"+surface))
+				button.alignment=HORIZONTAL_ALIGNMENT_LEFT; tools_box.add_child(button)
+		if heading=="Structure":
+			var room_button := _button(("•" if selected_tool=="room" else "+")+"  Room · choose two corners",func(): _select_build_tool("room"),selected_tool=="room")
+			room_button.alignment=HORIZONTAL_ALIGNMENT_LEFT; room_button.add_theme_font_size_override("font_size",12)
+			room_button.tooltip_text="Floors, perimeter walls, and a doorway in one edit. Preview the total before building."
+			tools_box.add_child(room_button)
+		for kind in keys:
+			var item: Dictionary=Catalog.ITEMS.get(kind,{})
+			var b:=_button("%s  %s   § %d" % ["•" if selected_tool==kind else "+",item.get("name",kind),int(item.get("cost",0))],func(): _select_build_tool(kind))
+			b.alignment=HORIZONTAL_ALIGNMENT_LEFT
+			b.add_theme_font_size_override("font_size",12)
+			b.tooltip_text=str(item.get("description",""))
+			if kind==selected_tool: b.add_theme_stylebox_override("normal",Style.box(Color("3b514b"),9,Style.GREEN))
+			tools_box.add_child(b)

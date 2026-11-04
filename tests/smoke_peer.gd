@@ -147,6 +147,16 @@ func _client(index: String) -> void:
 		await create_timer(0.1).timeout
 	assert(not [14,2] in session.state.lots[home].doors,"Single undo did not remove the whole room")
 	await _command({"type":"build_redo","lot_id":home,"revision":session.state.lots[home].revision})
+	for _attempt in range(50):
+		if [14,1] in session.state.lots[home].floors: break
+		await create_timer(0.1).timeout
+	var paint := {"type":"paint","lot_id":home,"surface":"floor","finish":"sage_tile","x":14,"y":1,"end_x":14,"end_y":1,"revision":session.state.lots[home].revision}
+	await _command(paint)
+	await _command(paint,false)
+	for _attempt in range(50):
+		if session.state.lots[home].finishes.floor.get("14,1")=="sage_tile": break
+		await create_timer(0.1).timeout
+	assert(session.state.lots[home].finishes.floor.get("14,1")=="sage_tile","Painted floors did not replicate")
 	await _command({"type": "build_end", "lot_id": home})
 	await _command({"type":"autonomy","member_id":member_id,"enabled":false})
 	await _command({"type":"cancel","member_id":member_id})
@@ -217,6 +227,7 @@ func _client(index: String) -> void:
 	assert(int(preload("res://game/friendships.gd").bond(session.state,member_id,companion_id).get("score",0))==32,"Reconnect lost the friendship")
 	assert(session.state.families[identity].name=="Gardeners "+index and session.state.families[identity].members[1].appearance.style==1,"Reconnect lost household identity")
 	assert([14,1] in session.state.lots[home].floors and [14,2] in session.state.lots[home].doors,"Reconnect lost the new room")
+	assert(session.state.lots[home].finishes.floor.get("14,1")=="sage_tile","Reconnect lost the floor finish")
 	assert(int(session.world._object(session.state.lots[home],moved_id).x)==9, "Reconnect lost furnishing move")
 	assert(session.state.families[identity].members[0].wishes.journal==journal_before,"Reconnect lost the activity journal")
 	assert(not session.state.families[identity].members[0].autonomy, "Reconnect lost autonomy preference")

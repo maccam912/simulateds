@@ -39,7 +39,9 @@ static func inspect(lot: Dictionary, command: Dictionary, residents: Array) -> D
 	return plan
 
 static func apply(lot: Dictionary, plan: Dictionary) -> void:
-	for cell: Array in plan.remove_walls: lot.walls.erase(cell)
+	for cell: Array in plan.remove_walls:
+		lot.walls.erase(cell)
+		preload("res://game/finishes.gd").remove(lot,"wall",int(cell[0]),int(cell[1]))
 	for key: String in ["floors","walls","doors"]:
 		for cell: Array in plan[key]: lot[key].append(cell.duplicate())
 	lot.funds-=int(plan.cost)
