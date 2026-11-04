@@ -1,5 +1,6 @@
 extends SceneTree
 ## Real Iroh processes: two independent builders, visitor recall and reconnect.
+const Leisure = preload("res://game/shared_leisure.gd")
 const WalkFeedback = preload("res://game/walk_feedback.gd")
 var session: Node
 var ticket_path := ""
@@ -457,6 +458,12 @@ func _client(index: String) -> void:
 		var dancers: Array=preload("res://game/shared_leisure.gd").players(session.state,host_home,stereo_id)
 		if dancers.size()==2 and guest.action=="Dancing together" and guest.needs.social>dance_social+1.0:
 			assert(preload("res://game/shared_leisure.gd").place(dancers[0])!=preload("res://game/shared_leisure.gd").place(dancers[1]))
+			var stereo: Dictionary={}
+			for object: Dictionary in session.state.lots[host_home].objects:
+				if object.id==stereo_id: stereo=object; break
+			var places := Leisure.spaces(session.state,session.state.lots[host_home],stereo,guest)
+			assert(places.capacity==3 and places.reserved==2,"Real clients derive the three-place room, not the catalog maximum")
+			assert(places.cells.filter(func(cell): return cell.status=="reserved").size()==2)
 			danced=true; break
 		await create_timer(0.1).timeout
 	assert(danced,"Both clients observe separate dance spots and shared social restoration")

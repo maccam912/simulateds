@@ -502,3 +502,31 @@ These are automated native and mixer checks; human listening, family play,
 physical Android/cross-OS play, and overnight hosting are still open.
 
 The preceding routine-capture checkpoint passed all four platform CI jobs.
+
+
+## Shared places and layout capacity
+
+All 58 local suites passed across the full run and its resumed remainder. The
+first run stopped on a legacy `1/4` text assertion in the People test; updating
+that test to the new explicit count and running it plus every remaining suite
+passed. Final shared-place/tabletop model checks and a compact native rerun
+passed after the last polish. The actual Iroh host, two clients, reconnect, and
+dedicated startup passed. Both real clients derived three usable dance places
+and two reservations from the accepted host snapshot.
+
+`shared_spaces.gd` covers a one-place corner, queued joining, reservation release
+with an idle resident still occupying the place, resumption after that resident
+moves, unreachable floor, all shared-object rotations, nonmutation, snapshot
+replacement, and future reservations across neighboring furnishings. The access
+suite still compares 180 layouts with ordinary pathfinding. No new persisted
+fields or protocol messages were added.
+
+`shared_spaces_ui.gd` uses injected input in the real macOS renderer at 1440×900
+and 1280×720 / 125% UI scale. It buys a stereo in a tight corner, queues a second
+dancer through People, inspects the reserved place, moves the stereo to an open
+area, and joins two dancers. Preview reads leave the world/funds unchanged.
+The final compact pass confirms cancellation changes markers while the simulation
+tick stays fixed. Screenshots were inspected for the count, markers, and tooltip
+placement clear of the activity. Captures: `build/shared-spaces-*.png` (ignored).
+The preceding dancing checkpoint passed all four platform CI jobs. Human family
+play, physical device checks, and overnight hosting remain open.

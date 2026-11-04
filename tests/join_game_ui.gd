@@ -58,7 +58,7 @@ func _run() -> void:
 	await _click(game.people_button)
 	game.tools_box.get_parent().ensure_control_visible(game.social_buttons[neighbor.id])
 	await _capture("discover")
-	assert("1/4" in game._leisure_options[neighbor.id].summary and not game.leisure_buttons.has(neighbor.id))
+	assert("1 of 4" in game._leisure_options[neighbor.id].summary and not game.leisure_buttons.has(neighbor.id))
 	await _click(game.social_buttons[neighbor.id])
 	assert(first.lot_id=="lot_2" and game.viewed_lot=="lot_2" and game.leisure_buttons[neighbor.id].text=="Join game")
 	# Keyboard focus survives a replacement snapshot and changing activity status.
@@ -99,7 +99,7 @@ func _run() -> void:
 			if resident.lot_id!="lot_2": session.world.apply_command(owner,{"type":"visit","member_id":resident.id,"lot_id":"lot_2"})
 			assert(session.world.apply_command(owner,{"type":"interact","member_id":resident.id,"lot_id":"lot_2","target_id":table_id}).ok)
 	game._refresh()
-	assert(game.leisure_buttons[neighbor.id].text=="Queue game" and "4/4" in game._leisure_options[neighbor.id].summary)
+	assert(game.leisure_buttons[neighbor.id].text=="Queue game" and "4 of 4" in game._leisure_options[neighbor.id].summary)
 	await _capture("full")
 	var card: Control=game.social_buttons[neighbor.id].get_parent().get_parent()
 	assert(game.tools_box.get_parent().get_global_rect().grow(1.0).encloses(card.get_global_rect()),"The focused person's name and actions remain visible when their card fits")

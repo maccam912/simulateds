@@ -644,8 +644,8 @@ func leisure_option(member: Dictionary, companion_id: String, kind: String="") -
 	if object.is_empty(): return {}
 	var definition: Dictionary=Leisure.KINDS[object.kind]
 	var noun: String=definition.noun; var place: String=definition.place
-	var count := Leisure.players(state,str(companion.lot_id),str(object.id),false).size()
-	var option := {"available":false,"kind":str(object.kind),"label":"Join "+noun,"detail":"Adds a "+noun+" after your planned activities. Companions may finish before you arrive.","summary":str(definition.title)+" · %d/%d places" % [count,int(definition.capacity)],"target_id":str(object.id),"activity_id":str(companion.task.id),"lot_id":str(companion.lot_id)}
+	var spaces := Leisure.spaces(state,state.lots[companion.lot_id],object,member)
+	var option := {"available":false,"kind":str(object.kind),"label":"Join "+noun,"detail":"Adds a "+noun+" after your planned activities. Companions may finish before you arrive.","summary":str(definition.title)+" · "+Leisure.summary(spaces),"target_id":str(object.id),"activity_id":str(companion.task.id),"lot_id":str(companion.lot_id)}
 	if member.lot_id!=companion.lot_id:
 		option.label="Visit to join"; option.detail="Visit this home, then choose Join "+noun+"."
 		return option
@@ -668,8 +668,8 @@ func leisure_option(member: Dictionary, companion_id: String, kind: String="") -
 		option.label="No path to "+noun; option.detail="There is no path to reach this "+place+"."
 		return option
 	option.available=true
-	if count>=int(definition.capacity):
-		option.label="Queue "+noun; option.detail="All four places are reserved. Wait for a place after your current plans."
+	if spaces.available.is_empty():
+		option.label="Queue "+noun; option.detail=Leisure.waiting_reason(spaces)+" Wait after your current plans."
 	return option
 
 func care_option(member: Dictionary, need: String) -> Dictionary:
@@ -861,9 +861,10 @@ func _start_next(member: Dictionary, lot: Dictionary) -> void:
 			member.action = "Waiting for " + str(user.name) + " · " + str(Catalog.ITEMS[furnishing.kind].name)
 			return
 		if Leisure.KINDS.has(furnishing.get("kind","")):
-			shared_places=_shared_places(member,lot,furnishing)
-			if shared_places.is_empty() or (not shared_places.has(_position(member)) and _path(lot,_position(member),shared_places).is_empty()):
-				member.action="Waiting for a place · "+str(Catalog.ITEMS[furnishing.kind].name)
+			var spaces := Leisure.spaces(state,lot,furnishing,member)
+			shared_places=spaces.available
+			if shared_places.is_empty():
+				member.action="Waiting for a place · "+Leisure.waiting_reason(spaces)
 				return
 	if pending.type=="interact" and pending.get("target_kind")=="member":
 		var companion := _find_member(str(pending.target_id))
@@ -905,20 +906,7 @@ func _start_next(member: Dictionary, lot: Dictionary) -> void:
 	member.action = "Walking" + (" · " + str(task.get("label", "")) if task.type == "interact" else "") if not route.is_empty() else "Starting activity"
 
 func _shared_places(member: Dictionary, lot: Dictionary, object: Dictionary) -> Array:
-	var players := Leisure.players(state,str(lot.id),str(object.id),false)
-	var reserved: Array=[]
-	for player: Dictionary in players:
-		if player.id!=member.id: reserved.append(Leisure.place(player))
-	if reserved.size()>=int(Leisure.KINDS[object.kind].capacity): return []
-	for family: Dictionary in state.families.values():
-		for other: Dictionary in family.members:
-			if other.lot_id==member.lot_id and other.id!=member.id:
-				reserved.append(_position(other))
-				if not Leisure.activity(state,other).is_empty(): reserved.append(Leisure.place(other))
-	var available: Array=[]
-	for cell: Vector2i in _interaction_cells(lot,object):
-		if not cell in reserved: available.append(cell)
-	return available
+	return Leisure.spaces(state,lot,object,member).available
 
 func _object_user(lot_id: String, object: Dictionary, except_member: String = "") -> Dictionary:
 	# Ownership is derived from accepted active tasks, so there are no stale locks

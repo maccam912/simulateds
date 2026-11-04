@@ -35,7 +35,7 @@ func _reject(intent: Dictionary, owner: String="a") -> void:
 func _run() -> void:
 	_fresh()
 	var option: Dictionary=world.tabletop_option(member,str(companion.id))
-	assert(not option.available and option.label=="Visit to join" and "1/4" in option.summary)
+	assert(not option.available and option.label=="Visit to join" and "1 of 4" in option.summary)
 	_reject(_intent())
 	_visit()
 	var before: Dictionary=world.snapshot()

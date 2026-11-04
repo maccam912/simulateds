@@ -1234,3 +1234,38 @@ space feedback: a stereo can be usable by one resident while nearby furniture
 leaves too little room for company, yet the UI mostly advertises the four-person
 maximum. Next: show usable/reserved shared-activity places and explain waiting,
 so players can arrange a music corner or game area that fits their plans.
+
+
+## Making space for company
+
+Shared furniture now reports actual reachable capacity, capped at four. The
+construction preview distinguishes a one-place music corner from a place for
+company, while a live hover shows reservations and temporary occupation with
+separate shapes. People offers Queue dance/game when no reachable place is free.
+Waiting feedback distinguishes a tight reserved corner, full shared activity,
+nearby reservations, and a resident simply standing in the available space.
+The simulation and presentation use the same calculation; no UI reservations
+or extra save fields are introduced.
+
+The native playtest bought a stereo with just one usable place, queued Robin
+behind Alex, then moved it and joined them together. During testing, an apparently
+empty neighboring tile was actually isolated from the entrance; the preview
+correctly excluded it. A genuinely open placement provided four places. Standard
+and compact runs passed. Screenshot review prompted moving inspection tooltips
+away from the activity and markers where space permits. A paused cancellation
+regression verifies immediate reservation refresh without advancing a tick.
+
+All 58 local suites passed (the old People count-text assertions were updated,
+then the remainder resumed). Final targeted model and compact native checks also
+passed. Actual host/two-client/reconnect and dedicated startup passed; the clients
+correctly counted the test room's three reachable dance places. The preceding
+dancing checkpoint passed macOS, Android, Linux, and Windows CI. Native playtests
+are automated input, not human family sessions or physical-device evidence.
+
+Fresh assessment: space and waiting are now understandable, but explaining a wait
+exposes the next friction. After finishing shared recreation, a resident can keep
+standing in a place that someone else wants. Next, investigate a small, polite
+step aside when an activity ends and another plan is waiting. Preserve deliberate
+orders and independent family control, keep anyone still participating in place,
+and avoid creating new collisions or hidden activity queues. This is proposed
+next work, not implemented behavior in this checkpoint.

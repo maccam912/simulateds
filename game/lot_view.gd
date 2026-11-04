@@ -56,6 +56,11 @@ var _paint_cells: Dictionary = {}
 var _preview_finish := ""
 var preview_result: Dictionary = {}
 var _preview_signature := ""
+var _preview_spaces: Dictionary={}
+var leisure_report: Dictionary={}
+var leisure_markers: Array=[]
+var _leisure_key := ""
+var _leisure_cached: Dictionary={}
 var building := false
 var access_report: Dictionary={}
 var access_visible := false
@@ -288,6 +293,7 @@ func _block(x: float, y: float, w: float, d: float, height: float, color: Color,
 func _draw() -> void:
 	_hit_regions.clear()
 	preview_label_rect=Rect2()
+	leisure_report={}; leisure_markers.clear()
 	resident_labels.clear()
 	access_markers.clear()
 	_drawing_target = {}
@@ -400,7 +406,11 @@ func _draw() -> void:
 			footprint=Catalog.footprint(kind,build_rotation)
 			tint=Color(0.62,0.88,0.49,0.42) if preview_result.get("ok",false) else Color(0.93,0.32,0.26,0.45)
 			outline=Color("d8f1b2") if preview_result.get("ok",false) else Color("ffab8f")
-			_draw_preview_label(str(preview_result.get("message","")),bool(preview_result.get("ok",false)))
+			var message := str(preview_result.get("message",""))
+			if not _preview_spaces.is_empty():
+				_draw_leisure_places(_preview_spaces)
+				message+="\n"+Leisure.layout_text(_preview_spaces)+" · ○ Open  × Blocked / no path"
+			_draw_preview_label(message,bool(preview_result.get("ok",false)))
 		elif building and build_kind in ["erase","move"] and hover_target.get("type")=="object":
 			preview_cell=Vector2i(int(hover_target.x),int(hover_target.y))
 			footprint=Catalog.footprint(str(hover_target.kind),int(hover_target.rotation))
@@ -408,7 +418,12 @@ func _draw() -> void:
 			if build_kind=="erase":
 				tint=Color(0.94,0.4,0.3,0.35)
 				_draw_preview_label("Sell " + str(item.name) + " · § %d" % int(float(item.cost)*0.6),false)
-			else: _draw_preview_label("Move " + str(item.name) + " · Click to select",true)
+			else:
+				var message := "Move " + str(item.name) + " · Click to select"
+				if Leisure.KINDS.has(hover_target.kind):
+					var report := _leisure_spaces(lot,hover_target,true)
+					_draw_leisure_places(report); message+="\n"+Leisure.layout_text(report)+" · ○ Open  × Blocked / no path"
+				_draw_preview_label(message,true)
 		elif building and build_kind=="erase":
 			tint=Color(0.94,0.4,0.3,0.35)
 			if not Windows.at(lot,hover_cell.x,hover_cell.y).is_empty(): _draw_preview_label("Remove window · Refund §%d · Wall stays" % Windows.resale(lot,hover_cell.x,hover_cell.y),false)
@@ -529,15 +544,74 @@ func _update_preview(lot: Dictionary) -> void:
 			if member.lot_id==lot_id: residents.append(Vector2i(int(member.x),int(member.y)))
 	var command := {"type":"move_object" if build_kind=="move" else "place","kind":build_kind,"object_id":build_object_id,"x":hover_cell.x,"y":hover_cell.y,"rotation":build_rotation}
 	preview_result=BuildRules.inspect(lot,command,residents)
+	_preview_spaces={}
+	if preview_result.get("ok",false) and Leisure.KINDS.has(preview_result.kind):
+		var draft := lot.duplicate(true)
+		if build_kind=="move":
+			draft.objects=draft.objects.filter(func(object): return object.id!=build_object_id)
+		var candidate := {"id":"preview","kind":preview_result.kind,"x":hover_cell.x,"y":hover_cell.y,"rotation":build_rotation}
+		draft.objects.append(candidate)
+		_preview_spaces=Leisure.spaces({},draft,candidate)
+
+func _fit_inspection(preferred: Rect2) -> Rect2:
+	var bounds := Rect2(Vector2(8,8),size-Vector2(16,16))
+	var avoid: Array[Rect2]=overlay_rects.duplicate()
+	if not leisure_markers.is_empty():
+		var places := Rect2(leisure_markers[0].point,Vector2.ONE)
+		for marker: Dictionary in leisure_markers: places=places.expand(marker.point)
+		places=places.grow(14)
+		places.position.y-=42; places.size.y+=42
+		avoid.append(places)
+	var fitted := ResidentCues.fit(preferred,bounds,avoid)
+	# Keep the explanation available when the compact HUD leaves no alternative.
+	return fitted if fitted.has_area() else ResidentCues.fit(preferred,bounds,overlay_rects)
 
 func _draw_preview_label(message: String, valid: bool) -> void:
-	var width := _font.get_string_size(message,HORIZONTAL_ALIGNMENT_LEFT,-1,12).x+24
+	var lines := message.split("\n")
+	var width := 0.0
+	for line: String in lines: width=maxf(width,_font.get_string_size(line,HORIZONTAL_ALIGNMENT_LEFT,-1,12).x+24)
+	width=minf(width,size.x-16)
 	var position := Vector2(clampf(_pointer.x+16,8,size.x-width-8),clampf(_pointer.y-40,8,size.y-220))
-	preview_label_rect=ResidentCues.fit(Rect2(position,Vector2(width,30)),Rect2(Vector2(8,8),size-Vector2(16,16)),overlay_rects)
+	preview_label_rect=_fit_inspection(Rect2(position,Vector2(width,12+18*lines.size())))
 	if not preview_label_rect.has_area(): return
 	position=preview_label_rect.position
 	draw_style_box(preload("res://game/style.gd").box(Color("1c2a2f"),6),preview_label_rect)
-	draw_string(_font,position+Vector2(12,20),message,HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("d8f1b2") if valid else Color("ffab8f"))
+	for index in range(lines.size()):
+		draw_string(_font,position+Vector2(12,20+18*index),lines[index],HORIZONTAL_ALIGNMENT_LEFT,width-24,12,Color("d8f1b2") if valid else Color("ffab8f"))
+
+func _leisure_spaces(lot: Dictionary, object: Dictionary, layout_only: bool=false) -> Dictionary:
+	var reservations: Array=[]
+	if not layout_only:
+		for family: Dictionary in world.families.values():
+			for resident: Dictionary in family.members:
+				if resident.lot_id==lot_id: reservations.append([resident.id,resident.x,resident.y,resident.task.get("id",""),Leisure.place(resident)])
+	var key := str([lot_id,lot.revision,selected_member,object,layout_only,reservations])
+	if key!=_leisure_key:
+		_leisure_key=key
+		var member: Dictionary={}
+		if not layout_only:
+			for family: Dictionary in world.families.values():
+				for resident: Dictionary in family.members:
+					if resident.id==selected_member: member=resident; break
+		_leisure_cached=Leisure.spaces({} if layout_only else world,lot,object,member)
+	return _leisure_cached
+
+func _draw_leisure_places(report: Dictionary) -> void:
+	leisure_report=report
+	for place: Dictionary in report.cells:
+		var cell: Vector2i=place.cell
+		var point := grid_point(cell.x+0.5,cell.y+0.5)+Vector2(0,-3)
+		var status: String=place.status
+		var color := Color("bddd9e") if status=="open" else Color("efc77d") if status=="reserved" else Color("c6d1cf") if status=="occupied" else Color("f0a28d")
+		_diamond(cell.x+0.14,cell.y+0.14,0.72,0.72,Color(color,0.16),2,Color(color,0.70))
+		draw_circle(point,7,Color("243736"))
+		if status=="open": draw_arc(point,4,0,TAU,20,color,1.5,true)
+		elif status=="reserved": draw_circle(point,4,color)
+		elif status=="occupied": draw_line(point-Vector2(4,0),point+Vector2(4,0),color,2,true)
+		else:
+			draw_line(point-Vector2(3,3),point+Vector2(3,3),color,1.5,true)
+			draw_line(point+Vector2(-3,3),point+Vector2(3,-3),color,1.5,true)
+		leisure_markers.append({"cell":cell,"status":status,"point":point})
 
 func _draw_hover() -> void:
 	var title := str(hover_target.get("name",""))
@@ -548,9 +622,11 @@ func _draw_hover() -> void:
 		title = str(item.name)
 		detail = str(item.need).capitalize() + " · Click to use"
 		if Leisure.KINDS.has(hover_target.kind):
-			var definition: Dictionary=Leisure.KINDS[hover_target.kind]
-			var count := Leisure.players(world,lot_id,str(hover_target.id),false).size()
-			detail="%d/%d places · Fun + social together · Click to %s" % [count,int(definition.capacity),"queue" if count>=int(definition.capacity) else "join"]
+			var report := _leisure_spaces(world.lots[lot_id],hover_target)
+			_draw_leisure_places(report)
+			detail=Leisure.summary(report)+" · Click to "+("queue" if report.available.is_empty() or report.reserved>=report.capacity else "join")
+			if report.available.is_empty(): detail+="\n"+Leisure.waiting_reason(report)
+			detail+="\n○ Open  ● Reserved  — Occupied  × Blocked / no path"
 		if bool(item.get("exclusive",false)) and hover_target.kind!="garden_bed":
 			for family: Dictionary in world.families.values():
 				for resident: Dictionary in family.members:
@@ -561,12 +637,18 @@ func _draw_hover() -> void:
 				if object.id==hover_target.id: detail=Gardens.summary(object.garden)+" · Click to inspect"; break
 		var dimensions := Catalog.footprint(str(hover_target.kind),int(hover_target.rotation))
 		_diamond(float(hover_target.x),float(hover_target.y),dimensions.x,dimensions.y,Color(0.95,0.95,0.75,0.14),2,Color("fff2bd"))
-	var width := maxf(_font.get_string_size(title,HORIZONTAL_ALIGNMENT_LEFT,-1,14).x,_font.get_string_size(detail,HORIZONTAL_ALIGNMENT_LEFT,-1,12).x) + 24
+	var lines := detail.split("\n")
+	var width := _font.get_string_size(title,HORIZONTAL_ALIGNMENT_LEFT,-1,14).x+24
+	for line: String in lines: width=maxf(width,_font.get_string_size(line,HORIZONTAL_ALIGNMENT_LEFT,-1,12).x+24)
+	width=minf(width,size.x-16)
 	var position := Vector2(clampf(_pointer.x+18,8,size.x-width-8),clampf(_pointer.y-62,8,size.y-220))
-	var badge := Rect2(position,Vector2(width,52))
+	var badge := _fit_inspection(Rect2(position,Vector2(width,34+18*lines.size())))
+	if not badge.has_area(): return
+	position=badge.position
 	draw_style_box(preload("res://game/style.gd").box(Color("1c2a2f"),6,Color("71877b")),badge)
-	draw_string(_font,position+Vector2(12,20),title,HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("f4eedf"))
-	draw_string(_font,position+Vector2(12,39),detail,HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("bdd89e"))
+	draw_string(_font,position+Vector2(12,20),title,HORIZONTAL_ALIGNMENT_LEFT,width-24,14,Color("f4eedf"))
+	for index in range(lines.size()):
+		draw_string(_font,position+Vector2(12,39+18*index),lines[index],HORIZONTAL_ALIGNMENT_LEFT,width-24,12,Color("bdd89e"))
 
 func _draw_neighborhood_ground() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color("8ba36d"))

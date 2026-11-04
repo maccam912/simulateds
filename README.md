@@ -351,7 +351,7 @@ gardening hobby/wish rewards; autonomy never buys seeds or harvests crops.
 ## Music and dancing
 
 Build a **Little hi-fi** (§260, Living) and click it to dance. Up to four residents
-reserve distinct walkable spots beside it. Solo dancing restores fun; actual
+reserve distinct walkable spots beside it when the layout has room. Solo dancing restores fun; actual
 participants also restore social while dancing together. A fifth resident waits
 for a place. Each resident keeps their own plan, so cancellation, travel, or a
 visitor leaving does not stop the others. **People → Join dance** discovers a
@@ -363,3 +363,20 @@ motion keeps a still, recognizable pose. One visible stereo plays an original
 music loop at a time, favoring the selected dancer's stereo. It lowers the
 background score, follows the Music slider, and stops with pause/menus,
 construction, or when offscreen. Effects mute still leaves music audible.
+
+## Making room for company
+
+Hover over a stereo or game table to inspect the places around it. Open rings
+show clear floor, solid gold dots mark reservations (including residents still
+walking there), dashes show someone standing there, and crosses show blocked or
+unreachable tiles. The count reflects the actual room, with a maximum of four
+participants. **People** offers **Queue dance/game** when no place is free and
+explains whether the room is too tight, places are reserved, or someone is in
+the way. A waiting order stays in your plan.
+
+While buying or moving shared furniture, the preview shows how many people the
+proposed layout can hold. **Solo only** is useful for a small music corner; leave
+more reachable floor around it to enjoy company. These hints do not spend money
+or change the house. Construction ignores the temporarily sheltered residents
+when counting usable space. The existing Access check still decides whether the
+whole house is ready to reopen.

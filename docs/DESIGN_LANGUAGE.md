@@ -446,3 +446,22 @@ household textures on Effects. Changing or replaying a state snapshot must not
 restart the song. People offers Join dance using the same voluntary, independently
 owned participation as tabletop games; its label and occupancy explain the shared
 activity without a separate social-game screen.
+
+### Places for company
+
+Shared recreation reveals its space only while inspecting or arranging it. Draw
+small floor diamonds with a ring for open floor, a solid gold dot for a reserved
+place, a dash for a resident standing there, and a cross for blocked or unreachable
+space. Pair these shapes with a short legend and a count based on reachability.
+The physical layout and temporary reservations are separate: a stereo in a tight
+corner can truthfully say Room for 1 / Solo only, without rejecting that choice.
+A game table may have several possible floor positions but still hosts at most
+four residents.
+
+During placement and moves, inspect a copied candidate layout from the entrance.
+In live play, use the selected resident's reachable area and accepted task
+reservations. Approaching residents already reserve their destinations, including
+places shared by adjacent furnishings. People, waiting feedback, and the world
+markers use the same calculation as activity assignment. Paused command changes
+must update markers without waiting for a simulation tick. Keep explanations
+clear of the HUD and, where space permits, the activity and its floor markers.
