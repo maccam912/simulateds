@@ -4,6 +4,9 @@
 *.py text eol=lf
 *.yml text eol=lf
 *.sh text eol=lf
+
+# Binary assets stay in LFS, including source art and generated interchange files.
+# Keep SVG, glTF JSON, Godot scenes/resources in text form when applicable.
 *.png filter=lfs diff=lfs merge=lfs -text
 *.jpg filter=lfs diff=lfs merge=lfs -text
 *.jpeg filter=lfs diff=lfs merge=lfs -text

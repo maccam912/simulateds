@@ -1,4 +1,5 @@
 extends SceneTree
+const ModelPoints = preload("res://tests/model_test_points.gd")
 var game: Control
 var session: Node
 var suffix := ""
@@ -60,7 +61,7 @@ func _run() -> void:
 	assert(first.task.is_empty() and second.task.is_empty() and first.activity_log[0].outcome=="cancelled" and session.state.families.violet==neighbor)
 	assert(panel.choices[first.id].disabled and panel.confirm.disabled and panel.confirm.text=="Everyone is here" and game.visit_button.disabled)
 	for resident: Dictionary in [second,first]:
-		var torso: Vector2=game.lot_view.resident_anchor(resident)+Vector2(0,-22)*game.lot_view._cell.x/48.0
+		var torso := ModelPoints.resident_part(game.lot_view,resident,"Torso")
 		assert(game.lot_view.hit_target(torso).get("id")==resident.id,"Each arrival must stay directly selectable")
 		await _mouse(torso); assert(game.selected_member==resident.id)
 	# Choose only one resident to return, leaving the other housemate's plan intact.

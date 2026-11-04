@@ -1,6 +1,6 @@
 # Simulateds
 
-A playable foundation for a small shared-neighborhood life simulation, inspired
+A 3D shared-neighborhood life simulation with an orthographic dollhouse camera, inspired
 by the homebuilding and household management of the early life-sim era. Build a
 home, look after two residents, and visit a neighbor. Each player owns a separate
 lot and family; one can build while the other keeps playing.
@@ -15,12 +15,15 @@ fallback.
 
 Read [DESIGN.md](DESIGN.md) for the game plan,
 [docs/DESIGN_LANGUAGE.md](docs/DESIGN_LANGUAGE.md) for visual, motion, and audio direction,
+[docs/ASSET_GUIDE.md](docs/ASSET_GUIDE.md) for the 3D art standards and source workflow,
+[docs/LFS.md](docs/LFS.md) for binary assets and migration instructions,
 [docs/ROADMAP.md](docs/ROADMAP.md) for follow-up milestones, and
 [docs/VALIDATION.md](docs/VALIDATION.md) for tested behavior and remaining gaps.
 
 ## Run
 
-Install Python 3.11+, Rust via rustup, and your platform's compiler (Xcode Command
+Install Git LFS (`git lfs install` and `git lfs pull` in this checkout),
+Python 3.11+, Rust via rustup, and your platform's compiler (Xcode Command
 Line Tools on macOS, Visual Studio C++ tools on Windows, or the usual C/C++ build
 tools on Linux), then:
 
@@ -407,7 +410,8 @@ server; this game's device and release readiness must be tested separately.
 
 The main extension points are the data-driven furnishing catalog, the pure world
 model and command dispatcher, the Iroh session/persistence layer, and the separate
-isometric presentation. Add game rules to the model, not the renderer or Rust
+3D presentation (`lot_scene_3d.gd`) and camera/interaction bridge
+(`lot_projection.gd`, `lot_view.gd`). Add game rules to the model, not the renderer or Rust
 transport. Clients send intentions; the host validates and applies them.
 
 See [THIRD_PARTY.md](THIRD_PARTY.md) for upstream transport attribution and

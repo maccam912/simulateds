@@ -1,5 +1,13 @@
 # Simulateds design language
 
+## 3D asset production
+
+The world is rendered with mesh models, a true orthographic 3D camera, depth and
+lighting. [ASSET_GUIDE.md](ASSET_GUIDE.md) defines the current geometry, scale,
+material, provenance and review requirements. Its 3D instructions supersede
+older implementation references below to drawing world shapes or silhouettes.
+The UI palette, interaction rules and domestic theme still apply.
+
 ## A lived-in neighborhood
 
 Linden Grove should feel like an early-2000s neighborhood seen through a sunny

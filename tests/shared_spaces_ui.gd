@@ -1,5 +1,6 @@
 extends SceneTree
 const Leisure = preload("res://game/shared_leisure.gd")
+const ModelPoints = preload("res://tests/model_test_points.gd")
 var game: Control
 var session: Node
 var sound: Node
@@ -30,13 +31,7 @@ func _button(button: Button) -> void:
 	await _mouse(button.get_global_rect().get_center()); assert(pressed[0])
 
 func _point() -> Vector2:
-	var cell: Vector2=view.object_point(stereo,Vector2(0.5,0.5))
-	var center: Vector2=view.grid_point(cell.x,cell.y)
-	for y in range(-32,1,2):
-		for x in range(-18,19,2):
-			var point := center+Vector2(x,y)
-			if view.hit_target(point).get("id")==stereo.id: return point
-	assert(false,"Stereo must have a visible click surface"); return center
+	return ModelPoints.object_surface(view,stereo)
 
 func _capture(name: String) -> void:
 	game._refresh(); await create_timer(0.3).timeout
@@ -96,9 +91,11 @@ func _run() -> void:
 	await _button(_find_button(game.context_box,"Move"))
 	await _mouse(_point()); assert(game._moving_object==stereo.id)
 	before=session.world.snapshot()
-	await _mouse(view.grid_point(9.5,9.5),false); await _capture("move-preview")
+	# This clear four-place location stays visible beside the sofa. The old
+	# (9,9) fixture is fully occluded by the real 3D bookshelf at (10,10).
+	await _mouse(view.grid_point(6.5,9.5),false); await _capture("move-preview")
 	assert(view.preview_result.ok and view.leisure_report.capacity==4 and session.world.snapshot()==before,str([view.preview_result,view.leisure_report,view.hover_cell,session.world.snapshot()==before]))
-	await _mouse(view.grid_point(9.5,9.5)); assert(stereo.x==9 and stereo.y==9)
+	await _mouse(view.grid_point(6.5,9.5)); assert(stereo.x==6 and stereo.y==9)
 	await _button(game.mode_button); game.context_panel.hide()
 	await _mouse(_point()); await _button(game.recreation_panel.single_button); await _arrive(1)
 	await _button(game.family_box.get_child(0)); await _button(game.people_button)

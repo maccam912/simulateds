@@ -29,3 +29,12 @@ collects package notices from the resolved sources, including build-only and
 target-specific crates. It is deliberately a superset of the packages linked into
 any one platform. Review this file after upgrading dependencies and preserve it
 when distributing compiled games. The template's export presets include notices.
+
+## Original 3D art
+
+The Linden Grove mesh library under `assets/models/` is original project content
+created from the retained Blender generator `tools/generate_models.py`. It uses
+procedural geometry and palette materials, with no third-party mesh or texture
+downloads. Model metadata and the reproducible workflow are documented in
+[docs/ASSET_GUIDE.md](docs/ASSET_GUIDE.md). Blender is an authoring dependency;
+its executable is not distributed with the game.

@@ -1,6 +1,7 @@
 extends SceneTree
 const Windows = preload("res://game/windows.gd")
 const BuildCatalog = preload("res://game/build_catalog.gd")
+const ModelPoints = preload("res://tests/model_test_points.gd")
 var game: Control
 var session: Node
 var suffix := ""
@@ -33,8 +34,7 @@ func _wall(x: int,y: int,click: bool=true) -> void:
 	# Sample the actual projected wall face, above its floor tile. This catches
 	# selecting the underlying tile when a raised wall owns the visible pixel.
 	var lot: Dictionary=session.state.lots.lot_1
-	var s: float=game.lot_view._cell.x/48.0
-	var point: Vector2=game.lot_view._window_face(x,y,Windows.along_x(lot,x,y),0.5,22*s)
+	var point := ModelPoints.wall_face(game.lot_view,x,y,Windows.along_x(lot,x,y))
 	var hit: Dictionary=game.lot_view.hit_target(point)
 	assert(hit.get("type")=="wall" and hit.x==x and hit.y==y,"Visible wall face must pick its actual tile: "+str(hit))
 	await _mouse(point,click)

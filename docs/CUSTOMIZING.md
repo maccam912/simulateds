@@ -37,7 +37,10 @@ household or an absent player.
 | `game/neighborhood_card.gd` | Stable focusable lot cards with clipped labels and complete tooltip detail |
 | `game/world.gd` | Serializable neighborhood state; ownership, construction, pathfinding, actions, autonomy, and needs |
 | `game/main.gd` | Main scene UI, selection, tool catalog, connection panel, and command submission |
-| `game/lot_view.gd` | Isometric rendering, tile picking, placement preview, pan, and zoom |
+| `game/lot_view.gd` | Existing world interaction, placement feedback, labels, pan and zoom |
+| `game/lot_projection.gd` | Orthographic Camera3D, viewport and projected model picking |
+| `game/lot_scene_3d.gd` | GLB instances, resident poses, architecture, scenery and lighting |
+| `tools/generate_models.py` | Reproducible original model sources; see the asset guide |
 | `game/style.gd` | Shared UI theme |
 | `game/persistence.gd` | Bounded JSON reads and temporary-file replacement with backups |
 | `network/session.gd` | Host tick, persistent identity, command IDs/acks, snapshots, saving, and reconnect lifecycle |
@@ -50,11 +53,13 @@ household or an absent player.
 
 1. Add a stable key and definition to `Catalog.ITEMS`. Provide a readable name,
    cost, footprint, visual color, need, rate, duration, and description.
-2. Add its drawing to `lot_view.gd` (the fallback block is useful while prototyping)
-   and expose it in the appropriate palette group in `main.gd`.
-   Name its recolorable material in `FurnitureColors.MATERIALS` and use
-   `FurnitureColors.material` for that material in its renderer. Keep the original
-   color as the fallback and leave distinct details such as foliage unchanged.
+2. Follow [ASSET_GUIDE.md](ASSET_GUIDE.md): create and export a real GLB model
+   under `assets/models/<kind>.glb`, with the matching footprint, orientation and
+   material slots. Retain the editable source and provenance. Expose the item in
+   the appropriate build catalog group. Name its recolorable material in
+   `FurnitureColors.MATERIALS`; preserve foliage, hardware and glass colors.
+   Add any changing activity state to `lot_scene_3d.gd`. Stage all binary assets
+   with Git LFS and run `python3 tools/check_assets.py`.
 3. Add a readable activity label in the model when it needs one. Ordinary
    single-need furniture uses the existing interaction machinery.
 4. Check rotation, collision, placement cost/refund, reachable interaction cells,

@@ -1,4 +1,5 @@
 extends SceneTree
+const ModelPoints = preload("res://tests/model_test_points.gd")
 var game: Control
 var session: Node
 var family: Dictionary
@@ -41,8 +42,7 @@ func _run() -> void:
 		_object("bed").rotation=rotation; lot.revision+=1
 		_pose(0,"bed"); _pose(1,"sofa")
 		await _capture("resting-"+str(rotation))
-		var point: Vector2=game.lot_view.object_point(_object("bed"),Vector2(0.5,0.32))
-		var head: Vector2=game.lot_view.grid_point(point.x,point.y)+Vector2(0,-22)*game.lot_view._cell.x/48.0
+		var head := ModelPoints.resident_surface(game.lot_view,family.members[0])
 		assert(game.lot_view.hit_target(head).get("id")==family.members[0].id,"Sleeping resident remains selectable in every rotation")
 	_pose(0,"bookshelf"); _pose(1,"table"); await _capture("reading-tea")
 	_pose(0,"shower"); _pose(1,"plant"); await _capture("shower-garden")
@@ -52,6 +52,8 @@ func _run() -> void:
 		session.world._clear_member(member); member.x=7+index; member.y=7
 	assert(session.world.apply_command(session.profile_id,{"type":"interact","member_id":family.members[0].id,"lot_id":lot.id,"target_id":family.members[1].id}).ok)
 	session.world.step(0.1)
+	# These fixture positions were assigned directly, without an accepted route.
+	game.lot_view.motion.tracks.clear()
 	await _capture("conversation")
 	assert(game.lot_view._activity_pose(family.members[0]).get("kind")=="chat")
 	root.get_node("Preferences").set_value("reduced_motion",true)

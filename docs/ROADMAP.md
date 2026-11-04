@@ -219,12 +219,15 @@ content distribution, permissions, and trust are separate projects. Larger world
 need measured replication interest and simulation budgets before raising caps.
 
 
-## Current stopping point for renderer evaluation
+## 3D presentation conversion
 
-The gardening loop now runs from a dining-table recipe to a household garden
-overview, explicit tending, a kept harvest, reserved ingredients, and a shared
-meal. Feature expansion is paused at the user’s request after this checkpoint’s
-validation. The next decision is whether to retain the isometric renderer or
-move the presentation to 3D. No 3D prototype or renderer conversion is part of
-this checkpoint. The simulation, save state, and Iroh command authority remain
-separate from the current `LotView` presentation.
+The neighborhood now uses real imported mesh furniture and residents, modeled
+architecture and scenery, and an orthographic Camera3D. The simulation, saves and
+Iroh command authority remain independent of the renderer. See
+[ASSET_GUIDE.md](ASSET_GUIDE.md) for consistent art production and
+[LFS.md](LFS.md) before updating an old clone after the binary history migration.
+
+Continue visual refinement from actual daytime/nighttime and compact-window
+captures. Dedicated authored skeletal animation, additional clothing silhouettes,
+and measured physical Android performance are follow-up work. Keep new gameplay
+features separate from this renderer conversion.

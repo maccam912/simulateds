@@ -1,5 +1,6 @@
 extends SceneTree
 const Facing = preload("res://game/resident_facing.gd")
+const ModelPoints = preload("res://tests/model_test_points.gd")
 var game: Control
 var view: Control
 var session: Node
@@ -86,10 +87,9 @@ func _run() -> void:
 		_start(first,bed); _start(second,sofa)
 		await _capture("resting-"+str(rotation))
 		assert(view.motion.direction(second).distance_to(Vector2.DOWN.rotated(rotation*PI*0.5))<0.001)
-		var point: Vector2=view.object_point(bed,Vector2(0.5,0.32))
-		var head: Vector2=view.grid_point(point.x,point.y)+Vector2(0,-22)*view._cell.x/48.0
-		assert(view.hit_target(head).get("id")==first.id,"The rotated sleeper remains selectable")
-		var torso: Vector2=view.resident_anchor(second)+Vector2(0,-22)*view._cell.x/48.0
+		var head := ModelPoints.resident_surface(view,first)
+		assert(view.hit_target(head).get("id")==first.id,"The rotated sleeper remains selectable: rotation=%d, point=%s, hit=%s" % [rotation,head,view.hit_target(head)])
+		var torso := ModelPoints.resident_part(view,second,"Torso")
 		assert(view.hit_target(torso).get("id")==second.id)
 		await _click(torso); assert(game.selected_member==second.id)
 	for kind: String in ["bookshelf","table","plant","fridge","tv"]:
@@ -127,8 +127,7 @@ func _run() -> void:
 	_start(first,bed); _start(second,sofa)
 	first.needs.bladder=10.0; second.needs.bladder=10.0
 	await _capture("urgent-resting")
-	var point: Vector2=view.object_point(bed,Vector2(0.5,0.32))
-	var head: Vector2=view.grid_point(point.x,point.y)+Vector2(0,-22)*view._cell.x/48.0
+	var head := ModelPoints.resident_surface(view,first)
 	assert(view.hit_target(head).get("id")==first.id and view.resident_labels.size()==2)
 	await _click(head); assert(game.selected_member==first.id)
 	# Actual floor clicks walk a small circuit, exercising turning, stride, and
@@ -152,7 +151,7 @@ func _run() -> void:
 		await _capture("walk-"+str(destination.x)+"-"+str(destination.y))
 		assert(view.motion.position(first)==Vector2(destination) and view.motion.direction(first).distance_to(direction)<0.001)
 		assert(session.world.snapshot()==accepted)
-		var torso: Vector2=view.resident_anchor(first)+Vector2(0,-22)*view._cell.x/48.0
+		var torso := ModelPoints.resident_part(view,first,"Torso")
 		assert(view.hit_target(torso).get("id")==first.id)
 		session.world.step(0.1)
 	print("RESIDENT_FACING_UI_PASS")

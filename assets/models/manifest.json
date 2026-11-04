@@ -1,0 +1,971 @@
+{
+  "schema": 1,
+  "collection": "Linden Grove",
+  "creator": "Original procedural models authored for Simulateds",
+  "license": "MIT (repository LICENSE)",
+  "source": "tools/generate_models.py",
+  "source_sha256": "50175e14a702d16f9d592f7c887c35d5ba69e41a5e69db3b8c3afee81bfcd3c7",
+  "generator": "Blender 5.1.2",
+  "units": "metres; one simulation tile = 1 metre",
+  "coordinates": {
+    "up": "+Y",
+    "front": "+Z",
+    "origin": "footprint center at ground y=0"
+  },
+  "materials": {
+    "custom_prefix": "custom_",
+    "resident": [
+      "skin",
+      "hair",
+      "shirt",
+      "trousers",
+      "shoes"
+    ]
+  },
+  "models": {
+    "bed": {
+      "file": "bed.glb",
+      "footprint": [
+        1,
+        2
+      ],
+      "description": "Oak slatted bed, quilt seams, linen pillow, blue sage duvet.",
+      "triangles": 2180,
+      "meshes": 7,
+      "materials": [
+        "custom_bedding",
+        "duvet_fold",
+        "duvet_stitch",
+        "linen",
+        "oak",
+        "pillow",
+        "walnut"
+      ],
+      "bounds": {
+        "min": [
+          -0.48,
+          0.0359,
+          -0.965
+        ],
+        "max": [
+          0.48,
+          1.09,
+          0.96
+        ]
+      },
+      "sha256": "5abc2618abf4de9778049d92cd7ee49b20b8ffb1e8a5a2a8a8d75b9a7d817988",
+      "animated_pivots": false
+    },
+    "fridge": {
+      "file": "fridge.glb",
+      "footprint": [
+        1,
+        1
+      ],
+      "description": "Rounded enamel fridge, separate freezer, handles, vents and note.",
+      "triangles": 4148,
+      "meshes": 5,
+      "materials": [
+        "charcoal",
+        "custom_enamel",
+        "magnet",
+        "note",
+        "steel"
+      ],
+      "bounds": {
+        "min": [
+          -0.39,
+          0.0,
+          -0.38
+        ],
+        "max": [
+          0.39,
+          1.71,
+          0.5065
+        ]
+      },
+      "sha256": "c1378e9702ad69928b98a81a46a6c127faee748e665f56c6db669ffa88e192aa",
+      "animated_pivots": false
+    },
+    "shower": {
+      "file": "shower.glb",
+      "footprint": [
+        1,
+        1
+      ],
+      "description": "Tiled shower, tray, frosted side screen, mixer and showerhead.",
+      "triangles": 3544,
+      "meshes": 7,
+      "materials": [
+        "custom_wall_panel",
+        "frosted_glass",
+        "linen",
+        "porcelain",
+        "shower_floor",
+        "soap",
+        "steel"
+      ],
+      "bounds": {
+        "min": [
+          -0.47,
+          0.0,
+          -0.47
+        ],
+        "max": [
+          0.47,
+          2.04,
+          0.47
+        ]
+      },
+      "sha256": "84515de3fc065a403622371cce0b34f7248dd8b94cabbdd92b75183f353ce1d1",
+      "animated_pivots": false
+    },
+    "toilet": {
+      "file": "toilet.glb",
+      "footprint": [
+        1,
+        1
+      ],
+      "description": "Porcelain bowl, open seat, cistern and flush button.",
+      "triangles": 1796,
+      "meshes": 4,
+      "materials": [
+        "bowl_interior",
+        "custom_porcelain",
+        "porcelain",
+        "steel"
+      ],
+      "bounds": {
+        "min": [
+          -0.29,
+          -0.03,
+          -0.405
+        ],
+        "max": [
+          0.29,
+          0.9865,
+          0.5
+        ]
+      },
+      "sha256": "d92ae8033551cfe67c2a3642f6d903834ae69d9080da8c35b00c22db8e621468",
+      "animated_pivots": false
+    },
+    "sofa": {
+      "file": "sofa.glb",
+      "footprint": [
+        2,
+        1
+      ],
+      "description": "Terracotta upholstered sofa, cushions, piping, throw and pillow.",
+      "triangles": 2784,
+      "meshes": 6,
+      "materials": [
+        "custom_upholstery",
+        "linen",
+        "sofa_pillow",
+        "sofa_throw",
+        "upholstery_piping",
+        "walnut"
+      ],
+      "bounds": {
+        "min": [
+          -1.0,
+          0.0326,
+          -0.435
+        ],
+        "max": [
+          1.0,
+          1.015,
+          0.4658
+        ]
+      },
+      "sha256": "c6b97b3c49ffe40fc4e1937355cc33e66675e984bc6e2a7df426360ccf88169d",
+      "animated_pivots": false
+    },
+    "tv": {
+      "file": "tv.glb",
+      "footprint": [
+        1,
+        1
+      ],
+      "description": "Small CRT with curved screen, controls and oak console.",
+      "triangles": 2292,
+      "meshes": 8,
+      "materials": [
+        "charcoal",
+        "custom_cabinet",
+        "indicator",
+        "screen",
+        "screen_glint",
+        "screen_rim",
+        "steel",
+        "walnut"
+      ],
+      "bounds": {
+        "min": [
+          -0.445,
+          0.0376,
+          -0.345
+        ],
+        "max": [
+          0.445,
+          1.3135,
+          0.358
+        ]
+      },
+      "sha256": "ac6b86750fb612d2bc056111f1c2d219dbe9ae81070181ad707261d5fcc55d2a",
+      "animated_pivots": false
+    },
+    "stereo": {
+      "file": "stereo.glb",
+      "footprint": [
+        1,
+        1
+      ],
+      "description": "Oak hi-fi with speakers, receiver and turntable.",
+      "triangles": 4012,
+      "meshes": 8,
+      "materials": [
+        "charcoal",
+        "custom_cabinet",
+        "display",
+        "hi_fi_metal",
+        "record_label",
+        "speaker_cone",
+        "steel",
+        "walnut"
+      ],
+      "bounds": {
+        "min": [
+          -0.46,
+          0.0372,
+          -0.32
+        ],
+        "max": [
+          0.46,
+          0.83,
+          0.32
+        ]
+      },
+      "sha256": "ed742311c870eb9eca18096de57d1c1397e0f8d3fc22bbb266d8eb6bb57e2461",
+      "animated_pivots": false
+    },
+    "easel": {
+      "file": "easel.glb",
+      "footprint": [
+        1,
+        1
+      ],
+      "description": "Tripod easel with canvas, shelf, clamp and paint jar.",
+      "triangles": 1692,
+      "meshes": 6,
+      "materials": [
+        "brushed_brass",
+        "canvas",
+        "custom_woodwork",
+        "linen",
+        "paint_jar",
+        "walnut"
+      ],
+      "bounds": {
+        "min": [
+          -0.415,
+          0.0139,
+          -0.4048
+        ],
+        "max": [
+          0.415,
+          1.8,
+          0.3052
+        ]
+      },
+      "sha256": "dd3614e73e89a18db4a0330285d9b1c24391984f5480482ce293993c6a652589",
+      "animated_pivots": false
+    },
+    "bookshelf": {
+      "file": "bookshelf.glb",
+      "footprint": [
+        1,
+        1
+      ],
+      "description": "Oak shelving with individually bound books.",
+      "triangles": 9288,
+      "meshes": 10,
+      "materials": [
+        "book_0",
+        "book_1",
+        "book_2",
+        "book_3",
+        "book_4",
+        "book_5",
+        "brushed_brass",
+        "custom_woodwork",
+        "linen",
+        "walnut"
+      ],
+      "bounds": {
+        "min": [
+          -0.48,
+          0.0,
+          -0.355
+        ],
+        "max": [
+          0.48,
+          1.74,
+          0.355
+        ]
+      },
+      "sha256": "35fd4d27fb6ec3cf24b9effeb612a9580011d2a81a4dec4d449aece65f2d6634",
+      "animated_pivots": false
+    },
+    "garden_bed": {
+      "file": "garden_bed.glb",
+      "footprint": [
+        2,
+        1
+      ],
+      "description": "Raised timber bed, exposed soil, planks and corner posts.",
+      "triangles": 3036,
+      "meshes": 3,
+      "materials": [
+        "custom_frame",
+        "soil",
+        "steel"
+      ],
+      "bounds": {
+        "min": [
+          -0.98,
+          0.0,
+          -0.483
+        ],
+        "max": [
+          0.98,
+          0.385,
+          0.483
+        ]
+      },
+      "sha256": "e26fc1ecb96a2887dabaec6a671ab8d6bdab423e41f6b6f77fd7588e957119e7",
+      "animated_pivots": false
+    },
+    "plant": {
+      "file": "plant.glb",
+      "footprint": [
+        1,
+        1
+      ],
+      "description": "Broad-leaf houseplant in terracotta pot.",
+      "triangles": 3576,
+      "meshes": 5,
+      "materials": [
+        "custom_pot",
+        "leaf",
+        "leaf_dark",
+        "leaf_light",
+        "soil"
+      ],
+      "bounds": {
+        "min": [
+          -0.326,
+          0.02,
+          -0.3739
+        ],
+        "max": [
+          0.3601,
+          0.9696,
+          0.3443
+        ]
+      },
+      "sha256": "29f9b0ebfea5ed8cde456c2c9704490f8913b37b1b49d152ebbbc1c087ad00e1",
+      "animated_pivots": false
+    },
+    "table": {
+      "file": "table.glb",
+      "footprint": [
+        2,
+        1
+      ],
+      "description": "Tea table with cups and teapot.",
+      "triangles": 3576,
+      "meshes": 5,
+      "materials": [
+        "custom_woodwork",
+        "porcelain",
+        "table_runner",
+        "tea",
+        "teapot"
+      ],
+      "bounds": {
+        "min": [
+          -0.955,
+          0.0378,
+          -0.45
+        ],
+        "max": [
+          0.955,
+          0.9175,
+          0.45
+        ]
+      },
+      "sha256": "6ead2973c5d69bac3d51f54928a8be0d68465c40ca1bcb88a11ffadeaa5a00d7",
+      "animated_pivots": false
+    },
+    "dining_table": {
+      "file": "dining_table.glb",
+      "footprint": [
+        2,
+        2
+      ],
+      "description": "Dining table with runner and four place settings.",
+      "triangles": 4644,
+      "meshes": 5,
+      "materials": [
+        "custom_woodwork",
+        "linen",
+        "porcelain",
+        "steel",
+        "table_runner"
+      ],
+      "bounds": {
+        "min": [
+          -0.955,
+          0.0378,
+          -0.915
+        ],
+        "max": [
+          0.955,
+          0.865,
+          0.915
+        ]
+      },
+      "sha256": "c74399fb1cb738767ee34726d8788e91e3d623574133c328694bf94450a92e20",
+      "animated_pivots": false
+    },
+    "game_table": {
+      "file": "game_table.glb",
+      "footprint": [
+        2,
+        2
+      ],
+      "description": "Game table with an eight-by-eight board and pieces.",
+      "triangles": 11800,
+      "meshes": 6,
+      "materials": [
+        "board_dark",
+        "board_light",
+        "charcoal",
+        "custom_woodwork",
+        "piece_red",
+        "walnut"
+      ],
+      "bounds": {
+        "min": [
+          -0.955,
+          0.0378,
+          -0.915
+        ],
+        "max": [
+          0.955,
+          0.926,
+          0.915
+        ]
+      },
+      "sha256": "594ee590efae4ff9eacbb6f46bef86de8a540c96b765cb99eb276ef4f5495561",
+      "animated_pivots": false
+    },
+    "tree_linden": {
+      "file": "tree_linden.glb",
+      "footprint": [
+        1,
+        1
+      ],
+      "description": "Branched linden tree with clustered modeled foliage.",
+      "triangles": 4016,
+      "meshes": 4,
+      "materials": [
+        "bark",
+        "leaf",
+        "leaf_dark",
+        "leaf_light"
+      ],
+      "bounds": {
+        "min": [
+          -1.4001,
+          -0.0275,
+          -1.3975
+        ],
+        "max": [
+          1.41,
+          3.42,
+          1.2585
+        ]
+      },
+      "sha256": "9b19606075f6a13a4658eac143f3f8df7679bb76a91849e3f96236954428f4bb",
+      "animated_pivots": false
+    },
+    "shrub": {
+      "file": "shrub.glb",
+      "footprint": [
+        1,
+        1
+      ],
+      "description": "Rounded berry shrub.",
+      "triangles": 696,
+      "meshes": 3,
+      "materials": [
+        "berry",
+        "leaf_dark",
+        "leaf_light"
+      ],
+      "bounds": {
+        "min": [
+          -0.55,
+          0.048,
+          -0.408
+        ],
+        "max": [
+          0.58,
+          0.806,
+          0.31
+        ]
+      },
+      "sha256": "3b38729b0469e74e8f718551baece8d3ec74a67eea1de9acb5835e636df2519e",
+      "animated_pivots": false
+    },
+    "streetlamp": {
+      "file": "streetlamp.glb",
+      "footprint": [
+        1,
+        1
+      ],
+      "description": "Painted iron neighborhood lantern.",
+      "triangles": 1700,
+      "meshes": 2,
+      "materials": [
+        "lamp_glow",
+        "painted_iron"
+      ],
+      "bounds": {
+        "min": [
+          -0.2353,
+          0.0,
+          -0.2353
+        ],
+        "max": [
+          0.2353,
+          3.105,
+          0.2353
+        ]
+      },
+      "sha256": "4a60a8ba112ebf8fb9069e36ae3faff3b0ff5d88f4ea6bf008fd66444cb24f78",
+      "animated_pivots": false
+    },
+    "mailbox": {
+      "file": "mailbox.glb",
+      "footprint": [
+        1,
+        1
+      ],
+      "description": "Post mailbox with flag and slot.",
+      "triangles": 1036,
+      "meshes": 6,
+      "materials": [
+        "brushed_brass",
+        "charcoal",
+        "mail_flag",
+        "mailbox_door",
+        "mailbox_paint",
+        "oak"
+      ],
+      "bounds": {
+        "min": [
+          -0.215,
+          0.0,
+          -0.29
+        ],
+        "max": [
+          0.2433,
+          1.36,
+          0.3545
+        ]
+      },
+      "sha256": "34876e2f737c1992d922e32ce230e08db43d0b3a17e78aac240247fad7d2cfcd",
+      "animated_pivots": false
+    },
+    "fence": {
+      "file": "fence.glb",
+      "footprint": [
+        1,
+        1
+      ],
+      "description": "One-metre cream picket fence segment.",
+      "triangles": 1284,
+      "meshes": 1,
+      "materials": [
+        "fence_paint"
+      ],
+      "bounds": {
+        "min": [
+          -0.5455,
+          0.0,
+          -0.0655
+        ],
+        "max": [
+          0.5455,
+          0.9964,
+          0.0978
+        ]
+      },
+      "sha256": "1ce40c61eec1114a3cf86584c2a3694a00b6958daad004cdd3b1a3a579fd3908",
+      "animated_pivots": false
+    },
+    "flower_patch": {
+      "file": "flower_patch.glb",
+      "footprint": [
+        1,
+        1
+      ],
+      "description": "Small flowering border.",
+      "triangles": 5148,
+      "meshes": 5,
+      "materials": [
+        "brushed_brass",
+        "flower_cream",
+        "flower_rose",
+        "leaf",
+        "leaf_dark"
+      ],
+      "bounds": {
+        "min": [
+          -0.3076,
+          0.0,
+          -0.3619
+        ],
+        "max": [
+          0.3695,
+          0.348,
+          0.3305
+        ]
+      },
+      "sha256": "62827dddb7b51c39090a8682b3292180ac523f0f45392d5fa0ba8c41d5a71813",
+      "animated_pivots": false
+    },
+    "crop_tomato": {
+      "file": "crop_tomato.glb",
+      "footprint": [
+        0.4,
+        0.4
+      ],
+      "description": "Single tomato crop; runtime scales growth and tints fruit.",
+      "triangles": 3460,
+      "meshes": 4,
+      "materials": [
+        "fruit",
+        "leaf",
+        "leaf_dark",
+        "leaf_light"
+      ],
+      "bounds": {
+        "min": [
+          -0.1576,
+          0.0,
+          -0.1746
+        ],
+        "max": [
+          0.175,
+          0.65,
+          0.1662
+        ]
+      },
+      "sha256": "b451ddb7619d22bc4372bab56d09f3e4294c3109c5a6db0c5c80e0e63c260fc8",
+      "animated_pivots": false
+    },
+    "crop_radish": {
+      "file": "crop_radish.glb",
+      "footprint": [
+        0.4,
+        0.4
+      ],
+      "description": "Single radish crop; runtime scales growth and tints fruit.",
+      "triangles": 1180,
+      "meshes": 4,
+      "materials": [
+        "fruit",
+        "leaf",
+        "leaf_dark",
+        "leaf_light"
+      ],
+      "bounds": {
+        "min": [
+          -0.1576,
+          -0.06,
+          -0.1451
+        ],
+        "max": [
+          0.1736,
+          0.3427,
+          0.1662
+        ]
+      },
+      "sha256": "fdd523656f6f0071879c593b07087d01c9883f73869615f729c02235dbc77ccb",
+      "animated_pivots": false
+    },
+    "window_cottage": {
+      "file": "window_cottage.glb",
+      "footprint": [
+        1,
+        0.2
+      ],
+      "description": "Window overlay; centered on wall, y=.89\u20131.90m.",
+      "triangles": 972,
+      "meshes": 3,
+      "materials": [
+        "window_frame",
+        "window_glass",
+        "window_glint"
+      ],
+      "bounds": {
+        "min": [
+          -0.515,
+          0.855,
+          -0.0
+        ],
+        "max": [
+          0.515,
+          1.8925,
+          0.2
+        ]
+      },
+      "sha256": "207ebf63fd3b0461832c986c84b5f80dc8eda39d3712f496ed95e582a8ec10b8",
+      "animated_pivots": false
+    },
+    "window_picture": {
+      "file": "window_picture.glb",
+      "footprint": [
+        1,
+        0.2
+      ],
+      "description": "Window overlay; centered on wall, y=.89\u20131.90m.",
+      "triangles": 756,
+      "meshes": 3,
+      "materials": [
+        "oak",
+        "window_glass",
+        "window_glint"
+      ],
+      "bounds": {
+        "min": [
+          -0.515,
+          0.855,
+          -0.0
+        ],
+        "max": [
+          0.515,
+          1.8925,
+          0.2
+        ]
+      },
+      "sha256": "2fb7484699fcda529748b4a90e8a0c8ea23a006f66f511c1ab91df043b68e389",
+      "animated_pivots": false
+    },
+    "window_shutters": {
+      "file": "window_shutters.glb",
+      "footprint": [
+        1,
+        0.2
+      ],
+      "description": "Window overlay; centered on wall, y=.89\u20131.90m.",
+      "triangles": 2916,
+      "meshes": 4,
+      "materials": [
+        "shutter",
+        "window_frame",
+        "window_glass",
+        "window_glint"
+      ],
+      "bounds": {
+        "min": [
+          -0.52,
+          0.855,
+          -0.025
+        ],
+        "max": [
+          0.52,
+          1.8925,
+          0.2
+        ]
+      },
+      "sha256": "f8adcd6067c2b42fe131a958fd71f41f169ee80ac4c0bd20894e549f311a9bd5",
+      "animated_pivots": false
+    },
+    "door_frame": {
+      "file": "door_frame.glb",
+      "footprint": [
+        1,
+        1
+      ],
+      "description": "Open doorway with frame, threshold, and open paneled door.",
+      "triangles": 876,
+      "meshes": 4,
+      "materials": [
+        "brushed_brass",
+        "door_trim",
+        "door_wood",
+        "walnut"
+      ],
+      "bounds": {
+        "min": [
+          -0.505,
+          0.0,
+          -0.735
+        ],
+        "max": [
+          0.505,
+          2.11,
+          0.135
+        ]
+      },
+      "sha256": "2825d4465b07a214f86b188be53277421a969a1ae72d3a7d11a7b8dace787ea5",
+      "animated_pivots": false
+    },
+    "resident": {
+      "file": "resident.glb",
+      "footprint": [
+        0.6,
+        0.4
+      ],
+      "description": "Resident with independently animated head, arms, legs and appearance materials.",
+      "triangles": 6308,
+      "meshes": 19,
+      "materials": [
+        "charcoal",
+        "hair",
+        "linen",
+        "lips",
+        "shirt",
+        "shoe_sole",
+        "shoes",
+        "skin",
+        "trousers"
+      ],
+      "bounds": {
+        "min": [
+          -0.349,
+          0.005,
+          -0.184
+        ],
+        "max": [
+          0.349,
+          1.74,
+          0.2155
+        ]
+      },
+      "sha256": "5e1caf19b9e15e2ae141e8df4daa1a99ef511f860be2226520395f2e22b4ced5",
+      "animated_pivots": true
+    },
+    "resident_bob": {
+      "file": "resident_bob.glb",
+      "footprint": [
+        0.6,
+        0.4
+      ],
+      "description": "Resident with independently animated head, arms, legs and appearance materials.",
+      "triangles": 7004,
+      "meshes": 19,
+      "materials": [
+        "charcoal",
+        "hair",
+        "linen",
+        "lips",
+        "shirt",
+        "shoe_sole",
+        "shoes",
+        "skin",
+        "trousers"
+      ],
+      "bounds": {
+        "min": [
+          -0.349,
+          0.005,
+          -0.19
+        ],
+        "max": [
+          0.349,
+          1.74,
+          0.2155
+        ]
+      },
+      "sha256": "2a835ffd7dd0028ae7b84e8267a0371db33b45c81bcbbc78b3ed92e96b4d01ce",
+      "animated_pivots": true
+    },
+    "resident_curls": {
+      "file": "resident_curls.glb",
+      "footprint": [
+        0.6,
+        0.4
+      ],
+      "description": "Resident with independently animated head, arms, legs and appearance materials.",
+      "triangles": 7548,
+      "meshes": 19,
+      "materials": [
+        "charcoal",
+        "hair",
+        "linen",
+        "lips",
+        "shirt",
+        "shoe_sole",
+        "shoes",
+        "skin",
+        "trousers"
+      ],
+      "bounds": {
+        "min": [
+          -0.349,
+          0.005,
+          -0.2205
+        ],
+        "max": [
+          0.349,
+          1.74,
+          0.2155
+        ]
+      },
+      "sha256": "17c116e1aa70bcb52ec19ef2641bbb88b5c5ff885907a3364270441a32c7158f",
+      "animated_pivots": true
+    },
+    "resident_shaved": {
+      "file": "resident_shaved.glb",
+      "footprint": [
+        0.6,
+        0.4
+      ],
+      "description": "Resident with independently animated head, arms, legs and appearance materials.",
+      "triangles": 5668,
+      "meshes": 19,
+      "materials": [
+        "charcoal",
+        "hair",
+        "linen",
+        "lips",
+        "shirt",
+        "shoe_sole",
+        "shoes",
+        "skin",
+        "trousers"
+      ],
+      "bounds": {
+        "min": [
+          -0.349,
+          0.005,
+          -0.167
+        ],
+        "max": [
+          0.349,
+          1.714,
+          0.2155
+        ]
+      },
+      "sha256": "e32afb509d9f7687215820fe5ee132a74d2232d2a62777084e476f87c92afce8",
+      "animated_pivots": true
+    }
+  }
+}

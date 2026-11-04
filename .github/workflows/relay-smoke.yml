@@ -12,9 +12,13 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+        with:
+          lfs: true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
+      - name: Verify binary asset storage
+        run: python tools/check_assets.py
       - uses: dtolnay/rust-toolchain@1.98.1
       - run: python tools/build_native.py
       - run: python tools/check.py --relay-only
