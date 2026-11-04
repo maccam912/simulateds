@@ -7,6 +7,8 @@ household or an absent player.
 | File | Responsibility |
 | --- | --- |
 | `game/catalog.gd` | Furniture prices, footprints, need effects, duration, labels, and color hints |
+| `game/clear_lot.gd` | Shared whole-lot resale preview, finished-art preservation, unfinished/capacity guards, and atomic application |
+| `game/clear_lot_panel.gd` | Revision-bound clearing review, consumable warnings, exact acknowledgement, and rebuild shortcuts |
 | `game/room_library.gd` | Canonical host-captured room recipes, four-entry/32 KiB household bounds, revision-checked edits, and legacy defaults |
 | `game/room_library_panel.gd` | Saved-room previews, names, correlated save/rename/remove commands, and placement selection |
 | `game/room_thumbnail.gd` | Read-only floor-plan swatches drawn from room geometry, finishes, and furniture colors |
@@ -160,3 +162,16 @@ live state through `_new_object`. Extend malformed-save and original-preservatio
 checks. Keep the four-entry and 32,768-byte household bounds unless measured
 replication and persistence evidence justifies a change; current packet and
 snapshot caps remain unchanged.
+
+## Whole-lot clearing
+
+`clear_lot` requires construction ownership, the reviewed lot revision, and the
+exact shared resale quote. Refund each piece individually, matching Sell’s
+rounding; finishes have no independent refund. Do not credit original paintings
+as furniture or invent practice/rewards. Finished easel originals move into the
+collection with their original identity/credit, wall pictures become stored, and
+unfinished canvases or collection overflow reject the whole edit. Review shows
+meal portions and planted beds that will be discarded. Existing construction
+history restores their exact contents and any artwork transfer atomically;
+external allowances/gifts remain handled by the shared balance-history logic.
+No new saved fields are required. Saved room libraries stay outside the edit.

@@ -150,6 +150,12 @@ or shell expressions.
   residents, and original artwork are left behind; new furnishings start fresh.
   Removing a design leaves built rooms untouched. Libraries travel with the
   neighborhood save and your household when reconnecting.
+- **Clear lot…** opens a review of everything removed, the exact 60% per-piece
+  refund, and any food or crops that would be lost. Finished paintings move safely
+  into the collection; unfinished canvases or a full collection block clearing.
+  Confirming makes one undoable edit. **Discard draft** restores the committed
+  home, and saved designs remain available for rebuilding. Ordinary lot clicks do
+  nothing during the review; a changed lot requires a fresh review.
 - The build **Catalog** groups items by room/use. Search within a category by
   name or activity (for example, "sleep", "meal", or "book"). **Ctrl/Cmd+F** focuses
   search, **Enter** selects the first result, and **Escape** clears a search before

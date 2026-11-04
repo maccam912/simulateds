@@ -315,6 +315,22 @@ func _client(index: String) -> void:
 		if preload("res://game/room_copy.gd").is_applied(session.state.lots[home],copy_plan): break
 		await create_timer(0.1).timeout
 	assert(preload("res://game/room_copy.gd").is_applied(session.state.lots[home],copy_plan) and not session.world._object(session.state.lots[home],copied_plant).is_empty())
+	# A reviewed whole-lot edit is priced once; Undo restores the entire accepted house.
+	var before_clear: Dictionary=session.state.lots[home].duplicate(true)
+	var clear_plan: Dictionary=preload("res://game/clear_lot.gd").inspect(before_clear); assert(clear_plan.ok)
+	var clear_intent := {"type":"clear_lot","lot_id":home,"revision":before_clear.revision,"refund":clear_plan.refund}
+	var foreign_clear:=clear_intent.duplicate(); foreign_clear.lot_id=host_home
+	await _command(foreign_clear,false); await _command(clear_intent); await _command(clear_intent,false)
+	for attempt in range(60):
+		if preload("res://game/clear_lot.gd").empty(session.state.lots[home]): break
+		await create_timer(0.1).timeout
+	assert(preload("res://game/clear_lot.gd").empty(session.state.lots[home]) and session.state.lots[home].funds==int(before_clear.funds)+int(clear_plan.refund))
+	assert(session.state.families[identity].room_library.entries==[saved_room],"Clearing the lot preserves its saved designs")
+	await _command({"type":"build_undo","lot_id":home,"revision":session.state.lots[home].revision})
+	for attempt in range(60):
+		if session.state.lots[home].objects.size()==before_clear.objects.size(): break
+		await create_timer(0.1).timeout
+	for field: String in preload("res://game/world.gd").BUILD_FIELDS: assert(session.state.lots[home][field]==before_clear[field],"Whole-lot undo restores "+field)
 	var fill := {"type":"paint","lot_id":home,"surface":"floor","selection":"room","finish":"walnut","x":7,"y":7,"revision":session.state.lots[home].revision}
 	var fill_plan: Dictionary=preload("res://game/finishes.gd").inspect(session.state.lots[home],fill)
 	assert(fill_plan.ok and fill_plan.area.size()==56 and fill_plan.cost==224)

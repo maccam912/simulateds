@@ -5,6 +5,7 @@ const Catalog = preload("res://game/catalog.gd")
 const BuildRules = preload("res://game/build_rules.gd")
 const RoomPlan = preload("res://game/room_plan.gd")
 const RoomCopy = preload("res://game/room_copy.gd")
+const ClearLot = preload("res://game/clear_lot.gd")
 const RoomLibrary = preload("res://game/room_library.gd")
 const FurnitureColors = preload("res://game/furniture_colors.gd")
 const Wishes = preload("res://game/wishes.gd")
@@ -154,7 +155,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 			captured=RoomCopy.capture(lot,Vector2i(int(command.source_x),int(command.source_y)))
 			if not captured.ok: return captured
 		return RoomLibrary.edit(family,command,captured)
-	if type in ["build_begin", "build_end", "build_cancel", "build_undo", "build_redo", "place", "erase", "move_object", "build_room", "copy_room", "place_blueprint", "paint", "set_window", "recolor", "art_hang", "art_store", "art_return"]:
+	if type in ["build_begin", "build_end", "build_cancel", "build_undo", "build_redo", "place", "erase", "move_object", "build_room", "copy_room", "place_blueprint", "clear_lot", "paint", "set_window", "recolor", "art_hang", "art_store", "art_return"]:
 		if lot.owner != profile_id:
 			return _result(false, "Only the owner can build on this lot.")
 		if type == "build_begin":
@@ -176,7 +177,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 			return _result(true, "Construction started. Your family is paused; neighbors keep living.")
 		if not lot.building:
 			return _result(false, "Enter construction mode first.")
-		if type in ["build_undo", "build_redo", "build_room", "copy_room", "place_blueprint", "paint", "set_window", "recolor", "art_hang", "art_store", "art_return"]:
+		if type in ["build_undo", "build_redo", "build_room", "copy_room", "place_blueprint", "clear_lot", "paint", "set_window", "recolor", "art_hang", "art_store", "art_return"]:
 			if not _integer(command.get("revision")) or int(command.revision) != int(lot.revision):
 				return _result(false, "The building draft changed. Review the preview and try again.")
 			if type in ["build_undo","build_redo"]: return _history_step(lot,type == "build_redo")
@@ -794,6 +795,12 @@ func move_option(profile_id: String,member_id: String,lot_id: String,goal: Vecto
 	return {"ok":true,"message":"Walk here" if ahead==0 else "Queue walk · %d %s first" % [ahead,"activity" if ahead==1 else "activities"],"path":route,"ahead":ahead,"cell":goal,"here":_position(member)==goal}
 
 func _build(lot: Dictionary, command: Dictionary) -> Dictionary:
+	if command.type=="clear_lot":
+		var plan:=ClearLot.inspect(lot)
+		if not plan.ok: return plan
+		if not ClearLot.matches(command,plan): return _result(false,"The clearing quote changed. Review the lot again.")
+		ClearLot.apply(lot,plan)
+		return _result(true,"Lot cleared · §%d refunded. %d paintings stored. Undo restores the whole edit." % [plan.refund,plan.stored+plan.paintings.size()])
 	if command.type in ["art_hang","art_store","art_return"]:
 		var plan := WallArt.inspect(lot,command)
 		if not plan.ok: return plan

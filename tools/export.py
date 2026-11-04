@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import tempfile
 import zipfile
 from bootstrap import ROOT, templates
 from build_native import HOST, BIN, NAMES, build
@@ -14,6 +15,19 @@ from godot import run
 PRESETS = {"linux": ("Linux", "simulateds.x86_64"), "windows": ("Windows", "simulateds.exe"),
            "macos": ("macOS", "simulateds.zip"), "android": ("Android", "simulateds.apk"),
            "server": ("Server", "simulateds-server.x86_64")}
+
+
+def native_smoke(executable):
+    # Export verification must never create or load the player's normal profile.
+    with tempfile.TemporaryDirectory(prefix="simulateds-export-smoke-") as temporary:
+        work = Path(temporary)
+        result = subprocess.run([str(executable), "--headless", "--", "--native-smoke",
+                                 f"--profile-path={work / 'profile.json'}",
+                                 f"--save-path={work / 'world.json'}"],
+                                capture_output=True, text=True, timeout=30)
+        if result.returncode or "ERROR:" in result.stdout + result.stderr or "NATIVE_RUNTIME_PASS" not in result.stdout:
+            raise RuntimeError(result.stdout + result.stderr)
+        print("EXPORTED_NATIVE_RUNTIME_PASS", flush=True)
 
 
 def export(platform, skip_build=False):
@@ -68,15 +82,10 @@ def export(platform, skip_build=False):
         subprocess.run(["codesign", "--verify", "--deep", "--strict", "--all-architectures", str(apps[0])], check=True)
         # Check the shipped app can load the native extension, not just the editor.
         executable = next((apps[0] / "Contents/MacOS").iterdir())
-        result = subprocess.run([str(executable), "--headless", "--", "--native-smoke"],
-                                capture_output=True, text=True, timeout=30)
-        if result.returncode or "ERROR:" in result.stdout + result.stderr or "NATIVE_RUNTIME_PASS" not in result.stdout:
-            raise RuntimeError(result.stdout + result.stderr)
+        native_smoke(executable)
     if platform in ("linux", "windows", "server"):
         output.chmod(output.stat().st_mode | 0o111)
-        result = subprocess.run([str(output), "--headless", "--", "--native-smoke"], capture_output=True, text=True, timeout=30)
-        if result.returncode or "ERROR:" in result.stdout + result.stderr or "NATIVE_RUNTIME_PASS" not in result.stdout:
-            raise RuntimeError(result.stdout + result.stderr)
+        native_smoke(output)
     release = ROOT / "build/artifacts"
     release.mkdir(parents=True, exist_ok=True)
     artifact = release / ("simulateds-" + platform + (".apk" if platform == "android" else ".zip"))

@@ -1083,3 +1083,46 @@ preview price, undoes/redoes the placement, and verifies persistence through
 reconnect. Final focused model and headless/compact native checks followed the
 last UI-copy and save-during-draft test changes. No human-family playtest is
 claimed by these injected-input scenarios.
+
+## Reviewed whole-lot clearing
+
+Full regression passed 94 local suites, `IROH_SMOKE_PASS`,
+`PAINTINGS_IROH_PASS`, `MEALS_IROH_PASS`, and `SERVER_SMOKE_PASS`.
+`clear_lot` verifies the starter home's §2,940 quote against independent component
+totals, exact refund, ownership/stale-quote rejection, atomic undo/redo/discard,
+allowance preservation, crash-save restoration of the committed house, no new
+object IDs, and rebuilding from a retained saved-room design. Finished wall and
+easel originals are stored with their identities/credit; unfinished canvases and
+collection/budget overflow reject without mutation. Meals/crops are named by the
+preview and restored exactly by undo.
+
+`clear_lot_ui` passes with injected native input at 1440×900 and 1280×720 / 125%
+UI scale. Keep/Escape and ordinary world clicks leave the lot unchanged. Updated
+lots require review; unrelated acknowledgements cannot release a pending clear.
+The pending state disables conflicting build/history controls. The flow clears,
+undoes/redoes, discards the draft, finds unfinished art, protects finished art,
+and rebuilds a saved starter home. Final compact headless/native passes assert
+that the full consumable warning fits next to the quote without scrolling.
+
+The main separate-process Iroh scenario now clears both clients' independent
+lots and restores all construction fields with one Undo, including funds and
+saved design availability. The painting Iroh scenario stores a real deliberately
+finished canvas while clearing, then restores it to its original easel before
+selling it once. These passes remain local-machine multiplayer evidence.
+
+GitHub workflow `41872387441` (saved-room checkpoint) failed before executing any
+steps or assigning runners. The check annotation says recent account payments
+failed or the Actions spending limit must be increased. No billing change was
+made; current hosted platform checks are blocked for that reason. This supersedes
+the earlier macOS-only runner-availability observation, without converting local
+tests into hosted export evidence.
+
+A local macOS export completed with ARM64 and Intel slices, `Info.plist` validation,
+`codesign --verify --deep --strict --all-architectures`, and
+`EXPORTED_NATIVE_RUNTIME_PASS` from the packaged app on this Apple Silicon Mac.
+The artifact is `build/artifacts/simulateds-macos.zip` with its adjacent SHA-256
+file. It is a local ad-hoc-signed package, not a notarized release or physical
+Intel runtime test. Export smoke checks now use temporary profile/save paths,
+so validating a package does not load or create the player's normal profile.
+The final focused clear-lot model pass uses the universal library and verifies
+that committed artwork also survives crash-save recovery and Discard draft.

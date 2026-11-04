@@ -21,6 +21,7 @@ const GardenPanel = preload("res://game/garden_panel.gd")
 const BuildCatalog = preload("res://game/build_catalog.gd")
 const RoomPlan = preload("res://game/room_plan.gd")
 const RoomCopy = preload("res://game/room_copy.gd")
+const ClearLotPanel = preload("res://game/clear_lot_panel.gd")
 const RoomLibrary = preload("res://game/room_library.gd")
 const RoomLibraryPanel = preload("res://game/room_library_panel.gd")
 const FurnitureColors = preload("res://game/furniture_colors.gd")
@@ -159,6 +160,8 @@ var _copy_revision := -1
 var _copy_request: Dictionary={}
 var _blueprint_id := ""
 var _blueprint_revision := -1
+var clear_panel: VBoxContainer
+var clear_discard_button: Button
 var library_panel: VBoxContainer
 var save_room_button: Button
 var furniture_color := "original"
@@ -610,7 +613,7 @@ func _refresh() -> void:
 			need_buttons[need].disabled=bool(state.lots[family.home_lot].building)
 			if care_values.has(need) and is_instance_valid(care_values[need]): care_values[need].text=str(need).capitalize()+" · %d" % int(value)
 	var build_mode := building and mine
-	catalog_filters.visible=build_mode and selected_tool not in ["window","furniture_color","wall_art"] and _paint_surface().is_empty() and _context_page not in ["access","blueprints"]
+	catalog_filters.visible=build_mode and selected_tool not in ["window","furniture_color","wall_art"] and _paint_surface().is_empty() and _context_page not in ["access","blueprints","clear_lot"]
 	wishes_button.disabled=build_mode or member.is_empty()
 	hobbies_button.disabled=bool(state.lots.get(family.get("home_lot",""),{}).get("building",false)) or member.is_empty()
 	people_button.disabled=build_mode or member.is_empty()
@@ -647,7 +650,7 @@ func _refresh() -> void:
 			for hobby: String in Hobbies.ORDER: _hobby_options[hobby]=Session.world.hobby_option(member,hobby)
 		tools_signature+=str(member.get("hobbies",{}))+str(day)+str(_hobby_options)
 	if _context_page=="care" and not build_mode: tools_signature+=str(_care_options)+str(Wellbeing.mood(member.get("needs",{})))
-	if build_mode and _context_page=="blueprints": tools_signature="blueprints:"+viewed_lot+str(Session.role)
+	if build_mode and _context_page in ["blueprints","clear_lot"]: tools_signature=_context_page+":"+viewed_lot+str(Session.role)
 	if tools_signature!=_tools_signature:
 		_tools_signature=tools_signature
 		_rebuild_context(building and mine,lot)
@@ -659,6 +662,10 @@ func _refresh() -> void:
 	if build_mode and _context_page=="blueprints" and is_instance_valid(library_panel):
 		library_panel.refresh(viewed_lot,_copy_source,_blueprint_id)
 		undo_button.disabled=int(lot.get("build_undo",0))==0; redo_button.disabled=int(lot.get("build_redo",0))==0
+	if build_mode and _context_page=="clear_lot" and is_instance_valid(clear_panel):
+		clear_panel.refresh(viewed_lot)
+		undo_button.disabled=_clear_busy() or int(lot.get("build_undo",0))==0; redo_button.disabled=_clear_busy() or int(lot.get("build_redo",0))==0
+		clear_discard_button.disabled=_clear_busy(); mode_button.disabled=mode_button.disabled or _clear_busy()
 	if _context_page=="travel" and not build_mode and is_instance_valid(travel_panel): travel_panel.refresh(viewed_lot,selected_member)
 	if _context_page=="garden" and not build_mode and is_instance_valid(garden_panel): garden_panel.refresh(viewed_lot,_selected_object,selected_member)
 	help_label.text="Click to place · " + Preferences.action_label("rotate") + " rotates · Ctrl/Cmd+Z undoes" if building and mine else "Click a need to care for it · Click the ground to walk"
@@ -669,6 +676,7 @@ func _refresh() -> void:
 	if building and mine and selected_tool=="furniture_color": help_label.text="Choose a color · Hover furniture to preview · Click to apply · Free"
 	if building and mine and selected_tool=="window": help_label.text="Choose a style, then click a wall · Windows follow its direction"
 	if building and mine and _context_page=="access": help_label.text="Find an item · Choose Door, Move, or Sell to repair"
+	if build_mode and _context_page=="clear_lot": help_label.text="Review the whole lot · Ground clicks do not edit · Escape keeps the lot"
 	help_label.tooltip_text=help_label.text
 	if room_label!=null:
 		room_label.text=Session.status+("\nRoom code: "+Rooms.code if not Rooms.code.is_empty() else "")
@@ -851,6 +859,11 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 	if building:
 		activity_label.text="Build & buy"
 		if _context_page=="access": _build_access_list()
+		elif _context_page=="clear_lot":
+			activity_label.text="Clear lot · Review"
+			clear_panel=ClearLotPanel.new(); tools_box.add_child(clear_panel)
+			clear_panel.command_requested.connect(_send); clear_panel.tool_requested.connect(_select_build_tool)
+			clear_panel.focus_requested.connect(func(cell): lot_view.focus_cell(cell))
 		elif _context_page=="blueprints":
 			activity_label.text="Saved rooms"
 			library_panel=RoomLibraryPanel.new(); tools_box.add_child(library_panel)
@@ -996,7 +1009,7 @@ func _send(command: Dictionary) -> void:
 	_refresh()
 
 func _entity_clicked(target: Dictionary) -> void:
-	if routine_panel.visible: return
+	if routine_panel.visible or (lot_view.building and _context_page=="clear_lot"): return
 	if target.get("type")=="wall_art":
 		_art_source="art:"+str(target.id)
 		if not lot_view.building: _context_page="wall_art_inspect"
@@ -1023,10 +1036,12 @@ func _entity_clicked(target: Dictionary) -> void:
 		_send({"type":"interact","member_id":selected_member,"lot_id":viewed_lot,"target_id":str(target.id)})
 
 func _select_build_tool(kind: String) -> void:
+	if _clear_busy(): return
 	if kind=="saved_rooms": _open_room_library(); return
-	if _context_page in ["access","blueprints"]: _context_page="activities"
+	if _context_page in ["access","blueprints","clear_lot"]: _context_page="activities"
 	var reset_scroll := kind.begins_with("finish_") or not _paint_surface().is_empty() or kind in ["window","furniture_color","wall_art"] or selected_tool in ["window","furniture_color","wall_art"]
 	if kind!="wall_art": _art_source=""; _art_request.clear(); _art_entry.clear()
+	if kind=="clear_lot": _context_page="clear_lot"; _access_visible=false
 	selected_tool=kind; _moving_object=""; _move_request.clear(); _color_request.clear()
 	_paint_anchor=Vector2i(-1,-1); _paint_request.clear()
 	_room_anchor=Vector2i(-1,-1); _room_request.clear(); _copy_source=Vector2i(-1,-1); _copy_request.clear(); _blueprint_id=""; _refresh()
@@ -1042,7 +1057,7 @@ func _select_moving_object(id: String) -> void:
 			_moving_object=id; build_rotation=int(object.rotation); _refresh(); return
 
 func _tile_clicked(cell: Vector2i) -> void:
-	if routine_panel.visible: return
+	if routine_panel.visible or (lot_view.building and _context_page=="clear_lot"): return
 	if lot_view.building and selected_tool=="wall_art" and not lot_view.access_inspecting:
 		_art_command({"type":"art_hang","lot_id":viewed_lot,"source":_art_source,"x":cell.x,"y":cell.y,"revision":Session.state.lots[viewed_lot].revision}); return
 	var lot: Dictionary=Session.state.get("lots",{}).get(viewed_lot,{})
@@ -1152,6 +1167,7 @@ func _chat_with_family() -> void:
 	_notice("Bring a friend over, or visit a neighbor to chat.")
 
 func _toggle_build() -> void:
+	if _clear_busy(): return
 	var lot: Dictionary=Session.state.get("lots",{}).get(viewed_lot,{})
 	if lot.get("building",false) and str(lot.get("owner",""))==str(Session.profile_id) and not Session.world.build_access(lot).ok:
 		_access_visible=true; _context_page="access"
@@ -1166,6 +1182,8 @@ func _toggle_access() -> void:
 	_refresh(); _show_tray(context_panel,true); call_deferred("_reset_catalog_scroll")
 
 func _close_context() -> void:
+	if _clear_busy(): return
+	if _context_page=="clear_lot": _select_build_tool("floor")
 	if _context_page=="access":
 		_access_visible=false; _context_page="activities"; _refresh()
 	context_panel.hide()
@@ -1185,6 +1203,7 @@ func _go_home() -> void:
 	viewed_lot=str(_family().get("home_lot",viewed_lot))
 
 func _build_history(redo: bool) -> void:
+	if _clear_busy(): return
 	var lot: Dictionary=Session.state.get("lots",{}).get(viewed_lot,{})
 	_send({"type":"build_redo" if redo else "build_undo","lot_id":viewed_lot,"revision":lot.get("revision",-1)})
 
@@ -1219,14 +1238,15 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	var focused := get_viewport().gui_get_focus_owner()
 	if focused is LineEdit or focused is TextEdit: return
 	if event is InputEventKey and event.pressed and not event.echo:
+		if _clear_busy(): get_viewport().set_input_as_handled(); return
 		if lot_view.building and (event.ctrl_pressed or event.meta_pressed) and event.keycode==KEY_F:
-			if not _paint_surface().is_empty() or selected_tool in ["window","furniture_color","wall_art"]: _select_build_tool("floor")
+			if not _paint_surface().is_empty() or selected_tool in ["window","furniture_color","wall_art","clear_lot"]: _select_build_tool("floor")
 			_context_page="activities"; _refresh()
 			_show_tray(context_panel,true); catalog_search.grab_focus(); catalog_search.select_all()
 		elif lot_view.building and (event.ctrl_pressed or event.meta_pressed) and event.keycode in [KEY_Z,KEY_Y]:
 			_build_history(event.shift_pressed or event.keycode==KEY_Y)
 		elif event.is_action_pressed("pause") or event.keycode==KEY_ESCAPE:
-			if _context_page=="access" and context_panel.visible:
+			if _context_page in ["access","clear_lot"] and context_panel.visible:
 				_close_context()
 			elif selected_tool=="wall_art" and not _art_source.is_empty() and _art_request.is_empty():
 				_art_source=""; _refresh()
@@ -1557,9 +1577,14 @@ func _place_blueprint(id: String,revision: int) -> void:
 	_blueprint_id=id; _blueprint_revision=revision; _copy_source=Vector2i(-1,-1); build_rotation=0
 	get_viewport().gui_release_focus(); _refresh()
 
+func _clear_busy() -> bool:
+	return _context_page=="clear_lot" and is_instance_valid(clear_panel) and not clear_panel.pending.is_empty()
+
 func _build_edit_controls(lot: Dictionary) -> void:
 	var painting := (not _paint_surface().is_empty() or selected_tool in ["window","furniture_color","wall_art"]) and _context_page!="access"
-	if _context_page=="blueprints":
+	if _context_page=="clear_lot":
+		clear_panel.add_footer(context_box)
+	elif _context_page=="blueprints":
 		var library_actions:=HBoxContainer.new(); context_box.add_child(library_actions)
 		_edit_button("‹ Catalog",func(): _select_build_tool("copy_room"),library_actions)
 		_edit_button("Rotate ↻",_rotate,library_actions,"Rotate selected room · "+Preferences.action_label("rotate"))
@@ -1597,7 +1622,9 @@ func _build_edit_controls(lot: Dictionary) -> void:
 	undo_button=_edit_button("Undo",func(): _build_history(false),history,"Undo the last edit and its price · Ctrl/Cmd+Z")
 	redo_button=_edit_button("Redo",func(): _build_history(true),history,"Redo a building edit · Ctrl/Cmd+Shift+Z or Ctrl+Y")
 	undo_button.disabled=int(lot.get("build_undo",0))==0; redo_button.disabled=int(lot.get("build_redo",0))==0
-	if not painting: _edit_button("Discard draft",func(): _send({"type":"build_cancel","lot_id":viewed_lot}),history,"Restore the whole house and budget from before construction.")
+	if not painting:
+		var discard:=_edit_button("Discard draft",func(): _send({"type":"build_cancel","lot_id":viewed_lot}),history,"Restore the whole house and budget from before construction.")
+		if _context_page=="clear_lot": clear_discard_button=discard
 	elif selected_tool in ["window","furniture_color","wall_art"]:
 		_edit_button("Discard draft",func(): _send({"type":"build_cancel","lot_id":viewed_lot}),history,"Restore the house and budget from before construction.")
 	else:
@@ -1605,7 +1632,7 @@ func _build_edit_controls(lot: Dictionary) -> void:
 		var cancel := _edit_button("Cancel area",func(): _paint_anchor=Vector2i(-1,-1); _refresh(),finish,"Cancel the first painting corner · Escape")
 		cancel.disabled=_paint_anchor.x<0 or not _paint_request.is_empty()
 		_edit_button("Discard draft",func(): _send({"type":"build_cancel","lot_id":viewed_lot}),finish,"Restore the whole house and budget from before construction.")
-	if _context_page=="blueprints": return
+	if _context_page in ["blueprints","clear_lot"]: return
 	access_button=_edit_button("Hide access" if _context_page=="access" else "Access · Clear" if _access_report.get("ok",true) else "Access · %d issues" % _access_report.issues.size(),_toggle_access,context_box,"Show routes from the entrance and locate blocked residents or furnishings.")
 	if not _access_report.get("ok",true): access_button.add_theme_color_override("font_color",Style.GOLD)
 

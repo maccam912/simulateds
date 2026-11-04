@@ -432,6 +432,7 @@ func _draw() -> void:
 	hover_target = hit_target(_pointer)
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if (not building and not hover_target.is_empty()) or (building and access_inspecting and hover_target.get("type")=="access") else Control.CURSOR_ARROW
 	if building and access_inspecting: pass
+	elif building and build_kind=="clear_lot": _draw_clear_review(lot)
 	elif building and build_kind=="furniture_color": _draw_furniture_color()
 	elif building and build_kind=="copy_room": _draw_room_copy(lot)
 	elif building and build_kind=="room":
@@ -1458,3 +1459,11 @@ func _draw_wall_art(lot: Dictionary,x: int,y: int,picture: Dictionary,s: float,i
 	var target := {"type":"wall_art","id":id,"x":x,"y":y}
 	if building and build_kind!="wall_art": target={"type":"wall","x":x,"y":y}
 	_hit_regions.append({"polygon":PackedVector2Array(frame),"target":target})
+
+func _draw_clear_review(lot: Dictionary) -> void:
+	if lot.objects.is_empty() and lot.floors.is_empty() and lot.walls.is_empty() and lot.doors.is_empty(): return
+	var color:=Color("eda58e")
+	_diamond(0,0,16,16,Color.TRANSPARENT,3,color)
+	for object: Dictionary in lot.objects:
+		var footprint:=Catalog.footprint(object.kind,int(object.rotation))
+		_diamond(int(object.x),int(object.y),footprint.x,footprint.y,Color(color,0.1),2,color)

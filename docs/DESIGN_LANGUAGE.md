@@ -728,3 +728,11 @@ preview. Save forms collapse after acceptance. Rename and remove are local
 review forms; remove explicitly says that built rooms remain. Undo, redo, rotation
 and return to Catalog stay in a fixed footer above the household HUD. Long lists
 scroll inside the tray, including at 720p with enlarged interface text.
+
+Whole-lot clearing uses a distinct review in that same tray, with a coral lot
+outline and furnishing footprints. The world stays visible and receives no edits
+from pointer clicks during review. Counts and the refund name the consequence;
+protected paintings and lost consumables are explicit. Keep the confirm/back and
+history controls fixed at the bottom. A stale review asks for a new review and
+scrolls back to its updated quote, instead of silently accepting different
+contents. After acceptance, the tray offers Saved rooms and Build room.

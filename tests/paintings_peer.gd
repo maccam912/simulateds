@@ -211,6 +211,13 @@ func _client(index: String) -> void:
 	await _construction(home,true)
 	await _art_edit(home,{"type":"art_return","source":"art:"+art_id,"target_id":id})
 	assert(session.state.lots[home].artworks.is_empty() and _easel(home,id).painting.artists==completed.artists)
+	var canvas_before_clear: Dictionary=_easel(home,id).painting.duplicate(true)
+	var clear_plan: Dictionary=preload("res://game/clear_lot.gd").inspect(session.state.lots[home]); assert(clear_plan.ok and clear_plan.paintings.size()==1)
+	await _art_edit(home,{"type":"clear_lot","refund":clear_plan.refund})
+	assert(session.state.lots[home].objects.is_empty() and session.state.lots[home].artworks.size()==1)
+	assert(session.state.lots[home].artworks.values()[0]=={"picture":canvas_before_clear,"x":-1,"y":-1},"Clearing stores the exact completed original with all artist credit")
+	await _art_edit(home,{"type":"build_undo"})
+	assert(session.state.lots[home].artworks.is_empty() and _easel(home,id).painting==canvas_before_clear,"Undo returns the original to its original easel without duplicating it")
 	completed=_easel(home,id).painting.duplicate(true)
 	await _construction(home,false)
 	var funds: int=session.state.lots[home].funds

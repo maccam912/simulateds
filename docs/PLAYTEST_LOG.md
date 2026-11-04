@@ -2007,3 +2007,57 @@ can fit. The next useful building increment is a reviewed clear-lot action with
 an exact refund, protected original artwork, and whole-edit Undo/Discard. It
 should make rebuilding from a saved design practical without hiding what the
 player is about to remove. This is proposed next work, not implemented here.
+
+## Reviewing a whole-lot rebuild
+
+Clear lot… now opens a distinct catalog review with a coral boundary/furnishing
+preview, counts, an exact per-piece resale quote, and protected/lost contents.
+World clicks cannot edit during review. Confirming clears architecture and
+furnishings as one history entry, stores finished easel originals and mounted
+paintings, and preserves residents and saved-room designs. Unfinished canvases,
+collection overflow, and budget overflow reject the whole action. Find unfinished
+easel helps locate protected work. A changed lot requires a fresh review, and
+pending confirmation blocks conflicting history/build controls.
+
+The first compact visual pass showed the food/crop warning below the fold. The
+review now uses shorter counts, correct singular/plural wording, and a concise
+refund with the resulting balance on hover; all consequences fit beside the
+fixed confirmation controls. Review changed lot scrolls back to the new quote.
+After clearing, Saved rooms and Build room lead directly into rebuilding.
+
+All 94 local suites, all three real Iroh host/two-client scenarios, and dedicated
+server startup passed. Both network builders clear, reject duplicate/foreign
+commands, and undo back to the exact house and budget while retaining their
+saved designs. The painting scenario stores a finished original with its artist
+credit, then undoes back to the same easel without duplicating it. Native
+injected-input scenarios pass at 1440×900 and 1280×720 / 125% UI scale, with final
+headless/native compact checks for the fully visible food/crop warning. They
+exercise Keep/Escape, ignored world clicks, stale review, exact ACK handling,
+clearing, undo/redo, draft discard, unfinished-art protection, and rebuilding a
+saved starter house with the original painting still in the collection.
+
+Model evidence also covers allowance preservation across history, committed-home
+crash saves, collection/budget limits, no ID allocation or family mutation, and
+exact restoration of food/crops. Reviewed captures include
+`build/clear-lot-review.png`, `build/clear-lot-contents-compact.png`, and
+`build/clear-lot-rebuilt-compact.png`.
+
+The saved-room checkpoint's hosted workflow did not execute any job: GitHub's
+annotation reported failed recent account payments or an Actions spending limit.
+No billing change was made. Local validation continued; this account-level CI
+block is separate from the previously unassigned macOS runner.
+
+Local export validation also produced a universal ARM64/Intel macOS package with
+strict signature verification and packaged native startup on Apple Silicon.
+The export smoke helper now uses temporary profile/save paths. Physical Intel
+execution and notarization were not performed; hosted builds remain billing-
+blocked. A final focused model pass additionally verifies committed artwork in
+crash-save recovery and Discard draft.
+
+Fresh assessment: clearing and saved designs now form a useful remodeling loop.
+The next friction is making space around paused residents: a proposed furnishing
+can overlap someone standing in the build area, but ordinary clicks in build
+mode cannot move that person. An explicit construction action to move the owner's
+family to reachable entrance-side spaces would keep rebuilding fluid, while
+leaving the rest of the neighborhood and the construction draft alone. This is
+proposed next work, not implemented at this checkpoint.
