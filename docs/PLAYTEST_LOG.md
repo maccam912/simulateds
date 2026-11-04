@@ -384,3 +384,45 @@ several useful entry points. Building has accumulated a long flat list of tools,
 furniture, and decorating options. Next, organize the catalog into readable
 categories with search and clear item details, and playtest furnishing a room at
 compact size. Keep the world visible and avoid adding permanent HUD clutter.
+
+## 2026-11-04 · Find the thing, keep building
+
+The build catalog now groups all fifteen tools/items into Build, Sleep, Kitchen,
+Bath, Living, Garden, and Finishes, plus All. Search matches both names and uses,
+including "sleep", "meal", "book", and "garden", within the selected category.
+The field survives periodic world refreshes. Ctrl/Cmd+F focuses it, Enter selects
+the first result, and Escape clears a query before using the normal close/cancel
+behavior. Browsing keeps the selected tool and never purchases anything. Item
+cards show price, footprint, and use; the fixed footer retains selected-item
+details and two compact rows of editing controls. Over-budget items explain the
+shortfall while remaining available for an honest placement preview.
+
+Validation: all twenty model/application suites passed, followed by the real
+Iroh host/two-client and dedicated-server checks. The new catalog input test
+checks typed search (including gameplay-bound letters), persistent focus, empty
+results, category filtering, Enter selection, rotated dimensions, Escape, missing
+budget, finish-palette navigation, and every furnishing's discoverability. It
+builds a usable addition, buys a bed, shelf, and plant for exactly §655 after the
+room cost, checks undo/redo, and returns to live play. Graphical runs passed at
+1440×900 and 1280×720/125% UI scale. The compact decorating regression also passed,
+with all six swatches visible after the footer layout changes.
+
+A native macOS mouse/keyboard playtest selected Kitchen, searched "meal", used
+arrow keys to choose Living, searched "book", placed a shelf for §160, issued
+undo/redo, finished construction, and saved/quit. Reloading retained the second
+shelf and §11,840. Visual review found the category popup still using the engine's
+default gray; it now uses the shared ink/cream/leaf theme, verified in the native
+window after reload. Both native runs exited cleanly without engine errors.
+
+The initial synthetic popup-navigation attempt did not exercise Godot's native
+window input path and failed to select a category. The automated test now covers
+its selection callback; actual popup mouse/keyboard routing was checked in the
+native playtest. This distinction is intentional, not evidence of a broken menu.
+The preceding hobby checkpoint passed all four CI platform jobs. No physical
+Android or human family playtest is claimed.
+
+Fresh assessment: the growing catalog is easier to use and the household now has
+several meaningful activities. A newcomer still has to discover most of them by
+opening panels. Next: an optional first-day guide with direct links into existing
+controls, plus a clear controls reference that reflects key bindings. Keep it
+reopenable and dismissible, with no forced tutorial or persistent extra HUD panel.

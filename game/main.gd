@@ -7,6 +7,7 @@ signal mail_requested
 
 const Style = preload("res://game/style.gd")
 const Catalog = preload("res://game/catalog.gd")
+const BuildCatalog = preload("res://game/build_catalog.gd")
 const RoomPlan = preload("res://game/room_plan.gd")
 const Wishes = preload("res://game/wishes.gd")
 const Hobbies = preload("res://game/hobbies.gd")
@@ -34,6 +35,13 @@ var household_button: Button
 var mail_button: Button
 var lots_box: VBoxContainer
 var tools_box: VBoxContainer
+var catalog_filters: HBoxContainer
+var catalog_category: OptionButton
+var catalog_search: LineEdit
+var catalog_buttons: Dictionary = {}
+var catalog_detail: Label
+var _catalog_category := "all"
+var _catalog_query := ""
 var context_box: VBoxContainer
 var activity_label: Label
 var needs_title: Label
@@ -291,6 +299,18 @@ func _build_ui() -> void:
 	var context_head := HBoxContainer.new(); context.add_child(context_head)
 	activity_label = _label("Activities",15); activity_label.size_flags_horizontal=Control.SIZE_EXPAND_FILL; activity_label.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; context_head.add_child(activity_label)
 	context_head.add_child(_button("×",func(): context_panel.hide()))
+	catalog_filters=HBoxContainer.new(); catalog_filters.add_theme_constant_override("separation",6); context.add_child(catalog_filters)
+	catalog_category=OptionButton.new(); catalog_category.custom_minimum_size.x=88; catalog_category.fit_to_longest_item=false; catalog_category.add_theme_font_size_override("font_size",12)
+	for category: String in BuildCatalog.CATEGORIES: catalog_category.add_item(str(BuildCatalog.CATEGORIES[category]))
+	catalog_category.item_selected.connect(func(index): _catalog_category=BuildCatalog.CATEGORIES.keys()[index]; _refresh(); call_deferred("_reset_catalog_scroll"))
+	catalog_category.tooltip_text="Browse a room or building category"; _compact_control(catalog_category); catalog_filters.add_child(catalog_category)
+	catalog_search=LineEdit.new(); catalog_search.placeholder_text="Search"; catalog_search.max_length=64; catalog_search.clear_button_enabled=true; catalog_search.expand_to_text_length=false; catalog_search.size_flags_horizontal=Control.SIZE_EXPAND_FILL; catalog_search.add_theme_font_size_override("font_size",12)
+	catalog_search.tooltip_text="Find by name or use in this category · Ctrl/Cmd+F\nEnter selects the first result · Escape clears search"
+	_compact_control(catalog_search); catalog_filters.add_child(catalog_search)
+	catalog_search.text_changed.connect(func(value): _catalog_query=value; _refresh(); call_deferred("_reset_catalog_scroll"))
+	catalog_search.text_submitted.connect(func(_value):
+		var matches := BuildCatalog.results(_catalog_category,_catalog_query)
+		if not matches.is_empty(): _select_build_tool(matches[0]); catalog_search.release_focus())
 	var scroll := ScrollContainer.new(); scroll.size_flags_vertical=Control.SIZE_EXPAND_FILL; scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED; context.add_child(scroll)
 	tools_box = _vbox(scroll,5); tools_box.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	context_box = _vbox(context,6)
@@ -431,6 +451,7 @@ func _refresh() -> void:
 			need_buttons[need].disabled=bool(state.lots[family.home_lot].building)
 			if care_values.has(need) and is_instance_valid(care_values[need]): care_values[need].text=str(need).capitalize()+" · %d" % int(value)
 	var build_mode := building and mine
+	catalog_filters.visible=build_mode and _paint_surface().is_empty()
 	wishes_button.disabled=build_mode or member.is_empty()
 	hobbies_button.disabled=bool(state.lots.get(family.get("home_lot",""),{}).get("building",false)) or member.is_empty()
 	people_button.disabled=build_mode or member.is_empty()
@@ -442,6 +463,7 @@ func _refresh() -> void:
 		if hud.visible: Soundscape.set_context("build" if build_mode else "live")
 	palette_button.text = "Catalog" if build_mode else "Activities"
 	var tools_signature := str(building and mine)+selected_tool+_moving_object+str(_move_request.is_empty())+_selected_object+str(build_rotation)+viewed_lot+str(lot.get("revision",0))+_context_page+selected_member+str(_room_anchor)+str(_room_request.is_empty())
+	if build_mode: tools_signature+=_catalog_category+":"+_catalog_query+":"+str(lot.get("funds",0))
 	tools_signature+=str(_paint_anchor)+str(_paint_request.is_empty())+str(finish_choice)
 	if _context_page=="wishes" and not build_mode:
 		tools_signature+=str(member.get("wishes",{}))+str(day)+str(member.get("task",{}).get("id",""))+str(member.get("queue",[]))
@@ -536,43 +558,7 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 		activity_label.text="Build & buy"
 		if _paint_surface().is_empty(): _build_catalog()
 		else: _build_finish_palette(_paint_surface())
-		var edit_row := HBoxContainer.new(); context_box.add_child(edit_row)
-		edit_row.visible=_paint_surface().is_empty()
-		var move_label := "Move" if _moving_object.is_empty() else "Cancel move"
-		var move_button := _button(move_label,func():
-			_select_build_tool("move"),selected_tool=="move")
-		move_button.disabled=not _move_request.is_empty()
-		move_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; edit_row.add_child(move_button)
-		move_button.tooltip_text="Choose existing furniture to rearrange at no cost."
-		var sell_button := _button("Sell",func(): _select_build_tool("erase"),selected_tool=="erase")
-		sell_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; edit_row.add_child(sell_button)
-		sell_button.tooltip_text="Demolish tiles or sell furniture for 60% of its price."
-		var history_row := HBoxContainer.new(); context_box.add_child(history_row)
-		undo_button = _button("Undo",func(): _build_history(false)); undo_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; history_row.add_child(undo_button)
-		redo_button = _button("Redo",func(): _build_history(true)); redo_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; history_row.add_child(redo_button)
-		undo_button.disabled=int(lot.get("build_undo",0))==0
-		redo_button.disabled=int(lot.get("build_redo",0))==0
-		undo_button.tooltip_text="Undo the last building edit, including its price. Ctrl/Cmd+Z"
-		redo_button.tooltip_text="Redo a building edit. Ctrl/Cmd+Shift+Z or Ctrl+Y"
-		var finish_row := HBoxContainer.new(); context_box.add_child(finish_row)
-		var rotation_button := _button(("Door side %d" % (build_rotation+1)) if selected_tool=="room" else "Rotate %d°" % (build_rotation*90),_rotate)
-		rotation_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; finish_row.add_child(rotation_button)
-		rotation_button.tooltip_text=("Change the room doorway side" if selected_tool=="room" else "Rotate furnishing") + " · " + Preferences.action_label("rotate")
-		if not _paint_surface().is_empty():
-			rotation_button.text="Cancel area"; rotation_button.tooltip_text="Cancel the first painting corner · Escape"
-			rotation_button.pressed.disconnect(_rotate); rotation_button.pressed.connect(func(): _paint_anchor=Vector2i(-1,-1); _refresh())
-			rotation_button.disabled=_paint_anchor.x<0 or not _paint_request.is_empty()
-		var discard_button := _button("Discard draft",func(): _send({"type":"build_cancel","lot_id":viewed_lot}))
-		discard_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; finish_row.add_child(discard_button)
-		discard_button.tooltip_text="Restore the whole house and budget from before construction."
-		var selected: Dictionary=Catalog.ITEMS.get(selected_tool,{})
-		var help := str(selected.get("description","Remove an object or tile. A partial refund returns to your household."))
-		if selected_tool=="room": help="Floors, walls, and a doorway. Existing doors stay."
-		if selected_tool=="move": help="Click furniture, then a new spot. " + Preferences.action_label("rotate") + " rotates · Escape cancels."
-		if not _paint_surface().is_empty(): help="Two corners select an area. Only existing "+("floors" if _paint_surface()=="floor" else "walls")+" with a different finish are charged."
-		var description:=_label(help,12,Style.MUTED)
-		description.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; description.custom_minimum_size.x=200; context_box.add_child(description)
-		description.visible=_paint_surface().is_empty()
+		_build_edit_controls(lot)
 	elif _context_page=="wishes":
 		_rebuild_wishes()
 	elif _context_page=="people":
@@ -775,7 +761,10 @@ func _show_tray(panel: Control,show_panel: bool) -> void:
 func _unhandled_key_input(event: InputEvent) -> void:
 	if hud==null or not hud.visible: return
 	if event is InputEventKey and event.pressed and not event.echo:
-		if lot_view.building and (event.ctrl_pressed or event.meta_pressed) and event.keycode in [KEY_Z,KEY_Y]:
+		if lot_view.building and (event.ctrl_pressed or event.meta_pressed) and event.keycode==KEY_F:
+			if not _paint_surface().is_empty(): _select_build_tool("floor")
+			_show_tray(context_panel,true); catalog_search.grab_focus(); catalog_search.select_all()
+		elif lot_view.building and (event.ctrl_pressed or event.meta_pressed) and event.keycode in [KEY_Z,KEY_Y]:
 			_build_history(event.shift_pressed or event.keycode==KEY_Y)
 		elif event.is_action_pressed("pause") or event.keycode==KEY_ESCAPE:
 			if _paint_anchor.x>=0 and _paint_request.is_empty():
@@ -981,31 +970,88 @@ func _follow_social(target_id: String) -> void:
 		tools_box.get_parent().ensure_control_visible(social_buttons[target_id].get_parent().get_parent())
 
 func _build_catalog() -> void:
-	for heading in ["Structure","Decorate","Everyday essentials","A little recreation"]:
-		tools_box.add_child(_label(heading.to_upper(),10,Style.MUTED))
-		var keys: Array=[]
-		match heading:
-			"Structure": keys=["floor","wall","door"]
-			"Decorate": keys=[]
-			"Everyday essentials": keys=["bed","fridge","shower","toilet"]
-			_: keys=["sofa","tv","bookshelf","plant","table"]
-		if heading=="Decorate":
-			for surface: String in ["floor","wall"]:
-				var button := _button(surface.capitalize()+" finishes",func(): _select_build_tool("finish_"+surface))
-				button.alignment=HORIZONTAL_ALIGNMENT_LEFT; tools_box.add_child(button)
-		if heading=="Structure":
-			var room_button := _button(("•" if selected_tool=="room" else "+")+"  Room · choose two corners",func(): _select_build_tool("room"),selected_tool=="room")
-			room_button.alignment=HORIZONTAL_ALIGNMENT_LEFT; room_button.add_theme_font_size_override("font_size",12)
-			room_button.tooltip_text="Floors, perimeter walls, and a doorway in one edit. Preview the total before building."
-			tools_box.add_child(room_button)
-		for kind in keys:
-			var item: Dictionary=Catalog.ITEMS.get(kind,{})
-			var b:=_button("%s  %s   § %d" % ["•" if selected_tool==kind else "+",item.get("name",kind),int(item.get("cost",0))],func(): _select_build_tool(kind))
-			b.alignment=HORIZONTAL_ALIGNMENT_LEFT
-			b.add_theme_font_size_override("font_size",12)
-			b.tooltip_text=str(item.get("description",""))
-			if kind==selected_tool: b.add_theme_stylebox_override("normal",Style.box(Color("3b514b"),9,Style.GREEN))
-			tools_box.add_child(b)
+	catalog_buttons.clear()
+	var matches := BuildCatalog.results(_catalog_category,_catalog_query)
+	activity_label.text="Catalog · %d" % matches.size()
+	var previous_group := ""
+	var funds := int(Session.state.lots[viewed_lot].funds)
+	for kind: String in matches:
+		var item := BuildCatalog.entry(kind)
+		if _catalog_category=="all" and _catalog_query.strip_edges().is_empty() and item.category!=previous_group:
+			previous_group=str(item.category)
+			tools_box.add_child(_label(str(BuildCatalog.CATEGORIES[previous_group]).to_upper(),10,Style.MUTED))
+		var detail := str(item.price)+" · "+str(item.get("size",item.use))
+		if item.has("size"): detail+=" · "+str(item.use)
+		var button := _button(str(item.name)+"\n"+detail,func(): _select_build_tool(kind),selected_tool==kind)
+		button.alignment=HORIZONTAL_ALIGNMENT_LEFT; button.add_theme_font_size_override("font_size",12); button.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; button.clip_text=true
+		button.tooltip_text=str(item.description)+"\n"+str(item.use)+("\nOver budget: need §%d more." % (int(item.cost)-funds) if int(item.get("cost",0))>funds else "")
+		if int(item.get("cost",0))>funds and selected_tool!=kind: button.add_theme_color_override("font_color",Style.GOLD)
+		_compact_control(button,selected_tool==kind); tools_box.add_child(button); catalog_buttons[kind]=button
+	if matches.is_empty():
+		var empty := _label("Nothing matches here. Try a shorter search or browse All.",12,Style.MUTED)
+		empty.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; empty.custom_minimum_size.x=200; tools_box.add_child(empty)
+		tools_box.add_child(_button("Show everything",_clear_catalog_filters))
+
+func _clear_catalog_filters() -> void:
+	_catalog_category="all"; _catalog_query=""; catalog_category.select(0); catalog_search.text=""; _refresh(); call_deferred("_reset_catalog_scroll")
+
+func _compact_control(control: Control, accent: bool=false) -> void:
+	for state_name: String in (["normal","focus"] if control is LineEdit else ["normal","hover","pressed","disabled"]):
+		var color := Style.INK if control is LineEdit else Style.GREEN if accent or state_name=="pressed" else Style.EDGE if state_name=="hover" else Style.PANEL
+		var surface := Style.box(color,4,Style.GREEN if state_name in ["hover","focus"] else Style.EDGE)
+		surface.content_margin_top=5; surface.content_margin_bottom=5; surface.content_margin_left=8; surface.content_margin_right=8
+		control.add_theme_stylebox_override(state_name,surface)
+
+func _edit_button(text: String, action: Callable, parent: Node, tooltip: String="") -> Button:
+	var button := _button(text,action)
+	button.add_theme_font_size_override("font_size",11); button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; button.tooltip_text=tooltip; _compact_control(button); parent.add_child(button)
+	return button
+
+func _build_edit_controls(lot: Dictionary) -> void:
+	var painting := not _paint_surface().is_empty()
+	if not painting:
+		var title := ""
+		var detail := ""
+		var hint := ""
+		if BuildCatalog.ORDER.has(selected_tool):
+			var item := BuildCatalog.entry(selected_tool)
+			title=str(item.name)+" · "+str(item.price)
+			detail=str(item.use)
+			if item.has("size"):
+				var footprint := Catalog.footprint(selected_tool,build_rotation)
+				detail="%d×%d · " % [footprint.x,footprint.y]+detail
+			hint=str(item.description)
+			if int(item.get("cost",0))>int(lot.funds): detail="Need §%d more · Preview available" % (int(item.cost)-int(lot.funds))
+		elif selected_tool=="move":
+			title="Move furniture · Free"; detail="Choose furniture, then its new spot"; hint="Rotate before placing. Escape cancels the selection."
+		else:
+			title="Sell & demolish"; detail="Furniture returns 60% of its price"; hint="Click furniture or a tile. Undo restores the exact purchase."
+		catalog_detail=_label(title,12,Style.GOLD); catalog_detail.clip_text=true; catalog_detail.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; catalog_detail.tooltip_text=title+"\n"+hint; context_box.add_child(catalog_detail)
+		var subtitle := _label(detail,11,Style.MUTED); subtitle.clip_text=true; subtitle.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; subtitle.tooltip_text=detail+"\n"+hint; context_box.add_child(subtitle)
+		var editing := HBoxContainer.new(); editing.add_theme_constant_override("separation",5); context_box.add_child(editing)
+		var move := _edit_button("Cancel move" if not _moving_object.is_empty() else "Move",func(): _select_build_tool("move"),editing,"Choose furniture to rearrange at no cost.")
+		move.disabled=not _move_request.is_empty()
+		_edit_button("Sell",func(): _select_build_tool("erase"),editing,"Demolish tiles or sell furniture for 60% of its price.")
+		_edit_button("Door %d" % (build_rotation+1) if selected_tool=="room" else "%d° ↻" % (build_rotation*90),_rotate,editing,("Change doorway side" if selected_tool=="room" else "Rotate furnishing")+" · "+Preferences.action_label("rotate"))
+	var history := HBoxContainer.new(); history.add_theme_constant_override("separation",5); context_box.add_child(history)
+	undo_button=_edit_button("Undo",func(): _build_history(false),history,"Undo the last edit and its price · Ctrl/Cmd+Z")
+	redo_button=_edit_button("Redo",func(): _build_history(true),history,"Redo a building edit · Ctrl/Cmd+Shift+Z or Ctrl+Y")
+	undo_button.disabled=int(lot.get("build_undo",0))==0; redo_button.disabled=int(lot.get("build_redo",0))==0
+	if not painting: _edit_button("Discard draft",func(): _send({"type":"build_cancel","lot_id":viewed_lot}),history,"Restore the whole house and budget from before construction.")
+	else:
+		var finish := HBoxContainer.new(); finish.add_theme_constant_override("separation",5); context_box.add_child(finish)
+		var cancel := _edit_button("Cancel area",func(): _paint_anchor=Vector2i(-1,-1); _refresh(),finish,"Cancel the first painting corner · Escape")
+		cancel.disabled=_paint_anchor.x<0 or not _paint_request.is_empty()
+		_edit_button("Discard draft",func(): _send({"type":"build_cancel","lot_id":viewed_lot}),finish,"Restore the whole house and budget from before construction.")
+
+func _input(event: InputEvent) -> void:
+	if catalog_search==null or not catalog_search.has_focus() or not catalog_filters.is_visible_in_tree(): return
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode==KEY_ESCAPE:
+		if not _catalog_query.is_empty(): catalog_search.clear(); _catalog_query=""; _refresh(); call_deferred("_reset_catalog_scroll")
+		else:
+			catalog_search.release_focus()
+			_unhandled_key_input(event)
+		get_viewport().set_input_as_handled()
 
 func _open_hobbies() -> void:
 	_context_page="hobbies"; _refresh(); _show_tray(context_panel,true)

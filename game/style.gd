@@ -39,6 +39,13 @@ static func make_theme() -> Theme:
 	result.set_stylebox("focus", "LineEdit", box(INK, 8, GREEN))
 	result.set_color("font_color", "LineEdit", TEXT)
 	result.set_color("font_placeholder_color", "LineEdit", MUTED)
+	var menu := box(PANEL,4,EDGE)
+	menu.content_margin_left=6; menu.content_margin_right=6; menu.content_margin_top=6; menu.content_margin_bottom=6
+	result.set_stylebox("panel","PopupMenu",menu)
+	result.set_stylebox("hover","PopupMenu",box(GREEN,3))
+	result.set_color("font_color","PopupMenu",TEXT)
+	result.set_color("font_hover_color","PopupMenu",INK)
+	result.set_color("font_disabled_color","PopupMenu",MUTED)
 	var overlay := box(Color(0.075, 0.12, 0.16, 0.92), 5, Color("647782"))
 	overlay.shadow_color = Color(0, 0, 0, 0.22)
 	overlay.shadow_size = 4

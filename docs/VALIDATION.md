@@ -83,7 +83,7 @@ service mode was not repeated for this update.
 ## Still open
 
 The subsequent feature checks are recorded in [PLAYTEST_LOG.md](PLAYTEST_LOG.md).
-The current local suite contains nineteen model/application suites, plus real Iroh
+The current local suite contains twenty model/application suites, plus real Iroh
 host/two-client reconnect and dedicated-server startup. The room-construction
 checkpoint passed Linux, Windows, macOS, and Android CI builds/exports. The later
 household checkpoint passed the three desktop jobs; Android built, tested,
@@ -105,6 +105,12 @@ autonomy/absence behavior, reservations, blocked targets, legacy/corrupt saves,
 and real Iroh progress/reconnect. Graphical input checks at 1440×900 and
 1280×720/125% UI scale cover all three practices, rank feedback, individual
 resident progress, scrolling, missing furniture, Escape, and construction.
+The hobby checkpoint passed all four CI platform jobs. Catalog checks add typed
+search, stable focus, category callbacks, filtered/empty results, selected-item
+footprints and affordability, construction purchase/undo, and compact palette
+regression coverage. A native mouse/keyboard playtest separately verified the
+actual category popup, search, bookshelf purchase, undo/redo commands, and
+save/reload; its saved world retained two bookshelves and the exact §160 purchase.
 
 Physical Android operation, cross-OS multiplayer, exported game packages,
 production authentication, public matchmaking abuse resistance, long-term

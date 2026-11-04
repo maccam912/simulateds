@@ -31,7 +31,8 @@ care shortcuts and a derived mood summary, backed by host-selected activities.
 Floor/wall finish palettes now support priced rectangle painting, preview, and
 whole-area undo alongside room construction. Reading, gardening, and cooking now
 have five persistent ranks, bounded deliberate practice, activity bonuses, and a
-Hobbies panel.
+Hobbies panel. The build catalog now offers categories, search by name/use,
+selected-item details, and compact editing controls.
 See [the playtest log](PLAYTEST_LOG.md) for evidence
 and current usability priorities.
 

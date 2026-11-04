@@ -101,6 +101,11 @@ or shell expressions.
   The preview shows the full price; **R** changes the doorway side. Existing
   floors, walls, and doors are preserved where possible and only new pieces cost
   money. **Escape** cancels the first corner. Rooms need at least 3 × 3 tiles.
+- The build **Catalog** groups items by room/use. Search within a category by
+  name or activity (for example, "sleep", "meal", or "book"). **Ctrl/Cmd+F** focuses
+  search, **Enter** selects the first result, and **Escape** clears a search before
+  closing the tray. Selected item cost, footprint, and use stay above the edit
+  controls. Over-budget items can still be selected for a placement preview.
 - **Floor finishes** and **Wall finishes** in the catalog offer wood, tile, carpet,
   and paint palettes. Choose a finish and two corners to decorate an area; click
   the same tile twice for a single tile. The preview shows the look and exact

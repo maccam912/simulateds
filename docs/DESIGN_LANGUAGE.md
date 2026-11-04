@@ -58,6 +58,13 @@ At the daily limit they still allow recreation; the card says more practice is
 available tomorrow. Rank changes use one modest confirmation sound and a short
 notice, plus a saved journal memory. No streaks, expiry, or recurring reminders.
 
+The build catalog keeps one compact category selector and one persistent search
+field above the scrolling results. Item cards show name, price, footprint, and
+use. Selected-item details and two small rows of edit controls stay below the
+results, so scrolling never hides Undo or the chosen item's cost. Search refreshes
+must retain focus and caret; empty results offer an explicit way back to All.
+Popup menus use the same ink, cream, and leaf colors as the rest of the HUD.
+
 ## Typography and layout
 
 Use one legible interface family and a system monospace face for development
