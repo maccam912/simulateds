@@ -86,6 +86,19 @@ Settings should show their current value, not just a slider position. Controls
 must remain usable at the supported UI scales; scroll long content instead of
 shrinking its text.
 
+## Construction access
+
+Construction access is an optional view of the home. Tint connected floor green
+and disconnected floor coral, with a warm entrance marker. Numbered problems link
+the world to a scrollable list, so color alone never carries the diagnosis. Keep
+badges separate and connect displaced markers to their objects. Find centers the
+camera without changing resident selection; reduced motion makes it immediate.
+The report shares the host's reachability rules and updates with accepted edits.
+Inspection absorbs placement clicks, while repair tools return to editing with
+the overlay still visible. Escape or the close button leaves inspection. A
+rejected Finish building opens the same report instead of leaving a text-only
+error for the player to decipher.
+
 ## Motion
 
 Motion acknowledges a change and lets the player track it. It must not delay an

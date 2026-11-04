@@ -171,6 +171,19 @@ func _client(index: String) -> void:
 		if session.state.lots[home].finishes.floor.get("14,1")=="sage_tile": break
 		await create_timer(0.1).timeout
 	assert(session.state.lots[home].finishes.floor.get("14,1")=="sage_tile","Painted floors did not replicate")
+	await _command({"type":"place","lot_id":home,"kind":"wall","x":8,"y":11})
+	for _attempt in range(50):
+		if not session.world.build_access(session.state.lots[home]).ok: break
+		await create_timer(0.1).timeout
+	var access: Dictionary=session.world.build_access(session.state.lots[home])
+	assert(not access.ok and not access.issues.is_empty(),"A client derives blocked access from its accepted draft snapshot")
+	await _command({"type":"build_end","lot_id":home},false)
+	assert(session.last_action_message==access.message,"The client's access explanation matches the actual host rejection")
+	await _command({"type":"place","lot_id":home,"kind":"door","x":8,"y":11})
+	for _attempt in range(50):
+		if session.world.build_access(session.state.lots[home]).ok: break
+		await create_timer(0.1).timeout
+	assert(session.world.build_access(session.state.lots[home]).ok,"Repairing the doorway clears access in the replicated draft")
 	await _command({"type": "build_end", "lot_id": home})
 	await _command({"type":"autonomy","member_id":member_id,"enabled":false})
 	await _command({"type":"cancel","member_id":member_id})

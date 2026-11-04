@@ -44,6 +44,11 @@ var _preview_finish := ""
 var preview_result: Dictionary = {}
 var _preview_signature := ""
 var building := false
+var access_report: Dictionary={}
+var access_visible := false
+var access_inspecting := false
+var access_focus := ""
+var access_markers: Dictionary={}
 var zoom := 1.0
 var pan := Vector2.ZERO
 var _camera_tween: Tween
@@ -136,6 +141,15 @@ func focus_resident(member: Dictionary) -> bool:
 	_layout(); queue_redraw()
 	return true
 
+func focus_cell(cell: Vector2) -> void:
+	stop_camera_motion(); _layout()
+	var destination := pan+camera_focus_point()-grid_point(cell.x,cell.y)
+	if bool(Preferences.values.reduced_motion): pan=destination
+	else:
+		_camera_tween=create_tween()
+		_camera_tween.tween_property(self,"pan",destination,0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_layout(); queue_redraw()
+
 func object_point(object: Dictionary, local: Vector2) -> Vector2:
 	var dimensions: Array=Catalog.ITEMS[object.kind].size
 	var w := float(dimensions[0]); var d := float(dimensions[1])
@@ -178,7 +192,10 @@ func _gui_input(event: InputEvent) -> void:
 					accept_event(); return
 				var target := hit_target(event.position)
 				var cell := cell_at(event.position)
-				if building and build_kind=="finish_wall" and target.get("type")=="wall": cell=Vector2i(int(target.x),int(target.y))
+				if building and access_inspecting:
+					if target.get("type")=="access": entity_clicked.emit(target)
+					accept_event(); return
+				if building and build_kind in ["finish_wall","door","erase"] and target.get("type")=="wall": cell=Vector2i(int(target.x),int(target.y))
 				if building and build_kind=="move" and build_object_id.is_empty() and target.get("type")=="object":
 					entity_clicked.emit(target)
 				elif not building and not target.is_empty():
@@ -196,7 +213,7 @@ func _gui_input(event: InputEvent) -> void:
 		_pointer = event.position
 		hover_cell = cell_at(event.position)
 		hover_target = hit_target(event.position)
-		if building and build_kind=="finish_wall" and hover_target.get("type")=="wall": hover_cell=Vector2i(int(hover_target.x),int(hover_target.y))
+		if building and build_kind in ["finish_wall","door","erase"] and hover_target.get("type")=="wall": hover_cell=Vector2i(int(hover_target.x),int(hover_target.y))
 		hovered.emit(hover_cell)
 
 func hit_target(point: Vector2) -> Dictionary:
@@ -242,6 +259,7 @@ func _block(x: float, y: float, w: float, d: float, height: float, color: Color,
 func _draw() -> void:
 	_hit_regions.clear()
 	resident_labels.clear()
+	access_markers.clear()
 	_drawing_target = {}
 	_layout()
 	light=Daylight.sample(float(world.get("day_minutes",480)))
@@ -283,6 +301,7 @@ func _draw() -> void:
 				_diamond(x,y,1,1,Daylight.outside(Color("c5c4a5"),light),0,Daylight.outside(Color("b1b496"),light))
 			if floors.has(cell):
 				_draw_floor_finish(x,y,Finishes.PALETTES.floor[_surface_finish(lot,"floor",x,y)])
+	if building and access_visible: _draw_access_ground(lot)
 	# Paint rear walls first. Near walls use a low cutaway for readable interiors.
 	for depth in range(31):
 		for x in range(16):
@@ -293,7 +312,7 @@ func _draw() -> void:
 				var rear := (floors.has(cell+Vector2i.RIGHT) and not floors.has(cell+Vector2i.LEFT)) or (floors.has(cell+Vector2i.DOWN) and not floors.has(cell+Vector2i.UP))
 				var h := (39.0 if rear else 8.0)*scale_factor
 				var color := Color(Finishes.PALETTES.wall[_surface_finish(lot,"wall",x,y)].color).lerp(Color("f3dfb6"),float(light.night)*0.22)
-				if building and build_kind=="finish_wall": _drawing_target={"type":"wall","x":x,"y":y}
+				if building and build_kind in ["finish_wall","door","erase"]: _drawing_target={"type":"wall","x":x,"y":y}
 				_block(x,y,1,1,h,color)
 				if h > 20*scale_factor:
 					_diamond(x+0.04,y+0.04,0.92,0.92,color.lightened(0.12),h)
@@ -320,9 +339,11 @@ func _draw() -> void:
 			_resident(entity.member, entity.family,scale_factor)
 	_draw_street_lights(scale_factor)
 	_draw_resident_overlays(entities,scale_factor)
+	if building and access_visible: _draw_access_issues(scale_factor)
 	hover_target = hit_target(_pointer)
-	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if not building and not hover_target.is_empty() else Control.CURSOR_ARROW
-	if building and build_kind=="room":
+	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if (not building and not hover_target.is_empty()) or (building and access_inspecting and hover_target.get("type")=="access") else Control.CURSOR_ARROW
+	if building and access_inspecting: pass
+	elif building and build_kind=="room":
 		_draw_room_preview(lot)
 	elif building and build_kind in ["finish_floor","finish_wall"]: _draw_finish_preview()
 	elif _in_bounds(hover_cell) and (building or hover_target.is_empty()):
@@ -356,6 +377,35 @@ func _draw() -> void:
 		draw_style_box(preload("res://game/style.gd").box(Color("eac88c"),17),badge)
 		draw_string(_font,badge.position+Vector2(25,23),"UNDER CONSTRUCTION  ·  Lot paused",HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("5d4a2d"))
 
+func _draw_access_ground(lot: Dictionary) -> void:
+	var reachable: Dictionary=access_report.get("reachable",{})
+	for tile: Array in lot.floors:
+		var cell := Vector2i(int(tile[0]),int(tile[1]))
+		if reachable.has(cell): _diamond(cell.x,cell.y,1,1,Color(0.52,0.79,0.61,0.25),1)
+	for cell: Vector2i in access_report.get("unreachable",[]):
+		_diamond(cell.x,cell.y,1,1,Color(0.89,0.40,0.32,0.30),1,Color("efab91"))
+	_diamond(8,14,1,1,Color(0.93,0.79,0.55,0.45),2,Color("ffe3a2"))
+	var gate := grid_point(8.5,14.5)+Vector2(0,18)
+	draw_string(_font,gate-Vector2(27,0),"Entrance",HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("fff0bf"))
+
+func _draw_access_issues(s: float) -> void:
+	var index := 0
+	var occupied: Array[Rect2]=[]
+	var bounds := Rect2(Vector2(8,64),Vector2(size.x-16,maxf(32,size.y-240)))
+	for issue: Dictionary in access_report.get("issues",[]):
+		index+=1
+		var selected: bool=str(issue.key)==access_focus
+		_diamond(issue.cell.x,issue.cell.y,issue.footprint.x,issue.footprint.y,Color(0.90,0.35,0.27,0.30),4,Color("ffe3a2") if selected else Color("ffae92"))
+		var point := grid_point(issue.center.x,issue.center.y)+Vector2(0,-43*s)
+		var rect := ResidentCues.fit(Rect2(point-Vector2(14,14),Vector2(28,28)),bounds,occupied)
+		if not rect.has_area(): continue
+		occupied.append(rect); access_markers[str(issue.key)]=rect
+		draw_line(grid_point(issue.center.x,issue.center.y)+Vector2(0,-12*s),rect.get_center(),Color("f3c6a3"),1.5,true)
+		draw_style_box(preload("res://game/style.gd").box(Color("f2d1b4"),5,Color("ffe7a0") if selected else Color("b76b55")),rect)
+		var width := _font.get_string_size(str(index),HORIZONTAL_ALIGNMENT_LEFT,-1,14).x
+		draw_string(_font,rect.get_center()+Vector2(-width*0.5,5),str(index),HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("643b32"))
+		if access_inspecting:
+			_hit_regions.append({"polygon":PackedVector2Array([rect.position,Vector2(rect.end.x,rect.position.y),rect.end,Vector2(rect.position.x,rect.end.y)]),"target":{"type":"access","id":str(issue.key)}})
 
 func _update_preview(lot: Dictionary) -> void:
 	var signature := str([lot_id,lot.revision,lot.funds,hover_cell,build_kind,build_rotation,build_object_id])
@@ -731,7 +781,7 @@ func _draw_street_lights(s: float) -> void:
 
 func _update_finish_preview(lot: Dictionary) -> void:
 	_paint_cells.clear(); _preview_finish=""
-	if not building or not build_kind in ["finish_floor","finish_wall"]: return
+	if not building or access_inspecting or not build_kind in ["finish_floor","finish_wall"]: return
 	var plan: Dictionary={}
 	if paint_pending: plan=paint_plan
 	elif _in_bounds(hover_cell):

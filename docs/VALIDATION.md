@@ -83,7 +83,7 @@ service mode was not repeated for this update.
 ## Still open
 
 The subsequent feature checks are recorded in [PLAYTEST_LOG.md](PLAYTEST_LOG.md).
-The current local suite contains thirty-four model/application suites, plus real Iroh
+The current local suite contains thirty-six model/application suites, plus real Iroh
 host/two-client reconnect and dedicated-server startup. The room-construction
 checkpoint passed Linux, Windows, macOS, and Android CI builds/exports. The later
 household checkpoint passed the three desktop jobs; Android built, tested,
@@ -224,6 +224,22 @@ remained on the same person after joining. A compact screen review led to a
 post-layout scroll correction that keeps the person's name with their focused
 button when the card fits; the final compact native and related model/UI checks
 passed. Human interaction and cross-device play remain separate gates.
+
+The People-discovery checkpoint passed all four platform CI jobs. Construction
+access shares a pure entrance flood with the host's commit check. Across 180
+generated layouts, its decisions and per-object findings matched the ordinary
+pathfinder, including rotations, occupied legacy starts, sealed rooms, and bad
+gates. Model checks also cover exact blocked targets, read-only inspection,
+atomic commit rejection, door repair, undo/redo, and replacement snapshots.
+All 36 suites and real Iroh/server checks passed. Native standard/compact checks
+covered automatic report opening, camera focus, marker clicks, visible-wall
+doorway repair, reopening, Escape, and catalog-search recovery. The final compact
+capture keeps twelve problem badges distinct in a sealed house. Related UI,
+catalog, and finish checks passed after the presentation polish.
+The extended real Iroh check then closed each client's front door, verified that
+its locally derived report matched the host's rejected commit message, repaired
+the doorway, and reopened successfully. This establishes actual command/snapshot
+agreement; the native overlay captures are local graphical checks.
 
 Physical Android operation, cross-OS multiplayer, exported game packages,
 production authentication, public matchmaking abuse resistance, long-term

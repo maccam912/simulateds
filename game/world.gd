@@ -14,6 +14,7 @@ const Finishes = preload("res://game/finishes.gd")
 const Pastimes = preload("res://game/pastimes.gd")
 const Appearance = preload("res://game/appearance.gd")
 const Tabletop = preload("res://game/tabletop.gd")
+const BuildAccess = preload("res://game/build_access.gd")
 const HouseholdProfile = preload("res://game/household_profile.gd")
 const GRID_SIZE := 16
 const SCHEMA := 1
@@ -768,17 +769,14 @@ func _object_user(lot_id: String, object: Dictionary, except_member: String = ""
 	return {}
 
 func _layout_issue(lot: Dictionary) -> String:
-	var gate := Vector2i(8,14)
-	if not _walkable(lot, gate):
-		return "Keep the lot entrance clear."
+	return str(build_access(lot).message)
+
+func build_access(lot: Dictionary) -> Dictionary:
+	var residents: Array=[]
 	for family: Dictionary in state.families.values():
 		for member: Dictionary in family.members:
-			if member.lot_id == lot.id and _path(lot, _position(member), [gate]).is_empty() and _position(member) != gate:
-				return "A resident cannot reach the entrance. Add a door or clear a path."
-	for object: Dictionary in lot.objects:
-		if not _can_reach_object(lot, gate, object):
-			return "Leave a clear path to the " + str(Catalog.ITEMS[object.kind].name) + "."
-	return ""
+			if member.lot_id==lot.id: residents.append(member)
+	return BuildAccess.inspect(lot,residents)
 
 func _capture_build(lot: Dictionary) -> Dictionary:
 	var edit := {}

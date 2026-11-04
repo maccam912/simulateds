@@ -104,6 +104,11 @@ var palette_button: Button
 var _last_build_mode := false
 var undo_button: Button
 var redo_button: Button
+var access_button: Button
+var access_buttons: Dictionary={}
+var _access_visible := false
+var _access_report: Dictionary={}
+var _access_focus := ""
 var _moving_object := ""
 var _move_request: Dictionary = {}
 var _room_anchor := Vector2i(-1,-1)
@@ -314,7 +319,7 @@ func _build_ui() -> void:
 	var context := _vbox(context_panel,8)
 	var context_head := HBoxContainer.new(); context.add_child(context_head)
 	activity_label = _label("Activities",15); activity_label.size_flags_horizontal=Control.SIZE_EXPAND_FILL; activity_label.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; context_head.add_child(activity_label)
-	context_head.add_child(_button("×",func(): context_panel.hide()))
+	context_head.add_child(_button("×",_close_context))
 	catalog_filters=HBoxContainer.new(); catalog_filters.add_theme_constant_override("separation",6); context.add_child(catalog_filters)
 	catalog_category=OptionButton.new(); catalog_category.custom_minimum_size.x=88; catalog_category.fit_to_longest_item=false; catalog_category.add_theme_font_size_override("font_size",12)
 	for category: String in BuildCatalog.CATEGORIES: catalog_category.add_item(str(BuildCatalog.CATEGORIES[category]))
@@ -389,6 +394,15 @@ func _refresh() -> void:
 	mail_button.add_theme_color_override("font_color",Style.GOLD if unread>0 or news_pending else Style.TEXT)
 	var mine := str(lot.get("owner",""))==str(Session.profile_id)
 	var building := bool(lot.get("building",false))
+	if building and mine:
+		_access_report=Session.world.build_access(lot)
+		var found := false
+		for issue: Dictionary in _access_report.issues:
+			if issue.key==_access_focus: found=true; break
+		if not found: _access_focus=""
+	else:
+		_access_visible=false; _access_report={}; _access_focus=""
+		if _context_page=="access": _context_page="activities"
 	if not building:
 		_moving_object=""; _move_request.clear()
 	elif not _move_request.is_empty() and int(lot.revision)>int(_move_request.revision):
@@ -411,6 +425,8 @@ func _refresh() -> void:
 	lot_view.world=state; lot_view.lot_id=viewed_lot; lot_view.selected_member=selected_member
 	lot_view.build_object_id=_moving_object
 	lot_view.building=building and mine; lot_view.build_kind=selected_tool; lot_view.build_rotation=build_rotation
+	lot_view.access_report=_access_report; lot_view.access_visible=_access_visible
+	lot_view.access_inspecting=_access_visible and _context_page=="access"; lot_view.access_focus=_access_focus
 	lot_title.text=str(lot.get("name","Linden Grove"))
 	lot_subtitle.text=str(state.get("families",{}).get(str(lot.get("owner","")),{}).get("name","Neighbor’s home"))
 	if building: lot_subtitle.text="Under construction · "+lot_subtitle.text
@@ -473,7 +489,7 @@ func _refresh() -> void:
 			need_buttons[need].disabled=bool(state.lots[family.home_lot].building)
 			if care_values.has(need) and is_instance_valid(care_values[need]): care_values[need].text=str(need).capitalize()+" · %d" % int(value)
 	var build_mode := building and mine
-	catalog_filters.visible=build_mode and _paint_surface().is_empty()
+	catalog_filters.visible=build_mode and _paint_surface().is_empty() and _context_page!="access"
 	wishes_button.disabled=build_mode or member.is_empty()
 	hobbies_button.disabled=bool(state.lots.get(family.get("home_lot",""),{}).get("building",false)) or member.is_empty()
 	people_button.disabled=build_mode or member.is_empty()
@@ -485,7 +501,7 @@ func _refresh() -> void:
 		if hud.visible: Soundscape.set_context("build" if build_mode else "live")
 	palette_button.text = "Catalog" if build_mode else "Activities"
 	var tools_signature := str(building and mine)+selected_tool+_moving_object+str(_move_request.is_empty())+_selected_object+str(build_rotation)+viewed_lot+str(lot.get("revision",0))+_context_page+selected_member+str(_room_anchor)+str(_room_request.is_empty())
-	if build_mode: tools_signature+=_catalog_category+":"+_catalog_query+":"+str(lot.get("funds",0))
+	if build_mode: tools_signature+=_catalog_category+":"+_catalog_query+":"+str(lot.get("funds",0))+str(_access_visible)+str(_access_report.get("issues",[]))
 	tools_signature+=str(_paint_anchor)+str(_paint_request.is_empty())+str(finish_choice)
 	if _context_page=="wishes" and not build_mode:
 		tools_signature+=str(member.get("wishes",{}))+str(day)+str(member.get("task",{}).get("id",""))+str(member.get("queue",[]))
@@ -508,6 +524,7 @@ func _refresh() -> void:
 		_tools_signature=tools_signature
 		_rebuild_context(building and mine,lot)
 	help_label.text="Click to place · " + Preferences.action_label("rotate") + " rotates · Ctrl/Cmd+Z undoes" if building and mine else "Click a need to care for it · Click the ground to walk"
+	if building and mine and _context_page=="access": help_label.text="Find an item · Choose Door, Move, or Sell to repair"
 	if building and mine and selected_tool=="room": help_label.text="Click two opposite corners · " + Preferences.action_label("rotate") + " changes door side · Escape cancels"
 	if building and mine and not _paint_surface().is_empty(): help_label.text="Click two corners to decorate · Same tile twice for one · Escape cancels"
 	help_label.tooltip_text=help_label.text
@@ -651,7 +668,8 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 	_clear(tools_box); _clear(context_box)
 	if building:
 		activity_label.text="Build & buy"
-		if _paint_surface().is_empty(): _build_catalog()
+		if _context_page=="access": _build_access_list()
+		elif _paint_surface().is_empty(): _build_catalog()
 		else: _build_finish_palette(_paint_surface())
 		_build_edit_controls(lot)
 	elif _context_page=="wishes":
@@ -745,6 +763,9 @@ func _send(command: Dictionary) -> void:
 	_refresh()
 
 func _entity_clicked(target: Dictionary) -> void:
+	if target.get("type")=="access":
+		if lot_view.building and lot_view.access_inspecting: _focus_access_issue(str(target.get("id","")))
+		return
 	if target.get("type")=="care":
 		if target.get("owner")!=Session.profile_id or not target.get("need") in Wellbeing.ORDER: return
 		for resident: Dictionary in _family().get("members",[]):
@@ -762,6 +783,7 @@ func _entity_clicked(target: Dictionary) -> void:
 		_send({"type":"interact","member_id":selected_member,"lot_id":viewed_lot,"target_id":str(target.id)})
 
 func _select_build_tool(kind: String) -> void:
+	if _context_page=="access": _context_page="activities"
 	var reset_scroll := kind.begins_with("finish_") or not _paint_surface().is_empty()
 	selected_tool=kind; _moving_object=""; _move_request.clear()
 	_paint_anchor=Vector2i(-1,-1); _paint_request.clear()
@@ -781,6 +803,7 @@ func _tile_clicked(cell: Vector2i) -> void:
 	var lot: Dictionary=Session.state.get("lots",{}).get(viewed_lot,{})
 	if lot.is_empty(): return
 	if bool(lot.building) and str(lot.owner)==str(Session.profile_id):
+		if _context_page=="access": return
 		if not _paint_surface().is_empty():
 			if not _paint_request.is_empty(): return
 			if _paint_anchor.x<0: _paint_anchor=cell; _refresh(); return
@@ -842,7 +865,29 @@ func _chat_with_family() -> void:
 
 func _toggle_build() -> void:
 	var lot: Dictionary=Session.state.get("lots",{}).get(viewed_lot,{})
+	if lot.get("building",false) and str(lot.get("owner",""))==str(Session.profile_id) and not Session.world.build_access(lot).ok:
+		_access_visible=true; _context_page="access"
 	_send({"type":"build_end" if lot.get("building",false) else "build_begin","lot_id":viewed_lot})
+	if lot.get("building",false) and _context_page=="access": _show_tray(context_panel,true)
+
+func _toggle_access() -> void:
+	if _context_page=="access":
+		_access_visible=false; _context_page="activities"
+	else:
+		_access_visible=true; _context_page="access"
+	_refresh(); _show_tray(context_panel,true); call_deferred("_reset_catalog_scroll")
+
+func _close_context() -> void:
+	if _context_page=="access":
+		_access_visible=false; _context_page="activities"; _refresh()
+	context_panel.hide()
+
+func _focus_access_issue(key: String) -> void:
+	for issue: Dictionary in _access_report.get("issues",[]):
+		if issue.key==key:
+			_access_focus=key; lot_view.access_focus=key; lot_view.focus_cell(issue.center)
+			return
+	_notice("That access issue is resolved.")
 
 func _visit() -> void:
 	_send({"type":"visit","member_id":selected_member,"lot_id":viewed_lot})
@@ -886,11 +931,14 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		if lot_view.building and (event.ctrl_pressed or event.meta_pressed) and event.keycode==KEY_F:
 			if not _paint_surface().is_empty(): _select_build_tool("floor")
+			_context_page="activities"; _refresh()
 			_show_tray(context_panel,true); catalog_search.grab_focus(); catalog_search.select_all()
 		elif lot_view.building and (event.ctrl_pressed or event.meta_pressed) and event.keycode in [KEY_Z,KEY_Y]:
 			_build_history(event.shift_pressed or event.keycode==KEY_Y)
 		elif event.is_action_pressed("pause") or event.keycode==KEY_ESCAPE:
-			if _paint_anchor.x>=0 and _paint_request.is_empty():
+			if _context_page=="access" and context_panel.visible:
+				_close_context()
+			elif _paint_anchor.x>=0 and _paint_request.is_empty():
 				_paint_anchor=Vector2i(-1,-1); _refresh()
 			elif _room_anchor.x>=0 and _room_request.is_empty():
 				_room_anchor=Vector2i(-1,-1); _refresh()
@@ -1168,8 +1216,13 @@ func _edit_button(text: String, action: Callable, parent: Node, tooltip: String=
 	return button
 
 func _build_edit_controls(lot: Dictionary) -> void:
-	var painting := not _paint_surface().is_empty()
-	if not painting:
+	var painting := not _paint_surface().is_empty() and _context_page!="access"
+	if _context_page=="access":
+		var repairs := HBoxContainer.new(); repairs.add_theme_constant_override("separation",5); context_box.add_child(repairs)
+		_edit_button("Door",func(): _select_build_tool("door"),repairs,"Choose a door to reconnect a room.")
+		_edit_button("Move",func(): _select_build_tool("move"),repairs,"Move furniture to clear a route.")
+		_edit_button("Sell",func(): _select_build_tool("erase"),repairs,"Remove an obstruction. Undo restores the edit.")
+	elif not painting:
 		var title := ""
 		var detail := ""
 		var hint := ""
@@ -1203,6 +1256,23 @@ func _build_edit_controls(lot: Dictionary) -> void:
 		var cancel := _edit_button("Cancel area",func(): _paint_anchor=Vector2i(-1,-1); _refresh(),finish,"Cancel the first painting corner · Escape")
 		cancel.disabled=_paint_anchor.x<0 or not _paint_request.is_empty()
 		_edit_button("Discard draft",func(): _send({"type":"build_cancel","lot_id":viewed_lot}),finish,"Restore the whole house and budget from before construction.")
+	access_button=_edit_button("Hide access" if _context_page=="access" else "Access · Clear" if _access_report.get("ok",true) else "Access · %d issues" % _access_report.issues.size(),_toggle_access,context_box,"Show routes from the entrance and locate blocked residents or furnishings.")
+	if not _access_report.get("ok",true): access_button.add_theme_color_override("font_color",Style.GOLD)
+
+func _build_access_list() -> void:
+	activity_label.text="Home access"; access_buttons.clear()
+	var issues: Array=_access_report.get("issues",[])
+	var summary := _label("Everyone can leave, and every furnishing is reachable." if issues.is_empty() else "1 thing needs a clear path." if issues.size()==1 else "%d things need a clear path." % issues.size(),14,Style.GREEN if issues.is_empty() else Style.GOLD)
+	summary.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; summary.custom_minimum_size.x=200; tools_box.add_child(summary)
+	var legend := _label("Green floor connects to the entrance. Coral floor is cut off. Find a numbered item, then add a door or clear a path.",12,Style.MUTED)
+	legend.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; legend.custom_minimum_size.x=200; tools_box.add_child(legend)
+	var index := 0
+	for issue: Dictionary in issues:
+		index+=1
+		var button := _button("%d. Find %s" % [index,str(issue.name)],func(): _focus_access_issue(str(issue.key)))
+		button.clip_text=true; button.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; button.tooltip_text=str(issue.message)
+		tools_box.add_child(button); access_buttons[issue.key]=button
+		var reason := _label(str(issue.message),11,Style.MUTED); reason.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; reason.custom_minimum_size.x=200; tools_box.add_child(reason)
 
 func _input(event: InputEvent) -> void:
 	if catalog_search==null or not catalog_search.has_focus() or not catalog_filters.is_visible_in_tree(): return

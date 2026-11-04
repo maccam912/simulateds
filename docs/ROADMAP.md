@@ -55,7 +55,9 @@ and current usability priorities.
   two-corner rooms, rectangle decoration, undo/redo, and exact undo refunds are
   implemented. Add room-aware fill and broader architectural options.
 - Room blueprints and reusable layouts on the existing draft/commit boundary.
-- Stronger routing checks and helpful "cannot reach this" presentation.
+- Shared entrance routing checks and an access overlay now locate blocked
+  furnishings and residents, with camera focus and direct repair tools. Extend
+  routing as architectural options become richer.
 - Camera pan/zoom/rotation and a clear cutaway-wall policy.
 
 Exit: construct a small home from an empty lot; every essential object is usable;

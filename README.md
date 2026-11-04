@@ -100,6 +100,12 @@ or shell expressions.
   tile. **Sell** removes something; **R** rotates placement. **Move** rearranges
   furniture for free. Choose
   **Finish building** to resume life on the lot.
+- **Access** in the construction controls shows connected floor in green and cut
+  off floor in coral. Numbered markers and Find buttons locate trapped residents
+  or inaccessible furniture. Add a door, move furniture, or remove an obstruction;
+  the report updates after each edit and undo. A rejected Finish building opens
+  the report automatically. Inspection cannot place items accidentally; Escape
+  leaves the access view. Door and Sell tools can target the visible wall surface.
 - **Room** builds floors, perimeter walls, and a doorway from two opposite corners.
   The preview shows the full price; **R** changes the doorway side. Existing
   floors, walls, and doors are preserved where possible and only new pieces cost

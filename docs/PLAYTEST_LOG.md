@@ -799,3 +799,42 @@ without taking over a companion. Housebuilding is the next usability opportunity
 Finish building rejects inaccessible furniture, but identifies the problem only
 in text. Next: a construction access view that locates unreachable furnishings
 and trapped residents, so a player can repair a layout before reopening the lot.
+
+## 2026-11-04 · See what a home needs to reopen
+
+Construction now offers Access: an optional floor overlay and a list of numbered
+problems. Green floor connects to the entrance; coral floor is cut off. Trapped
+residents and unreachable furniture get separate markers and Find controls that
+center the camera without changing the selected resident. Door, Move, and Sell
+return directly to editing while leaving access visible. The report updates
+after accepted edits, undo, and redo, and disappears when construction ends.
+A rejected Finish building opens the report automatically.
+
+The host's commit decision and the display share a pure entrance flood. It
+replaces repeated entrance path searches while retaining their rules, including
+an occupied legacy starting cell that can step out to a clear route. Inspection
+does not mutate a draft or place the previously selected item. Escape/close exit
+inspection, and Ctrl/Cmd+F returns to catalog search. Door and Sell can target a
+wall's visible surface, making repairs easier than locating its ground cell.
+
+Validation: all 36 local suites, real Iroh host/two-client checks, and server
+startup passed. The diagnostic matched the ordinary pathfinder across 180 varied
+layouts and every furnishing in them. Model checks cover exact targets, pure
+inspection, atomic commit failure, repair, history, and replacement snapshots.
+The extended real Iroh check then closed each client's doorway, compared its
+derived report with the actual host rejection, repaired the doorway, and reopened
+successfully. The People-discovery checkpoint passed all four platform CI jobs.
+
+Native standard and compact/125% UI checks exercised the complete repair loop:
+rejected finish, Find, badge click, visible-wall door placement, undo/redo, and
+successful reopening. The screen review found crowded issue badges overlapping;
+they now fit separately and connect to their targets. The final compact check
+asserts all twelve badges remain distinct in a sealed home. It also verifies
+Escape and catalog-search recovery. Related UI/catalog/finish checks passed
+again after these presentation changes. Human/device playtesting remains open.
+
+Fresh assessment: layouts now explain their own problems and the repair tools
+are immediately available. Decorating an enclosed room still requires carefully
+choosing rectangle corners. Next: room-aware floor finishing with a whole-room
+preview, an exact price, doorway boundaries, and one-step undo, making it easier
+to give each household a coherent home.
