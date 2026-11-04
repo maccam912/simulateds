@@ -1829,3 +1829,49 @@ This is proposed next work, not behavior in this checkpoint.
 
 The final focused model, compact native playthrough, and editor import passed
 after replacing duplicated displayed amounts with shared price/reward constants.
+
+
+## Calling the household to a meal
+
+The meal wish playthrough exposed repetitive resident selection. A served table
+now offers Call household with an eligible count. Hover or focus previews each
+resident's outcome. Deliberate plans stay first, existing chosen meals stay
+untouched, automatic diners keep their portion and remaining time, and absent
+residents stay away. Limited portions go to the selected resident first. The
+same call works for one's own visiting household without directing neighbors.
+
+The command rechecks the displayed group and stages the ordinary meal orders
+before changing any live resident. Changed plans or food reject the whole call.
+The panel waits for all participating action counters after acknowledgement; an
+away selection cannot leave it waiting for a counter that will never advance.
+
+Native injected-input playthroughs passed at 1440×900 and 1280×720 with 125% UI
+scale. They called two residents, observed eating together, chose two automatic
+diners after the last portions were taken, and called only the housemate at home
+while the selected resident visited Violet. Exact/early/unrelated acknowledgements
+were exercised. Adding the button initially pushed the compact wish rule below
+the tray; reduced spacing and a shorter platter preview restore visibility. The
+compact meal-wish playthrough and long-name roster check also pass. Reviewed
+captures include `build/meal-call-preview-compact.png` and
+`build/meal-call-away-compact.png`.
+
+The real Iroh host/two-client meal scenario passed with both families calling
+their own residents and later adopting an automatic pair with one call. Duplicate
+calls reject, all four dining places remain distinct, and the observing client
+sees the accepted tasks, food counts, and two wish rewards. Focused model checks
+cover stale/malformed calls, full plans, scarce portions, absence, construction,
+visits, current meals, and runtime snapshot restoration.
+
+Fresh assessment: the shared-meal loop now takes fewer clicks and explains who
+will participate. The broader visit flow still directs one resident at a time,
+which makes taking the whole family next door cumbersome; that is a useful next
+usability target. First address the recurring macOS CI runner shortage: three
+consecutive checkpoints have passed Linux, Windows, and Android but their macOS
+jobs ran no steps before GitHub cancelled them for runner capacity. Local native
+macOS tests pass, but they do not replace the missing export/CI result.
+
+Final validation covers all 86 local suites across the initial run and its
+continuation. The headless run exposed pointer-exit events clearing a keyboard-
+focused roster; focus now independently keeps the preview visible. Both native
+meal-call layouts, the compact meal-wish playthrough, and editor import passed
+after that correction.

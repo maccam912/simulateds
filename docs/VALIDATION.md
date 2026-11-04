@@ -964,3 +964,27 @@ open; native injected-input results do not establish those.
 
 The final focused model, compact native playthrough, and editor import passed
 after replacing duplicated displayed amounts with shared price/reward constants.
+
+
+## Household meal calls
+
+`meal_call` verifies read-only previews, ownership, selected-resident priority,
+atomic rejection of changed plans/portions, malformed identifiers/counters,
+JSON round trips, duplicate calls, queue preservation, full-plan and away skips,
+construction, own-family visits, automatic meal adoption without extra food or
+time, and valid runtime snapshots. Native `meal_call_ui` passes at 1440×900 and
+1280×720 / 125% UI scale, including long names, exact/early acknowledgements,
+partial accepted-state arrival, and calling a housemate while the selection is
+away. The compact meal-wish rule remains visible with the added call control.
+
+The separate-process Iroh meal scenario passes with one household call for each
+client's two residents, followed by an automatic pair adopted together after
+absence/reconnect. Duplicate calls reject. Both clients observe consistent
+portions, selected actions, and wish rewards. Captures live in ignored
+`build/meal-call-*.png`; native injected-input checks are not human-family play.
+
+Final validation covers all 86 local suites across the initial run and its
+continuation. The headless run exposed pointer-exit events clearing a keyboard-
+focused roster; focus now independently keeps the preview visible. Both native
+meal-call layouts, the compact meal-wish playthrough, and editor import passed
+after that correction.

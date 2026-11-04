@@ -81,6 +81,12 @@ func _wait_servings(home: String,id: String,count: int) -> void:
 	assert(false,"Expected accepted portion count")
 func _meal(home: String,id: String,resident: String,action: String,recipe: String="",accepted: bool=true) -> void:
 	await _command({"type":"meal","lot_id":home,"target_id":id,"member_id":resident,"action":action,"recipe":recipe,"batch":int(_table(home,id).meal.batch)},accepted)
+func _call_household(home: String,id: String,preferred: String) -> void:
+	var option: Dictionary=session.world.meal_call_option(session.profile_id,preferred,home,id)
+	assert(option.ok and option.orders.size()==2)
+	var intent := {"type":"meal_call","member_id":preferred,"lot_id":home,"target_id":id,"batch":int(option.batch),"orders":option.orders.duplicate(true)}
+	await _command(intent); await _command(intent,false)
+
 func _client(index: String) -> void:
 	await _connect()
 	var identity: String=session.profile_id; var own_home: String=session.home_lot()
@@ -113,8 +119,7 @@ func _client(index: String) -> void:
 		await _meal(home,id,member,"clear","",false)
 		_flag(".guests-arrived")
 	await _wait_flag(".guests-arrived")
-	await _meal(home,id,member,"eat"); await _meal(home,id,member,"eat","",false)
-	await _meal(home,id,housemate,"eat")
+	await _call_household(home,id,member)
 	await _wait_servings(home,id,0)
 	var places := {}
 	var diners: Array=preload("res://game/shared_leisure.gd").players(session.state,home,id,false)
@@ -154,10 +159,7 @@ func _client(index: String) -> void:
 		var funds_before: int=session.state.lots[home].funds
 		for resident: String in [member,housemate]: await _command({"type":"autonomy","member_id":resident,"enabled":true})
 		await _wait_servings(home,id,1); await _wait_flag(".autonomy-observed")
-		for resident: String in [member,housemate]:
-			var task: Dictionary=session.world._member(session.state.families[identity],resident).task
-			var choice := {"type":"meal","lot_id":home,"target_id":id,"member_id":resident,"action":"choose","recipe":"","batch":int(_table(home,id).meal.batch),"activity_id":str(task.id)}
-			await _command(choice); await _command(choice,false)
+		await _call_household(home,id,member)
 		_flag(".meal-chosen"); await _wait_flag(".choice-observed")
 		for resident: String in [member,housemate]: await _command({"type":"autonomy","member_id":resident,"enabled":false})
 		for attempt in range(100):

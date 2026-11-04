@@ -201,6 +201,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 	var member := _member(family, member_id)
 	if member.is_empty():
 		return _result(false, "You can only direct your own family.")
+	if type=="meal_call": return _call_meal(profile_id,command)
 	if type == "renew_wishes":
 		if not Wishes.can_renew(member.wishes,int(state.day)):
 			return _result(false,"Finish these wishes first. A fresh set is available on the following day.")
@@ -406,6 +407,64 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 	if member.task.is_empty():
 		_start_next(member, lot)
 	return _result(true, "Action queued.")
+
+func meal_call_option(profile_id: String,member_id: String,lot_id: String,table_id: Variant) -> Dictionary:
+	var result := {"ok":false,"message":"Choose a dining table.","orders":[],"rows":[],"batch":0}
+	var family: Dictionary=state.families.get(profile_id,{})
+	var preferred := _member(family,member_id) if not family.is_empty() else {}
+	if preferred.is_empty(): result.message="Choose one of your household's residents."; return result
+	var lot: Dictionary=state.lots.get(lot_id,{})
+	if lot.is_empty() or not table_id is String: return result
+	var table := _object(lot,table_id)
+	if table.get("kind")!="dining_table": return result
+	result.batch=int(table.meal.batch)
+	if lot.building or state.lots[family.home_lot].building:
+		result.message="Finish construction before calling your household to a meal."; return result
+	var residents: Array=[preferred]
+	for resident: Dictionary in family.members:
+		if resident.id!=member_id: residents.append(resident)
+	var portions := Meals.available(state,lot,table)
+	for resident: Dictionary in residents:
+		var row := {"id":str(resident.id),"name":str(resident.name),"action":"","detail":""}
+		if resident.lot_id!=lot_id: row.detail="Away · Visit this lot first"
+		else:
+			var choice := meal_option(profile_id,str(resident.id),lot_id,table_id,"choose")
+			if choice.ok: row.action="choose"; row.detail="Choose current meal · Keep portion and time"
+			else:
+				var option := meal_option(profile_id,str(resident.id),lot_id,table_id,"eat")
+				if option.ok and portions>0:
+					row.action="eat"; portions-=1
+					row.detail="After their plan · Reserve one portion" if not resident.queue.is_empty() or (not resident.task.is_empty() and not resident.task.get("automatic",false)) else "Join now · Reserve one portion"
+				elif option.ok: row.detail="No unreserved portion left"
+				else: row.detail=str(option.message)
+		if not str(row.action).is_empty():
+			result.orders.append({"member_id":str(resident.id),"action":str(row.action),"next_action":int(resident.next_action),"activity_id":str(resident.task.get("id","")),"queue":resident.queue.map(func(task): return str(task.id))})
+		result.rows.append(row)
+	result.ok=not result.orders.is_empty()
+	var lines: PackedStringArray=[]
+	for row: Dictionary in result.rows: lines.append(str(row.name)+": "+str(row.detail))
+	result.message="\n".join(lines)+"\nOnly your household here. Existing plans stay first; arriving at different times may mean eating separately."
+	return result
+
+func _call_meal(profile_id: String,command: Dictionary) -> Dictionary:
+	if not command.get("lot_id") is String or not command.get("target_id") is String: return _result(false,"Choose a dining table.")
+	var option := meal_call_option(profile_id,str(command.member_id),str(command.lot_id),command.target_id)
+	if not option.ok: return _result(false,str(option.message))
+	if not _integer(command.get("batch")) or int(command.batch)!=int(option.batch): return _result(false,"The meal changed. Check the household call again.")
+	if not Meals.matches_call(command.get("orders"),option.orders): return _result(false,"Household plans or portions changed. Check who can join and call again.")
+	# Stage ordinary single-resident orders together. Publish no partial call if
+	# any order fails, and preserve the identities of live member dictionaries.
+	var staged: RefCounted=get_script().new(); staged.state=state.duplicate(true)
+	for order: Dictionary in option.orders:
+		var intent := {"type":"meal","member_id":order.member_id,"lot_id":command.lot_id,"target_id":command.target_id,"action":order.action,"recipe":"","batch":option.batch}
+		if order.action=="choose": intent.activity_id=order.activity_id
+		var accepted: Dictionary=staged.apply_command(profile_id,intent)
+		if not accepted.ok: return _result(false,"The household call changed: "+str(accepted.message))
+	var names: PackedStringArray=[]
+	for order: Dictionary in option.orders:
+		var member := _member(state.families[profile_id],str(order.member_id))
+		member.merge(_member(staged.state.families[profile_id],str(order.member_id)),true); names.append(str(member.name))
+	return _result(true,"Called to meal · "+", ".join(names)+". Existing plans stay first.")
 
 func meal_option(profile_id: String,member_id: String,lot_id: String,table_id: Variant,action: Variant,recipe: Variant="") -> Dictionary:
 	var family: Dictionary=state.families.get(profile_id,{})

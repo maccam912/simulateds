@@ -39,6 +39,19 @@ static func choosing(member: Dictionary,table: Dictionary) -> bool:
 static func chosen_time(task: Dictionary) -> float:
 	return maxf(0.0,float(task.get("elapsed",0.0))-float(task.get("meal_chosen_at",0.0)))
 
+static func matches_call(value: Variant,expected: Array) -> bool:
+	if not value is Array or value.size()!=expected.size(): return false
+	for index in range(expected.size()):
+		var row: Variant=value[index]; var wanted: Dictionary=expected[index]
+		if not row is Dictionary or row.size()!=5: return false
+		for key: String in ["member_id","action","activity_id"]:
+			if not row.get(key) is String or row[key]!=wanted[key]: return false
+		if not _integer(row.get("next_action"),1,9007199254740991) or int(row.next_action)!=int(wanted.next_action): return false
+		if not row.get("queue") is Array or row.queue.size()!=wanted.queue.size(): return false
+		for queued in range(wanted.queue.size()):
+			if not row.queue[queued] is String or row.queue[queued]!=wanted.queue[queued]: return false
+	return true
+
 static func summary(meal: Dictionary) -> String:
 	if meal.recipe=="": return "Set the table for a meal"
 	return str(RECIPES[meal.recipe].name)+(" · All eaten" if int(meal.servings)==0 else " · %d portions left" % int(meal.servings))

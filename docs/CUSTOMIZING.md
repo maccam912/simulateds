@@ -105,3 +105,15 @@ ingredients. `meal_company` uses the same newly chosen shared-time qualification
 as friendship, but its once-per-wish reward is independent of the pair/day cap.
 The qualifying frame's elapsed slice is included, so a meal ending on exactly
 twelve chosen game minutes can still fulfill the wish.
+
+
+`World.meal_call_option` previews an explicit household call. Its roster includes
+skipped residents, while its ordered intents contain only eligible household
+members on the table's lot. The selected resident has first claim to limited
+unreserved portions. `meal_call` matches the platter batch and each participant's
+current action, next action counter, and queued IDs before staging ordinary
+`meal` orders in a copied world. Only a fully accepted group updates live member
+dictionaries. `Meals.matches_call` tolerates JSON integer representation without
+accepting fractional counters. The UI waits for the exact acknowledgement and
+accepted counters for every participant, including when the selected resident
+was skipped. No new persisted group or meal schema is needed.

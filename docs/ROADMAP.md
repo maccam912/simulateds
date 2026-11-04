@@ -102,6 +102,11 @@ and sharing chosen meal time, using the existing bounded rewards. Wish navigatio
 finds a relevant table or its Kitchen catalog entry without choosing ingredients
 or controlling other diners. Starter sets and existing saved wishes are preserved.
 
+A household meal call now previews and directs eligible residents together,
+keeping existing plans, reusing current automatic portions, skipping absent
+residents, and reserving food atomically. It works on visits without directing
+another player's family.
+
 ## 1. Make homebuilding dependable
 
 - Edge-based walls, room detection, door orientation, and roofs. Wall-mounted

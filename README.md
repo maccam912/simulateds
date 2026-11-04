@@ -209,6 +209,14 @@ or shell expressions.
   Leftovers keep until eaten or explicitly removed with **Clear leftovers**.
   A portion is consumed when eating starts; cancelling before arrival frees the
   reservation. Moving/undoing a table preserves food; room copies start empty.
+- **Call household** at a served table calls your own residents on that lot in
+  one choice. Hover or focus it to preview who joins now, joins after their plan,
+  keeps a current automatic portion, or stays away. The selected resident gets
+  priority when food is limited. Existing chosen meals stay untouched, and busy
+  residents keep their plans first, so arrival together is not guaranteed.
+  It also works while visiting with your own household; neighbors choose for
+  themselves. Changed plans or portions require a fresh call instead of applying
+  half the request.
 - Later wish sets can include **Something homemade** (serve a meal) and
   **Share a meal** (both diners choose twelve game minutes together). They use
   the usual §40 reward and once-per-set bonus. Click a meal wish to inspect a
