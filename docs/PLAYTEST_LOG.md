@@ -91,3 +91,26 @@ Fresh assessment: building now supports affordable experimentation and clear
 feedback. The next biggest playability gap is purpose: residents mostly refill
 bars. Next: small personal daily wishes with visible progress, modest rewards,
 and a saved journal, keeping absent households protected from missed deadlines.
+
+## 2026-11-03 · Little wishes and a personal journal
+
+Each resident has three optional wishes chosen from six everyday activities.
+Directed activity completion pays §40 per wish, plus §80 for a complete set;
+autonomy and absent households cannot farm these rewards. Wishes never expire,
+and a completed set can be renewed on a later day. The bounded journal, progress,
+and rewards persist and replicate. Older saves receive a first set automatically.
+Cards show completed/active/planned status and reject duplicate activity orders.
+Idle conversation partners stay engaged, while their own directed orders win.
+
+Validation: eleven local suites passed, plus two actual Iroh clients fulfilling
+wishes, rejecting duplicate payouts, and retaining journals after reconnect.
+Graphical captures at 1280×720/125% scale passed. An interactive desktop playtest
+completed conversation, relaxation, and reading wishes, verified §200 total and
+three journal entries, used the debug terminal to cross midnight, renewed the
+set without losing the journal, and saved/quit cleanly. This is agent playtesting,
+not a family playtest.
+
+Fresh assessment: activities now have a small, understandable purpose. Watching
+them still reveals stiff movement and almost identical poses, and midnight looks
+like midday. Next: resident movement/activity presentation and day/night lighting,
+while preserving authoritative positions and reduced-motion preferences.

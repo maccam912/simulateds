@@ -5,6 +5,7 @@ signal save_menu_requested
 
 const Style = preload("res://game/style.gd")
 const Catalog = preload("res://game/catalog.gd")
+const Wishes = preload("res://game/wishes.gd")
 const LotView = preload("res://game/lot_view.gd")
 var viewed_lot := ""
 var selected_member := ""
@@ -25,6 +26,9 @@ var tools_box: VBoxContainer
 var context_box: VBoxContainer
 var activity_label: Label
 var needs_title: Label
+var wishes_button: Button
+var _context_page := "activities"
+var _wish_seen: Dictionary = {}
 var queue_label: Button
 var plan_panel: PanelContainer
 var plan_box: VBoxContainer
@@ -189,6 +193,7 @@ func _build_ui() -> void:
 	var needs := _vbox(needs_panel,9)
 	var needs_head := HBoxContainer.new(); needs.add_child(needs_head)
 	needs_title = _label("Alex · Taking it easy",15); needs_title.size_flags_horizontal=Control.SIZE_EXPAND_FILL; needs_title.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; needs_head.add_child(needs_title)
+	wishes_button = _button("Wishes",_open_wishes); wishes_button.add_theme_font_size_override("font_size",12); needs_head.add_child(wishes_button)
 	queue_label = _button("Plan",func(): _show_tray(plan_panel,not plan_panel.visible))
 	queue_label.add_theme_font_size_override("font_size",12); needs_head.add_child(queue_label)
 	plan_panel = _hud_panel(Rect2(16,-480,408,300),Vector2(0,1))
@@ -216,7 +221,9 @@ func _build_ui() -> void:
 	var actions := _vbox(actions_panel,7)
 	var mode_row := HBoxContainer.new(); actions.add_child(mode_row)
 	mode_button = _button("Build & furnish",_toggle_build,true); mode_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; mode_row.add_child(mode_button)
-	palette_button = _button("Activities",func(): _show_tray(context_panel,not context_panel.visible)); mode_row.add_child(palette_button)
+	palette_button = _button("Activities",func():
+		var was_activities := _context_page=="activities"
+		_context_page="activities"; _refresh(); _show_tray(context_panel,not context_panel.visible if was_activities else true)); mode_row.add_child(palette_button)
 	var travel_row := HBoxContainer.new(); actions.add_child(travel_row)
 	visit_button = _button("Visit lot",_visit); visit_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; travel_row.add_child(visit_button)
 	home_button = _button("Go home",_go_home); home_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; travel_row.add_child(home_button)
@@ -229,7 +236,7 @@ func _build_ui() -> void:
 	context_panel.visible = false
 	var context := _vbox(context_panel,8)
 	var context_head := HBoxContainer.new(); context.add_child(context_head)
-	activity_label = _label("Activities",15); activity_label.size_flags_horizontal=Control.SIZE_EXPAND_FILL; context_head.add_child(activity_label)
+	activity_label = _label("Activities",15); activity_label.size_flags_horizontal=Control.SIZE_EXPAND_FILL; activity_label.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; context_head.add_child(activity_label)
 	context_head.add_child(_button("×",func(): context_panel.hide()))
 	var scroll := ScrollContainer.new(); scroll.size_flags_vertical=Control.SIZE_EXPAND_FILL; scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED; context.add_child(scroll)
 	tools_box = _vbox(scroll,5); tools_box.size_flags_horizontal=Control.SIZE_EXPAND_FILL
@@ -270,7 +277,7 @@ func _refresh() -> void:
 		_view_context = view_context
 		viewed_lot = str(family.home_lot)
 		_selected_object = ""
-		_moving_object = ""; _move_request.clear()
+		_moving_object = ""; _move_request.clear(); _wish_seen.clear()
 	if viewed_lot.is_empty() or not state.get("lots",{}).has(viewed_lot):
 		viewed_lot = str(family.get("home_lot","lot_1"))
 	if selected_member.is_empty() and not family.get("members",[]).is_empty():
@@ -329,19 +336,24 @@ func _refresh() -> void:
 		needs_title.text=str(member.name)+"  /  "+str(member.get("action","Enjoying the day"))
 		queue_label.text="Plan · %d" % (member.get("queue",[]).size() + (0 if member.get("task",{}).is_empty() else 1))
 		_refresh_plan(member)
+		wishes_button.text="Wishes · %d/3" % Wishes.completed(member.get("wishes",{}))
+		_announce_wishes(family)
 		for need in need_bars:
 			var value := float(member.get("needs",{}).get(need,100))
 			need_bars[need].value=value; need_values[need].text=str(int(value))
 			var color := Style.GREEN if value>=60 else Style.GOLD if value>=30 else Color("df8d79")
 			need_bars[need].add_theme_stylebox_override("fill",Style.box(color,4))
 	var build_mode := building and mine
+	wishes_button.disabled=build_mode or member.is_empty()
 	if build_mode != _last_build_mode:
 		_last_build_mode = build_mode
 		_show_tray(context_panel,build_mode)
 		if build_mode: plan_panel.hide()
 		if hud.visible: Soundscape.set_context("build" if build_mode else "live")
 	palette_button.text = "Catalog" if build_mode else "Activities"
-	var tools_signature := str(building and mine)+selected_tool+_moving_object+str(_move_request.is_empty())+_selected_object+str(build_rotation)+viewed_lot+str(lot.get("revision",0))
+	var tools_signature := str(building and mine)+selected_tool+_moving_object+str(_move_request.is_empty())+_selected_object+str(build_rotation)+viewed_lot+str(lot.get("revision",0))+_context_page+selected_member
+	if _context_page=="wishes" and not build_mode:
+		tools_signature+=str(member.get("wishes",{}))+str(day)+str(member.get("task",{}).get("id",""))+str(member.get("queue",[]))
 	if tools_signature!=_tools_signature:
 		_tools_signature=tools_signature
 		_rebuild_context(building and mine,lot)
@@ -457,6 +469,8 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 		if selected_tool=="move": help="Click furniture, then a new spot. " + Preferences.action_label("rotate") + " rotates · Escape cancels."
 		var description:=_label(help,12,Style.MUTED)
 		description.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; description.custom_minimum_size.x=200; context_box.add_child(description)
+	elif _context_page=="wishes":
+		_rebuild_wishes()
 	else:
 		activity_label.text="Activities"
 		var shown: Dictionary={}
@@ -472,6 +486,42 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 		context_box.add_child(_button("Clear action queue",func(): _send({"type":"cancel","member_id":selected_member})))
 		var hint:=_label("Select furniture in the world to use it.",12,Style.MUTED)
 		hint.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; hint.custom_minimum_size.x=200; context_box.add_child(hint)
+
+func _open_wishes() -> void:
+	_context_page="wishes"; _refresh(); _show_tray(context_panel,true)
+
+func _rebuild_wishes() -> void:
+	var member := _member()
+	if member.is_empty(): return
+	var board: Dictionary=member.get("wishes",{})
+	activity_label.text=str(member.name)+"’s wishes"
+	for wish: Dictionary in board.get("wishes",[]):
+		var definition: Dictionary=Wishes.CATALOG[wish.id]
+		var status: String=Session.world.wish_status(member,str(definition.activity))
+		var detail := "Complete" if wish.done else (status if not status.is_empty() else "Try this")+" · § %d" % Wishes.REWARD
+		var button := _button(("✓ " if wish.done else "♡ ")+str(definition.title)+"\n"+detail,func(): _send({"type":"pursue_wish","member_id":selected_member,"wish_id":str(wish.id)}))
+		button.alignment=HORIZONTAL_ALIGNMENT_LEFT; button.add_theme_font_size_override("font_size",12)
+		button.custom_minimum_size.y=60; button.disabled=bool(wish.done) or not status.is_empty(); button.tooltip_text=str(definition.description)
+		if wish.done: button.add_theme_color_override("font_disabled_color",Style.GREEN)
+		tools_box.add_child(button)
+	var bonus := _label("All three: § %d extra" % Wishes.SET_BONUS,12,Style.GOLD); tools_box.add_child(bonus)
+	if not board.get("journal",[]).is_empty():
+		tools_box.add_child(_label("LITTLE MOMENTS",11,Style.MUTED))
+		for entry: Dictionary in board.journal:
+			var line := _label("Day %d · %s" % [int(entry.day),str(entry.text)],12,Style.MUTED)
+			line.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; line.custom_minimum_size.x=200; tools_box.add_child(line)
+	var renew := _button("A fresh set of wishes",func(): _send({"type":"renew_wishes","member_id":selected_member}))
+	renew.disabled=not Wishes.can_renew(board,int(Session.state.day)); context_box.add_child(renew)
+	var hint := _label("No rush: wishes never expire. Finish this set, then start another on a new day.",12,Style.MUTED)
+	hint.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; hint.custom_minimum_size.x=200; context_box.add_child(hint)
+
+func _announce_wishes(family: Dictionary) -> void:
+	for resident: Dictionary in family.get("members",[]):
+		var count := Wishes.completed(resident.get("wishes",{}))
+		if _wish_seen.has(resident.id) and count>int(_wish_seen[resident.id]) and hud.visible:
+			notice_label.text=str(resident.name)+( " finished all three wishes!" if count==3 else " fulfilled a wish!")+" See Wishes for their journal."
+			_notice_time=7.0; notice_panel.show(); Soundscape.play_ui("confirm")
+		_wish_seen[resident.id]=count
 
 func _select_lot(id: String) -> void:
 	viewed_lot=id; _selected_object=""; neighborhood_panel.hide(); _refresh()

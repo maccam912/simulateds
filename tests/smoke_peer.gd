@@ -127,6 +127,19 @@ func _client(index: String) -> void:
 	assert(not queued_id.is_empty(), "Replicated plan did not expose stable action ID")
 	await _command({"type":"remove_action","member_id":member_id,"action_id":queued_id})
 	await _command({"type":"remove_action","member_id":member_id,"action_id":queued_id},false)
+	await _command({"type":"cancel","member_id":member_id})
+	var wished_id := ""
+	for wish: Dictionary in session.state.families[identity].members[0].wishes.wishes:
+		if wish.id!="company": wished_id=str(wish.id); break
+	await _command({"type":"pursue_wish","member_id":member_id,"wish_id":wished_id})
+	var fulfilled := false
+	for _attempt in range(350):
+		for wish: Dictionary in session.state.families[identity].members[0].wishes.wishes:
+			if wish.id==wished_id and wish.done: fulfilled=true
+		if fulfilled: break
+		await create_timer(0.1).timeout
+	assert(fulfilled,"Host did not fulfill and replicate the client's wish")
+	await _command({"type":"pursue_wish","member_id":member_id,"wish_id":wished_id},false)
 	await _command({"type": "visit", "lot_id": host_home, "member_id": member_id})
 	var recalled := false
 	for _attempt in range(300):
@@ -142,6 +155,7 @@ func _client(index: String) -> void:
 	await _connect()
 	assert(session.home_lot() == home, "Reconnect changed lot ownership")
 	assert(int(session.world._object(session.state.lots[home],moved_id).x)==9, "Reconnect lost furnishing move")
+	assert(session.state.families[identity].members[0].wishes.journal.size()==1,"Reconnect lost wish journal")
 	assert(not session.state.families[identity].members[0].autonomy, "Reconnect lost autonomy preference")
 	assert(session.state.families.size() == 3, "Reconnect duplicated family")
 	assert([0, 0] in session.state.lots[home].floors, "Reconnect lost construction")

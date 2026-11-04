@@ -20,6 +20,12 @@ visit an open neighbor, survive that neighbor entering construction, disconnect,
 reconnect to the same family, and reload a valid saved world. Record separately
 which of these were verified by model tests, live processes, or human play.
 
+Recent implemented increments include editable resident plans and autonomy,
+exclusive private furnishings, shape-based picking, free furniture moves,
+placement validation previews, 32-edit construction undo/redo, and persistent
+personal wishes/journals. See [the playtest log](PLAYTEST_LOG.md) for evidence
+and current usability priorities.
+
 ## 1. Make homebuilding dependable
 
 - Edge-based walls, room detection, window and door orientation, and roofs.

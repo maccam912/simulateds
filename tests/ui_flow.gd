@@ -122,6 +122,21 @@ func _run() -> void:
 	game._build_history(false)
 	_check(int(session.world._object(session.state.lots.lot_1,str(fridge.id)).x)==10,"Move participates in undo")
 	game._send({"type":"build_cancel","lot_id":"lot_1"})
+	await _click(game.wishes_button.get_global_rect().get_center())
+	_check(game.context_panel.visible and game._context_page=="wishes","Wishes opens its overlay")
+	for resident: Dictionary in game._family().members: resident.autonomy=false
+	var wish_funds: int=session.state.lots.lot_1.funds
+	var wish_button: Button=game.tools_box.get_child(0)
+	await _click(wish_button.get_global_rect().get_center())
+	_check(session.last_action_ok,"Wish card starts a real reachable activity")
+	for index in range(350):
+		session.world.step(0.1)
+		if game._member().task.is_empty() and game._member().queue.is_empty(): break
+	game._refresh()
+	_check(game.wishes_button.text=="Wishes · 1/3","HUD shows completed wish count")
+	_check(session.state.lots.lot_1.funds==wish_funds+40,"Wish UI leads to authoritative reward")
+	_check(game.tools_box.get_child(0).disabled,"Completed wish card cannot be repeated")
+	game.context_panel.hide()
 	game._open_connection()
 	_check(game.connection_dialog.visible,"Multiplayer dialog opens")
 	game.connection_dialog.hide()

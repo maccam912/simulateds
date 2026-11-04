@@ -74,6 +74,24 @@ func _run() -> void:
 	await RenderingServer.frame_post_draw
 	assert(game.lot_view.hover_target.get("id")==fridge.id)
 	assert(root.get_texture().get_image().save_png("res://build/hover" + suffix + ".png") == OK)
+	for resident: Dictionary in family.members:
+		session.world._clear_member(resident); resident.autonomy=false
+	game._open_wishes()
+	await create_timer(0.3).timeout
+	await RenderingServer.frame_post_draw
+	assert(root.get_texture().get_image().save_png("res://build/wishes" + suffix + ".png") == OK)
+	var resident: Dictionary=game._member()
+	for wish: Dictionary in resident.wishes.wishes:
+		if wish.id!="company":
+			game._send({"type":"pursue_wish","member_id":resident.id,"wish_id":wish.id}); break
+	for index in range(350):
+		session.world.step(0.1)
+		if resident.task.is_empty() and resident.queue.is_empty(): break
+	game._refresh()
+	await create_timer(0.3).timeout
+	await RenderingServer.frame_post_draw
+	assert(resident.wishes.journal.size()==1)
+	assert(root.get_texture().get_image().save_png("res://build/wish-complete" + suffix + ".png") == OK)
 	print("GAME_RENDER_PASS")
 	await root.get_node("Soundscape").shutdown_and_wait()
 	quit()

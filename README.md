@@ -184,3 +184,9 @@ In construction, choose **Move**, click existing furniture, rotate if desired,
 and click its new location. Moves are free and support undo. Green/red placement
 footprints explain whether the position is valid before you commit; **Sell**
 shows its refund. Escape releases an unplaced move selection.
+
+**Wishes** gives each resident three optional activities and a personal journal.
+Completing an activity yourself earns §40; finishing the set adds §80. Wishes
+never expire while you are away. After completing a set, a new one is available
+on a later game day. Autonomous activities still tend needs but do not earn wish
+rewards. Completed and queued wishes cannot be claimed repeatedly.

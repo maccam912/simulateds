@@ -3,6 +3,7 @@ extends RefCounted
 ## Commands are the only external mutations; the whole state is JSON-compatible.
 const Catalog = preload("res://game/catalog.gd")
 const BuildRules = preload("res://game/build_rules.gd")
+const Wishes = preload("res://game/wishes.gd")
 const GRID_SIZE := 16
 const SCHEMA := 1
 const MAX_FAMILIES := 4
@@ -56,6 +57,7 @@ func ensure_family(profile_id: String, display_name: String) -> String:
 			for need: String in NEEDS:
 				needs[need] = 70.0 + index * 8.0
 			members.append({"id":profile_id + "_" + str(index + 1), "name":clean_name if index == 0 else "Robin", "lot_id":lot_id, "x":7 + index, "y":7, "needs":needs, "action":"Taking it easy", "queue":[], "task":{}, "walk_clock":0.0, "idle_clock":float(index) * 2.0, "autonomy":true, "next_action":1})
+		for member: Dictionary in members: member.wishes=Wishes.create(str(member.id),int(state.day))
 		state.families[profile_id] = {"id":profile_id, "name":clean_name + " household", "home_lot":lot_id, "online":false, "members":members}
 		_event(clean_name + " moved into " + str(lot.name) + ".")
 		return lot_id
@@ -154,6 +156,38 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 	var member := _member(family, member_id)
 	if member.is_empty():
 		return _result(false, "You can only direct your own family.")
+	if type == "renew_wishes":
+		if not Wishes.can_renew(member.wishes,int(state.day)):
+			return _result(false,"Finish these wishes first. A fresh set is available on the following day.")
+		member.wishes=Wishes.create(str(member.id),int(state.day),int(member.wishes.round)+1,member.wishes.journal)
+		return _result(true,"A few new things to look forward to.")
+	if type == "pursue_wish":
+		var wish_id: Variant=command.get("wish_id")
+		if not wish_id is String: return _result(false,"Choose a wish.")
+		var activity := ""
+		for wish: Dictionary in member.wishes.wishes:
+			if wish.id==wish_id and not wish.done: activity=str(Wishes.CATALOG[wish_id].activity)
+		if activity.is_empty(): return _result(false,"That wish is already complete or unavailable.")
+		if not wish_status(member,activity).is_empty(): return _result(false,"That activity is already in this resident’s plan.")
+		var destination: Dictionary=state.lots[member.lot_id]
+		var target := ""
+		var best_score := 100000.0
+		if activity=="chat":
+			for other: Dictionary in state.families.values():
+				for companion: Dictionary in other.members:
+					if companion.id==member.id or companion.lot_id!=member.lot_id: continue
+					var goals := _social_cells(destination,companion)
+					if goals.has(_position(member)) or not _path(destination,_position(member),goals).is_empty():
+						target=str(companion.id); break
+		else:
+			for object: Dictionary in destination.objects:
+				if object.kind!=activity or not _can_reach_object(destination,_position(member),object): continue
+				var score := _position(member).distance_to(Vector2i(int(object.x),int(object.y)))
+				if not _object_user(str(destination.id),object,str(member.id)).is_empty(): score+=1000.0
+				if score<best_score: target=str(object.id); best_score=score
+		if target.is_empty():
+			return _result(false,"Find another resident to chat with." if activity=="chat" else "There is no reachable " + str(Catalog.ITEMS[activity].name) + " here. Build one or visit a neighbor.")
+		return apply_command(profile_id,{"type":"interact","member_id":member.id,"lot_id":member.lot_id,"target_id":target})
 	if type == "autonomy":
 		if not command.get("enabled") is bool:
 			return _result(false, "Choose whether this resident acts on their own.")
@@ -312,6 +346,10 @@ func _tick_member(member: Dictionary, lot: Dictionary, delta: float) -> void:
 		if not member.queue.is_empty():
 			_start_next(member, lot)
 		else:
+			var partner := _conversation_partner(member)
+			if not partner.is_empty():
+				member.action="Chatting with "+str(partner.name)
+				return
 			member.idle_clock = minf(2.0, float(member.idle_clock) + delta)
 			if member.idle_clock >= 2.0 and bool(member.get("autonomy", true)):
 				member.idle_clock = 0.0
@@ -336,6 +374,7 @@ func _tick_member(member: Dictionary, lot: Dictionary, delta: float) -> void:
 	if task.type == "move":
 		member.task = {}
 		return
+	task.elapsed = float(task.get("elapsed",0.0)) + delta
 	if task.get("target_kind", "object") == "member":
 		var neighbor := _find_member(str(task.target_id))
 		if neighbor.is_empty() or neighbor.lot_id != member.lot_id or _position(member).distance_to(_position(neighbor)) > 2.0:
@@ -347,7 +386,9 @@ func _tick_member(member: Dictionary, lot: Dictionary, delta: float) -> void:
 		neighbor.needs.social = minf(100.0, float(neighbor.needs.social) + 7.0 * delta)
 		task.remaining -= delta
 		if task.remaining <= 0.0:
+			_finish_wish(member,task,"chat")
 			member.task = {}
+			member.action = "Taking it easy"
 		return
 	var object := _object(lot, str(task.get("target_id", "")))
 	if object.is_empty():
@@ -365,8 +406,41 @@ func _tick_member(member: Dictionary, lot: Dictionary, delta: float) -> void:
 				if companion.id != member.id and companion.lot_id == member.lot_id and _position(companion).distance_to(_position(member)) <= 4.0:
 					companion.needs.social = minf(100.0, float(companion.needs.social) + 2.0 * delta)
 	task.remaining -= delta
-	if task.remaining <= 0.0 or float(member.needs[need]) >= 99.0:
+	var minimum_time := 0.0 if task.get("automatic",false) else 4.0
+	if task.remaining <= 0.0 or (float(member.needs[need]) >= 99.0 and float(task.elapsed)>=minimum_time):
+		_finish_wish(member,task,str(object.kind))
 		member.task = {}
+		member.action = "Taking it easy"
+
+func task_activity(task: Dictionary, lot_id: String) -> String:
+	if task.get("type")!="interact": return ""
+	if task.get("target_kind")=="member": return "chat"
+	return str(_object(state.lots[lot_id],str(task.get("target_id",""))).get("kind",""))
+
+func wish_status(member: Dictionary, activity: String) -> String:
+	if not member.task.get("automatic",false) and task_activity(member.task,str(member.lot_id))==activity: return "In progress"
+	for task: Dictionary in member.queue:
+		if not task.get("automatic",false) and task_activity(task,str(member.lot_id))==activity: return "In your plan"
+	return ""
+
+func _conversation_partner(member: Dictionary) -> Dictionary:
+	for family: Dictionary in state.families.values():
+		for other: Dictionary in family.members:
+			if other.id==member.id or other.lot_id!=member.lot_id: continue
+			if other.task.get("target_kind")=="member" and other.task.get("target_id")==member.id and other.task.get("path",[]).is_empty() and _position(other).distance_to(_position(member))<=2.0: return other
+	return {}
+
+func _finish_wish(member: Dictionary, task: Dictionary, activity: String) -> void:
+	if bool(task.get("automatic",false)): return
+	for family: Dictionary in state.families.values():
+		if not family.online: continue
+		if not family.members.has(member): continue
+		var result := Wishes.record(member.wishes,activity,int(state.day))
+		if int(result.reward)>0:
+			var home: Dictionary=state.lots[family.home_lot]
+			home.funds=mini(1000000000,int(home.funds)+int(result.reward))
+			_event(str(member.name)+" fulfilled a wish: "+str(result.title)+". § %d earned." % int(result.reward))
+		return
 
 func _choose_autonomy(member: Dictionary, lot: Dictionary) -> void:
 	# A missing bathroom must not prevent eating or sleeping. Score every useful,
@@ -426,6 +500,7 @@ func _start_next(member: Dictionary, lot: Dictionary) -> void:
 		member.action = "Cannot reach destination"
 		return
 	task.path = route
+	if task.type=="interact": task.elapsed=0.0
 	member.task = task
 	member.walk_clock = 0.0
 	member.action = "Walking" + (" · " + str(task.get("label", "")) if task.type == "interact" else "") if not route.is_empty() else "Starting activity"
@@ -678,6 +753,8 @@ func _normalize_numbers() -> void:
 				object[key] = int(object[key])
 	for family: Dictionary in state.families.values():
 		for member: Dictionary in family.members:
+			if not member.has("wishes"): member.wishes=Wishes.create(str(member.id),int(state.day))
+			Wishes.normalize(member.wishes)
 			member.autonomy = member.get("autonomy", true)
 			member.next_action = int(member.get("next_action", 1))
 			member.x = int(member.x)
@@ -766,6 +843,7 @@ func _valid_state(data: Dictionary) -> bool:
 				return false
 			if not member.get("autonomy", true) is bool or not _integer(member.get("next_action", 1)) or float(member.get("next_action", 1)) < 1 or float(member.get("next_action", 1)) > 9007199254740000:
 				return false
+			if member.has("wishes") and not Wishes.valid(member.wishes,int(data.day)): return false
 			members_seen[member.id] = true
 			if not member.get("action") is String or str(member.action).length() > 100 or not member.get("queue") is Array or member.queue.size() > MAX_QUEUE or not member.get("task") is Dictionary or not _number(member.get("walk_clock")) or not _number(member.get("idle_clock")):
 				return false
@@ -787,6 +865,7 @@ func _valid_state(data: Dictionary) -> bool:
 func _valid_task(value: Variant, active: bool) -> bool:
 	if not value is Dictionary or not value.get("type") in ["move", "interact"]:
 		return false
+	if value.has("elapsed") and (not _number(value.elapsed) or float(value.elapsed)<0 or float(value.elapsed)>120): return false
 	if value.has("id") and (not value.id is String or str(value.id).is_empty() or str(value.id).length() > 180):
 		return false
 	if value.has("automatic") and not value.automatic is bool:
