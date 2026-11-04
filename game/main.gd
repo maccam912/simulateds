@@ -331,6 +331,7 @@ func _build_ui() -> void:
 
 func _process(delta: float) -> void:
 	if lot_view == null: return
+	lot_view.show_cues=hud.is_visible_in_tree()
 	_refresh_clock += delta
 	_notice_time = maxf(0,_notice_time-delta)
 	if _refresh_clock>=0.2:
@@ -641,6 +642,12 @@ func _send(command: Dictionary) -> void:
 	_refresh()
 
 func _entity_clicked(target: Dictionary) -> void:
+	if target.get("type")=="care":
+		if target.get("owner")!=Session.profile_id or not target.get("need") in Wellbeing.ORDER: return
+		for resident: Dictionary in _family().get("members",[]):
+			if resident.id==target.get("id") and resident.lot_id==viewed_lot:
+				selected_member=str(resident.id); _care_need(str(target.need)); return
+		return
 	if lot_view.building and selected_tool=="move" and target.get("type")=="object":
 		_select_moving_object(str(target.id)); return
 	if target.get("type") == "object":

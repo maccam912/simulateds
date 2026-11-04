@@ -114,6 +114,10 @@ or shell expressions.
   the same tile twice for a single tile. The preview shows the look and exact
   price. Only changed existing surfaces cost money (§4 per floor tile, §3 per
   wall tile), and one Undo restores the whole area. Finishes have no resale bonus.
+- Residents with a pressing need show a small thought cue above the house. Click
+  it to select that resident and plan useful care. Needs already being handled
+  or queued stay quiet, and cues belong only to your household. The selected
+  resident's name remains readable over furniture, including while asleep.
 - **Plan** shows the selected resident's actions, individual cancel buttons, and
   autonomy switch. **Wishes** gives optional activities, rewards, and a saved
   personal journal. **Hobbies** tracks reading, gardening, and cooking, with five

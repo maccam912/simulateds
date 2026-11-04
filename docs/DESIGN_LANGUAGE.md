@@ -142,6 +142,20 @@ must be silent. Headless hosts do not create audio playback. Important
 information is never conveyed only through sound. Later recordings and richer
 ambience should retain these bus boundaries and comparable loudness.
 
+## Reading the residents
+
+Draw the selected resident's name and marker after furnishings so a tall shelf
+cannot hide who is selected. Small cream thought cues appear only for a pressing
+unmet need in the player's own household. Each uses a name, a simple drawn icon,
+and plain words; color is supplementary. Covered or queued care stays quiet.
+Cues can request the ordinary care command, preserving the player's existing
+plan and explaining unavailable furniture through the existing care tray.
+
+Nearby labels separate rather than overlap, long names truncate with the full
+name on hover, and night colors keep readable contrast. Cues do not blink or
+bounce. Construction, menus, and offscreen actors leave no floating controls.
+A double click on a disappearing cue must never fall through into an extra order.
+
 ## Everyday personality
 
 A favorite pastime is a preference, not a level or a reward multiplier. Reading,

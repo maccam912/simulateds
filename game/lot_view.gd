@@ -12,6 +12,7 @@ const ResidentMotion = preload("res://game/resident_motion.gd")
 const ActivityAudio = preload("res://game/activity_audio.gd")
 const Appearance = preload("res://game/appearance.gd")
 const Daylight = preload("res://game/daylight.gd")
+const ResidentCues = preload("res://game/resident_cues.gd")
 var motion = ResidentMotion.new()
 var activity_audio = ActivityAudio.new()
 var _audio_tick := -1
@@ -19,6 +20,9 @@ var light: Dictionary = Daylight.sample(480)
 var world: Dictionary = {}
 var lot_id := "lot_1"
 var selected_member := ""
+var show_cues := true
+var resident_labels: Dictionary={}
+var _last_care_click := -1000
 var build_kind := "floor"
 var build_rotation := 0
 var build_object_id := ""
@@ -129,12 +133,15 @@ func _gui_input(event: InputEvent) -> void:
 			elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 				zoom = maxf(0.65, zoom - 0.1)
 			elif event.button_index == MOUSE_BUTTON_LEFT:
+				if event.double_click and Time.get_ticks_msec()-_last_care_click<500 and not building:
+					accept_event(); return
 				var target := hit_target(event.position)
 				var cell := cell_at(event.position)
 				if building and build_kind=="finish_wall" and target.get("type")=="wall": cell=Vector2i(int(target.x),int(target.y))
 				if building and build_kind=="move" and build_object_id.is_empty() and target.get("type")=="object":
 					entity_clicked.emit(target)
 				elif not building and not target.is_empty():
+					if target.get("type")=="care": _last_care_click=Time.get_ticks_msec()
 					entity_clicked.emit(target)
 				elif building and build_kind == "erase" and target.get("type") == "object":
 					tile_clicked.emit(Vector2i(int(target.x),int(target.y)))
@@ -192,6 +199,7 @@ func _block(x: float, y: float, w: float, d: float, height: float, color: Color,
 
 func _draw() -> void:
 	_hit_regions.clear()
+	resident_labels.clear()
 	_drawing_target = {}
 	_layout()
 	light=Daylight.sample(float(world.get("day_minutes",480)))
@@ -269,6 +277,7 @@ func _draw() -> void:
 		else:
 			_resident(entity.member, entity.family,scale_factor)
 	_draw_street_lights(scale_factor)
+	_draw_resident_overlays(entities,scale_factor)
 	hover_target = hit_target(_pointer)
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if not building and not hover_target.is_empty() else Control.CURSOR_ARROW
 	if building and build_kind=="room":
@@ -326,6 +335,7 @@ func _draw_preview_label(message: String, valid: bool) -> void:
 func _draw_hover() -> void:
 	var title := str(hover_target.get("name",""))
 	var detail := "Click to select" if hover_target.get("owner") == Session.profile_id else "Click to chat"
+	if hover_target.type=="care": detail="Click to plan care · Your existing orders keep priority"
 	if hover_target.type == "object":
 		var item: Dictionary = Catalog.ITEMS[hover_target.kind]
 		title = str(item.name)
@@ -495,12 +505,6 @@ func _resident(member: Dictionary, family: Dictionary,s: float) -> void:
 	draw_line(p+Vector2(7,-23)*s,p+Vector2(9-stride*3,-14)*s,skin,3*s,true)
 	Appearance.draw_head(self,p+Vector2(0,-31)*s+Vector2(0,bob),s,look)
 	_activity_prop(p,str(pose.get("kind","")),s,reduced)
-	if selected:
-		var q := p+Vector2(0,-47)*s
-		_poly([q+Vector2(0,-7)*s,q+Vector2(4,0)*s,q+Vector2(0,7)*s,q+Vector2(-4,0)*s],Color("e9d695"),Color("fff3b4"))
-		var text := str(member.name)
-		var text_width := _font.get_string_size(text,HORIZONTAL_ALIGNMENT_LEFT,-1,13).x
-		_resident_name(p+Vector2(-text_width*0.5,18*s),text)
 
 func _activity_pose(member: Dictionary) -> Dictionary:
 	if motion.moving(str(member.id)): return {}
@@ -536,8 +540,6 @@ func _sleeping_resident(member: Dictionary,family: Dictionary,object: Dictionary
 	draw_string(_font,head+Vector2(8,-15+float_y)*s,"z z",HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("f5efd8"))
 	if str(member.id)==selected_member:
 		draw_arc(head,10*s,0,TAU,24,Color("fff2bd"),1.5*s,true)
-		var width := _font.get_string_size(str(member.name),HORIZONTAL_ALIGNMENT_LEFT,-1,13).x
-		_resident_name(feet+Vector2(-width*0.5,20*s),str(member.name))
 
 func _activity_prop(p: Vector2,kind: String,s: float,reduced: bool) -> void:
 	match kind:
@@ -569,12 +571,88 @@ func _activity_prop(p: Vector2,kind: String,s: float,reduced: bool) -> void:
 			draw_style_box(preload("res://game/style.gd").box(Color("304b4f"),3),Rect2(q,Vector2(18,14)*s))
 			draw_line(q+Vector2(5,5)*s,q+Vector2(14,5)*s,Color("b9d69f"),2*s,true)
 
-func _resident_name(position: Vector2, text: String) -> void:
-	if float(light.night)>0.4:
-		draw_string_outline(_font,position,text,HORIZONTAL_ALIGNMENT_LEFT,-1,13,3,Color("26363b"))
-		draw_string(_font,position,text,HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("fff1ce"))
-	else:
-		draw_string(_font,position,text,HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("263f36"))
+func _trim_label(text: String, maximum: float) -> String:
+	if _font.get_string_size(text,HORIZONTAL_ALIGNMENT_LEFT,-1,13).x<=maximum: return text
+	while not text.is_empty() and _font.get_string_size(text+"…",HORIZONTAL_ALIGNMENT_LEFT,-1,13).x>maximum: text=text.left(text.length()-1)
+	return text+"…"
+
+func _draw_resident_overlays(entities: Array, s: float) -> void:
+	if not show_cues or building or world.lots[lot_id].building or Session.role=="joining": return
+	var occupied: Array[Rect2]=[]
+	var bounds := Rect2(Vector2(8,8),size-Vector2(16,16))
+	for entity: Dictionary in entities:
+		if not entity.has("member") or entity.family.id!=Session.profile_id or world.lots[entity.family.home_lot].building: continue
+		var member: Dictionary=entity.member
+		var anchor := resident_anchor(member)
+		if not Rect2(Vector2.ZERO,size).has_point(anchor): continue
+		var head := anchor+Vector2(0,-31)*s
+		var pose := _activity_pose(member)
+		if pose.get("kind")=="bed":
+			var point := object_point(pose.object,Vector2(0.5,0.32))
+			head=grid_point(point.x,point.y)+Vector2(0,-22)*s
+		var selected: bool=str(member.id)==selected_member
+		if selected:
+			var q := head+Vector2(0,-16)*s
+			_poly([q+Vector2(0,-7)*s,q+Vector2(4,0)*s,q+Vector2(0,7)*s,q+Vector2(-4,0)*s],Color("e9d695"),Color("fff3b4"))
+		var cue := ResidentCues.need(member,world.lots[lot_id])
+		if cue.is_empty() and not selected: continue
+		var caption := _trim_label(str(member.name),180.0)
+		if not cue.is_empty(): caption=_trim_label(str(member.name),90.0)+" · "+str(cue.label)
+		caption=_trim_label(caption,240.0)
+		var width := _font.get_string_size(caption,HORIZONTAL_ALIGNMENT_LEFT,-1,13).x+(36.0 if not cue.is_empty() else 18.0)
+		var dimensions := Vector2(width,30.0 if not cue.is_empty() else 24.0)
+		var center := head+Vector2(0,-42)*s if not cue.is_empty() else anchor+Vector2(0,18)*s
+		var box := ResidentCues.fit(Rect2(center-dimensions*0.5,dimensions),bounds,occupied)
+		if not box.has_area(): continue
+		occupied.append(box)
+		var color := Color("f4e8cd") if not cue.is_empty() else Color("203339")
+		var edge := Color("c58670") if not cue.is_empty() else Color("c6d6a4")
+		if not cue.is_empty():
+			var tail := Vector2(clampf(head.x,box.position.x+8,box.end.x-8),box.end.y)
+			draw_circle(head.lerp(tail,0.45),2.0,color)
+			draw_circle(head.lerp(tail,0.72),3.0,color)
+		draw_style_box(preload("res://game/style.gd").box(color,6,edge),box)
+		var text_point := box.position+Vector2(28,20) if not cue.is_empty() else box.position+Vector2(9,17)
+		draw_string(_font,text_point,caption,HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("30423b") if not cue.is_empty() else Color("f4eedf"))
+		var target := {"type":"member","id":member.id,"owner":entity.family.id,"name":member.name}
+		if not cue.is_empty():
+			_draw_need_icon(box.position+Vector2(14,15),str(cue.need))
+			target.type="care"; target.need=cue.need; target.name=str(member.name)+" · "+str(cue.label)
+		var polygon := PackedVector2Array([box.position,Vector2(box.end.x,box.position.y),box.end,Vector2(box.position.x,box.end.y)])
+		_hit_regions.append({"polygon":polygon,"target":target})
+		resident_labels[str(member.id)]={"rect":box,"need":str(cue.get("need","")),"text":caption}
+
+func _draw_need_icon(at: Vector2, need: String) -> void:
+	var ink := Color("405b50")
+	match need:
+		"hunger":
+			draw_arc(at+Vector2(0,-2),6,0,PI,12,ink,2,true)
+			draw_line(at+Vector2(-6,-2),at+Vector2(6,-2),ink,2,true)
+			draw_line(at+Vector2(-2,-6),at+Vector2(-1,-4),ink,1,true)
+		"energy":
+			draw_rect(Rect2(at+Vector2(-7,-3),Vector2(14,6)),Color("80a99a"))
+			draw_rect(Rect2(at+Vector2(-6,-3),Vector2(4,4)),Color("f7f0da"))
+			for x in [-7,7]: draw_line(at+Vector2(x,-5),at+Vector2(x,6),ink,1.5,true)
+		"hygiene":
+			draw_colored_polygon(PackedVector2Array([at+Vector2(0,-7),at+Vector2(-5,2),at+Vector2(0,6),at+Vector2(5,2)]),Color("63918c"))
+			draw_circle(at+Vector2(-1,2),1.2,Color("e2f0df"))
+		"bladder":
+			draw_rect(Rect2(at+Vector2(2,-6),Vector2(5,9)),Color("91a59b"))
+			draw_arc(at+Vector2(-1,0),5,0,PI,12,ink,2,true)
+			draw_line(at+Vector2(-6,0),at+Vector2(4,0),ink,2,true)
+			draw_line(at+Vector2(0,4),at+Vector2(0,7),ink,2,true)
+		"fun":
+			var points := PackedVector2Array()
+			for index in range(10): points.append(at+Vector2.from_angle(-PI/2+float(index)*PI/5)*(7.0 if index%2==0 else 3.2))
+			draw_colored_polygon(points,Color("bb8b3e"))
+		"social":
+			draw_circle(at+Vector2(-2,-2),5,Color("779d85")); draw_circle(at+Vector2(4,3),3,ink)
+			draw_line(at+Vector2(-3,1),at+Vector2(-6,5),Color("779d85"),2,true)
+		"comfort":
+			draw_rect(Rect2(at+Vector2(-5,-7),Vector2(10,8)),Color("ae8260"))
+			draw_rect(Rect2(at+Vector2(-7,0),Vector2(14,5)),Color("ae8260"))
+			for x in [-5,5]: draw_line(at+Vector2(x,4),at+Vector2(x,7),ink,1.5,true)
+
 
 func _draw_street_lights(s: float) -> void:
 	var night := float(light.night)

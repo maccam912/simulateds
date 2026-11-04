@@ -590,3 +590,44 @@ resident readability with labels above furniture and small actionable need cues,
 keeping the world readable without adding another permanent HUD panel. Preserve
 quiet play by showing cues only when they are useful, and verify clustered
 residents, occlusion, compact layout, and direct care through the real command path.
+
+
+## 2026-11-04 · Residents you can read
+
+The selected resident's name and marker now draw after furnishings, so a shelf
+or appliance cannot cover the label. Sleeping residents keep the same selectable
+name. A small cream thought cue identifies each owned resident's most pressing
+uncovered need below 30, using a drawn icon and plain words. Clicking it selects
+that resident and uses the existing care command. Active or queued care—including
+automatic care and sleep's secondary comfort—hides that need's cue. Other players'
+residents receive no actionable care controls. Quiet residents add no extra
+labels beyond the current selection.
+
+Label placement separates nearby cues and clamps them inside the viewport. Long
+names truncate, with full names on hover, and the palette remains readable at
+night. Cues do not animate or flash. They disappear in construction, menu
+backgrounds, and when their resident leaves the viewport. A double-click guard
+prevents a cue disappearing between clicks from issuing an unrelated second
+world order. Missing or blocked furniture follows the existing useful care
+feedback rather than claiming an action succeeded.
+
+Validation: all twenty-six model/application suites, real Iroh reconnect, and
+dedicated-server checks passed. Focused tests cover every need, derivation without
+world mutation, covered/queued/secondary care, missing furnishings, crowded edge
+placement, owner/stale-target guards, and preserving an existing manual plan.
+Graphical input runs passed at 1440×900 and 1280×720/125% UI scale. They exercised
+clustered residents, exact cue hit targets above furniture, food/sleep through the
+real care path, no double-click fallthrough, sleeping/settled labels, long names,
+night and viewport edges, missing furniture, construction, hidden HUD, and
+panning actors offscreen. The first edge fixture used the previous displayed
+position immediately after relocating test residents; it now waits for the
+presentation frame before calculating the camera offset. Corrected runs passed.
+The preceding spatial-audio checkpoint passed all four platform CI jobs. These
+are agent checks, with human family and physical Android playtests still open.
+
+Fresh assessment: a household now communicates urgent needs in the world, and
+selection is readable around tall furniture. The edge-layout exercise makes the
+remaining navigation gap clear: after panning away, selecting a household member
+can leave them outside the useful view. Next: a discoverable camera focus action
+and sensible resident/lot framing, preserving manual camera control, existing key
+bindings, reduced motion, and the full-screen world.

@@ -39,6 +39,8 @@ choices, with editable preferences and a visible daily-plan explanation. Mail no
 includes durable return recaps of simulated absence, actual allowance, postcards,
 and discarded construction drafts. Visible activity now has sparse positional
 footsteps and domestic sounds with bounded voices and shared audio settings.
+Resident names now stay in front of furniture, with quiet actionable thought
+cues for unplanned pressing needs.
 See [the playtest log](PLAYTEST_LOG.md) for evidence
 and current usability priorities.
 
@@ -60,7 +62,8 @@ understandable result. Fuzz placement and reopening around residents/visitors.
 
 - Household creation, traits, and preferences. Names and a palette-based
   appearance editor and favorite pastimes are implemented for both residents.
-- Visible action queues, interruption rules, autonomy controls, and thought icons.
+- Visible plans, interruption rules, autonomy controls, and actionable need
+  thoughts are implemented. Improve camera focus and ease of finding residents.
 - Object reservations, shared activities, conversations, and basic relationships
   are implemented. Add richer shared recreation and personality-driven choices.
 - Activity poses and sparse positional sounds are implemented. Improve resident
