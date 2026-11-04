@@ -1237,3 +1237,43 @@ verification across ARM64 and Intel slices, and `EXPORTED_NATIVE_RUNTIME_PASS`
 on Apple Silicon. It remains a local ad-hoc-signed package, not a notarized release
 or physical Intel/Android/cross-device test. Hosted platform jobs still fail
 before execution under the existing GitHub account billing/spending-limit block.
+
+## Catch-up notices and direct relationship navigation
+
+`friendship_feedback` verifies all four company activities, pure sampling,
+ordinary and first-meeting notices, all larger milestones, duplicate suppression,
+grouping and quiet intervals, foreign/startup-bond suppression, daily caps,
+hidden-menu consumption, generation/owner changes, rewinds, protected command
+messages, and expired pending notices. No persistent state or protocol change is
+required; `Session.world_generation` is local presentation metadata.
+
+`friendship_feedback_ui` passes with native input at standard and compact sizes.
+It verifies the first catch-up, exactly one quieter Effects cue despite a stale
+failed-command flag, unchanged-state People navigation, full long-name wrapping
+with Plan open, loading a newer bond through the save menu without celebration,
+and a new muted milestone after loading. The existing compact
+`shared_friendships_ui` native scenario passes its ordinary dancing catch-up and
+Friends milestone. A final compact native pass adds one notice/cue for a real
+three-person gathering, primary-relationship navigation, and clearing an old
+notice at session transition. These are injected-input checks, not human play.
+
+Final focused model/headless UI passes additionally verify relationship navigation
+from the other owner's perspective and selected-resident priority. A separate
+compact native `paintings_ui` assessment passes the current creation/sale/restore
+loop while selecting optional art commissions as proposed next gameplay work.
+
+Full regression passes 102 local suites, `IROH_SMOKE_PASS`,
+`PAINTINGS_IROH_PASS`, `MEALS_IROH_PASS`, `RECREATION_IROH_PASS`, and
+`SERVER_SMOKE_PASS`. The recreation host/two-client scenario now samples feedback
+from real accepted client snapshots: each player sees their own first game and
+Friends milestone, a visiting foreign household creates no local notice, and
+reconnecting does not replay the saved bond. These remain local-machine network
+checks. Final focused model/headless UI and compact native checks cover the later
+group-navigation and displayed-notice cleanup polish.
+
+The refreshed universal macOS package passes plist validation, strict signature
+verification across both architectures, and `EXPORTED_NATIVE_RUNTIME_PASS` on
+Apple Silicon. It is locally ad-hoc signed, not notarized or physically tested
+on Intel/Android. Hosted workflow `41888525936` for the preceding checkpoint
+failed all platform jobs before any steps ran. The previously diagnosed GitHub
+billing/spending-limit block was not changed.

@@ -291,8 +291,12 @@ or shell expressions.
 - **People** shows the selected resident’s relationships and offers Visit or Chat.
   Up to two catch-ups per pair per day build friendship when both households
   are online: finish a chosen chat, or spend 12 game minutes in deliberately
-  chosen shared games or dancing. Milestones appear in both journals. Busy residents finish
+  chosen shared games, dancing, or meals. Milestones appear in both journals. Busy residents finish
   their own plans first, and friendships never decay while someone is away.
+  Earned catch-ups now show a brief notice naming the residents and their activity;
+  its **People ›** button opens the relevant relationship. Group gains share one
+  notice and soft cue. Loading, reconnecting, and time spent in menus stay quiet,
+  and Effects volume controls the cue without hiding the text.
   Ongoing tabletop games show their occupied places. Visit the home, then use
   **Join game** to add it after your resident's planned activities, or **Queue
   game** to wait at a full table. The card distinguishes planned and active

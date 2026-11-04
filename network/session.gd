@@ -38,6 +38,8 @@ var local_id := 1
 var players: Dictionary = {}
 var pending: Dictionary = {}
 var snapshots_received := 0
+## Local presentation baseline; never serialized or advanced for ordinary snapshots.
+var world_generation := 0
 var last_action_ok := true
 var last_action_message := ""
 var actions_received := 0
@@ -204,6 +206,7 @@ func ticket() -> String:
 	return str(peer.call("connection_string")) if role == "host" and peer != null else ""
 
 func leave() -> void:
+	world_generation+=1
 	var was_client := role in ["joining", "client"]
 	if is_authority() and not profile_id.is_empty():
 		for family_id in players.values():
@@ -331,6 +334,7 @@ func _activate_world(candidate) -> Dictionary:
 		return {"ok":false, "message":"Could not write the active autosave. The current world remains open."}
 	_previous_saved=data
 	world=candidate
+	world_generation+=1
 	world.set_online(profile_id,not _dedicated)
 	players={1:profile_id}
 	_simulation_clock=0.0
@@ -659,6 +663,7 @@ func _receive_chunk(message: Dictionary) -> void:
 	if not candidate.restore(parser.data, true) or not candidate.state.get("families", {}).has(profile_id):
 		return
 	world = candidate
+	if snapshots_received==0: world_generation+=1
 	_last_snapshot_id = id
 	_last_snapshot_at = Time.get_ticks_msec()
 	snapshots_received += 1

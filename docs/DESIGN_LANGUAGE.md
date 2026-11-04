@@ -496,6 +496,22 @@ card and explain the threshold in the existing footer; no separate friendship
 currency or HUD gauge is needed. A shared activity can continue after it qualifies.
 Repeated snapshots and the two participants' views must never duplicate its gain.
 
+Ordinary catch-ups now use the existing floating notice above the household HUD.
+Name the people and activity, then say that friendship grew. Its temporary
+**People ›** button opens the primary relationship without issuing an order;
+hovering shows all relationships in a grouped notice. Keep full names readable,
+including with Plan open and enlarged text. The button disappears with the
+notice, leaving no permanent HUD addition.
+
+Collect simultaneous gains for 600 ms, prefer larger milestones and the selected
+resident, and leave at least 2.5 seconds between notices. Protect recent command
+feedback for two seconds and discard announcements older than eight seconds.
+Use one existing confirmation cue per group, 6 dB quieter for ordinary catch-ups;
+new acquaintances and larger milestones retain the normal confirmation level.
+Effects mute leaves the text available. Menus, load/reconnect baselines, repeated
+snapshots, absent-player progress, and the exhausted daily reward budget produce
+no new celebration. Presentation never grants rewards or changes simulation.
+
 ### Repeat a room's design
 
 Room copying uses the same world and catalog. Hover an enclosed interior to

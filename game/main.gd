@@ -88,7 +88,7 @@ var social_buttons: Dictionary = {}
 var leisure_buttons: Dictionary = {}
 var _leisure_options: Dictionary = {}
 var _social_focus := ""
-var _friend_seen: Dictionary = {}
+var _friend_feedback = preload("res://game/friendship_feedback.gd").new()
 var _context_page := "activities"
 var _wish_seen: Dictionary = {}
 var queue_label: Button
@@ -120,6 +120,8 @@ var care_values: Dictionary = {}
 var _care_options: Dictionary = {}
 var connection_label: Label
 var notice_label: Label
+var notice_people_button: Button
+var _notice_people := {}
 var help_label: Label
 var connection_dialog: Window
 var code_input: LineEdit
@@ -429,11 +431,15 @@ func _build_ui() -> void:
 	notice_panel.grow_vertical=Control.GROW_DIRECTION_BEGIN
 	notice_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	notice_panel.hide()
+	var notice_row:=HBoxContainer.new(); notice_row.mouse_filter=Control.MOUSE_FILTER_IGNORE; notice_row.add_theme_constant_override("separation",12); notice_panel.add_child(notice_row)
 	notice_label = _label("",13,Style.TEXT)
+	notice_label.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	notice_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	notice_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	notice_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	notice_panel.add_child(notice_label)
+	notice_row.add_child(notice_label)
+	notice_people_button=_button("People ›",_open_notice_people); notice_people_button.add_theme_font_size_override("font_size",13); notice_people_button.size_flags_vertical=Control.SIZE_SHRINK_CENTER
+	notice_row.add_child(notice_people_button); notice_people_button.hide()
 	routine_panel=_hud_panel(Rect2(-290,-230,580,440),Vector2(0.5,0.5)); routine_panel.hide()
 	routine_editor=RoutinePanel.new(); routine_panel.add_child(routine_editor)
 	routine_editor.command_requested.connect(_send)
@@ -472,7 +478,7 @@ func _refresh() -> void:
 		viewed_lot = str(family.home_lot)
 		_selected_object = ""; _space_request={}; _space_ack=false
 		_art_source=""; _art_entry.clear(); _art_request.clear()
-		_moving_object = ""; _move_request.clear(); _wish_seen.clear(); _friend_seen.clear(); _hobby_seen.clear(); _room_anchor=Vector2i(-1,-1); _room_request.clear()
+		_moving_object = ""; _move_request.clear(); _wish_seen.clear(); _friend_feedback.reset(); _hobby_seen.clear(); _room_anchor=Vector2i(-1,-1); _room_request.clear()
 		_paint_anchor=Vector2i(-1,-1); _paint_request.clear(); _window_request.clear(); _color_request.clear(); _copy_source=Vector2i(-1,-1); _copy_request.clear(); _blueprint_id=""
 	if viewed_lot.is_empty() or not state.get("lots",{}).has(viewed_lot):
 		viewed_lot = str(family.get("home_lot","lot_1"))
@@ -608,7 +614,7 @@ func _refresh() -> void:
 		_refresh_plan(member)
 		wishes_button.text="Wishes · %d/3" % Wishes.completed(member.get("wishes",{}))
 		_announce_wishes(family)
-		_announce_friendships(family)
+		_announce_friendships()
 		_announce_hobbies(family)
 		var mood := Wellbeing.mood(member.needs)
 		mood_button.text=str(mood.label)+" · Care"
@@ -997,8 +1003,8 @@ func _announce_wishes(family: Dictionary) -> void:
 	for resident: Dictionary in family.get("members",[]):
 		var count := Wishes.completed(resident.get("wishes",{}))
 		if _wish_seen.has(resident.id) and count>int(_wish_seen[resident.id]) and hud.visible:
-			notice_label.text=str(resident.name)+( " finished all three wishes!" if count==3 else " fulfilled a wish!")+" See Wishes for their journal."
-			_notice_time=7.0; notice_panel.show(); Soundscape.play_ui("confirm")
+			_show_notice(str(resident.name)+( " finished all three wishes!" if count==3 else " fulfilled a wish!")+" See Wishes for their journal.")
+			Soundscape.play_ui("confirm")
 		_wish_seen[resident.id]=count
 
 func _select_lot(id: String) -> void:
@@ -1302,15 +1308,19 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		else: return
 		get_viewport().set_input_as_handled()
 
-func _notice(message: String) -> void:
+func _show_notice(message: String) -> void:
 	if notice_label!=null:
 		notice_label.text=message
+		notice_label.tooltip_text=""
+		notice_people_button.hide(); _notice_people.clear()
 		_notice_time=7.0
 		notice_panel.show()
-		if not Session.last_action_ok:
-			_move_request.clear(); _room_request.clear()
-			_paint_request.clear()
-			Soundscape.play_ui("error")
+
+func _notice(message: String) -> void:
+	_show_notice(message)
+	if not Session.last_action_ok:
+		_move_request.clear(); _room_request.clear(); _paint_request.clear()
+		Soundscape.play_ui("error")
 
 func _open_connection() -> void:
 	if connection_dialog!=null:
@@ -1534,19 +1544,23 @@ func _restore_people_focus(previous: Dictionary) -> void:
 	var scroll: ScrollContainer=tools_box.get_parent()
 	scroll.ensure_control_visible(card if card.size.y<=scroll.size.y else button)
 
-func _announce_friendships(family: Dictionary) -> void:
-	var own_ids: Array=[]
-	for member: Dictionary in family.get("members",[]): own_ids.append(str(member.id))
-	for id: String in Session.state.get("friendships",{}):
-		var bond: Dictionary=Session.state.friendships[id]
-		if not own_ids.has(bond.a) and not own_ids.has(bond.b): continue
-		var before := int(_friend_seen.get(id,bond.score))
-		_friend_seen[id]=int(bond.score)
-		if not hud.visible: continue
-		if (before<40 and int(bond.score)>=40) or (before<70 and int(bond.score)>=70) or (before<100 and int(bond.score)==100):
-			var first := Session.world._find_member(str(bond.a)); var second := Session.world._find_member(str(bond.b))
-			notice_label.text=str(first.get("name","A resident"))+" and "+str(second.get("name","a neighbor"))+" are now "+Friendships.title(bond).to_lower()+"."
-			_notice_time=7.0; notice_panel.show(); Soundscape.play_ui("confirm")
+func _announce_friendships() -> void:
+	if not _notice_people.is_empty() and _notice_people.generation!=Session.world_generation:
+		_notice_people.clear(); notice_people_button.hide(); _notice_time=0; notice_panel.hide()
+	var feedback: Dictionary=_friend_feedback.sample(Session.state,Session.profile_id,Session.world_generation,Time.get_ticks_msec(),hud.is_visible_in_tree() and not Session.menu_paused and Session.role!="joining",selected_member,_notice_time<=5.0)
+	if feedback.is_empty(): return
+	_show_notice(str(feedback.message))
+	_notice_people={"resident":feedback.resident,"person":feedback.person,"generation":Session.world_generation}
+	notice_people_button.tooltip_text=str(feedback.detail); notice_people_button.show()
+	Soundscape.play_ui(str(feedback.sound))
+
+func _open_notice_people() -> void:
+	var request:=_notice_people.duplicate()
+	_notice_time=0; notice_panel.hide(); _notice_people.clear()
+	if request.get("generation")!=Session.world_generation: return
+	if not _family().get("members",[]).any(func(member): return member.id==request.get("resident")): return
+	if selected_member!=request.resident: _select_resident(str(request.resident))
+	_social_focus=str(request.person); _open_people(); call_deferred("_follow_social",_social_focus)
 
 func _follow_social(target_id: String) -> void:
 	await get_tree().process_frame
@@ -1772,8 +1786,8 @@ func _announce_hobbies(family: Dictionary) -> void:
 			var key := str(member.id)+":"+hobby
 			var level := Hobbies.rank(entry)
 			if _hobby_seen.has(key) and level>int(_hobby_seen[key]) and hud.visible:
-				notice_label.text=str(member.name)+" became a "+Hobbies.title(hobby,entry).to_lower()+"! "+str(Hobbies.CATALOG[hobby].name)+" rank %d." % level
-				_notice_time=7.0; notice_panel.show(); Soundscape.play_ui("confirm")
+				_show_notice(str(member.name)+" became a "+Hobbies.title(hobby,entry).to_lower()+"! "+str(Hobbies.CATALOG[hobby].name)+" rank %d." % level)
+				Soundscape.play_ui("confirm")
 			_hobby_seen[key]=level
 
 

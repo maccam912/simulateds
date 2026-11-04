@@ -5,12 +5,15 @@ var ticket_path := ""
 var use_codes := false
 var rooms: Node
 var command_results: Array=[]
+var feedback = preload("res://game/friendship_feedback.gd").new()
+var feedbacks: Array=[]
 
 func _initialize() -> void:
 	call_deferred("_run")
 
 func _run() -> void:
 	session = root.get_node("Session")
+	session.world_changed.connect(_observe_feedback)
 	session.command_completed.connect(func(intent: Dictionary,ok: bool,_message: String): command_results.append({"intent":intent,"ok":ok}))
 	rooms = root.get_node("Rooms")
 	var args := OS.get_cmdline_user_args()
@@ -20,6 +23,17 @@ func _run() -> void:
 		await _host()
 	else:
 		await _client(args[2])
+
+func _observe_feedback() -> void:
+	if session.role!="client" or session.snapshots_received==0: return
+	var notice: Dictionary=feedback.sample(session.state,session.profile_id,session.world_generation,Time.get_ticks_msec())
+	if not notice.is_empty(): feedbacks.append(notice)
+
+func _await_feedback(count: int) -> void:
+	for attempt in range(50):
+		if feedbacks.size()==count: return
+		await create_timer(0.1).timeout
+	assert(false,"Accepted client snapshots must yield exactly one local notice per encounter")
 
 func _connect() -> void:
 	assert(session.set_play_speed(0).ok)
@@ -114,6 +128,7 @@ func _client(index: String) -> void:
 	assert(not table.is_empty() and not stereo.is_empty())
 	_flag(".prime"+index,{"owner":identity}); await _wait_flag(".primed"+index)
 	await _call(home,table); await _shared(home,table,identity,1); await _cancel_own()
+	await _await_feedback(1); assert(feedbacks[0].message.contains("caught up over a game"))
 	_flag(".home"+index,{"owner":identity,"home":home,"table":table,"stereo":stereo})
 	var neighbor: Dictionary=await _wait_flag(".home"+("2" if index=="1" else "1"))
 	if index=="2":
@@ -127,11 +142,13 @@ func _client(index: String) -> void:
 		await _wait_flag(".visiting-observed"); await _cancel_own()
 		for resident: Dictionary in session.state.families[identity].members: await _command({"type":"go_home","member_id":resident.id})
 		_flag(".visiting-done")
+		await _await_feedback(2); assert(feedbacks[1].message.contains("now friends"))
 	else:
 		await _wait_flag(".visiting-call")
 		await _shared(home,table,neighbor.owner,2)
 		assert(session.state.families[identity].members.all(func(resident): return resident.task.is_empty() and resident.queue.is_empty()),"A visiting player controls only their own household")
 		_flag(".visiting-observed"); await _wait_flag(".visiting-done")
+		assert(feedbacks.size()==1,"Another player's visiting household earns no local toast")
 		_flag(".automatic",{"owner":identity,"home":home,"stereo":stereo})
 	if index=="1":
 		await _wait_flag(".automatic-started")
@@ -149,10 +166,13 @@ func _client(index: String) -> void:
 			assert(task.id!=old[member_index].id and not task.get("automatic",false) and task.remaining<=old[member_index].remaining and task.leisure_chosen_at>=old[member_index].elapsed)
 		_flag(".chosen"); await _wait_flag(".choice-observed")
 		await _shared(home,stereo,identity,2); await _cancel_own()
+		await _await_feedback(2); assert(feedbacks[1].message.contains("now friends"))
 		var bond: Dictionary=preload("res://game/friendships.gd").bond(session.state,str(session.state.families[identity].members[0].id),str(session.state.families[identity].members[1].id)).duplicate(true)
 		session.leave(); await create_timer(0.3).timeout; await _connect()
 		assert(session.home_lot()==home and session.state.lots[home].funds==11400)
 		assert(preload("res://game/friendships.gd").bond(session.state,str(session.state.families[identity].members[0].id),str(session.state.families[identity].members[1].id))==bond)
+		await create_timer(1.5).timeout
+		assert(feedbacks.size()==2,"Reconnecting establishes a quiet baseline instead of replaying earned friendship")
 		_flag(".reconnected")
 	else:
 		await _wait_flag(".automatic-ready")

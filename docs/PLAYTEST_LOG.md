@@ -2224,3 +2224,67 @@ The refreshed local universal macOS package passes plist validation, strict
 all-architecture signature verification, and packaged native startup on Apple
 Silicon (`EXPORTED_NATIVE_RUNTIME_PASS`). It remains ad-hoc signed; physical Intel,
 Android, cross-device, human-family play, and notarization are separate gaps.
+
+## Seeing a catch-up happen
+
+Earned friendship now creates a short notice naming the residents and their
+activity, including ordinary progress before the Friends milestone. Its temporary
+**People ›** button opens that relationship without directing either resident.
+Simultaneous gains share one notice; larger milestones take priority, then the
+selected resident. The button tooltip lists every included relationship. Full
+names wrap within the notice, including with Plan open at 720p / 125% UI scale.
+
+The local presenter observes accepted score and encounter-tick changes. It
+collects gains for 600 ms, leaves a 2.5-second quiet interval, protects recent
+command messages for two seconds, and drops pending notices older than eight
+seconds. Initial state, menus, repeated snapshots, loading, reconnecting, and
+foreign-household progress are quiet. A local session generation changes only
+at world/session boundaries; it is never sent or saved. Ordinary catch-ups use
+the existing confirmation cue 6 dB quieter. Larger milestones keep their normal
+cue, and Effects mute leaves text available. Presentation awards nothing.
+
+Native injected-input passes at 1440×900 and 1280×720 / 125% cover first-game
+progress, exactly one soft cue, the People button and unchanged world state,
+long names beside Plan, real save-menu loading without replay, and fresh progress
+with Effects muted. The compact dancing scenario also passes first catch-up and
+Friends-milestone feedback. A final compact native pass adds three people at one
+table: all three relevant bonds share one notice/cue, its button opens the chosen
+primary relationship, and switching sessions clears an old displayed notice.
+Reviewed captures include `build/friendship-feedback-first-catch-up-compact.png`,
+`build/friendship-feedback-long-names-compact.png`, and
+`build/friendship-feedback-three-person-company-compact.png`.
+
+Review separated successful presentation from the command-error path: an old
+failed command must not give a catch-up an error sound or clear pending command
+state. The native cue-count check retains that stale-error case. An initial test
+incorrectly placed a construction request in live mode; normal live-mode cleanup
+removed it, so that invalid fixture was removed before the passing rerun.
+
+Final focused model and headless UI checks pass after the group and session-change
+polish, including relationship navigation from either owner's perspective and
+preferring the selected owned resident among equally important gains.
+
+Fresh assessment: a compact native painting playthrough passes placement,
+subject preview, partial work/resume, finished canvases, explicit sales, rotation,
+save restoration, and visitor restrictions. The three subjects remain distinct
+visually, but each sells for the same §60; choosing a subject currently serves
+decoration and gifting rather than an external goal. The next gameplay increment
+will be optional household art commissions: a visible requested subject and
+reward, deliberate acceptance/delivery, bounded payouts, and no deadline or
+absence penalty. Delivering must review the particular original and pay once;
+ordinary art sales, display, and gifts remain meaningful alternatives. This is
+proposed next work, not implemented by the catch-up-feedback checkpoint.
+
+Full regression passes all 102 local suites, the main, painting, meal, and
+recreation Iroh scenarios, and dedicated-server startup. Real client snapshots
+produce each player's own ordinary and milestone notices, ignore the other
+player's visiting household, and establish a quiet baseline on reconnect. The
+final focused model/headless UI and compact native checks cover the subsequent
+group-navigation and displayed-notice cleanup polish.
+
+The refreshed universal macOS package passes plist validation, strict
+all-architecture signature verification, and packaged native startup on Apple
+Silicon. This remains a local ad-hoc-signed build. The preceding hosted workflow
+`41888525936` failed each platform before executing steps; the previously
+diagnosed GitHub account billing/spending-limit block was not changed. Physical
+Intel/Android, cross-device and human-family play, and notarization remain open.

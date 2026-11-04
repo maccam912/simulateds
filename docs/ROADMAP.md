@@ -158,6 +158,8 @@ understandable result. Fuzz placement and reopening around residents/visitors.
   plan preservation and adoption of ongoing automatic play.
   Chosen participants now finish a brief shared moment before full fun ends play,
   with ordinary timers, voluntary leaving, and truthful Plan estimates retained.
+  Earned catch-ups now have bounded, grouped feedback and a direct People link;
+  loading and reconnecting do not replay previous progress.
   Add richer recreation and shared activities.
 - Activity poses, directional facing, thoughtful need cues, and sparse positional
   sounds are implemented, along with movement previews and accepted destination

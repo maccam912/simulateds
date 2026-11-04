@@ -65,6 +65,12 @@ func _catch_up(count: int) -> void:
 		if int(_bond().today)==count: game._refresh(); await process_frame; return
 	assert(false,"Shared play did not build friendship")
 
+func _notice_contains(value: String) -> void:
+	for attempt in range(45):
+		if game.notice_label.text.contains(value): return
+		await create_timer(0.1).timeout
+	assert(false,"Accepted friendship progress must reach its quiet notice")
+
 func _run() -> void:
 	var compact := "--compact" in OS.get_cmdline_user_args()
 	root.size=Vector2i(1280,720) if compact else Vector2i(1440,900)
@@ -91,13 +97,13 @@ func _run() -> void:
 	assert(game.leisure_buttons[first.id].text=="Join dance" and not game.leisure_buttons[first.id].disabled)
 	await _capture("choose-together"); await _button(game.leisure_buttons[first.id])
 	assert(not second.task.get("automatic",false))
-	await _catch_up(1); await _capture("first-catch-up")
+	await _catch_up(1); await _notice_contains("caught up while dancing"); await _capture("first-catch-up")
 	assert(_bond().score==32 and _bond().last_activity=="stereo")
 	assert(_text(game.tools_box).contains("Danced together · Day 1") and _text(game.tools_box).contains("1 catch-up left today"))
 	# A second chosen encounter reaches the shared Friends milestone and daily limit.
 	await _button(game.queue_label); await _button(game.plan_controls[second.task.id].cancel)
 	await _button(game.people_button); await _button(game.leisure_buttons[first.id])
-	await _catch_up(2); await _capture("friends")
+	await _catch_up(2); await _notice_contains("now friends"); await _capture("friends")
 	assert(_bond().score==44 and Bonds.title(_bond())=="Friends")
 	assert(_text(game.tools_box).contains("Caught up today") and _text(game.tools_box).contains("Friends"))
 	assert(game.notice_label.text.contains("now friends") and first.wishes.journal[0].text.contains("friends") and second.wishes.journal[0].text.contains("friends"))
