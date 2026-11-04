@@ -47,7 +47,9 @@ queued walks, and accepted destinations share numbering with the resident plan.
 The checkered game table now supports solo puzzles and voluntary shared games
 with separate places, fun/social restoration, and a tabletop pastime preference.
 People cards discover ongoing games and let a visiting resident join or wait,
-preserving their existing planned activities.
+preserving their existing planned activities. Reusable household routines now
+save one to six care/recreation activities, resolve current reachable furnishings,
+and append to either resident’s existing plan.
 See [the playtest log](PLAYTEST_LOG.md) for evidence
 and current usability priorities.
 
@@ -79,8 +81,8 @@ understandable result. Fuzz placement and reopening around residents/visitors.
   Add richer recreation and shared activities.
 - Activity poses, directional facing, thoughtful need cues, and sparse positional
   sounds are implemented, along with movement previews and accepted destination
-  feedback. Add reusable household routines, richer animation, and the original
-  art pass.
+  feedback. Reusable household routines are implemented. Add richer animation
+  and the original art pass.
 
 Exit: two residents can use a busy home without occupying the same object;
 player-directed actions beat autonomy predictably; a visitor and resident can

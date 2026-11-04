@@ -955,3 +955,49 @@ the world. Rebuilding a useful care/leisure sequence each day is still repetitiv
 Next: reusable household routines, so a player can prepare a familiar plan with
 fewer clicks and spend more time decorating or visiting. Routine execution must
 resolve current reachable furnishings and preserve the player's existing plan.
+
+
+## 2026-11-04 · Familiar household routines
+
+Plan now opens a shared household library with Morning care and Wind down presets.
+Players can save four named recipes of one to six care/recreation activities,
+reorder their steps, and add one to either resident's existing plan. The host
+resolves reachable furnishings on the resident's current lot, validates the whole
+sequence and available capacity before mutating anything, and enqueues ordinary
+activities. Manual work stays first; autonomous work yields as usual. Private
+furnishings keep their existing waits, and a routine already in a resident's plan
+cannot be added again. Editing/removing a recipe leaves accepted activities alone.
+Old saves gain the starter library; custom recipes survive saves and reconnects.
+
+The editor uses the existing floating panels, tray fade, and UI sounds. Keyboard
+pickers and reorder controls retain focus, and a six-step draft scrolls at compact
+size. Opening another gameplay tray tucks the editor away without losing its
+draft. Escape backs out of a draft and then returns to Plan; console Escape keeps
+priority. Uncovered world clicks are inert during editing. Pending results are
+matched to the submitted command rather than a generic action notification;
+rejected/stale edits retain typed work. A success reply arriving before its library
+snapshot leaves the editor locked until the updated library arrives.
+
+Validation: all 44 local suites, actual Iroh host/two-client checks, and dedicated
+startup passed. Model tests cover exact ordered execution and need recovery,
+independent residents, busy/missing furnishings, current-lot targeting, whole-plan
+capacity, autonomy, preserved manual work, ownership, malformed/stale edits,
+legacy saves, and atomic restoration. Real clients save independent recipes,
+append them behind their walks, reject duplicates/foreign orders, and retain the
+library after reconnect. Every real-peer command checks its intent-correlated
+result. Protocol checks cover bad/non-host/repeated replies, local outcomes,
+backpressure, oversized requests, and caller draft mutation. The walking-feedback
+checkpoint passed all four platform CI jobs.
+
+Native standard and compact/125% checks exercise typing, actual activity-picker
+keys, step editing, save/run/removal, missing-furnishing explanations, snapshot
+focus retention, unrelated delayed replies, retries, stale drafts, and eventual
+activity completion. Final compact checks cover draft-preserving tray changes and
+acknowledgement-before-snapshot behavior; related app, Plan, and guide checks pass.
+These are automated native checks, not human family or physical-device playtests.
+
+Fresh assessment: reusable sequences reduce repetitive care clicks and free the
+player to spend time on the home. The visible architecture remains a plain wall
+ring, making independently decorated lots look too similar. Next: placeable
+windows that give houses character while retaining solid-wall routing, explicit
+prices, construction history, and clear previews.

@@ -136,6 +136,14 @@ or shell expressions.
   autonomy switch. **Wishes** gives optional activities, rewards, and a saved
   personal journal. **Hobbies** tracks reading, gardening, and cooking, with five
   lasting ranks and useful activity bonuses. Wishes never expire; completed sets can renew on a later day.
+- **Plan → Routines** keeps up to four named care/recreation sequences shared by
+  your two residents. Start with Morning care or Wind down, or arrange one to six
+  activities of your own. **Add to plan** finds reachable furnishings on the
+  resident's current lot and appends the whole sequence after existing orders.
+  Busy furnishings keep their normal waiting rules; missing furnishings or a
+  full plan explain why the routine cannot be added. Editing/removing a saved
+  routine leaves activities already in a plan intact. Routines persist through
+  saves and reconnects; they run when you choose, without a repeating schedule.
 - **Edit** beside Household (or **Household** in the game menu) changes the
   household name, both resident names, clothing/skin/hair colors, hair style, and
   favorite pastimes (reading, television, gardening, tea, tabletop games, or a little of everything).

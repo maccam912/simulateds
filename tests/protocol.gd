@@ -5,6 +5,8 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var session := root.get_node("Session")
+	var completions: Array=[]
+	session.command_completed.connect(func(intent: Dictionary,ok: bool,message: String): completions.append({"intent":intent,"ok":ok,"message":message}))
 	session.set_physics_process(false)
 	session.world.initialize()
 	session.world.ensure_family(session.profile_id, "Test family")
@@ -53,7 +55,35 @@ func _run() -> void:
 	var replicated: String = JSON.stringify(session.state)
 	session._receive(1, {"type": "chunk", "id": 999, "index": 0, "count": 100000, "size": 100000000, "data": "bad"})
 	assert(JSON.stringify(session.state) == replicated, "Malformed snapshot mutated state")
+	# A completion identifies the original submitted command, never another
+	# request or mutable editor draft. Bad/duplicate/non-host replies are ignored.
+	var submitted := {"type":"routine_save","routine_id":"routine_1","revision":0,"name":"Morning","steps":["toilet","fridge"]}
+	var original_intent: Dictionary=submitted.duplicate(true)
+	session.command(submitted)
+	var request_id: int=session._request_id
+	submitted.name="A different draft"; submitted.steps.append("bed")
+	assert(session._requests[request_id].packet.intent==original_intent)
+	for reply: Dictionary in [{"type":"ack","id":request_id,"ok":"yes","message":"bad"},{"type":"ack","id":request_id,"ok":true,"message":42},{"type":"ack","id":request_id+1,"ok":true,"message":"unknown"}]:
+		session._receive(1,reply)
+	var ack := {"type":"ack","id":request_id,"ok":true,"message":"saved"}
+	session._receive(777,ack)
+	assert(completions.is_empty() and session._requests.has(request_id))
+	session._receive(1,ack); session._receive(1,ack)
+	assert(completions.size()==1 and completions[0].intent==original_intent and completions[0].ok and not session._requests.has(request_id))
+	completions.clear()
+	for index in range(16): session._requests[index]={}
+	session.command(original_intent)
+	assert(completions.size()==1 and not completions[0].ok and completions[0].intent==original_intent,"Backpressure also completes the correct editor command")
+	session._requests.clear(); completions.clear()
+	session.command({"type":"routine_save","name":"x".repeat(1500)})
+	assert(completions.size()==1 and not completions[0].ok and session._requests.is_empty())
+	session.role="joining"; completions.clear(); session.command(original_intent)
+	assert(completions.size()==1 and not completions[0].ok and completions[0].intent==original_intent)
 	session.role = "offline"
+	completions.clear(); session.command(original_intent)
+	assert(completions.size()==1 and completions[0].ok and completions[0].intent==original_intent,"Local commands report the same intent-scoped result")
+	session.command(original_intent)
+	assert(completions.size()==2 and not completions[1].ok,"Local stale edits report failure")
 	session.players = {1: session.profile_id}
 	assert(session.save_world(), "Save failed")
 	var persisted: Dictionary = preload("res://game/persistence.gd").read_json(session.save_path)

@@ -19,6 +19,7 @@ const Appearance = preload("res://game/appearance.gd")
 const Wellbeing = preload("res://game/wellbeing.gd")
 const ActivityStatus = preload("res://game/activity_status.gd")
 const Finishes = preload("res://game/finishes.gd")
+const RoutinePanel = preload("res://game/routine_panel.gd")
 const LotView = preload("res://game/lot_view.gd")
 var viewed_lot := ""
 var selected_member := ""
@@ -62,6 +63,9 @@ var _friend_seen: Dictionary = {}
 var _context_page := "activities"
 var _wish_seen: Dictionary = {}
 var queue_label: Button
+var routine_panel: PanelContainer
+var routine_editor: Control
+var routines_button: Button
 var plan_panel: PanelContainer
 var plan_box: VBoxContainer
 var plan_scroll: ScrollContainer
@@ -267,6 +271,7 @@ func _build_ui() -> void:
 	var plan := _vbox(plan_panel,8)
 	var plan_head := HBoxContainer.new(); plan.add_child(plan_head)
 	plan_title = _label("Your day",18); plan_title.size_flags_horizontal=Control.SIZE_EXPAND_FILL; plan_title.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; plan_head.add_child(plan_title)
+	routines_button=_button("Routines",_open_routines); routines_button.add_theme_font_size_override("font_size",12); plan_head.add_child(routines_button)
 	plan_head.add_child(_button("×",func(): plan_panel.hide()))
 	autonomy_button = _button("Autonomy: on",func(): _send({"type":"autonomy","member_id":selected_member,"enabled":not bool(_member().get("autonomy",true))}))
 	autonomy_button.tooltip_text="When on, this resident tends their own needs between your orders. Your orders always take priority."
@@ -347,11 +352,16 @@ func _build_ui() -> void:
 	notice_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	notice_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	notice_panel.add_child(notice_label)
+	routine_panel=_hud_panel(Rect2(-290,-230,580,440),Vector2(0.5,0.5)); routine_panel.hide()
+	routine_editor=RoutinePanel.new(); routine_panel.add_child(routine_editor)
+	routine_editor.command_requested.connect(_send)
+	routine_editor.closed.connect(func(): routine_panel.hide(); _show_tray(plan_panel,true); routines_button.grab_focus())
 
 func _process(delta: float) -> void:
 	if lot_view == null: return
-	lot_view.show_cues=hud.is_visible_in_tree()
+	lot_view.show_cues=hud.is_visible_in_tree() and not routine_panel.visible
 	lot_view.show_plan_routes=plan_panel.visible and hud.is_visible_in_tree()
+	lot_view.mouse_filter=Control.MOUSE_FILTER_IGNORE if routine_panel.visible else Control.MOUSE_FILTER_STOP
 	_refresh_clock += delta
 	_notice_time = maxf(0,_notice_time-delta)
 	if _refresh_clock>=0.2:
@@ -385,6 +395,8 @@ func _refresh() -> void:
 	var member := _member()
 	if member.is_empty() and not family.get("members",[]).is_empty():
 		selected_member=str(family.members[0].id); member=_member()
+	if routine_panel.visible: routine_editor.refresh(selected_member)
+	routines_button.disabled=member.is_empty() or Session.role=="joining"
 	find_button.disabled=member.is_empty() or Session.role=="joining"
 	find_button.tooltip_text="Center on the selected resident · "+Preferences.action_label("focus_resident")+" · Middle-drag to pan again"
 	var lot: Dictionary = state.get("lots",{}).get(viewed_lot,{})
@@ -579,6 +591,7 @@ func _refresh_plan(member: Dictionary) -> void:
 		var label := _label(("NOW " if current else "WAIT " if waiting else "NEXT ") + str(tasks.find(task)+1) + " · " + title + suffix,13,Style.GREEN if current else Style.TEXT)
 		var content := _vbox(row,4); content.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 		label.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; label.tooltip_text=title+(" · A favorite pastime, chosen autonomously." if favorite else ""); content.add_child(label)
+		if task.has("routine_name"): label.tooltip_text+="\nFrom routine: "+str(task.routine_name)
 		var action_id := str(task.get("id",""))
 		plan_titles[action_id]=label
 		if current or waiting:
@@ -767,6 +780,7 @@ func _send(command: Dictionary) -> void:
 	_refresh()
 
 func _entity_clicked(target: Dictionary) -> void:
+	if routine_panel.visible: return
 	if target.get("type")=="access":
 		if lot_view.building and lot_view.access_inspecting: _focus_access_issue(str(target.get("id","")))
 		return
@@ -804,6 +818,7 @@ func _select_moving_object(id: String) -> void:
 			_moving_object=id; build_rotation=int(object.rotation); _refresh(); return
 
 func _tile_clicked(cell: Vector2i) -> void:
+	if routine_panel.visible: return
 	var lot: Dictionary=Session.state.get("lots",{}).get(viewed_lot,{})
 	if lot.is_empty(): return
 	if bool(lot.building) and str(lot.owner)==str(Session.profile_id):
@@ -926,6 +941,7 @@ func _request_save_menu() -> void:
 	else: save_menu_requested.emit()
 
 func _show_tray(panel: Control,show_panel: bool) -> void:
+	if show_panel and panel!=routine_panel and routine_panel!=null: routine_panel.hide()
 	panel.visible=show_panel
 	_layout_notice()
 	if show_panel and not bool(Preferences.values.reduced_motion):
@@ -934,7 +950,7 @@ func _show_tray(panel: Control,show_panel: bool) -> void:
 	else: panel.modulate.a=1
 
 func _unhandled_key_input(event: InputEvent) -> void:
-	if hud==null or not hud.visible: return
+	if hud==null or not hud.visible or routine_panel.visible: return
 	var focused := get_viewport().gui_get_focus_owner()
 	if focused is LineEdit or focused is TextEdit: return
 	if event is InputEventKey and event.pressed and not event.echo:
@@ -1321,6 +1337,12 @@ func _input(event: InputEvent) -> void:
 			catalog_search.release_focus()
 			_unhandled_key_input(event)
 		get_viewport().set_input_as_handled()
+
+func _open_routines() -> void:
+	plan_panel.hide(); context_panel.hide(); neighborhood_panel.hide()
+	routine_editor.refresh(selected_member)
+	_show_tray(routine_panel,true)
+	routine_editor.focus_entry()
 
 func _open_hobbies() -> void:
 	_context_page="hobbies"; _refresh(); _show_tray(context_panel,true)

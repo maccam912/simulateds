@@ -12,7 +12,7 @@ func _ready() -> void:
 	tabs=TabContainer.new(); tabs.size_flags_vertical=Control.SIZE_EXPAND_FILL; add_child(tabs)
 	var first := _page("First day")
 	_card(first,"01 · Meet your household","Select a resident at the lower left; click their name again to find them in the world. Edit gives each resident a name, a look, and a favorite pastime.",[["household","Meet your household"]])
-	_card(first,"02 · A little care","Click a need bar or a resident’s thought cue to plan a useful activity. Plan's arrows move upcoming activities earlier or later; the current activity continues. Your orders take priority over autonomy.",[["care","Open care suggestions"]])
+	_card(first,"02 · A little care","Click a need bar or a resident’s thought cue to plan a useful activity. Plan's arrows reorder upcoming activities; the current activity continues. Your orders take priority over autonomy. Plan → Routines saves care and leisure sequences for either resident.",[["care","Open care suggestions"]])
 	_card(first,"03 · Something to enjoy","Wishes offer small goals and a journal. Reading, gardening, and cooking develop lasting hobbies. Nothing expires while you are away.",[["wishes","See wishes"],["hobbies","Find a hobby"]])
 	_card(first,"04 · Make it home","Move furniture for free, decorate a room, or build an addition. Your household waits safely while you build.",[["build","Open build mode"]])
 	var building := _page("Building")

@@ -213,6 +213,30 @@ stale snapshot. Update existing labels and bars so focus and scroll stay put.
 An idle conversation partner is still participating and should be described as
 chatting rather than free. Keep all of this inside the optional Plan tray.
 
+## Familiar routines
+
+Keep reusable care and leisure sequences inside **Plan → Routines**, in one
+floating library/editor over the live world. Warm names such as Morning care and
+Wind down describe a familiar part of the day. Show the ordered activities and
+current availability before Add to plan. The library belongs to the household;
+the selected resident receives the orders. Do not introduce another permanent HUD
+island, automatic schedule, or separate activity executor.
+
+Four saved recipes of one to six activities are enough for this slice. Save a
+local named draft explicitly, with up/down arrows and keyboard activity pickers.
+Opening another tray preserves the draft; Escape from editing returns to the
+library, then Escape returns to Plan. Normal UI audio and the existing brief tray
+fade apply. Typing and clicking the exposed world must not issue gameplay orders.
+Keep pending changes locked to their own command reply, retain drafts on rejection,
+and show a stale-library explanation rather than replacing typed work.
+
+Choose reachable furnishings afresh on the resident's current lot. Add every step
+in order after existing manual work, or add none if a furnishing is missing or
+capacity is insufficient. Busy private objects use ordinary waiting. Keep accepted
+activities independent of later recipe edits/removal, with their original routine
+name available in the Plan tooltip. Both residents can use a recipe independently;
+a resident cannot add the same one again while it remains in their plan.
+
 ## Everyday personality
 
 A favorite pastime is a preference, not a level or a reward multiplier. Reading,

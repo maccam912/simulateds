@@ -83,7 +83,7 @@ service mode was not repeated for this update.
 ## Still open
 
 The subsequent feature checks are recorded in [PLAYTEST_LOG.md](PLAYTEST_LOG.md).
-The current local suite contains forty-two model/application suites, plus real Iroh
+The current local suite contains forty-four model/application suites, plus real Iroh
 host/two-client reconnect and dedicated-server startup. The room-construction
 checkpoint passed Linux, Windows, macOS, and Android CI builds/exports. The later
 household checkpoint passed the three desktop jobs; Android built, tested,
@@ -305,3 +305,26 @@ motion. Final compact checks also inspect actual walking, combined numbers for
 repeated destinations, and Plan-number correspondence. Captures are ignored
 `build/walking-*.png`. These tests use native automated input; physical-device,
 human family, and impaired-network visual playtests remain open.
+
+
+Routine validation covers independent household libraries, all-or-nothing queue
+capacity and reachability, current-lot target selection, duplicate prevention,
+private-object waits, preserved manual work, interrupted autonomy, ordered need
+recovery, stale/malformed/foreign edits, monotonic IDs, library limits, legacy
+save defaults, strict restoration, and retained recipe tags after deletion.
+All 44 suites and actual Iroh host/two-client/server checks passed. Both clients
+save independent recipes, reject stale edits and duplicate runs, append behind
+existing orders, retain ordered target/tag metadata, reject foreign residents,
+and keep their recipes after reconnect. Every smoke-test command checks its
+intent-correlated result. Protocol checks also cover mutable caller drafts,
+malformed/duplicate/non-host replies, backpressure, oversized requests, and local
+success/failure. The walking-feedback checkpoint passed all four CI platform jobs.
+
+Native standard and compact/125% routine checks exercise actual mouse/keyboard
+editing, activity-picker navigation, step ordering/removal, save/run, capacity,
+missing furnishings, deleting a recipe without canceling accepted work, snapshot
+focus retention, unrelated delayed replies, retry, stale edits, and completion.
+Captures are ignored `build/routines-*.png`. Final compact navigation preserves a
+six-step draft while another tray is open. Application checks cover Escape from
+the focused name field and developer-console Escape priority. These are automated
+native checks, not human family or physical-device playtests.

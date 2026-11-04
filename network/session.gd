@@ -7,6 +7,7 @@ signal chat_received(message: String)
 signal session_closed
 signal world_changed
 signal action_result(message: String)
+signal command_completed(intent: Dictionary,ok: bool,message: String)
 
 const WorldModel = preload("res://game/world.gd")
 const Persistence = preload("res://game/persistence.gd")
@@ -452,8 +453,10 @@ func _receive(sender: int, message: Dictionary) -> void:
 		elif kind == "ack" and _welcomed and _integer(message.get("id"), 1, 2147483647):
 			var request_id := int(message.id)
 			if _requests.has(request_id) and message.get("ok") is bool and message.get("message") is String:
+				var intent: Dictionary=_requests[request_id].packet.intent.duplicate(true)
 				_requests.erase(request_id)
 				_emit_action(bool(message.ok), str(message.message).left(200))
+				command_completed.emit(intent,bool(message.ok),str(message.message).left(200))
 		elif kind == "chat" and _welcomed and message.get("text") is String:
 			chat_received.emit(str(message.text).left(200))
 
@@ -488,23 +491,27 @@ func command(intent: Dictionary) -> void:
 	if is_authority():
 		var result: Dictionary = world.apply_command(profile_id, intent)
 		_emit_action(bool(result.get("ok", false)), str(result.get("message", "")))
+		command_completed.emit(intent.duplicate(true),bool(result.get("ok",false)),str(result.get("message","")))
 		if result.get("ok", false):
 			world_changed.emit()
-			if intent.get("type") in ["build_begin", "build_end", "build_cancel", "place", "erase", "rename_family", "household_edit", "mail_send", "mail_read", "mail_claim", "mail_archive", "news_read"]:
+			if intent.get("type") in ["build_begin", "build_end", "build_cancel", "place", "erase", "rename_family", "household_edit", "routine_save", "routine_delete", "mail_send", "mail_read", "mail_claim", "mail_archive", "news_read"]:
 				save_world()
 	elif role == "client" and _welcomed:
 		if _requests.size() >= 16:
 			_emit_action(false, "Waiting for the host to finish your recent actions.")
+			command_completed.emit(intent.duplicate(true),false,"Waiting for the host to finish your recent actions.")
 			return
 		_request_id += 1
-		var packet := {"type": "command", "id": _request_id, "intent": intent}
+		var packet := {"type": "command", "id": _request_id, "intent": intent.duplicate(true)}
 		if JSON.stringify(packet).to_utf8_buffer().size() > MAX_PACKET:
 			_emit_action(false, "That action is too large.")
+			command_completed.emit(intent.duplicate(true),false,"That action is too large.")
 			return
 		_requests[_request_id] = {"packet": packet, "sent": Time.get_ticks_msec(), "tries": 1}
 		_send(1, packet)
 	else:
 		_emit_action(false, "Wait until the neighborhood is connected.")
+		command_completed.emit(intent.duplicate(true),false,"Wait until the neighborhood is connected.")
 
 func _accept_command(sender: int, message: Dictionary) -> void:
 	if not _integer(message.get("id"), 1, 2147483647) or not message.get("intent") is Dictionary:
@@ -538,7 +545,7 @@ func _accept_command(sender: int, message: Dictionary) -> void:
 	_send(sender, response)
 	if result.get("ok", false):
 		world_changed.emit()
-		if message.intent.get("type") in ["build_begin", "build_end", "build_cancel", "place", "erase", "rename_family", "household_edit", "mail_send", "mail_read", "mail_claim", "mail_archive", "news_read"]:
+		if message.intent.get("type") in ["build_begin", "build_end", "build_cancel", "place", "erase", "rename_family", "household_edit", "routine_save", "routine_delete", "mail_send", "mail_read", "mail_claim", "mail_archive", "news_read"]:
 			save_world()
 
 func _emit_action(ok: bool, message: String) -> void:

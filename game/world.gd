@@ -15,6 +15,7 @@ const Pastimes = preload("res://game/pastimes.gd")
 const Appearance = preload("res://game/appearance.gd")
 const Tabletop = preload("res://game/tabletop.gd")
 const BuildAccess = preload("res://game/build_access.gd")
+const Routines = preload("res://game/routines.gd")
 const HouseholdProfile = preload("res://game/household_profile.gd")
 const GRID_SIZE := 16
 const SCHEMA := 1
@@ -81,6 +82,7 @@ func ensure_family(profile_id: String, display_name: String) -> String:
 		Friendships.ensure_housemates(state,state.families[profile_id])
 		state.families[profile_id].mailbox=Mailbox.create(int(state.day))
 		state.families[profile_id].home_news=HomeNews.create()
+		state.families[profile_id].routines=Routines.create()
 		_event(clean_name + " moved into " + str(lot.name) + ".")
 		return lot_id
 	return ""
@@ -112,6 +114,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 	var family: Dictionary = state.families[profile_id]
 	if type == "news_read": return HomeNews.read(family,command.get("revision"))
 	if type == "household_edit": return HouseholdProfile.edit(family,command)
+	if type in ["routine_save","routine_delete"]: return Routines.edit(family,command)
 	if type in ["mail_send","mail_read","mail_claim","mail_archive"]:
 		return Mailbox.apply(state,profile_id,command,_adjust_funds)
 	if type == "rename_family":
@@ -259,6 +262,17 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 		return _result(true, "Action queue cleared.")
 	if bool(state.lots[family.home_lot].building):
 		return _result(false, "Finish construction before directing your family.")
+	if type=="run_routine":
+		if not Routines.revision_matches(family.routines,command.get("revision")): return _result(false,"Routines changed. Choose from the current library.")
+		var id: Variant=command.get("routine_id")
+		if not id is String: return _result(false,"Choose a household routine.")
+		var option := routine_option(profile_id,str(member.id),id)
+		if not option.available: return _result(false,str(option.detail))
+		# Resolve every step and queue limit before changing any task or counter.
+		for action: Dictionary in option.actions: _queue_action(member,action.duplicate(true))
+		if member.task.get("automatic",false): member.task={}
+		if member.task.is_empty(): _start_next(member,state.lots[member.lot_id])
+		return _result(true,str(option.name)+" added to "+str(member.name)+"'s plan.")
 	if type=="practice_hobby":
 		var hobby: Variant=command.get("hobby")
 		if not hobby is String or not Hobbies.CATALOG.has(hobby): return _result(false,"Choose reading, gardening, or cooking.")
@@ -622,6 +636,47 @@ func wish_status(member: Dictionary, activity: String) -> String:
 	for task: Dictionary in member.queue:
 		if not task.get("automatic",false) and task_activity(task,str(member.lot_id))==activity: return "In your plan"
 	return ""
+
+func routine_option(profile_id: String,member_id: String,routine_id: String) -> Dictionary:
+	var family: Dictionary=state.get("families",{}).get(profile_id,{})
+	if family.is_empty(): return {"available":false,"detail":"Join a household first."}
+	var member := _member(family,member_id)
+	if member.is_empty(): return {"available":false,"detail":"Choose one of your own residents."}
+	var entry := Routines.find(family.routines,routine_id)
+	if entry.is_empty(): return {"available":false,"detail":"That routine is no longer saved."}
+	var result := {"available":false,"name":str(entry.name),"detail":"","actions":[],"steps":[]}
+	if state.lots[family.home_lot].building or state.lots[member.lot_id].building:
+		result.detail="Finish construction before directing your family."; return result
+	var tasks: Array=member.queue.duplicate()
+	if not member.task.is_empty(): tasks.append(member.task)
+	for task: Dictionary in tasks:
+		if task.get("routine_id")==routine_id: result.detail="Already in this resident's plan."; return result
+	if member.queue.size()+entry.steps.size()>MAX_QUEUE:
+		result.detail="Needs %d free places in the plan; %d available." % [entry.steps.size(),MAX_QUEUE-member.queue.size()]; return result
+	var lot: Dictionary=state.lots[member.lot_id]
+	var waits := 0
+	for kind: String in entry.steps:
+		var best: Dictionary={}; var best_score := 100000.0
+		for object: Dictionary in lot.objects:
+			if object.kind!=kind: continue
+			var goals := _interaction_cells(lot,object)
+			var path := _path(lot,_position(member),goals)
+			if path.is_empty() and not goals.has(_position(member)): continue
+			var busy := not _object_user(str(lot.id),object,str(member.id)).is_empty()
+			if kind=="game_table":
+				var places := _game_places(member,lot,object)
+				busy=places.is_empty() or (not places.has(_position(member)) and _path(lot,_position(member),places).is_empty())
+			var score := float(path.size())+(1000.0 if busy else 0.0)
+			if score<best_score: best_score=score; best={"object":object,"busy":busy}
+		if best.is_empty():
+			result.detail="No reachable "+str(Catalog.ITEMS[kind].name)+" here. Add one or visit a home with one."; result.actions=[]; return result
+		if best.busy: waits+=1
+		result.actions.append({"type":"interact","target_kind":"object","target_id":str(best.object.id),"routine_id":routine_id,"routine_name":str(entry.name)})
+		result.steps.append({"activity":kind,"target_id":str(best.object.id),"name":str(Catalog.ITEMS[kind].name),"busy":bool(best.busy)})
+	result.available=true
+	result.detail="Adds %d activities after your existing orders." % entry.steps.size()
+	if waits>0: result.detail+=" %d %s currently in use; wait your turn." % [waits,"is" if waits==1 else "are"]
+	return result
 
 func hobby_option(member: Dictionary, hobby: String) -> Dictionary:
 	var activity: String=Hobbies.CATALOG[hobby].activity
@@ -1021,6 +1076,8 @@ func _normalize_numbers() -> void:
 				object[key] = int(object[key])
 	for family: Dictionary in state.families.values():
 		HomeNews.normalize(family)
+		if not family.has("routines"): family.routines=Routines.create()
+		Routines.normalize(family.routines)
 		family.identity_revision=int(family.get("identity_revision",0))
 		for member: Dictionary in family.members:
 			if not member.has("favorite"): member.favorite="variety"
@@ -1117,6 +1174,7 @@ func _valid_state(data: Dictionary) -> bool:
 		if family.get("id") != profile_id or not family.get("name") is String or str(family.name).length() > 64 or not data.lots.has(family.get("home_lot")) or data.lots[family.home_lot].owner != profile_id or not family.get("online") is bool or not family.get("members") is Array or family.members.size() != 2:
 			return false
 		if family.has("home_news") and not HomeNews.valid(family.home_news): return false
+		if family.has("routines") and not Routines.valid(family.routines): return false
 		if not _integer(family.get("identity_revision",0)) or float(family.get("identity_revision",0))<0 or float(family.get("identity_revision",0))>9007199254740000: return false
 		for member: Variant in family.members:
 			if not member is Dictionary or not member.get("id") is String or str(member.id).length() > 160 or members_seen.has(member.id) or not member.get("name") is String or str(member.name).length() > 32 or not data.lots.has(member.get("lot_id")) or not _valid_coord(member.get("x")) or not _valid_coord(member.get("y")) or not member.get("needs") is Dictionary:
@@ -1166,6 +1224,8 @@ func _adjust_funds(lot_id: String, amount: int) -> bool:
 func _valid_task(value: Variant, active: bool) -> bool:
 	if not value is Dictionary or not value.get("type") in ["move", "interact"]:
 		return false
+	if value.has("routine_id") or value.has("routine_name"):
+		if value.type!="interact" or not Routines.valid_id(value.get("routine_id")) or not HouseholdProfile.valid_name(value.get("routine_name"),32): return false
 	if value.has("social_started") and (not _integer(value.social_started) or float(value.social_started)<0 or float(value.social_started)>9007199254740991): return false
 	if value.has("elapsed") and (not _number(value.elapsed) or float(value.elapsed)<0 or float(value.elapsed)>120): return false
 	if value.has("id") and (not value.id is String or str(value.id).is_empty() or str(value.id).length() > 180):

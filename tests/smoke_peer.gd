@@ -5,12 +5,14 @@ var session: Node
 var ticket_path := ""
 var use_codes := false
 var rooms: Node
+var command_results: Array=[]
 
 func _initialize() -> void:
 	call_deferred("_run")
 
 func _run() -> void:
 	session = root.get_node("Session")
+	session.command_completed.connect(func(intent: Dictionary,ok: bool,_message: String): command_results.append({"intent":intent,"ok":ok}))
 	rooms = root.get_node("Rooms")
 	var args := OS.get_cmdline_user_args()
 	ticket_path = args[1]
@@ -33,10 +35,12 @@ func _connect() -> void:
 
 func _command(intent: Dictionary, accepted := true) -> void:
 	var count: int = session.actions_received
+	var completed_before := command_results.size()
 	session.command(intent)
 	for _index in range(100):
 		if session.actions_received > count:
 			assert(session.last_action_ok == accepted, "Unexpected action result: " + session.last_action_message)
+			assert(command_results.size()==completed_before+1 and command_results[-1].intent==intent and command_results[-1].ok==accepted,"Each command result correlates to the actual submitted intent")
 			return
 		await create_timer(0.1).timeout
 	assert(false, "Command was not acknowledged")
@@ -129,6 +133,13 @@ func _client(index: String) -> void:
 	assert(session.state.families[identity].members[1].appearance.shirt==3,"Appearance was not replicated")
 	assert(session.state.families[identity].members[0].favorite=="reading" and session.state.families[identity].members[1].favorite=="gardening","Favorite pastimes were not replicated")
 	await _command(identity_command,false)
+	var routine_command := {"type":"routine_save","routine_id":"","revision":session.state.families[identity].routines.revision,"name":"Quiet time "+index,"steps":["bookshelf","table"]}
+	await _command(routine_command)
+	for _attempt in range(50):
+		if session.state.families[identity].routines.entries.size()==3: break
+		await create_timer(0.1).timeout
+	assert(session.state.families[identity].routines.entries[2].name=="Quiet time "+index,"Independent libraries replicate the owning family's recipe")
+	await _command(routine_command,false)
 	# Ownership is enforced on the host, even for syntactically valid commands.
 	await _command({"type": "build_begin", "lot_id": host_home}, false)
 	await _command({"type": "build_begin", "lot_id": home})
@@ -250,6 +261,19 @@ func _client(index: String) -> void:
 	assert(planned.queue.size()==2 and planned.queue[0].id==later_id and planned.queue[1].id==queued_id and planned.task.id==active_id,"Edited order must replicate without interrupting the current activity")
 	walk_feedback.update(session.state,identity,member_id,home,Vector2i.ZERO,false,true,0)
 	assert(walk_feedback.markers[1].id==later_id and walk_feedback.markers[1].order==2 and walk_feedback.markers[2].id==queued_id,"Destination numbers follow the host's reordered plan")
+	var run_routine := {"type":"run_routine","member_id":member_id,"routine_id":"routine_3","revision":session.state.families[identity].routines.revision}
+	await _command(run_routine)
+	await _command(run_routine,false)
+	for _attempt in range(30):
+		if session.state.families[identity].members[0].queue.size()==4: break
+		await create_timer(0.1).timeout
+	var routine_plan: Dictionary=session.state.families[identity].members[0]
+	assert(routine_plan.queue.size()==4 and routine_plan.task.id==active_id and routine_plan.queue[0].id==later_id and routine_plan.queue[1].id==queued_id,"Adding a routine preserves accepted manual work")
+	for step in range(2):
+		assert(routine_plan.queue[step+2].routine_name=="Quiet time "+index and routine_plan.queue[step+2].routine_id=="routine_3")
+		assert(session.world.task_activity(routine_plan.queue[step+2],home)==["bookshelf","table"][step],"Host resolves each activity to a reachable local furnishing in order")
+	var foreign_routine: Dictionary=run_routine.duplicate(); foreign_routine.member_id=session.state.families[str(session.state.lots[host_home].owner)].members[0].id
+	await _command(foreign_routine,false)
 	await _command(reorder,false)
 	var foreign := reorder.duplicate(); foreign.member_id=session.state.families[str(session.state.lots[host_home].owner)].members[0].id
 	await _command(foreign,false)
@@ -353,6 +377,7 @@ func _client(index: String) -> void:
 	assert(not session.state.families[identity].home_news.report.pending,"Acknowledged recap did not replicate")
 	await _command(postcard,false)
 	assert(session.home_lot() == home, "Reconnect changed lot ownership")
+	assert(session.state.families[identity].routines.entries[2].name=="Quiet time "+index and session.state.families[identity].routines.entries[2].steps==["bookshelf","table"],"Reconnect retains the independent routine library")
 	assert(int(preload("res://game/friendships.gd").bond(session.state,member_id,companion_id).get("score",0))==32,"Reconnect lost the friendship")
 	assert(session.state.families[identity].name=="Gardeners "+index and session.state.families[identity].members[1].appearance.style==1,"Reconnect lost household identity")
 	assert(session.state.families[identity].members[0].favorite=="reading" and session.state.families[identity].members[1].favorite=="gardening","Reconnect lost favorite pastimes")
