@@ -33,6 +33,7 @@ static func capture_plan(member: Dictionary, lot: Dictionary) -> Dictionary:
 		elif task.get("type")=="move": reason="Walking destinations are specific to this lot."
 		elif task.get("target_kind")=="member": reason="Conversations need a particular resident."
 		elif task.has("garden_action") or kind=="garden_bed": reason="Garden work depends on the crop and its current condition."
+		elif task.has("paint_action") or kind=="easel": reason="Painting needs a chosen subject and the current canvas."
 		elif not kind in ACTIVITIES: reason="This furnishing is no longer available."
 		if reason.is_empty(): result.steps.append(kind)
 		else: result.omitted.append({"position":index+1,"title":str(task.get("title",task.get("label","Activity"))),"reason":reason})

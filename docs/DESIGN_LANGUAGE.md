@@ -554,3 +554,28 @@ Forecast from a copied, validated layout using the same access rules as the
 host. Hovering changes no funds, history, identities, or simulation. Invalidate
 forecasts on layout, resident, tool, rotation, and world changes. The guide
 explains all three placement colors in plain language.
+
+
+### A little studio at home
+
+The Daydream easel uses the same warm wood and material palette as other
+furnishings. Its original miniatures share muted colors with the neighborhood:
+a green morning meadow, a blue harbor, and flowers in a teal vase. Draw a wash,
+then broad shapes, then details as accepted progress advances; add a small
+signature only when finished. The in-world canvas and tray preview use the same
+art renderer. Recoloring changes the easel's wood, never the resident's picture.
+
+Opening the easel starts at the top of the tray. Keep all three named subjects
+visible together, with a smaller canvas preview in the compact layout. Hover or
+keyboard focus previews a finished subject without changing accepted state.
+Once work starts, show its actual progress and the names of contributing
+housemates. Let unfinished work wait, and retain the finished piece on the easel.
+A journal entry marks completion without requiring a popup or a reward claim.
+
+Painting uses a small brush-and-palette pose and the sparse existing paper cue.
+Packing a sold picture uses a wrapped-frame pose and fabric cue instead. Reduced
+motion keeps the pose legible without moving strokes. A sale requires a deliberate
+plan and completes before paying; its UI says that it frees the canvas. Selling
+the whole easel in construction explicitly includes its canvas, and Undo restores
+both. Copied easels are clearly described as blank. Wall hanging and a painting
+hobby are separate next steps rather than implied by the first easel feature.

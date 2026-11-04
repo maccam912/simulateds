@@ -71,3 +71,10 @@ The native dancing playtest records `build/dancing-music*.wav` and
 `build/dancing-muted*.wav`, verifying audible unclipped output and music mute in
 standard and compact windows. Mixer measurements do not replace listening on
 family devices.
+
+
+Painting reuses the quiet `page` texture at onset and at most once every five
+activity seconds. Packing a sold painting uses one `fabric` onset. Both follow
+the existing position, visibility, pause, Effects volume, and onset-deduplication
+rules. The native painting flows check that both cues reach the live mixer;
+this is event-level coverage, not a new recording or listening assessment.

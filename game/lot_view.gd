@@ -5,6 +5,7 @@ signal hovered(cell: Vector2i)
 signal entity_clicked(target: Dictionary)
 
 const Catalog = preload("res://game/catalog.gd")
+const Paintings = preload("res://game/paintings.gd")
 const Gardens = preload("res://game/gardens.gd")
 const BuildRules = preload("res://game/build_rules.gd")
 const BuildImpact = preload("res://game/build_impact.gd")
@@ -141,6 +142,7 @@ func _update_activity_audio(delta: float) -> void:
 				var cell := motion.position(member)
 				var task: Dictionary=member.get("task",{})
 				var sound_kind := str(_activity_pose(member).get("kind",""))
+				if sound_kind=="easel" and task.get("paint_action")=="sell": sound_kind="painting_sale"
 				if sound_kind=="garden_bed": sound_kind="garden_"+str(task.get("garden_action","water"))
 				residents.append({"id":str(member.id),"cell":cell,"position":get_global_transform_with_canvas()*point,"kind":sound_kind,"task":str(task.get("id","")),"elapsed":float(task.get("elapsed",0.0)),"walking":motion.moving(str(member.id)) or not task.get("path",[]).is_empty(),"indoors":[roundi(cell.x),roundi(cell.y)] in lot.floors})
 				sources[str(member.id)]={"position":get_global_transform_with_canvas()*point,"task":str(task.get("id",""))}
@@ -454,6 +456,7 @@ func _draw() -> void:
 			if build_kind=="erase":
 				tint=Color(0.94,0.4,0.3,0.35)
 				hint_message="Sell " + str(item.name) + " · § %d" % int(float(item.cost)*0.6)
+				if hover_target.kind=="easel": hint_message+="\nIncludes its canvas · Undo restores both"
 			else:
 				var message := "Move " + str(item.name) + " · Click to select"
 				if Leisure.KINDS.has(hover_target.kind):
@@ -685,11 +688,14 @@ func _draw_hover() -> void:
 			detail=Leisure.summary(report)+" · Click to "+("queue" if report.available.is_empty() or report.reserved>=report.capacity else "join")
 			if report.available.is_empty(): detail+="\n"+Leisure.waiting_reason(report)
 			detail+="\n○ Open  ● Reserved  — Occupied  × Blocked / no path"
-		if bool(item.get("exclusive",false)) and hover_target.kind!="garden_bed":
+		if bool(item.get("exclusive",false)) and not hover_target.kind in ["garden_bed","easel"]:
 			for family: Dictionary in world.families.values():
 				for resident: Dictionary in family.members:
 					if resident.lot_id == lot_id and resident.task.get("target_id") == hover_target.id:
 						detail = "In use by " + str(resident.name) + " · Click to queue"
+		if hover_target.kind=="easel":
+			for object: Dictionary in world.lots[lot_id].objects:
+				if object.id==hover_target.id: detail=Paintings.summary(object.painting)+" · Click to inspect"; break
 		if hover_target.kind=="garden_bed":
 			for object: Dictionary in world.lots[lot_id].objects:
 				if object.id==hover_target.id: detail=Gardens.summary(object.garden)+" · Click to inspect"; break
@@ -770,6 +776,7 @@ func _furnishing(obj: Dictionary,s: float) -> void:
 	_diamond(x+0.12,y+0.2,w,d,Color(0.18,0.17,0.13,0.13))
 	_drawing_target = {"type":"object","id":obj.id,"kind":kind,"x":obj.x,"y":obj.y,"rotation":obj.get("rotation",0)}
 	match kind:
+		"easel": _easel_furnishing(obj,s)
 		"garden_bed": _garden_furnishing(obj,s)
 		"bed":
 			_block(x+0.05,y+0.05,w-0.1,d-0.1,10*s,Color("785648"))
@@ -848,6 +855,22 @@ func _furnishing(obj: Dictionary,s: float) -> void:
 	_drawing_target = {}
 	_art_object = {}
 
+func _easel_furnishing(object: Dictionary,s: float) -> void:
+	var x: float=object.x; var y: float=object.y
+	var wood := FurnitureColors.material(object,"ae8259")
+	var top := grid_point(x+0.5,y+0.5)+Vector2(0,-49*s)
+	for foot: Vector2 in [Vector2(0.08,0.9),Vector2(0.92,0.9),Vector2(0.5,0.05)]:
+		draw_line(grid_point(x+foot.x,y+foot.y),top,wood,3*s,true)
+	var left := grid_point(x+0.08,y+0.65)+Vector2(0,-43*s)
+	var right := grid_point(x+0.92,y+0.65)+Vector2(0,-43*s)
+	var down := Vector2(0,27*s)
+	var corners := PackedVector2Array([left,right,right+down,left+down])
+	_poly([left-Vector2(0,2*s),right-Vector2(0,2*s),right+down+Vector2(0,3*s),left+down+Vector2(0,3*s)],wood,wood.darkened(0.2))
+	draw_set_transform_matrix(Transform2D(right-left,down,left))
+	preload("res://game/painting_art.gd").draw(self,object.get("painting",Paintings.create()))
+	draw_set_transform_matrix(Transform2D.IDENTITY)
+	_hit_regions.append({"polygon":corners,"target":_drawing_target})
+
 func _garden_furnishing(object: Dictionary,s: float) -> void:
 	var x: float=object.x; var y: float=object.y
 	var bed: Dictionary=object.get("garden",Gardens.create())
@@ -903,6 +926,7 @@ func _resident(member: Dictionary, family: Dictionary,s: float) -> void:
 	var lateral := ResidentFacing.project(Vector2(direction.y,-direction.x))
 	var facing := forward.normalized()
 	var kind := str(pose.get("kind",""))
+	if kind=="easel" and member.get("task",{}).get("paint_action")=="sell": kind="painting_sale"
 	if kind=="garden_bed": kind="garden_"+str(member.get("task",{}).get("garden_action","water"))
 	var behind: bool=facing.y< -0.2 and kind not in ["chat","tv","shower"]
 	if behind: _activity_prop(p+forward*6*s,kind,s,reduced,facing,skin)
@@ -963,6 +987,16 @@ func _activity_prop(p: Vector2,kind: String,s: float,reduced: bool,facing: Vecto
 	draw_set_transform(p,0,Vector2(-1.0 if facing.x< -0.2 else 1.0,1))
 	p=Vector2.ZERO
 	match kind:
+		"painting_sale":
+			draw_rect(Rect2(p+Vector2(-9,-25)*s,Vector2(18,15)*s),Color("9b7954"))
+			draw_rect(Rect2(p+Vector2(-7,-23)*s,Vector2(14,11)*s),Color("dfccac"))
+			draw_line(p+Vector2(0,-23)*s,p+Vector2(0,-12)*s,Color("ba9c73"),1*s,true)
+		"easel":
+			var lift := 0.0 if reduced else sin(_time*3.5)*2.0
+			draw_line(p+Vector2(5,-23)*s,p+Vector2(13,-26+lift)*s,skin,3*s,true)
+			draw_line(p+Vector2(13,-26+lift)*s,p+Vector2(18,-33+lift)*s,Color("ac8158"),1.5*s,true)
+			draw_circle(p+Vector2(18,-34+lift)*s,1.5*s,Color("87a98d"))
+			draw_circle(p+Vector2(-7,-19)*s,4*s,Color("d9bd88"))
 		"game_table":
 			var lift := 0.0 if reduced else sin(_time*3.0)*1.5
 			draw_line(p+Vector2(7,-23)*s,p+Vector2(14,-19+lift)*s,skin,3*s,true)
@@ -1235,11 +1269,13 @@ func _draw_room_copy(lot: Dictionary) -> void:
 		for item: Dictionary in ordered:
 			var object := item.duplicate(true)
 			if object.kind=="garden_bed": object.garden=Gardens.create()
+			if object.kind=="easel": object.painting=Paintings.create()
 			var hits := _hit_regions.size(); _furnishing(object,scale); _hit_regions.resize(hits)
 		_diamond(plan.low.x,plan.low.y,plan.extent.x,plan.extent.y,Color.TRANSPARENT,3,color)
 	var message := "Copying room…" if copy_pending else str(plan.message)
 	if valid:
 		message+="\nStructure §%d · Furniture §%d · Finishes §%d · Windows §%d" % [plan.structure_cost,plan.furniture_cost,plan.finish_cost,plan.window_cost]
+		if plan.get("art",false): message+="\nCopied easels start with blank canvases."
 		if plan.garden: message+="\nGarden beds start empty. Crops are not copied."
 	_draw_preview_label(message,valid)
 

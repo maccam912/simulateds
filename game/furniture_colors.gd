@@ -9,7 +9,7 @@ const PALETTE := {
 	"honey":{"name":"Honey","color":"c9a363"},
 	"ink":{"name":"Ink","color":"596d78"}
 }
-const MATERIALS := {"bed":"Bedding","sofa":"Upholstery","fridge":"Enamel","shower":"Wall panel","toilet":"Porcelain","tv":"Cabinet","stereo":"Cabinet","bookshelf":"Woodwork","plant":"Pot","table":"Woodwork","game_table":"Woodwork","garden_bed":"Frame"}
+const MATERIALS := {"easel":"Woodwork","bed":"Bedding","sofa":"Upholstery","fridge":"Enamel","shower":"Wall panel","toilet":"Porcelain","tv":"Cabinet","stereo":"Cabinet","bookshelf":"Woodwork","plant":"Pot","table":"Woodwork","game_table":"Woodwork","garden_bed":"Frame"}
 
 static func at(object: Dictionary) -> String: return str(object.get("color_style","original"))
 

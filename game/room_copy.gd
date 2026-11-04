@@ -26,7 +26,7 @@ static func capture(lot: Dictionary, seed: Vector2i) -> Dictionary:
 	var low := seed; var high := seed
 	for cell: Vector2i in region:
 		low=Vector2i(mini(low.x,cell.x),mini(low.y,cell.y)); high=Vector2i(maxi(high.x,cell.x),maxi(high.y,cell.y))
-	var result := {"ok":true,"low":low,"extent":high-low+Vector2i.ONE,"interior":[],"floors":[],"walls":[],"doors":[],"finishes":{"floor":{},"wall":{}},"windows":{},"objects":[],"garden":false}
+	var result := {"ok":true,"low":low,"extent":high-low+Vector2i.ONE,"interior":[],"floors":[],"walls":[],"doors":[],"finishes":{"floor":{},"wall":{}},"windows":{},"objects":[],"garden":false,"art":false}
 	for cell: Array in interior: result.interior.append([int(cell[0])-low.x,int(cell[1])-low.y])
 	for kind: String in ["floors","walls","doors"]:
 		for cell: Array in lot[kind]:
@@ -49,6 +49,7 @@ static func capture(lot: Dictionary, seed: Vector2i) -> Dictionary:
 		var furnishing := {"kind":str(object.kind),"x":int(object.x)-low.x,"y":int(object.y)-low.y,"rotation":int(object.rotation)}
 		FurnitureColors.set_style(furnishing,FurnitureColors.at(object)); result.objects.append(furnishing)
 		result.garden=result.garden or object.kind=="garden_bed"
+		result.art=result.art or object.kind=="easel"
 	result.message="%d × %d room · %d furnishings · Click to select" % [result.extent.x,result.extent.y,result.objects.size()]
 	return result
 
@@ -67,7 +68,7 @@ static func inspect(lot: Dictionary, command: Dictionary, residents: Array) -> D
 	if not source.ok: return source
 	var rotation := int(command.get("rotation",0)); var at := Vector2i(int(command.x),int(command.y))
 	var extent: Vector2i=Vector2i(source.extent.y,source.extent.x) if rotation%2 else source.extent
-	var plan := {"ok":true,"source":source,"low":at,"extent":extent,"interior":[],"floors":[],"walls":[],"doors":[],"objects":[],"finishes":{"floor":{},"wall":{}},"windows":{},"structure_cost":0,"furniture_cost":0,"finish_cost":0,"window_cost":0,"cost":0,"garden":source.garden}
+	var plan := {"ok":true,"source":source,"low":at,"extent":extent,"interior":[],"floors":[],"walls":[],"doors":[],"objects":[],"finishes":{"floor":{},"wall":{}},"windows":{},"structure_cost":0,"furniture_cost":0,"finish_cost":0,"window_cost":0,"cost":0,"garden":source.garden,"art":source.art}
 	if at.x+extent.x>16 or at.y+extent.y>16: return _reject(plan,"Keep the whole copied room inside the lot.")
 	for kind: String in ["interior","floors","walls","doors"]:
 		for cell: Array in source[kind]:

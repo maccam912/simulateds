@@ -1440,3 +1440,44 @@ painting, with visible progress and something personal to keep in the home.
 Start with a small complete loop, preserve ownership and always-on safety, and
 avoid making it an unattended income source. This is proposed next work, not
 implemented behavior in this checkpoint.
+
+
+## A canvas that belongs to the household
+
+Daydream easels add a deliberate creative loop: choose Morning meadow, Quiet
+harbor, or Flowers for home; work on the canvas; keep the finished picture on the
+easel or pack it for sale. Free supplies and a fixed 24 seconds of simulation
+work restore fun and comfort. The image develops from a wash to broad shapes to
+details, with a small signature on completion. A housemate can resume unfinished
+work and receive shared credit. Completion leaves a journal entry. Selling pays
+§60 only after packing finishes and leaves a fresh canvas.
+
+The first model run exposed a command-name collision with architectural paint;
+the creative command is now `painting`, keeping decoration's `paint` behavior.
+Other fixture corrections moved a test easel away from a resident, supplied
+required undo revisions, and used approximate comparison for JSON floating-point
+progress. Headless checks exercise subject focus; native tests exercise actual mouse hover
+too.
+
+Standard and compact native input flows painted all three subjects, canceled and
+resumed work, checked Plan timing, rotated the easel through all orientations,
+sold/undid the whole furnishing with its artwork intact, and packed individual
+pictures. The sparse painting/packing cues reached the live mixer. Screenshot
+review caught the compact tray inheriting the catalog's scroll position; it now
+opens at the top with all subjects visible together and a smaller preview.
+Packing has its own wrapped-frame pose and does not claim to restore needs.
+
+The new real Iroh scenario uses two independent households, each with its own
+canvas. Partial work and completed art survive reconnects, duplicate/stale orders
+are rejected, and sales pay once. All 70 local suites, both actual Iroh scenarios,
+and dedicated-server startup passed. The preceding construction-access checkpoint
+passed all four platform CI jobs. Native input and separate-process tests remain
+automated evidence, not human-family or physical-device playtesting.
+
+Fresh assessment: making a picture gives residents a visible result beyond
+refilling a need bar. Keeping a favorite picture currently occupies its easel,
+so the strongest next improvement is wall display: keep the artwork in the home
+while freeing the easel for another canvas. Preserve its artist credit and avoid
+copying earned art with room duplication. A painting hobby can follow once
+keeping and arranging finished work feels natural. This is proposed next work,
+not implemented behavior in this checkpoint.

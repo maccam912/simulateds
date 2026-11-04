@@ -76,6 +76,12 @@ automatic activity, and old saves retain their real chat history.
 See [the playtest log](PLAYTEST_LOG.md) for evidence
 and current usability priorities.
 
+Daydream easels now support three deliberately painted subjects, persistent
+partial work, shared household credit, staged original artwork, completion
+journals, and explicit single-payment sales. Finished art stays on the easel.
+Add wall display and a painting hobby next; room duplication already creates
+blank canvases so it cannot duplicate earned artwork.
+
 ## 1. Make homebuilding dependable
 
 - Edge-based walls, room detection, door orientation, and roofs. Wall-mounted

@@ -160,6 +160,16 @@ or shell expressions.
   **Original** restores the furnishing's original materials. Details such as
   foliage and glass keep their own colors. Choices survive moves, room copies,
   saves, and reconnect, without changing the object, its crops, or its resale value.
+- **Daydream easel** (§220, Living in the catalog) lets residents paint a meadow,
+  harbor, or flowers. Hover or focus a subject to preview it. Painting takes about
+  72 game minutes and restores fun and comfort, even if those needs fill first.
+  Canceling keeps the unfinished canvas; either housemate can continue it, with
+  both artists credited. Finished pictures stay on the easel and appear in the
+  finisher's journal. **Sell painting** queues packing and pays §60 once it finishes,
+  leaving a fresh canvas. Visitors can inspect art; only its household can paint
+  or sell it. Artwork survives saves, reconnects, moves, colors, and Undo. Copied
+  easels start blank. Painting is deliberate: autonomy and routines do not create
+  or sell artwork. Wall display and a painting hobby are future additions.
 - Residents with a pressing need show a small thought cue above the house. Click
   it to select that resident and plan useful care. Needs already being handled
   or queued stay quiet, and cues belong only to your household. The selected

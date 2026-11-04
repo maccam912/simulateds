@@ -8,7 +8,7 @@ static func need(member: Dictionary, lot: Dictionary, world: Dictionary={}) -> D
 	var tasks: Array=member.get("queue",[]).duplicate()
 	if not member.get("task",{}).is_empty(): tasks.append(member.task)
 	for task: Dictionary in tasks:
-		if task.get("type")!="interact": continue
+		if task.get("type")!="interact" or task.get("paint_action")=="sell": continue
 		var activity := "chat" if task.get("target_kind")=="member" else ""
 		if activity.is_empty():
 			for object: Dictionary in lot.get("objects",[]):

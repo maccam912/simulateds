@@ -83,7 +83,7 @@ service mode was not repeated for this update.
 ## Still open
 
 The subsequent feature checks are recorded in [PLAYTEST_LOG.md](PLAYTEST_LOG.md).
-The current local suite contains 68 model/application suites, plus real Iroh
+The current local suite contains 70 model/application suites, plus real Iroh
 host/two-client reconnect and dedicated-server startup. The room-construction
 checkpoint passed Linux, Windows, macOS, and Android CI builds/exports. The later
 household checkpoint passed the three desktop jobs; Android built, tested,
@@ -676,4 +676,35 @@ The multiplayer scenario computes both the entrance-blocking forecast and its
 repair on the client, then compares each with the host's replicated report.
 No protocol or save fields changed. The furnishing-colors checkpoint passed all
 four CI platform jobs. Human-family, physical-device, and overnight hosting
+checks remain open.
+
+
+## Paintings and persistent creative work
+
+The 70 local model/application suites pass. New model coverage checks all three
+subjects, need restoration without early completion, cancel/resume with shared
+credit, paid sales versus canceled sales, duplicate and stale requests,
+construction and visitor restrictions, exact artwork retention through moves,
+recoloring, history, discard, save/load, and absence. Corrupt canvas/task data is
+rejected. All four rotations of an actual room copy retain the original work
+and create a new blank, colored easel; undo/redo cannot duplicate finished art.
+Legacy homes without easels still load. Packing a picture does not claim care
+coverage or suppress an unmet-need cue.
+
+Native injected-input flows passed at 1440×900 and 1280×720 / 125% UI scale.
+They buy an easel, preview subjects without mutation, paint all three miniatures,
+inspect accepted progress and Plan timing, cancel/resume, rotate through all
+orientations, sell and undo the whole easel, pack individual pictures, restore a
+snapshot, inspect a neighbor's easel, and verify exact pending-command feedback.
+The final compact layout keeps its heading and all three subject buttons visible
+together. Both native layouts check painting and packing events through the live
+mixer, with separate poses and cues. Reviewed captures are in ignored
+`build/paintings-*.png`; no human listening assessment is implied.
+
+The added real Iroh host/two-client scenario passed independently, including
+parallel household canvases, partial and finished reconnect retention, duplicate
+and stale rejection, author credit, journals, and exactly one payment per sale.
+The complete regression run passed both the original multiplayer scenario and
+this painting scenario, followed by dedicated-server startup. The preceding construction-access checkpoint passed
+all four platform CI jobs. Physical-device, human-family, and overnight-hosting
 checks remain open.
