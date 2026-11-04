@@ -876,3 +876,28 @@ focused friendship checks pass with the new Shared a meal history. The preceding
 art-admiration checkpoint passed all four CI jobs. Native screenshots and
 injected-input tests do not replace human-family play, device certification,
 listening assessment, or an overnight persistence soak.
+
+
+## Autonomous use of prepared food
+
+All 81 local suites pass, including `meals_autonomy`: household-only selection,
+prepared-food preference within hunger care, more urgent needs, reserved last
+portions, occupied/unreachable places, manual interruption, autonomy off,
+construction, disconnection, guests, caretaker preservation, and no automatic
+rewards or ingredient spending. Walking and consumed-portion snapshots round-trip;
+saved worlds clear unfinished plans without returning already eaten food.
+Valid deliberate preparation cannot be relabeled as automatic in a snapshot.
+The final focused test and editor import pass.
+
+The standard and compact native meal playthroughs pass with real injected mouse
+input. They prepare food, toggle both housemates' autonomy through Plan, observe
+shared eating and portion counts, and stop one diner without returning a used
+serving. The two captures in `build/meals-autonomy*.png` were visually reviewed.
+
+The extended real Iroh meal test passes on one host and two clients. After the
+existing visit/absence/reconnect sequence, hunger is seeded on the authoritative
+host; clients toggle their own autonomy through acknowledged commands. Both
+clients see two automatic diners and the same single remaining portion. Stopping
+them neither consumes another serving nor changes funds. This adds network
+coverage for the new automatic task validation; it does not establish physical
+Android cross-play or overnight persistence.

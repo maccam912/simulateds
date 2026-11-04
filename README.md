@@ -195,8 +195,12 @@ or shell expressions.
   earns bounded cooking practice, and ready food shows its cook and day.
   **Eat a portion** or **People → Join meal** reserves one serving and one of up
   to four separate places. Eating restores hunger and comfort; eating together
-  also restores social and can build friendship. Each player chooses their own
-  diners. Hunger care can choose a ready meal. Visitors can eat served food,
+  also restores social and can build friendship when both diners are chosen.
+  With autonomy on, hungry housemates eat available portions at home before
+  taking fridge snacks. Urgent needs and your orders still take priority.
+  Automatic eating earns no wishes, friendship, or cooking practice; it never
+  prepares food or spends ingredients. Caretakers preserve portions while you
+  are away. Hunger care can choose a ready meal. Visitors choose to eat served food,
   including while its household is away, but cannot spend its money or clear it.
   Leftovers keep until eaten or explicitly removed with **Clear leftovers**.
   A portion is consumed when eating starts; cancelling before arrival frees the

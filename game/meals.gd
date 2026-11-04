@@ -28,6 +28,10 @@ static func available(world: Dictionary,lot: Dictionary,table: Dictionary,except
 		if task.meal_action=="eat" and int(task.meal_batch)==int(table.meal.batch) and not task.get("meal_taken",false): portions-=1
 	return maxi(0,portions)
 
+static func can_autoeat(world: Dictionary,lot: Dictionary,member: Dictionary) -> bool:
+	var family: Dictionary=world.get("families",{}).get(lot.get("owner",""),{})
+	return not lot.get("building",false) and family.get("online",false) and family.get("home_lot")==lot.id and member.get("lot_id")==lot.id and member.get("autonomy",false) and family.get("members",[]).has(member)
+
 static func summary(meal: Dictionary) -> String:
 	if meal.recipe=="": return "Set the table for a meal"
 	return str(RECIPES[meal.recipe].name)+(" · All eaten" if int(meal.servings)==0 else " · %d portions left" % int(meal.servings))
@@ -44,7 +48,8 @@ static func valid(value: Variant,day: int) -> bool:
 
 static func valid_task(task: Dictionary,active: bool) -> bool:
 	if not task.get("id") is String or task.id.is_empty(): return false
-	if task.get("type")!="interact" or task.get("target_kind","object")!="object" or task.get("automatic",false): return false
+	if task.get("type")!="interact" or task.get("target_kind","object")!="object": return false
+	if task.get("automatic",false) and (not active or task.get("meal_action")!="eat"): return false
 	if not task.get("meal_action") in ["prepare","eat"] or not RECIPES.has(task.get("meal_recipe")) or not _integer(task.get("meal_batch"),0,MAX_BATCH): return false
 	if not task.get("meal_table") is String or task.meal_table.is_empty() or task.meal_table.length()>64: return false
 	for key: String in ["paint_action","garden_action","routine_id"]:
@@ -70,6 +75,7 @@ static func valid_reservations(world: Dictionary) -> bool:
 			var tasks: Array=member.queue.duplicate(); tasks.append(member.task)
 			for task: Dictionary in tasks:
 				if not task.has("meal_action"): continue
+				if task.get("automatic",false) and not can_autoeat(world,world.lots[member.lot_id],member): return false
 				var prefix := str(member.id)+":"; var id: String=task.id
 				var counter := id.trim_prefix(prefix)
 				if not id.begins_with(prefix) or not counter.is_valid_int() or str(int(counter))!=counter or int(counter)<1 or int(counter)>=int(member.next_action) or ids.has(id): return false

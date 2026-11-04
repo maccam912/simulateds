@@ -670,3 +670,12 @@ storage. A queued eater reserves food; arrival consumes the serving. Cancellatio
 before arrival releases the reservation. Guests choose their own residents and
 cannot prepare with another household's funds or clear their leftovers. Food
 keeps during absence, and room copying creates an empty table.
+
+Hungry housemates with autonomy on can use available prepared food at home. The
+same place and portion reservations apply, and the plan carries the existing
+“auto” suffix. The ready-food tray explains this in two short lines alongside
+its benefits. Guests still choose a portion explicitly; caretakers leave stored
+food alone during absence. Never suggest Join meal when this resident is already
+eating it automatically. A player's next order or autonomy toggle interrupts
+normally; an already taken portion stays consumed. Ordinary spontaneous dining
+restores needs without earning deliberate-play rewards.

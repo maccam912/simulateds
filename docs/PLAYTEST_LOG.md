@@ -1693,3 +1693,42 @@ resumed checks. All three separate-process Iroh scenarios and dedicated-server
 startup passed. Final focused model/friendship checks, native layouts, and editor
 import passed. The preceding admiration checkpoint passed all four CI jobs.
 Human-family play, physical-device checks, and an overnight soak remain open.
+
+
+## Prepared food in everyday family life
+
+The shared-meal review identified a household-care gap: residents could ignore a
+meal already on their table and choose a fridge snack instead. Hungry, idle
+housemates with autonomy enabled now prefer available prepared food for hunger.
+They still compare hunger against other needs, honor deliberate plans, and use
+only unreserved portions and reachable free places. Guests choose meals
+explicitly. Caretakers preserve household food during absence; nobody prepares
+or pays for ingredients automatically.
+
+Focused model checks cover the two sides of interruption (release a walking
+reservation; retain consumption after the first bite), saved/network snapshots,
+four-portion consistency, household ownership, urgent bathroom care, unreachable
+and occupied places, reserved last servings, guests, absence, and no automatic
+practice, wishes, or friendship. A first fixture made social and hunger equally
+urgent; it correctly chose closer social care, so the hunger scenario now makes
+hunger the pressing need. Native play then showed a diner moving on to social
+care after finishing. The fixture now checks finished food and restored hunger
+rather than incorrectly requiring an autonomous resident to remain idle.
+
+Both native layouts passed (1440×900 and 1280×720 with 125% UI scale). Reviewed
+`build/meals-autonomy.png` and `build/meals-autonomy-compact.png` show two diners,
+the “auto” plan, readable progress, and the ready-food explanation. A real Iroh
+host and two clients passed the existing visit/absence/reconnect sequence, then
+observed the owner's autonomous diners consume two portions through accepted
+snapshots. Toggling autonomy off retained the one remaining serving and funds.
+All 81 local suites, the final focused model test, and editor import passed.
+The preceding shared-meals CI has passed Linux and Windows; Android is running
+and macOS queued at this checkpoint. Native injected-input testing is not human
+play or physical-device certification.
+
+Fresh assessment: household meals now fit ordinary free time, but choosing to
+socialize after someone has already started eating automatically is awkward.
+Next, let a player adopt that resident's current automatic meal as deliberate
+shared time without taking another serving. Preserve the remaining eating time;
+friendship and wish credit must count only time after the player's choice. This
+is proposed next work, not behavior in this checkpoint.

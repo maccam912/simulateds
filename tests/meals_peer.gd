@@ -52,6 +52,13 @@ func _host() -> void:
 	var file := FileAccess.open(ticket_path,FileAccess.WRITE)
 	file.store_string(rooms.code if use_codes else session.ticket()); file.close()
 	for attempt in range(850):
+		if FileAccess.file_exists(ticket_path+".autonomy-requested") and not FileAccess.file_exists(ticket_path+".autonomy-primed"):
+			# Set appetite on the authoritative host; the clients still use real controls.
+			var request: Dictionary=JSON.parse_string(FileAccess.get_file_as_string(ticket_path+".autonomy-requested"))
+			for resident: Dictionary in session.state.families[request.owner].members:
+				for need: String in resident.needs: resident.needs[need]=100.0
+				resident.needs.hunger=20; resident.idle_clock=2
+			_flag(".autonomy-primed")
 		if FileAccess.file_exists(ticket_path+".done1") and FileAccess.file_exists(ticket_path+".done2"):
 			assert(session.state.families.size()==3)
 			print("HOST_PASS"); session.leave(); await root.get_node("Soundscape").shutdown_and_wait(); quit(); return
@@ -140,4 +147,19 @@ func _client(index: String) -> void:
 		await _command({"type":"cancel","member_id":member})
 		assert(_table(home,id).meal.servings==3,"A started portion is consumed once even if eating stops")
 		_flag(".guest-leftover"); await _wait_flag(".reconnected")
+	# Accepted autonomous reservations and consumed servings reach both clients.
+	if index=="1":
+		_flag(".autonomy-requested",{"owner":identity}); await _wait_flag(".autonomy-primed")
+		var funds_before: int=session.state.lots[home].funds
+		for resident: String in [member,housemate]: await _command({"type":"autonomy","member_id":resident,"enabled":true})
+		await _wait_servings(home,id,1); await _wait_flag(".autonomy-observed")
+		for resident: String in [member,housemate]: await _command({"type":"autonomy","member_id":resident,"enabled":false})
+		assert(session.state.lots[home].funds==funds_before and _table(home,id).meal.servings==1)
+		_flag(".autonomy-finished")
+	else:
+		await _wait_flag(".autonomy-primed"); await _wait_servings(home,id,1)
+		var owner: String=session.state.lots[home].owner
+		for resident: Dictionary in session.state.families[owner].members:
+			assert(resident.task.get("automatic",false) and resident.task.get("meal_action")=="eat" and resident.task.get("meal_taken",false))
+		_flag(".autonomy-observed"); await _wait_flag(".autonomy-finished")
 	_flag(".done"+index); print("CLIENT_PASS"); session.leave(); await root.get_node("Soundscape").shutdown_and_wait(); quit()

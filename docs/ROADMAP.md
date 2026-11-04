@@ -91,6 +91,10 @@ dining table supports preparation at the fridge, carrying and serving four
 portions, distinct dining places, per-resident reservations, guest participation,
 shared needs/friendship, saved leftovers, and explicit clearing. Construction and
 room copies preserve the distinction between an existing meal and a new table.
+Hungry household members now use available prepared food autonomously at home,
+with ordinary urgency, reservation, and player-order rules. Guests choose their
+own meals; absent caretakers preserve stored portions. Automatic eating cannot
+prepare food, spend ingredients, or earn deliberate-play rewards.
 
 ## 1. Make homebuilding dependable
 

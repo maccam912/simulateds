@@ -112,5 +112,20 @@ func _run() -> void:
 	assert(session.world.apply_command("violet",{"type":"build_begin","lot_id":"lot_2"}).ok)
 	game._refresh(); await _capture("construction")
 	assert(housemate.lot_id=="lot_1" and housemate.task.is_empty())
+	# Turn on ordinary household autonomy through Plan and watch served food get used.
+	game._select_lot("lot_1"); await process_frame; await process_frame
+	await _mouse(_point(id),true); await _button(game.meal_panel.buttons.salad); await _advance(20)
+	assert(table.meal.servings==4)
+	for resident: Dictionary in [member,housemate]:
+		for need: String in resident.needs: resident.needs[need]=100.0
+		resident.needs.hunger=20; resident.needs.social=40; resident.idle_clock=2
+	await _button(game.queue_label); await _button(game.autonomy_button)
+	await _button(game.family_box.get_child(0)); await _button(game.autonomy_button)
+	assert(member.autonomy and housemate.autonomy)
+	await _advance(4); await _mouse(_point(id),true); await _capture("autonomy")
+	assert(member.task.get("automatic",false) and housemate.task.get("automatic",false) and table.meal.servings==2)
+	assert(game.meal_panel.note.text.contains("hungry housemates") and game.meal_panel.note.get_global_rect().end.y<=game.tools_box.get_parent().get_global_rect().end.y)
+	await _button(game.autonomy_button); assert(not member.autonomy and member.task.is_empty() and table.meal.servings==2)
+	await _advance(12); assert(not housemate.task.has("meal_action") and housemate.needs.hunger>85 and table.meal.servings==2)
 	game.queue_free(); await process_frame; await root.get_node("Soundscape").shutdown_and_wait()
 	print("MEALS_UI_PASS"); quit()

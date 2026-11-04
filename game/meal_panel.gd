@@ -63,6 +63,7 @@ func refresh(lot_id: String,object_id: String,member_id: String) -> void:
 			status.text=str(plan.member.name)+" · Four portions when served"
 			preview.recipe=str(plan.task.meal_recipe); preview.portions=4; preview.queue_redraw(); break
 	note.text="Ingredients paid when served.\nLeftovers keep while you are away." if not ready else "One chosen portion · Hunger + comfort\nSocial when eating together."
+	if owner and ready: note.text="Autonomy: hungry housemates can eat.\nHunger + comfort · Social together."
 	if not owner and not ready: note.text="This household prepares its meals. Visit again when food is served."
 	_options.clear(); var unavailable := ""
 	for key: String in buttons:

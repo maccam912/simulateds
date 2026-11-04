@@ -446,6 +446,7 @@ func meal_option(profile_id: String,member_id: String,lot_id: String,table_id: V
 	return result
 
 func _meal_task_option(member: Dictionary,lot: Dictionary,task: Dictionary) -> Dictionary:
+	if task.get("automatic",false) and not Meals.can_autoeat(state,lot,member): return _result(false,"Automatic meals are for your own household while you are here.")
 	var table := _object(lot,str(task.get("meal_table","")))
 	if table.get("kind")!="dining_table" or int(table.meal.batch)!=int(task.meal_batch): return _result(false,"The meal or dining table changed.")
 	if task.meal_action=="prepare":
@@ -930,7 +931,7 @@ func leisure_option(member: Dictionary, companion_id: String, kind: String="") -
 	var tasks: Array=member.queue.duplicate()
 	if not member.task.is_empty(): tasks.push_front(member.task)
 	for task: Dictionary in tasks:
-		if task==member.task and task.get("automatic",false): continue
+		if task==member.task and task.get("automatic",false) and object.kind!="dining_table": continue
 		if task.get("type")=="interact" and task.get("target_kind","object")=="object" and task.get("target_id")==object.id:
 			option.label="In your plan"; option.detail="This "+noun+" is already in your plan."
 			if task==member.task and task.get("path",[]).is_empty() and float(task.get("elapsed",0.0))>0.0:
@@ -1116,8 +1117,10 @@ func _choose_autonomy(member: Dictionary, lot: Dictionary) -> void:
 	var best_score := 100000.0
 	var candidates: Array[Dictionary]=[]
 	var urgent := false
+	var ready_meal := false
 	for object: Dictionary in lot.objects:
-		if object.kind in ["garden_bed","easel","dining_table"]: continue # Crops, artwork, and shared meals require deliberate plans.
+		if object.kind in ["garden_bed","easel"]: continue # Crops and artwork require deliberate plans.
+		if object.kind=="dining_table" and (not Meals.can_autoeat(state,lot,member) or Meals.available(state,lot,object)<=0): continue
 		if not _object_user(str(lot.id),object,str(member.id)).is_empty(): continue
 		if Leisure.KINDS.has(object.kind):
 			var places := _shared_places(member,lot,object)
@@ -1127,10 +1130,12 @@ func _choose_autonomy(member: Dictionary, lot: Dictionary) -> void:
 		if value >= 78.0 or not _can_reach_object(lot, _position(member), object):
 			continue
 		candidates.append({"object":object,"need":value})
+		ready_meal=ready_meal or object.kind=="dining_table"
 		urgent=urgent or value<=Pastimes.URGENT
 	for candidate: Dictionary in candidates:
 		var object: Dictionary=candidate.object
 		var value: float=candidate.need
+		if ready_meal and object.kind=="fridge": continue # Eat available food before taking a fresh snack.
 		if urgent and value>Pastimes.URGENT: continue
 		var distance := _position(member).distance_to(Vector2i(int(object.x), int(object.y)))
 		var score := value + distance * 0.2
@@ -1139,7 +1144,9 @@ func _choose_autonomy(member: Dictionary, lot: Dictionary) -> void:
 			best = object
 			best_score = score
 	if not best.is_empty():
-		_queue_action(member, {"type":"interact", "target_id":best.id, "automatic":true})
+		var task := {"type":"interact","target_id":best.id,"automatic":true}
+		if best.kind=="dining_table": task.merge({"meal_action":"eat","meal_table":best.id,"meal_recipe":best.meal.recipe,"meal_batch":int(best.meal.batch)})
+		_queue_action(member,task)
 		_start_next(member, lot)
 
 func _queue_action(member: Dictionary, action: Dictionary) -> void:
