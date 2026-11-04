@@ -183,7 +183,7 @@ func _build_ui() -> void:
 	needs_panel.offset_right = -300
 	var needs := _vbox(needs_panel,9)
 	var needs_head := HBoxContainer.new(); needs.add_child(needs_head)
-	needs_title = _label("Alex · Taking it easy",15); needs_title.size_flags_horizontal=Control.SIZE_EXPAND_FILL; needs_head.add_child(needs_title)
+	needs_title = _label("Alex · Taking it easy",15); needs_title.size_flags_horizontal=Control.SIZE_EXPAND_FILL; needs_title.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; needs_head.add_child(needs_title)
 	queue_label = _button("Plan",func(): _show_tray(plan_panel,not plan_panel.visible))
 	queue_label.add_theme_font_size_override("font_size",12); needs_head.add_child(queue_label)
 	plan_panel = _hud_panel(Rect2(16,-480,408,300),Vector2(0,1))
@@ -344,7 +344,7 @@ func _refresh_plan(member: Dictionary) -> void:
 	var tasks: Array = []
 	if not member.task.is_empty(): tasks.append(member.task)
 	tasks.append_array(member.queue)
-	var signature := selected_member + str(member.get("autonomy",true)) + str(member.task.get("id",""))
+	var signature := selected_member + str(member.get("autonomy",true)) + str(member.task.get("id","")) + (str(member.action) if member.task.is_empty() else "")
 	for task: Dictionary in tasks: signature += str(task.get("id",""))
 	if signature == _plan_signature: return
 	_plan_signature = signature
@@ -356,7 +356,8 @@ func _refresh_plan(member: Dictionary) -> void:
 		var row := HBoxContainer.new(); plan_box.add_child(row)
 		var current: bool = task == member.task
 		var title := _task_title(task,member)
-		var label := _label(("NOW  " if current else "NEXT  ") + title + (" · auto" if task.get("automatic",false) else ""),13,Style.GREEN if current else Style.TEXT)
+		var waiting: bool = member.task.is_empty() and task == member.queue[0] and str(member.action).begins_with("Waiting")
+		var label := _label(("NOW  " if current else "WAIT  " if waiting else "NEXT  ") + title + (" · auto" if task.get("automatic",false) else ""),13,Style.GREEN if current else Style.TEXT)
 		label.size_flags_horizontal=Control.SIZE_EXPAND_FILL; label.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; label.tooltip_text=title; row.add_child(label)
 		var action_id := str(task.get("id",""))
 		var cancel := _button("×",func(): _send({"type":"remove_action","member_id":str(member.id),"action_id":action_id}))

@@ -302,6 +302,7 @@ func _tick_member(member: Dictionary, lot: Dictionary, delta: float) -> void:
 				member.idle_clock = 0.0
 				_choose_autonomy(member, lot)
 	if member.task.is_empty():
+		if not member.queue.is_empty(): return # A busy furnishing keeps its queued order.
 		member.action = "Taking it easy"
 		return
 	var task: Dictionary = member.task
@@ -358,6 +359,7 @@ func _choose_autonomy(member: Dictionary, lot: Dictionary) -> void:
 	var best: Dictionary = {}
 	var best_score := 100000.0
 	for object: Dictionary in lot.objects:
+		if not _object_user(str(lot.id),object,str(member.id)).is_empty(): continue
 		var need: String = Catalog.ITEMS[object.kind].need
 		var value := float(member.needs[need])
 		if value >= 78.0 or not _can_reach_object(lot, _position(member), object):
@@ -379,6 +381,13 @@ func _queue_action(member: Dictionary, action: Dictionary) -> void:
 func _start_next(member: Dictionary, lot: Dictionary) -> void:
 	if member.queue.is_empty():
 		return
+	var pending: Dictionary = member.queue[0]
+	if pending.type == "interact" and pending.get("target_kind", "object") == "object":
+		var furnishing := _object(lot,str(pending.target_id))
+		var user := _object_user(str(lot.id),furnishing,str(member.id))
+		if not user.is_empty():
+			member.action = "Waiting for " + str(user.name) + " · " + str(Catalog.ITEMS[furnishing.kind].name)
+			return
 	var task: Dictionary = member.queue.pop_front()
 	var goals: Array = []
 	if task.type == "move":
@@ -404,6 +413,18 @@ func _start_next(member: Dictionary, lot: Dictionary) -> void:
 	task.path = route
 	member.task = task
 	member.walk_clock = 0.0
+	member.action = "Walking" + (" · " + str(task.get("label", "")) if task.type == "interact" else "") if not route.is_empty() else "Starting activity"
+
+func _object_user(lot_id: String, object: Dictionary, except_member: String = "") -> Dictionary:
+	# Ownership is derived from accepted active tasks, so there are no stale locks
+	# to persist or release after cancel, travel, construction, or disconnect.
+	if object.is_empty() or not bool(Catalog.ITEMS[object.kind].get("exclusive", false)):
+		return {}
+	for family: Dictionary in state.families.values():
+		for resident: Dictionary in family.members:
+			if resident.id != except_member and resident.lot_id == lot_id and resident.task.get("type") == "interact" and resident.task.get("target_id") == object.id:
+				return resident
+	return {}
 
 func _layout_issue(lot: Dictionary) -> String:
 	var gate := Vector2i(8,14)

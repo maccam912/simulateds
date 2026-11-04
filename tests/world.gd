@@ -138,5 +138,33 @@ func _run() -> void:
 			for task: Dictionary in resident.queue: task.erase("id")
 	check(planner.restore(legacy,true), "old saves gain queue IDs and autonomy defaults")
 	check(planner.state.families.plan.members[0].autonomy and planner.state.families.plan.members[0].task.has("id"), "old runtime gets defaults")
+	# Exclusive furnishings reserve when walking, not just when animation starts.
+	var busy := World.new()
+	busy.initialize(); busy.ensure_family("busy", "Sam"); busy.set_online("busy", true)
+	var residents: Array=busy.state.families.busy.members
+	var bed: Dictionary=busy.state.lots.lot_1.objects[0]
+	for resident: Dictionary in residents:
+		resident.autonomy=false; resident.needs.energy=10.0
+		check(busy.apply_command("busy", {"type":"interact","member_id":resident.id,"lot_id":"lot_1","target_id":bed.id}).ok, "queue shared bed request")
+	check(not residents[0].task.is_empty() and residents[1].task.is_empty() and residents[1].queue.size()==1, "bed has one user and one waiter")
+	busy.step(0.1)
+	check(str(residents[1].action).begins_with("Waiting for Sam"), "waiting explains who owns the fixture")
+	check(busy.restore(busy.snapshot(),true), "waiting state survives a replicated snapshot")
+	residents=busy.state.families.busy.members
+	var waiting_id: String=residents[1].queue[0].id
+	busy.apply_command("busy", {"type":"cancel","member_id":residents[0].id})
+	busy.step(0.1)
+	check(residents[1].task.get("id")==waiting_id, "cancellation releases bed to waiting resident")
+	residents[0].autonomy=true
+	busy._choose_autonomy(residents[0],busy.state.lots.lot_1)
+	check(residents[0].task.get("target_id")!=bed.id, "autonomy chooses another available bed")
+	busy.set_online("busy",false)
+	check(busy._object_user("lot_1",bed).is_empty(), "disconnect releases all furnishing reservations")
+	busy.set_online("busy",true)
+	for resident: Dictionary in residents:
+		resident.autonomy=false
+		busy.apply_command("busy", {"type":"interact","member_id":resident.id,"lot_id":"lot_1","target_id":bed.id})
+	busy.apply_command("busy", {"type":"build_begin","lot_id":"lot_1"})
+	check(busy._object_user("lot_1",bed).is_empty(), "construction releases furnishing reservations")
 	if failures == 0: print("WORLD_PASS")
 	quit(1 if failures else 0)

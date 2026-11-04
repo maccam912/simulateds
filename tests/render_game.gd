@@ -31,6 +31,16 @@ func _run() -> void:
 	await create_timer(0.4).timeout
 	await RenderingServer.frame_post_draw
 	assert(root.get_texture().get_image().save_png("res://build/plan" + suffix + ".png") == OK)
+	var family: Dictionary=session.state.families[session.profile_id]
+	var bed_id: String=session.state.lots[game.viewed_lot].objects[0].id
+	for resident: Dictionary in family.members:
+		game._send({"type":"cancel","member_id":resident.id})
+		game._send({"type":"interact","member_id":resident.id,"lot_id":game.viewed_lot,"target_id":bed_id})
+	game.selected_member=str(family.members[1].id)
+	game._refresh()
+	await create_timer(0.3).timeout
+	await RenderingServer.frame_post_draw
+	assert(root.get_texture().get_image().save_png("res://build/waiting" + suffix + ".png") == OK)
 	print("GAME_RENDER_PASS")
 	await root.get_node("Soundscape").shutdown_and_wait()
 	quit()
