@@ -37,7 +37,8 @@ and live controls reference now lead into the existing systems without adding
 permanent HUD clutter. Resident favorites now gently influence autonomous leisure
 choices, with editable preferences and a visible daily-plan explanation. Mail now
 includes durable return recaps of simulated absence, actual allowance, postcards,
-and discarded construction drafts.
+and discarded construction drafts. Visible activity now has sparse positional
+footsteps and domestic sounds with bounded voices and shared audio settings.
 See [the playtest log](PLAYTEST_LOG.md) for evidence
 and current usability priorities.
 
@@ -62,7 +63,8 @@ understandable result. Fuzz placement and reopening around residents/visitors.
 - Visible action queues, interruption rules, autonomy controls, and thought icons.
 - Object reservations, shared activities, conversations, and basic relationships
   are implemented. Add richer shared recreation and personality-driven choices.
-- Sound and animation for each important action; original art pass.
+- Activity poses and sparse positional sounds are implemented. Improve resident
+  readability, thoughtful need cues, richer animation, and the original art pass.
 
 Exit: two residents can use a busy home without occupying the same object;
 player-directed actions beat autonomy predictably; a visitor and resident can

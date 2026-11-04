@@ -1,13 +1,19 @@
 extends Node
 signal shutdown_finished
+signal world_sound_started(sound: String, position: Vector2)
 ## Original generated music and UI sounds. Mix controls live on named audio buses.
 const MUSIC_PATHS := {"menu":"res://assets/audio/menu.wav","live":"res://assets/audio/live.wav","build":"res://assets/audio/build.wav"}
 const EFFECT_PATHS := {"hover":"res://assets/audio/hover.wav","click":"res://assets/audio/click.wav","confirm":"res://assets/audio/confirm.wav","error":"res://assets/audio/error.wav","save":"res://assets/audio/save.wav","build":"res://assets/audio/place.wav"}
+const WORLD_SOUNDS := ["step_wood","step_grass","page","water","tea","meal","fabric","shower","chat","television"]
 var context := "silent"
 var enabled := false
 var _music: Array[AudioStreamPlayer]=[]
 var _effects: Array[AudioStreamPlayer]=[]
 var _ambience: AudioStreamPlayer
+var _world_effects: Array[AudioStreamPlayer2D]=[]
+var _world_active := false
+var _world_context := ""
+var world_sounds_started := 0
 var _streams: Dictionary={}
 var _active_music:=0
 var _effect_cursor:=0
@@ -31,6 +37,12 @@ func _ready() -> void:
 		player.bus="Effects"
 		add_child(player)
 		_effects.append(player)
+	for index in range(4):
+		var player := AudioStreamPlayer2D.new()
+		player.bus="Effects"; player.panning_strength=0.65; player.attenuation=1.0
+		add_child(player); _world_effects.append(player)
+	Preferences.changed.connect(func():
+		if float(Preferences.values.master_volume)<=0.0 or float(Preferences.values.effects_volume)<=0.0: stop_world())
 	_ambience=AudioStreamPlayer.new()
 	_ambience.bus="Ambience"
 	_ambience.volume_db=-60
@@ -52,6 +64,7 @@ func _stream(path: String,looping: bool=false) -> AudioStream:
 func set_context(next_context: String) -> void:
 	if not next_context in ["menu","live","build","silent"] or next_context==context: return
 	context=next_context
+	if context!="live": stop_world()
 	if not enabled: return
 	if _fade!=null and _fade.is_valid(): _fade.kill()
 	var duration:=0.15 if Preferences.values.reduced_motion else 1.1
@@ -107,6 +120,40 @@ func attach_controls(root: Node) -> void:
 			if is_instance_valid(button) and not button.disabled: play_ui("hover"))
 	for child in root.get_children(): attach_controls(child)
 
+func sync_world(active: bool, key: String) -> void:
+	if not active or key!=_world_context: stop_world()
+	_world_context=key
+	_world_active=active and enabled and context=="live"
+
+func play_world(event: Dictionary) -> bool:
+	if not enabled or not _world_active or context!="live" or not event.get("sound") in WORLD_SOUNDS: return false
+	if float(Preferences.values.master_volume)<=0.0 or float(Preferences.values.effects_volume)<=0.0: return false
+	# Never steal an active voice. Dropping a quiet texture is better than a click.
+	for player: AudioStreamPlayer2D in _world_effects:
+		if player.playing: continue
+		var sound: String=event.sound
+		player.position=event.position
+		player.set_meta("member",str(event.get("member",""))); player.set_meta("task",str(event.get("task","")))
+		player.max_distance=maxf(get_viewport().get_visible_rect().size.x,get_viewport().get_visible_rect().size.y)*1.2
+		player.stream=_stream("res://assets/audio/"+sound+".wav")
+		player.pitch_scale=clampf(float(event.get("pitch",1.0)),0.95,1.05)
+		player.volume_db=-18.0 if sound.begins_with("step_") or sound=="chat" else -12.0
+		player.play(); world_sounds_started+=1
+		world_sound_started.emit(sound,player.position)
+		return true
+	return false
+
+func update_world_sources(sources: Dictionary) -> void:
+	for player: AudioStreamPlayer2D in _world_effects:
+		if not player.playing: continue
+		var source: Dictionary=sources.get(str(player.get_meta("member","")),{})
+		if source.is_empty() or source.task!=str(player.get_meta("task","")): player.stop()
+		else: player.position=source.position
+
+func stop_world() -> void:
+	_world_active=false
+	for player: AudioStreamPlayer2D in _world_effects: player.stop()
+
 func shutdown() -> void:
 	# Release playback references before SceneTree destroys the audio server.
 	# Explicitly clearing streams also releases resources cached for UI effects.
@@ -114,6 +161,8 @@ func shutdown() -> void:
 	context="silent"
 	if _fade!=null and _fade.is_valid(): _fade.kill()
 	_fade=null
+	stop_world()
+	for player: AudioStreamPlayer2D in _world_effects: player.stream=null
 	for player in _music+_effects:
 		if is_instance_valid(player):
 			player.stop()
@@ -147,4 +196,5 @@ func _exit_tree() -> void:
 	shutdown()
 	_music.clear()
 	_effects.clear()
+	_world_effects.clear()
 	_ambience=null

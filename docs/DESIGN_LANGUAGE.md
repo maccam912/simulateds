@@ -204,9 +204,13 @@ the authoritative host; a client must not silently edit its local replica.
   100 ms. The generator and asset notes live in `tools/generate_audio.py` and
   `assets/audio/README.md`.
 - Button hover/click, command confirmation/error, saves, and authoritative
-  furnishing placement have sound hooks. Resident footsteps, appliances,
-  conversations, room acoustics, and object-specific interaction sounds are
-  future hooks; the current garden ambience does not imply those are simulated.
+  furnishing placement have sound hooks. Visible walking and activities now add
+  sparse positional accents: wood/grass footsteps, pages, water, tea/cutlery,
+  fabric, and abstract conversation/television textures. A four-voice pool keeps
+  them separate from UI cues. They follow accepted task progress and displayed
+  movement, stop offscreen or behind menus, and respect Effects/Master mute.
+  Reduced motion retains audio. Actual room acoustics, continuous appliances,
+  and recorded voice/instrument performances remain future work.
 - `game/debug_console.gd` provides literal selectable output, a 50-command
   history, 180 retained log entries, completion, and a 256-character command
   limit. `game/debug_commands.gd` owns the explicit command registry and

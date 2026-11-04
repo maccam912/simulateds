@@ -44,7 +44,10 @@ console pause solo simulation; a hosted neighborhood keeps running for everyone.
 **Settings** persists separate Master/Music/Effects/Ambience volumes, fullscreen,
 VSync, frame cap, scenery detail, UI scale, reduced motion, and key bindings.
 Conflicting bindings are rejected. Escape and F1 remain recovery shortcuts.
-Original menu/live/build music, garden ambience, and UI sounds are included;
+Original menu/live/build music, garden ambience, UI cues, and quiet positional
+footsteps and household activity sounds are included. Effects volume controls
+household sounds too; menus, construction, offscreen sources, and stopped play
+keep them quiet. Reduced motion preserves audio feedback;
 see [the sound palette](assets/audio/README.md).
 
 **Save neighborhood** creates named copies or explicitly overwrites a selected

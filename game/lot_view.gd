@@ -9,9 +9,12 @@ const BuildRules = preload("res://game/build_rules.gd")
 const RoomPlan = preload("res://game/room_plan.gd")
 const Finishes = preload("res://game/finishes.gd")
 const ResidentMotion = preload("res://game/resident_motion.gd")
+const ActivityAudio = preload("res://game/activity_audio.gd")
 const Appearance = preload("res://game/appearance.gd")
 const Daylight = preload("res://game/daylight.gd")
 var motion = ResidentMotion.new()
+var activity_audio = ActivityAudio.new()
+var _audio_tick := -1
 var light: Dictionary = Daylight.sample(480)
 var world: Dictionary = {}
 var lot_id := "lot_1"
@@ -53,7 +56,35 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if not Session.menu_paused: _time += delta
 	motion.update(world,lot_id,delta,bool(Preferences.values.get("reduced_motion",false)),0.42 if Session.role=="client" else 0.22)
+	_update_activity_audio(delta)
 	queue_redraw()
+
+func _update_activity_audio(delta: float) -> void:
+	var lot: Dictionary=world.get("lots",{}).get(lot_id,{})
+	var key := Session.role+":"+lot_id+":"+str(lot.get("revision",0))
+	var active: bool=Soundscape.enabled and is_visible_in_tree() and Soundscape.context=="live" and not Session.menu_paused and not lot.is_empty() and not lot.get("building",false)
+	active=active and (Session.role=="client" or Session.debug_speed>0.0) and float(Preferences.values.effects_volume)>0.0 and float(Preferences.values.master_volume)>0.0
+	if int(world.get("tick",0))<_audio_tick: activity_audio.reset(); Soundscape.stop_world()
+	_audio_tick=int(world.get("tick",0))
+	Soundscape.sync_world(active,key)
+	var residents: Array[Dictionary]=[]
+	var sources := {}
+	if active:
+		_layout()
+		for family: Dictionary in world.get("families",{}).values():
+			for member: Dictionary in family.members:
+				if member.lot_id!=lot_id: continue
+				var point := resident_anchor(member)
+				if not Rect2(Vector2.ZERO,size).has_point(point): continue
+				var cell := motion.position(member)
+				var task: Dictionary=member.get("task",{})
+				residents.append({"id":str(member.id),"cell":cell,"position":get_global_transform_with_canvas()*point,"kind":str(_activity_pose(member).get("kind","")),"task":str(task.get("id","")),"elapsed":float(task.get("elapsed",0.0)),"walking":motion.moving(str(member.id)) or not task.get("path",[]).is_empty(),"indoors":[roundi(cell.x),roundi(cell.y)] in lot.floors})
+				sources[str(member.id)]={"position":get_global_transform_with_canvas()*point,"task":str(task.get("id",""))}
+	Soundscape.update_world_sources(sources)
+	for event: Dictionary in activity_audio.sample(key,residents,delta,active): Soundscape.play_world(event)
+
+func _exit_tree() -> void:
+	Soundscape.stop_world()
 
 func _layout() -> void:
 	# The camera frames the house, not a panel. Ground continues behind the HUD.

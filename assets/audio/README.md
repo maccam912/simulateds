@@ -20,3 +20,26 @@ buses under Master. At zero volume a bus is muted.
 `game/audio_director.gd` crossfades contexts and limits hover sounds. Headless
 servers and native smoke checks do not start audio playback. Settings persist
 separately from world saves.
+
+
+Ten short mono household textures now accompany visible accepted actions:
+`step_wood`, `step_grass`, `page`, `water`, `tea`, `meal`, `fabric`, `shower`,
+`chat`, and `television`. They are original filtered-noise/resonance sketches,
+including abstract syllables rather than a sampled or imitated voice. Quiet cloth
+settling covers beds/sofas; liquid textures cover watering and bathroom activity.
+Textures are sparse accents, not appliance loops or simulated room acoustics.
+
+A presentation sampler follows displayed walking and actual task progress.
+Repeated snapshots produce no repeated sounds, teleports produce no footsteps,
+and resuming/changing lots never replays a backlog. Four separate positional
+voices share the Effects bus with UI sounds but never steal UI voices. Activity
+cues take priority over footsteps; per-resident and overall rate limits keep a
+crowded house from chattering. Sources follow the camera and stop when offscreen
+or canceled. Menus, the console, construction, effects/master mute, and a stopped
+simulation stop household playback. Reduced motion changes visuals, not hearing.
+
+`tests/render_activity_audio.gd` records the actual Godot output bus into ignored
+`build/activity-audio-*.wav` artifacts. It checks left/right placement, zero output
+with effects muted, bounded overlapping voices, clean shutdown, and normal live
+walking/reading/gardening/tea. These mixer measurements are not a human listening
+or device-speaker assessment; that remains part of family playtesting.

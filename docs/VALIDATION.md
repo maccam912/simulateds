@@ -83,7 +83,7 @@ service mode was not repeated for this update.
 ## Still open
 
 The subsequent feature checks are recorded in [PLAYTEST_LOG.md](PLAYTEST_LOG.md).
-The current local suite contains twenty-four model/application suites, plus real Iroh
+The current local suite contains twenty-five model/application suites, plus real Iroh
 host/two-client reconnect and dedicated-server startup. The room-construction
 checkpoint passed Linux, Windows, macOS, and Android CI builds/exports. The later
 household checkpoint passed the three desktop jobs; Android built, tested,
@@ -136,6 +136,18 @@ the host's saved world retained both clients' read states after disconnect.
 Graphical input checks passed at standard and compact desktop sizes. They cover
 optional entry, fixed action footer, current-versus-historical gift totals, Escape,
 construction continuity, and immediately persisted read state without a manual save.
+
+The Home news checkpoint passed all four platform CI jobs. Activity-audio checks
+cover every activity mapping, unchanged snapshots, periodic progress, teleport
+silence, resume/lot transitions, headless silence, eight-walker fairness, and rate
+bounds. A graphical mixer playtest recorded real left/right positional output,
+zero effects-mute output, four household voices plus an independent UI cue, and
+ordinary walking/reading/gardening/tea. Live sources stop when panned offscreen,
+paused, canceled, or under construction; reduced motion retains footsteps.
+The host-menu check uses the host role locally, not a network audio playtest.
+The captured busy mix peaked at 0.158 and the ordinary mix at 0.116 full scale,
+with no clipped samples. Source files have quiet endpoints and no clipping.
+These objective checks do not establish subjective mix quality on user devices.
 
 Physical Android operation, cross-OS multiplayer, exported game packages,
 production authentication, public matchmaking abuse resistance, long-term

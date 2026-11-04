@@ -545,3 +545,48 @@ menu clicks. Next: subtle spatial footsteps and furnishing/activity sounds that
 follow visible accepted actions, respect audio settings and pause/menu state,
 and stay bounded when several residents are active. Reassess the mix in the
 running game so it adds life without turning into repetitive noise.
+
+
+## 2026-11-04 · A house that sounds inhabited
+
+Visible residents now produce quiet wood/grass footsteps and domestic activity
+accents. Ten original procedural mono textures cover pages, watering/bathroom
+water, ceramic/cutlery, fabric settling, showers, and abstract conversation and
+television. They follow actual task progress and displayed movement, rather than
+running independent appliance loops. Changing lots, resuming a menu, teleporting,
+or receiving the same snapshot again creates no catch-up sound. A sparse shared
+rate limit and four positional voices keep crowded houses bounded; the existing
+UI voice pool remains independent. Sources follow camera movement and stop when
+offscreen or canceled. Menus/console, construction, effects/master mute, and zero
+simulation speed stop household playback. Reduced motion retains footsteps.
+
+Validation: all twenty-five suites passed, followed by real Iroh host/two-client
+reconnect and dedicated-server checks. Pure scheduling checks include every
+activity, start/periodic timing, unchanged snapshots, repeated resumes, teleports,
+source removal, fair representation of simultaneous residents, and eight walkers
+bounded to at most 56 cues over ten seconds. During integration review, the quiet
+gaps between accepted walking steps were found to reset stride accumulation;
+tracking the outstanding walking path now preserves normal and reduced-motion
+footsteps across those gaps.
+
+A graphical playtest recorded the actual Godot Master output. Left/right probes
+produced greater energy on the expected channel; effects mute produced exactly
+zero samples. Four overlapping household textures plus a UI confirmation peaked
+at 0.158 full scale, without clipping. A 6.3-second ordinary play excerpt included
+wood/grass walking, reading, watering, and tea with music/ambience, peaking at
+0.116. The playtest verified that host-role simulation advances behind a menu
+while household sounds stop, offscreen panning stops current voices, zero speed
+is quiet, and reduced motion keeps footsteps. The host-role audio assertion is
+local; it does not claim a separate network audio session. Shutdown was clean.
+All ten source textures were checked for nonzero signal, bounded amplitude, and
+quiet endpoints. This is objective mixer and agent-playtest evidence, not a human
+listening assessment or physical speaker/headphone validation. The previous Home
+news checkpoint passed all four platform CI jobs.
+
+Fresh assessment: movement and recreation now have audible presence, but the
+capture still shows the selected name partly hidden behind a bookshelf, and an
+unselected resident gives little indication of needing attention. Next: improve
+resident readability with labels above furniture and small actionable need cues,
+keeping the world readable without adding another permanent HUD panel. Preserve
+quiet play by showing cues only when they are useful, and verify clustered
+residents, occlusion, compact layout, and direct care through the real command path.

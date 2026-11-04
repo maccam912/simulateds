@@ -115,6 +115,53 @@ def ui(name, notes, duration=.32, gain=.22):
     write(name + ".wav", track, .45)
 
 
+def household():
+    """Quiet domestic textures: filtered noise, small resonances, and water drops."""
+    definitions = {"step_wood": .15, "step_grass": .18, "page": .44, "water": .72,
+                   "tea": .56, "meal": .65, "fabric": .30, "shower": .85,
+                   "chat": .62, "television": .65}
+    for number, (name, duration) in enumerate(definitions.items()):
+        rng = random.Random(4200 + number)
+        channel = array("f", [0]) * round(duration * RATE)
+        low = 0.0
+        for i in range(len(channel)):
+            t = i / RATE
+            u = t / duration
+            noise = rng.uniform(-1, 1)
+            low = .88 * low + .12 * noise
+            fade = min(1.0, t / .012, (duration - t) / .035)
+            if name.startswith("step"):
+                envelope = math.exp(-t * 30)
+                signal = (.5 * math.sin(TAU * (92 if name == "step_wood" else 68) * t) + low * 2) * envelope
+                if name == "step_grass": signal = signal * .4 + (noise - low) * .14 * math.sin(math.pi * u) ** 2
+            elif name in ("page", "fabric"):
+                envelope = math.sin(math.pi * u) ** 2 * (.65 + .35 * math.sin(TAU * u * 2))
+                signal = (noise - low if name == "page" else low * 3) * envelope * .3
+            elif name in ("water", "shower"):
+                signal = (noise - low) * .12 * math.sin(math.pi * u) ** .5
+                for start in ([.08, .23, .47] if name == "water" else [.14, .52]):
+                    age = t - start
+                    if age >= 0: signal += math.sin(TAU * (640 * age + 450 * age * age)) * math.exp(-age * 35) * .18
+            elif name in ("tea", "meal"):
+                signal = low * .12 * math.sin(math.pi * u) ** 2
+                for start in ([.02, .26] if name == "tea" else [.03, .21, .39]):
+                    age = t - start
+                    if age >= 0:
+                        frequency = 1340 if name == "tea" else 710
+                        signal += (math.sin(TAU * frequency * age) + .3 * math.sin(TAU * frequency * 1.63 * age)) * math.exp(-age * 24) * .24
+            elif name == "chat":
+                # Abstract soft syllables, not a sample or imitation of a voice.
+                envelope = math.sin(math.pi * u * 2) ** 4
+                signal = (math.sin(TAU * (145 * t + 20 * t * t)) + .25 * math.sin(TAU * 430 * t)) * envelope * .12
+            else:
+                signal = 0.0
+                for start, frequency in [(.02, 392), (.25, 330)]:
+                    age = t - start
+                    if age >= 0: signal += math.sin(TAU * frequency * age) * math.exp(-age * 12) * .15
+            channel[i] = signal * fade
+        write(name + ".wav", [channel], .42)
+
+
 def main():
     DEST.mkdir(parents=True, exist_ok=True)
     for style in ["menu", "live", "build"]:
@@ -126,7 +173,8 @@ def main():
     ui("error", [(0, 55), (.10, 53)], .32, .13)
     ui("save", [(0, 67), (.10, 72), (.20, 76)], .58, .15)
     ui("place", [(0, 60), (.055, 67)], .24, .17)
-    print("Generated original music, garden ambience, and six UI sounds in", DEST)
+    household()
+    print("Generated original music, garden ambience, six UI sounds, and ten household textures in", DEST)
 
 
 if __name__ == "__main__":
