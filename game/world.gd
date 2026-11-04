@@ -11,6 +11,7 @@ const HomeNews = preload("res://game/home_news.gd")
 const Mailbox = preload("res://game/mailbox.gd")
 const Wellbeing = preload("res://game/wellbeing.gd")
 const Finishes = preload("res://game/finishes.gd")
+const Windows = preload("res://game/windows.gd")
 const Pastimes = preload("res://game/pastimes.gd")
 const Appearance = preload("res://game/appearance.gd")
 const Tabletop = preload("res://game/tabletop.gd")
@@ -24,7 +25,7 @@ const MAX_QUEUE := 8
 const MAX_BUILD_HISTORY := 32
 const MINUTES_PER_SECOND := 3.0
 const MIN_ACTIVITY_TIME := 4.0
-const BUILD_FIELDS := ["floors", "walls", "doors", "objects", "funds", "finishes"]
+const BUILD_FIELDS := ["floors", "walls", "doors", "objects", "funds", "finishes", "windows"]
 const NEEDS := ["hunger", "energy", "hygiene", "bladder", "fun", "social", "comfort"]
 const DECAY := {"hunger":0.13, "energy":0.08, "hygiene":0.10, "bladder":0.15, "fun":0.12, "social":0.09, "comfort":0.07}
 const ACTION_NAMES := {"bed":"Sleeping", "fridge":"Making a meal", "shower":"Showering", "toilet":"Using the bathroom", "sofa":"Relaxing", "tv":"Watching television", "bookshelf":"Reading", "plant":"Tending plants", "table":"Having tea", "game_table":"Playing a tabletop puzzle"}
@@ -53,6 +54,7 @@ func initialize() -> void:
 			lot.objects.append(_new_object(str(item[0]), int(item[1]), int(item[2]), 0))
 		state.lots[id] = lot
 		lot.finishes=Finishes.create()
+		lot.windows={"5,3":"cottage","10,3":"cottage","3,7":"cottage"}
 
 func ensure_family(profile_id: String, display_name: String) -> String:
 	if profile_id.is_empty() or profile_id.length() > 128:
@@ -130,7 +132,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 	if not lot_id is String or not state.lots.has(lot_id):
 		return _result(false, "That lot does not exist.")
 	var lot: Dictionary = state.lots[lot_id]
-	if type in ["build_begin", "build_end", "build_cancel", "build_undo", "build_redo", "place", "erase", "move_object", "build_room", "paint"]:
+	if type in ["build_begin", "build_end", "build_cancel", "build_undo", "build_redo", "place", "erase", "move_object", "build_room", "paint", "set_window"]:
 		if lot.owner != profile_id:
 			return _result(false, "Only the owner can build on this lot.")
 		if type == "build_begin":
@@ -152,7 +154,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 			return _result(true, "Construction started. Your family is paused; neighbors keep living.")
 		if not lot.building:
 			return _result(false, "Enter construction mode first.")
-		if type in ["build_undo", "build_redo", "build_room", "paint"]:
+		if type in ["build_undo", "build_redo", "build_room", "paint", "set_window"]:
 			if not _integer(command.get("revision")) or int(command.revision) != int(lot.revision):
 				return _result(false, "The building draft changed. Review the preview and try again.")
 			if type in ["build_undo","build_redo"]: return _history_step(lot,type == "build_redo")
@@ -375,7 +377,17 @@ func _build(lot: Dictionary, command: Dictionary) -> Dictionary:
 	if not _valid_coord(command.get("x")) or not _valid_coord(command.get("y")):
 		return _result(false, "Choose a tile inside the lot.")
 	var cell := Vector2i(int(command.x), int(command.y))
+	if command.type=="set_window":
+		var plan := Windows.inspect(lot,command)
+		if not plan.ok: return plan
+		Windows.apply(lot,plan)
+		return _result(true,str(plan.message)+". Undo restores this edit.")
 	if command.type == "erase":
+		if not Windows.at(lot,cell.x,cell.y).is_empty():
+			var plan := Windows.inspect(lot,{"style":"","x":cell.x,"y":cell.y})
+			if not plan.ok: return plan
+			Windows.apply(lot,plan)
+			return _result(true,str(plan.message)+".")
 		for object: Dictionary in lot.objects:
 			if _object_cells(object).has(cell):
 				lot.objects.erase(object)
@@ -418,7 +430,7 @@ func _build(lot: Dictionary, command: Dictionary) -> Dictionary:
 	if kind in ["floor","wall","door"]:
 		if kind=="wall": lot.doors.erase(existing)
 		elif kind=="door":
-			lot.walls.erase(existing); Finishes.remove(lot,"wall",cell.x,cell.y)
+			lot.walls.erase(existing); Finishes.remove(lot,"wall",cell.x,cell.y); Windows.remove(lot,cell.x,cell.y)
 		lot[_tile_key(kind)].append(existing)
 	else:
 		lot.objects.append(_new_object(kind,cell.x,cell.y,rotation))
@@ -1064,6 +1076,7 @@ func _normalize_numbers() -> void:
 	for lot: Dictionary in state.lots.values():
 		lot.build_undo = int(lot.get("build_undo",0))
 		if not lot.has("finishes"): lot.finishes=Finishes.create()
+		if not lot.has("windows"): lot.windows={}
 		lot.build_redo = int(lot.get("build_redo",0))
 		lot.funds = int(lot.funds)
 		lot.revision = int(lot.revision)
@@ -1165,7 +1178,7 @@ func _valid_state(data: Dictionary) -> bool:
 				if not _inside(cell) or occupied.has(cell) or not floor_cells.has(cell):
 					return false
 				occupied[cell] = true
-		if not Finishes.valid(lot): return false
+		if not Finishes.valid(lot) or not Windows.valid(lot): return false
 	var members_seen := {}
 	for profile_id: Variant in data.families:
 		if not profile_id is String or profile_id.is_empty() or profile_id.length() > 128 or not data.families[profile_id] is Dictionary:

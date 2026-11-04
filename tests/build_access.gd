@@ -56,7 +56,7 @@ func _run() -> void:
 	# including rotations, legacy occupied starts, isolated rooms, and bad gates.
 	var rng := RandomNumberGenerator.new(); rng.seed=6138
 	for layout in range(180):
-		_fresh(); lot.walls.clear()
+		_fresh(); lot.walls.clear(); lot.windows.clear()
 		for y in range(16):
 			for x in range(16):
 				if rng.randf()<0.25: lot.walls.append([x,y])

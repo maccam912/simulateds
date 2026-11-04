@@ -13,7 +13,7 @@ func _run() -> void:
 	var first: Dictionary=world.state.families.actor.members[0]
 	var second: Dictionary=world.state.families.actor.members[1]
 	var lot: Dictionary=world.state.lots.lot_1
-	lot.objects=[]; lot.walls=[]; lot.doors=[]
+	lot.objects=[]; lot.walls=[]; lot.doors=[]; lot.windows={}
 	for member: Dictionary in [first,second]: member.autonomy=false; member.queue=[]; member.task={}
 	var motion := Motion.new()
 	first.x=5; first.y=5; second.x=8; second.y=8

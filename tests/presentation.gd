@@ -21,7 +21,7 @@ func _run() -> void:
 	assert(motion.position(member)==Vector2(8,7) and not motion.moving(str(member.id)))
 	# A sparse network snapshot can omit the intermediate turn around a wall.
 	var lot: Dictionary=world.state.lots.lot_1
-	lot.objects=[]; lot.walls=[[1,1]]; lot.doors=[]; lot.revision+=1
+	lot.objects=[]; lot.walls=[[1,1]]; lot.doors=[]; lot.windows={}; lot.revision+=1
 	member.x=0; member.y=1
 	motion.update(world.state,"lot_1",0.0,false)
 	member.x=2

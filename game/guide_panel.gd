@@ -19,6 +19,7 @@ func _ready() -> void:
 	_card(building,"Start with a room","Choose Room and click two opposite corners. The preview includes floors, walls, a doorway, and the price. Rotate changes the door side.",[["build","Open build mode"]])
 	_card(building,"Find a place for everything","Search by a name or use: sleep, meal, book. Green previews are valid. Keep a route to the front gate and enough space to use each furnishing.",[["catalog","Browse the catalog"],["move","Rearrange furniture"]])
 	_card(building,"Your own colors","Floor and wall finishes decorate existing surfaces. Area uses two corners; Room fills connected floor with one click, stopping at walls and doorways. Preview the exact price; only changed tiles cost money. One Undo restores the edit.",[["decorate","Browse finishes"]])
+	_card(building,"Let the daylight in","Choose Windows in the catalog, then a style and an existing solid wall. Hover previews the exact price. Replacements credit the old window’s resale value; Remove window leaves the wall in place. Windows keep rooms and routes intact.",[])
 	_card(building,"Change your mind","Undo restores an edit and its exact cost; Redo reapplies it. Discard draft restores the whole house. Finish building checks that the home remains usable.",[])
 	_card(building,"Keep a neighborhood","The host owns shared saves. Saved games keep the last finished house; an unfinished construction draft is discarded when you leave.",[["save","Save neighborhood"]])
 	var neighbors := _page("Neighbors")

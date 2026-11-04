@@ -365,3 +365,30 @@ The plain watching view hides paths and expired queued confirmations. Cancellati
 travel, construction, menus, and selection changes clear irrelevant feedback.
 Reduced motion keeps this static information. Request acknowledgements alone do
 not create markers: each one must exist in the accepted world snapshot.
+
+
+## Windows belong to the house
+
+Windows are mounted on existing walls, with three readable silhouettes: pale
+cottage crossbars, a wood-framed picture pane, and garden-green shutters. Use
+muted blue glass, a small upper reflection, a beveled frame, and a slim sill.
+Night softly warms the glass with the existing domestic palette; this is
+presentation, not a new room-lighting or simulation system.
+
+Fit direction to the current wall run, including neighboring doors. Raise the
+walls while the Windows tool is active so near-side placement remains visible.
+During normal life and access inspection, near windows reduce to a glass sill
+along with the existing cutaway wall. Avoid obscuring residents with full-height
+near frames. Wall-face picking must select the mounted tile, even where that
+face projects above a different floor tile.
+
+Use a small catalog palette with all three priced styles and Remove window
+visible together at compact size. Hover previews the actual style on the wall
+and the exact net price. Replacing credits 60% of the previous window's cost;
+removal keeps the wall. Door conversions and extension doorways also trade in
+their window, and one Undo restores every layer and the exact budget. Missing
+walls, insufficient funds, and unchanged styles have plain explanations and
+cannot partly apply. Windows do not create passages or change room filling.
+Keep the current style while waiting for a command; accepted snapshots determine
+the fitted house. Use the established construction sound, with no extra ambient
+loop or persistent HUD control.

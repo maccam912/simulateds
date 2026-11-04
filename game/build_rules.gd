@@ -1,6 +1,7 @@
 extends RefCounted
 ## One non-mutating placement check serves host commands and local previews.
 const Catalog = preload("res://game/catalog.gd")
+const Windows = preload("res://game/windows.gd")
 
 static func inspect(lot: Dictionary, command: Dictionary, residents: Array) -> Dictionary:
 	if not _coordinate(command.get("x")) or not _coordinate(command.get("y")):
@@ -19,6 +20,8 @@ static func inspect(lot: Dictionary, command: Dictionary, residents: Array) -> D
 	if not _integer(rotation) or int(rotation)<0 or int(rotation)>3: return _no("Invalid rotation.")
 	var definition: Dictionary = Catalog.ITEMS[kind]
 	var cost := 0 if moving else int(definition.cost)
+	var refund := Windows.resale(lot,cell.x,cell.y) if not moving and kind=="door" else 0
+	cost-=refund
 	if int(lot.funds)<cost: return _no("Need § %d more." % (cost-int(lot.funds)))
 	if moving and int(object.x)==cell.x and int(object.y)==cell.y and int(object.rotation)==int(rotation):
 		return _no("Already here. Choose a new tile or rotate.")
@@ -38,7 +41,7 @@ static func inspect(lot: Dictionary, command: Dictionary, residents: Array) -> D
 				if lot.walls.has([x,y]) or lot.doors.has([x,y]): return _no("Leave walls and doorways clear.")
 				if residents.has(tile): return _no("A resident is standing here.")
 				if _furniture_at(lot,tile,str(object.get("id",""))): return _no("Another furnishing is in the way.")
-	return {"ok":true,"message":str(definition.name)+( " · No cost" if moving else " · § %d" % cost),"kind":kind,"cost":cost,"rotation":int(rotation)}
+	return {"ok":true,"message":str(definition.name)+( " · No cost" if moving else " · § %d" % cost)+(" after §%d window trade-in" % refund if refund>0 else ""),"kind":kind,"cost":cost,"rotation":int(rotation)}
 
 static func _furniture_at(lot: Dictionary, cell: Vector2i, ignore_id: String) -> bool:
 	for object: Dictionary in lot.objects:

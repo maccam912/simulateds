@@ -8,6 +8,7 @@ const Catalog = preload("res://game/catalog.gd")
 const BuildRules = preload("res://game/build_rules.gd")
 const RoomPlan = preload("res://game/room_plan.gd")
 const Finishes = preload("res://game/finishes.gd")
+const Windows = preload("res://game/windows.gd")
 const WalkFeedback = preload("res://game/walk_feedback.gd")
 const ResidentFacing = preload("res://game/resident_facing.gd")
 const ResidentMotion = preload("res://game/resident_motion.gd")
@@ -44,6 +45,11 @@ var paint_pending := false
 var paint_plan: Dictionary = {}
 var finish_choice := ""
 var finish_selection := "area"
+var window_style := "cottage"
+var window_pending := false
+var window_regions: Dictionary={}
+var overlay_rects: Array[Rect2]=[]
+var preview_label_rect := Rect2()
 var _paint_cells: Dictionary = {}
 var _preview_finish := ""
 var preview_result: Dictionary = {}
@@ -203,7 +209,7 @@ func _gui_input(event: InputEvent) -> void:
 				if building and access_inspecting:
 					if target.get("type")=="access": entity_clicked.emit(target)
 					accept_event(); return
-				if building and build_kind in ["finish_wall","door","erase"] and target.get("type")=="wall": cell=Vector2i(int(target.x),int(target.y))
+				if building and build_kind in ["finish_wall","door","erase","window"] and target.get("type")=="wall": cell=Vector2i(int(target.x),int(target.y))
 				if building and build_kind=="move" and build_object_id.is_empty() and target.get("type")=="object":
 					entity_clicked.emit(target)
 				elif not building and not target.is_empty():
@@ -221,7 +227,7 @@ func _gui_input(event: InputEvent) -> void:
 		_pointer = event.position
 		hover_cell = cell_at(event.position)
 		hover_target = hit_target(event.position)
-		if building and build_kind in ["finish_wall","door","erase"] and hover_target.get("type")=="wall": hover_cell=Vector2i(int(hover_target.x),int(hover_target.y))
+		if building and build_kind in ["finish_wall","door","erase","window"] and hover_target.get("type")=="wall": hover_cell=Vector2i(int(hover_target.x),int(hover_target.y))
 		hovered.emit(hover_cell)
 
 func hit_target(point: Vector2) -> Dictionary:
@@ -266,6 +272,7 @@ func _block(x: float, y: float, w: float, d: float, height: float, color: Color,
 
 func _draw() -> void:
 	_hit_regions.clear()
+	preview_label_rect=Rect2()
 	resident_labels.clear()
 	access_markers.clear()
 	_drawing_target = {}
@@ -284,6 +291,8 @@ func _draw() -> void:
 	for cell in lot.get("walls", []): walls[Vector2i(int(cell[0]),int(cell[1]))] = true
 	for cell in lot.get("doors", []): doors[Vector2i(int(cell[0]),int(cell[1]))] = true
 	_update_finish_preview(lot)
+	_update_window_preview(lot)
+	window_regions.clear()
 	# Planting sits along the property edges without boxing the entire view in.
 	for y in [1,3,5,7,9,11]:
 		_bush(0.35,float(y),scale_factor)
@@ -320,12 +329,17 @@ func _draw() -> void:
 			var cell := Vector2i(x,y)
 			if walls.has(cell):
 				var rear := (floors.has(cell+Vector2i.RIGHT) and not floors.has(cell+Vector2i.LEFT)) or (floors.has(cell+Vector2i.DOWN) and not floors.has(cell+Vector2i.UP))
-				var h := (39.0 if rear else 8.0)*scale_factor
+				var h := (39.0 if rear or (building and build_kind=="window" and not access_inspecting) else 8.0)*scale_factor
 				var color := Color(Finishes.PALETTES.wall[_surface_finish(lot,"wall",x,y)].color).lerp(Color("f3dfb6"),float(light.night)*0.22)
-				if building and build_kind in ["finish_wall","door","erase"]: _drawing_target={"type":"wall","x":x,"y":y}
+				if building and build_kind in ["finish_wall","door","erase","window"]: _drawing_target={"type":"wall","x":x,"y":y}
 				_block(x,y,1,1,h,color)
 				if h > 20*scale_factor:
 					_diamond(x+0.04,y+0.04,0.92,0.92,color.lightened(0.12),h)
+				var window := Windows.at(lot,x,y)
+				var previewing: bool=building and build_kind=="window" and not access_inspecting and not window_pending and hover_cell==cell and preview_result.get("ok",false)
+				if previewing: window=window_style
+				if not window.is_empty(): _draw_window(lot,x,y,h,window,scale_factor,previewing)
+				if previewing and window.is_empty(): _diamond(x,y,1,1,Color(0.94,0.4,0.3,0.18),h,Color("ffab8f"))
 				_drawing_target={}
 			if doors.has(cell):
 				_diamond(x,y,1,1,Color("8f6c50"),2*scale_factor)
@@ -356,6 +370,7 @@ func _draw() -> void:
 	elif building and build_kind=="room":
 		_draw_room_preview(lot)
 	elif building and build_kind in ["finish_floor","finish_wall"]: _draw_finish_preview()
+	elif building and build_kind=="window": _draw_window_preview()
 	elif building and _in_bounds(hover_cell):
 		var tint := Color(0.96,0.99,0.81,0.32)
 		var outline := Color("f8f3c7")
@@ -379,7 +394,9 @@ func _draw() -> void:
 				tint=Color(0.94,0.4,0.3,0.35)
 				_draw_preview_label("Sell " + str(item.name) + " · § %d" % int(float(item.cost)*0.6),false)
 			else: _draw_preview_label("Move " + str(item.name) + " · Click to select",true)
-		elif building and build_kind=="erase": tint=Color(0.94,0.4,0.3,0.35)
+		elif building and build_kind=="erase":
+			tint=Color(0.94,0.4,0.3,0.35)
+			if not Windows.at(lot,hover_cell.x,hover_cell.y).is_empty(): _draw_preview_label("Remove window · Refund §%d · Wall stays" % Windows.resale(lot,hover_cell.x,hover_cell.y),false)
 		_diamond(preview_cell.x,preview_cell.y,footprint.x,footprint.y,tint,4,outline)
 	if not building and not hover_target.is_empty(): _draw_hover()
 	elif not walking.preview.is_empty(): _draw_walk_hint()
@@ -501,7 +518,10 @@ func _update_preview(lot: Dictionary) -> void:
 func _draw_preview_label(message: String, valid: bool) -> void:
 	var width := _font.get_string_size(message,HORIZONTAL_ALIGNMENT_LEFT,-1,12).x+24
 	var position := Vector2(clampf(_pointer.x+16,8,size.x-width-8),clampf(_pointer.y-40,8,size.y-220))
-	draw_style_box(preload("res://game/style.gd").box(Color("1c2a2f"),6),Rect2(position,Vector2(width,30)))
+	preview_label_rect=ResidentCues.fit(Rect2(position,Vector2(width,30)),Rect2(Vector2(8,8),size-Vector2(16,16)),overlay_rects)
+	if not preview_label_rect.has_area(): return
+	position=preview_label_rect.position
+	draw_style_box(preload("res://game/style.gd").box(Color("1c2a2f"),6),preview_label_rect)
 	draw_string(_font,position+Vector2(12,20),message,HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("d8f1b2") if valid else Color("ffab8f"))
 
 func _draw_hover() -> void:
@@ -997,3 +1017,55 @@ func _draw_room_preview(lot: Dictionary) -> void:
 			_diamond(int(cell[0]),int(cell[1]),1,1,Color(1.0,0.81,0.4,0.75),5,Color("fff0ba"))
 	_diamond(room_anchor.x,room_anchor.y,1,1,Color(1,0.94,0.65,0.25),4,Color("fff0ba"))
 	_draw_preview_label(str(preview_result.get("message","")),valid)
+
+
+func _update_window_preview(lot: Dictionary) -> void:
+	if not building or build_kind!="window" or access_inspecting or window_pending or not _in_bounds(hover_cell): return
+	var signature := str(["window",lot_id,lot.revision,lot.funds,hover_cell,window_style])
+	if signature!=_preview_signature:
+		_preview_signature=signature
+		preview_result=Windows.inspect(lot,{"x":hover_cell.x,"y":hover_cell.y,"style":window_style})
+
+func _draw_window_preview() -> void:
+	if window_pending: _draw_preview_label("Fitting window…",true); return
+	if not _in_bounds(hover_cell): return
+	var valid: bool=preview_result.get("ok",false)
+	var unchanged: bool=preview_result.get("reason")=="unchanged"
+	if not valid and not unchanged: _diamond(hover_cell.x,hover_cell.y,1,1,Color(0.94,0.4,0.3,0.2),3,Color("ffab8f"))
+	_draw_preview_label(("Click · " if valid else "")+str(preview_result.get("message","")),valid or unchanged)
+
+func _window_face(x: int,y: int,along: bool,u: float,z: float) -> Vector2:
+	return (grid_point(x+u,y+1.015) if along else grid_point(x+1.015,y+u))+Vector2(0,-z)
+
+func _window_quad(x: int,y: int,along: bool,left: float,right: float,bottom: float,top: float) -> Array:
+	return [_window_face(x,y,along,left,bottom),_window_face(x,y,along,right,bottom),_window_face(x,y,along,right,top),_window_face(x,y,along,left,top)]
+
+func _draw_window(lot: Dictionary,x: int,y: int,height: float,style: String,s: float,previewing: bool=false) -> void:
+	var along := Windows.along_x(lot,x,y)
+	var definition: Dictionary=Windows.STYLES[style]
+	var frame := Color(definition.frame).lerp(Color("e5bc88"),float(light.night)*0.22)
+	var glass := Color(definition.glass).lerp(Color("efd19b"),float(light.night)*0.70)
+	if not along: frame=frame.darkened(0.10); glass=glass.darkened(0.08)
+	var cutaway := height<20*s
+	var bottom := 11*s if not cutaway else 2*s
+	var top := 33*s if not cutaway else 7*s
+	var left := 0.12 if style!="shutters" else 0.25
+	var right := 0.88 if style!="shutters" else 0.75
+	var outline := Color("d8f1b2") if previewing else Color("4c6565")
+	var polygon := _window_quad(x,y,along,left-0.04,right+0.04,bottom-2*s,top+2*s)
+	window_regions[Windows.key(x,y)]={"polygon":PackedVector2Array(polygon),"cutaway":cutaway,"style":style,"preview":previewing,"along_x":along}
+	_poly(polygon,frame,outline if previewing else frame.darkened(0.27))
+	_poly(_window_quad(x,y,along,left,right,bottom,top),glass,glass.darkened(0.25))
+	if not cutaway:
+		# A pale upper reflection and a quiet diagonal make the panes read as glass.
+		_poly(_window_quad(x,y,along,left+0.02,right-0.02,top-6*s,top-1*s),glass.lightened(0.12))
+		draw_line(_window_face(x,y,along,left+0.08,bottom+3*s),_window_face(x,y,along,left+0.26,top-2*s),Color(0.94,0.98,0.91,0.48),maxf(1,1.4*s),true)
+		if style=="cottage":
+			draw_line(_window_face(x,y,along,0.5,bottom),_window_face(x,y,along,0.5,top),frame,2*s,true)
+			draw_line(_window_face(x,y,along,left,(top+bottom)*0.5),_window_face(x,y,along,right,(top+bottom)*0.5),frame,2*s,true)
+		if style=="shutters":
+			for limits: Array in [[0.04,0.20],[0.80,0.96]]:
+				_poly(_window_quad(x,y,along,limits[0],limits[1],bottom,top),Color("72917b").lerp(Color("758773"),float(light.night)),Color("526f61"))
+				for z in [15,20,25,30]: draw_line(_window_face(x,y,along,limits[0]+0.02,z*s),_window_face(x,y,along,limits[1]-0.02,z*s),Color("97b098"),maxf(0.7,s),true)
+	# The sill stays readable when near walls are cut down during normal play.
+	draw_line(_window_face(x,y,along,left-0.06,bottom-2*s),_window_face(x,y,along,right+0.06,bottom-2*s),frame.lightened(0.12),2*s,true)

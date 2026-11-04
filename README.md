@@ -119,6 +119,14 @@ or shell expressions.
   search, **Enter** selects the first result, and **Escape** clears a search before
   closing the tray. Selected item cost, footprint, and use stay above the edit
   controls. Over-budget items can still be selected for a placement preview.
+- **Windows** in the build catalog offers Cottage panes (§60), Picture window
+  (§80), and Garden shutters (§90). Choose a style and click an existing wall;
+  the preview shows the exact cost, including 60% trade-in for a replaced window.
+  **Remove window** keeps the wall and refunds 60%; Sell removes a window before
+  its wall. A new doorway also credits and removes its window. One Undo restores
+  the window and budget. Windows follow the wall direction and keep it solid.
+  Near windows use a low sill during live play, with full walls while fitting.
+  New starter homes include windows; existing saved homes keep their own layout.
 - **Floor finishes** and **Wall finishes** in the catalog offer wood, tile, carpet,
   and paint palettes. Choose a finish and two corners to decorate an area; click
   the same tile twice for a single tile. The preview shows the look and exact

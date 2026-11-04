@@ -1001,3 +1001,48 @@ player to spend time on the home. The visible architecture remains a plain wall
 ring, making independently decorated lots look too similar. Next: placeable
 windows that give houses character while retaining solid-wall routing, explicit
 prices, construction history, and clear previews.
+
+
+## 2026-11-04 · Windows give a home its face
+
+The build catalog now offers Cottage panes (§60), Picture window (§80), and Garden
+shutters (§90), fitted to existing solid walls. The host and preview share the
+same inspection and exact price, including 60% trade-in when changing styles.
+Remove window leaves the wall; Sell removes its window first. Placing a doorway,
+including an extension doorway, removes and credits the window in that same edit.
+One Undo restores every layer and the exact budget. Windows stay on construction
+history, committed saves, discard, and reconnect boundaries. Existing saved homes
+gain no purchases; new starter homes include three cottage windows.
+
+Frames follow the wall run automatically. Pale crossbars, a wood picture frame,
+and green shutters give the small house distinct silhouettes, with quiet glass
+reflections and warm night tones. Windows never create a passage or change a room
+boundary. Walls rise while fitting windows so near-side placement is visible;
+normal life and Access restore the low cutaway sill. Raised wall-face clicks
+select the wall they visibly touch, not an underlying floor tile.
+
+Validation: all 46 local suites, actual Iroh host/two-client checks, and dedicated
+startup passed. Model coverage includes every lot tile, all styles, net prices,
+missing walls, unchanged and unaffordable work, malformed/foreign/stale input,
+solid routing and room filling, paint, door conversion, extension pricing,
+history/discard/disconnect, strict restore, and old saves. Both real clients buy
+independent styles for the previewed amount, undo/redo them, reject replay/foreign
+construction, and retain windows and solid walls after reconnect. The routine
+checkpoint passed all four platform CI jobs.
+
+Native standard and compact/125% checks exercise the palette, actual wall picking,
+style preview and replacement, removal, undo/redo, errors, Access, day/night,
+cutaways, and replacement snapshots. Final review shortened palette copy so every
+control and its explanation fit together. Ctrl/Cmd+F now leaves the palette for
+catalog search, and returning resets its scroll. Intent-matched replies preserve
+pending work until accepted state arrives. A compact screenshot found the price
+label beneath the catalog; construction labels now find visible space beside HUD
+panels. The final compact windows, room-finishing, catalog, and guide checks pass.
+These are automated native checks, not human family or physical-device playtests.
+
+Fresh assessment: decorating now changes the home's architecture as well as its
+colors and furniture. In the life loop, the player still lacks normal controls
+for pausing to plan or moving through an uneventful solo stretch; speed is exposed
+only through the developer console. Next: clear solo pause/speed controls, with
+movement, activities, and needs advancing consistently, while shared neighborhoods
+retain their common running clock.

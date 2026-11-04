@@ -83,7 +83,7 @@ service mode was not repeated for this update.
 ## Still open
 
 The subsequent feature checks are recorded in [PLAYTEST_LOG.md](PLAYTEST_LOG.md).
-The current local suite contains forty-four model/application suites, plus real Iroh
+The current local suite contains forty-six model/application suites, plus real Iroh
 host/two-client reconnect and dedicated-server startup. The room-construction
 checkpoint passed Linux, Windows, macOS, and Android CI builds/exports. The later
 household checkpoint passed the three desktop jobs; Android built, tested,
@@ -328,3 +328,27 @@ Captures are ignored `build/routines-*.png`. Final compact navigation preserves 
 six-step draft while another tray is open. Application checks cover Escape from
 the focused name field and developer-console Escape priority. These are automated
 native checks, not human family or physical-device playtests.
+
+
+Windows validation compares shared previews with host decisions for all 256 lot
+tiles and covers every style, exact net trade-in/removal prices, no-charge repeats,
+unchanged routing and room-fill regions, wall direction, paint under a window,
+ordinary doorway and extension-door replacement, undo/redo, discard, disconnect,
+committed crash saves, live snapshots, old-save defaults, malformed restoration,
+foreign/stale requests, invalid coordinates, and budget limits. All 46 suites and
+actual Iroh host/two-client/server checks passed. Each real client buys a different
+window style for the previewed price, rejects replay/foreign construction, undoes
+and redoes the window, and retains it with its solid wall after reconnect. The
+routine checkpoint passed all four platform CI jobs.
+
+Native standard and compact/125% checks inspect starter windows, all styles,
+raised-wall picking and previews, replacement pricing, undo/redo, removal without
+wall deletion, missing walls, insufficient funds, access inspection, live
+cutaways, night glass, and replacement snapshots. Final compact checks cover
+catalog search/return, all palette controls fitting together, unrelated replies,
+acknowledgement before the accepted snapshot, and price labels avoiding the HUD.
+The compact room-finishing and catalog flows passed again after shared preview
+label placement was polished, and the updated guide passed its native check.
+Captures are ignored `build/windows-*.png`. Empty-lot test fixtures now clear their
+mounted windows with their walls. These are automated/native checks; human family,
+physical-device, and impaired-network visual playtests remain open.

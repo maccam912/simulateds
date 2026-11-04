@@ -19,6 +19,7 @@ const Appearance = preload("res://game/appearance.gd")
 const Wellbeing = preload("res://game/wellbeing.gd")
 const ActivityStatus = preload("res://game/activity_status.gd")
 const Finishes = preload("res://game/finishes.gd")
+const Windows = preload("res://game/windows.gd")
 const RoutinePanel = preload("res://game/routine_panel.gd")
 const LotView = preload("res://game/lot_view.gd")
 var viewed_lot := ""
@@ -123,6 +124,9 @@ var finish_mode_buttons: Dictionary={}
 var _paint_request: Dictionary = {}
 var finish_choice := {"floor":"walnut","wall":"sage"}
 var finish_buttons: Dictionary = {}
+var window_style := "cottage"
+var window_buttons: Dictionary={}
+var _window_request: Dictionary={}
 
 func _ready() -> void:
 	if "--native-smoke" in OS.get_cmdline_user_args():
@@ -137,6 +141,7 @@ func _ready() -> void:
 	_build_ui()
 	Session.status_changed.connect(func(_message): _refresh())
 	Session.action_result.connect(_notice)
+	Session.command_completed.connect(_window_completed)
 	Rooms.changed.connect(_refresh)
 	_refresh()
 
@@ -362,6 +367,9 @@ func _process(delta: float) -> void:
 	lot_view.show_cues=hud.is_visible_in_tree() and not routine_panel.visible
 	lot_view.show_plan_routes=plan_panel.visible and hud.is_visible_in_tree()
 	lot_view.mouse_filter=Control.MOUSE_FILTER_IGNORE if routine_panel.visible else Control.MOUSE_FILTER_STOP
+	lot_view.overlay_rects.clear()
+	for panel: Control in hud.get_children():
+		if panel.is_visible_in_tree(): lot_view.overlay_rects.append(Rect2(panel.get_global_rect().position-lot_view.global_position,panel.get_global_rect().size))
 	_refresh_clock += delta
 	_notice_time = maxf(0,_notice_time-delta)
 	if _refresh_clock>=0.2:
@@ -387,7 +395,7 @@ func _refresh() -> void:
 		viewed_lot = str(family.home_lot)
 		_selected_object = ""
 		_moving_object = ""; _move_request.clear(); _wish_seen.clear(); _friend_seen.clear(); _hobby_seen.clear(); _room_anchor=Vector2i(-1,-1); _room_request.clear()
-		_paint_anchor=Vector2i(-1,-1); _paint_request.clear()
+		_paint_anchor=Vector2i(-1,-1); _paint_request.clear(); _window_request.clear()
 	if viewed_lot.is_empty() or not state.get("lots",{}).has(viewed_lot):
 		viewed_lot = str(family.get("home_lot","lot_1"))
 	if selected_member.is_empty() and not family.get("members",[]).is_empty():
@@ -438,6 +446,10 @@ func _refresh() -> void:
 	lot_view.paint_plan=_paint_request.get("plan",{})
 	lot_view.finish_choice=str(finish_choice.get(_paint_surface(),""))
 	lot_view.finish_selection=_paint_selection()
+	if not building or not mine or selected_tool!="window": _window_request.clear()
+	elif not _window_request.is_empty() and int(lot.revision)>int(_window_request.intent.revision) and Windows.is_applied(lot,_window_request.plan): _window_request.clear()
+	lot_view.window_style=window_style; lot_view.window_pending=not _window_request.is_empty()
+
 	lot_view.world=state; lot_view.lot_id=viewed_lot; lot_view.selected_member=selected_member
 	lot_view.build_object_id=_moving_object
 	lot_view.building=building and mine; lot_view.build_kind=selected_tool; lot_view.build_rotation=build_rotation
@@ -505,7 +517,7 @@ func _refresh() -> void:
 			need_buttons[need].disabled=bool(state.lots[family.home_lot].building)
 			if care_values.has(need) and is_instance_valid(care_values[need]): care_values[need].text=str(need).capitalize()+" · %d" % int(value)
 	var build_mode := building and mine
-	catalog_filters.visible=build_mode and _paint_surface().is_empty() and _context_page!="access"
+	catalog_filters.visible=build_mode and selected_tool!="window" and _paint_surface().is_empty() and _context_page!="access"
 	wishes_button.disabled=build_mode or member.is_empty()
 	hobbies_button.disabled=bool(state.lots.get(family.get("home_lot",""),{}).get("building",false)) or member.is_empty()
 	people_button.disabled=build_mode or member.is_empty()
@@ -518,6 +530,7 @@ func _refresh() -> void:
 	palette_button.text = "Catalog" if build_mode else "Activities"
 	var tools_signature := str(building and mine)+selected_tool+_moving_object+str(_move_request.is_empty())+_selected_object+str(build_rotation)+viewed_lot+str(lot.get("revision",0))+_context_page+selected_member+str(_room_anchor)+str(_room_request.is_empty())
 	if build_mode: tools_signature+=_catalog_category+":"+_catalog_query+":"+str(lot.get("funds",0))+str(_access_visible)+str(_access_report.get("issues",[]))
+	tools_signature+=window_style+str(_window_request.is_empty())
 	tools_signature+=str(_paint_anchor)+str(_paint_request.is_empty())+str(finish_choice)+_floor_selection
 	if _context_page=="wishes" and not build_mode:
 		tools_signature+=str(member.get("wishes",{}))+str(day)+str(member.get("task",{}).get("id",""))+str(member.get("queue",[]))
@@ -542,6 +555,7 @@ func _refresh() -> void:
 	help_label.text="Click to place · " + Preferences.action_label("rotate") + " rotates · Ctrl/Cmd+Z undoes" if building and mine else "Click a need to care for it · Click the ground to walk"
 	if building and mine and selected_tool=="room": help_label.text="Click two opposite corners · " + Preferences.action_label("rotate") + " changes door side · Escape cancels"
 	if building and mine and not _paint_surface().is_empty(): help_label.text="Click to finish a room · Walls and doorways mark its edges" if _paint_selection()=="room" else "Click two corners to decorate · Same tile twice for one · Escape cancels"
+	if building and mine and selected_tool=="window": help_label.text="Choose a style, then click a wall · Windows follow its direction"
 	if building and mine and _context_page=="access": help_label.text="Find an item · Choose Door, Move, or Sell to repair"
 	help_label.tooltip_text=help_label.text
 	if room_label!=null:
@@ -686,6 +700,7 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 	if building:
 		activity_label.text="Build & buy"
 		if _context_page=="access": _build_access_list()
+		elif selected_tool=="window": _build_window_palette()
 		elif _paint_surface().is_empty(): _build_catalog()
 		else: _build_finish_palette(_paint_surface())
 		_build_edit_controls(lot)
@@ -750,7 +765,7 @@ func _announce_wishes(family: Dictionary) -> void:
 		_wish_seen[resident.id]=count
 
 func _select_lot(id: String) -> void:
-	_paint_anchor=Vector2i(-1,-1); _paint_request.clear()
+	_paint_anchor=Vector2i(-1,-1); _paint_request.clear(); _window_request.clear()
 	viewed_lot=id; _selected_object=""; _room_anchor=Vector2i(-1,-1); _room_request.clear(); neighborhood_panel.hide(); _refresh()
 
 func _select_resident(id: String) -> void:
@@ -802,7 +817,7 @@ func _entity_clicked(target: Dictionary) -> void:
 
 func _select_build_tool(kind: String) -> void:
 	if _context_page=="access": _context_page="activities"
-	var reset_scroll := kind.begins_with("finish_") or not _paint_surface().is_empty()
+	var reset_scroll := kind.begins_with("finish_") or not _paint_surface().is_empty() or kind=="window" or selected_tool=="window"
 	selected_tool=kind; _moving_object=""; _move_request.clear()
 	_paint_anchor=Vector2i(-1,-1); _paint_request.clear()
 	_room_anchor=Vector2i(-1,-1); _room_request.clear(); _refresh()
@@ -823,6 +838,15 @@ func _tile_clicked(cell: Vector2i) -> void:
 	if lot.is_empty(): return
 	if bool(lot.building) and str(lot.owner)==str(Session.profile_id):
 		if _context_page=="access": return
+		if selected_tool=="window":
+			if not _window_request.is_empty(): return
+			var command := {"type":"set_window","lot_id":viewed_lot,"style":window_style,"x":cell.x,"y":cell.y,"revision":lot.revision}
+			var plan := Windows.inspect(lot,command)
+			if not plan.ok:
+				_notice(str(plan.message))
+				if plan.get("reason")!="unchanged": Soundscape.play_ui("error")
+				return
+			_window_request={"intent":command.duplicate(true),"plan":plan}; _send(command); return
 		if not _paint_surface().is_empty():
 			if not _paint_request.is_empty(): return
 			if _paint_selection()=="area" and _paint_anchor.x<0: _paint_anchor=cell; _refresh(); return
@@ -925,7 +949,7 @@ func _build_history(redo: bool) -> void:
 	_send({"type":"build_redo" if redo else "build_undo","lot_id":viewed_lot,"revision":lot.get("revision",-1)})
 
 func _rotate() -> void:
-	if not _paint_surface().is_empty(): return
+	if not _paint_surface().is_empty() or selected_tool=="window": return
 	build_rotation=(build_rotation+1)%4; _refresh()
 
 func _toggle_fullscreen() -> void:
@@ -955,7 +979,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if focused is LineEdit or focused is TextEdit: return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if lot_view.building and (event.ctrl_pressed or event.meta_pressed) and event.keycode==KEY_F:
-			if not _paint_surface().is_empty(): _select_build_tool("floor")
+			if not _paint_surface().is_empty() or selected_tool=="window": _select_build_tool("floor")
 			_context_page="activities"; _refresh()
 			_show_tray(context_panel,true); catalog_search.grab_focus(); catalog_search.select_all()
 		elif lot_view.building and (event.ctrl_pressed or event.meta_pressed) and event.keycode in [KEY_Z,KEY_Y]:
@@ -1271,7 +1295,7 @@ func _edit_button(text: String, action: Callable, parent: Node, tooltip: String=
 	return button
 
 func _build_edit_controls(lot: Dictionary) -> void:
-	var painting := not _paint_surface().is_empty() and _context_page!="access"
+	var painting := (not _paint_surface().is_empty() or selected_tool=="window") and _context_page!="access"
 	if _context_page=="access":
 		var repairs := HBoxContainer.new(); repairs.add_theme_constant_override("separation",5); context_box.add_child(repairs)
 		_edit_button("Door",func(): _select_build_tool("door"),repairs,"Choose a door to reconnect a room.")
@@ -1306,6 +1330,8 @@ func _build_edit_controls(lot: Dictionary) -> void:
 	redo_button=_edit_button("Redo",func(): _build_history(true),history,"Redo a building edit · Ctrl/Cmd+Shift+Z or Ctrl+Y")
 	undo_button.disabled=int(lot.get("build_undo",0))==0; redo_button.disabled=int(lot.get("build_redo",0))==0
 	if not painting: _edit_button("Discard draft",func(): _send({"type":"build_cancel","lot_id":viewed_lot}),history,"Restore the whole house and budget from before construction.")
+	elif selected_tool=="window":
+		_edit_button("Discard draft",func(): _send({"type":"build_cancel","lot_id":viewed_lot}),history,"Restore the house and budget from before construction.")
 	else:
 		var finish := HBoxContainer.new(); finish.add_theme_constant_override("separation",5); context_box.add_child(finish)
 		var cancel := _edit_button("Cancel area",func(): _paint_anchor=Vector2i(-1,-1); _refresh(),finish,"Cancel the first painting corner · Escape")
@@ -1392,3 +1418,38 @@ func _announce_hobbies(family: Dictionary) -> void:
 				notice_label.text=str(member.name)+" became a "+Hobbies.title(hobby,entry).to_lower()+"! "+str(Hobbies.CATALOG[hobby].name)+" rank %d." % level
 				_notice_time=7.0; notice_panel.show(); Soundscape.play_ui("confirm")
 			_hobby_seen[key]=level
+
+
+func _window_completed(intent: Dictionary,ok: bool,_message: String) -> void:
+	if intent.get("type")!="set_window": return
+	if ok and hud.is_visible_in_tree(): Soundscape.play_ui("build")
+	if not _window_request.is_empty() and intent==_window_request.intent:
+		if not ok: _window_request.clear()
+		_refresh()
+
+func _select_window(style: String) -> void:
+	if not _window_request.is_empty(): return
+	window_style=style; _refresh(); call_deferred("_focus_window",style)
+
+func _focus_window(style: String) -> void:
+	await get_tree().process_frame
+	if selected_tool!="window" or _context_page=="access" or not context_panel.visible: return
+	var button: Button=window_buttons.get(style)
+	if is_instance_valid(button) and not button.disabled:
+		button.grab_focus(); tools_box.get_parent().ensure_control_visible(button)
+
+func _build_window_palette() -> void:
+	activity_label.text="Windows"; window_buttons.clear()
+	var back := _button("‹ Catalog",func(): _select_build_tool("wall")); back.add_theme_font_size_override("font_size",12); _compact_control(back); tools_box.add_child(back)
+	for style: String in Windows.STYLES:
+		var definition: Dictionary=Windows.STYLES[style]
+		var selected := window_style==style
+		var button := _button(str(definition.name)+" · §%d" % int(definition.cost),func(): _select_window(style),selected)
+		button.alignment=HORIZONTAL_ALIGNMENT_LEFT; button.add_theme_font_size_override("font_size",12); button.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+		button.custom_minimum_size.y=38; button.disabled=not _window_request.is_empty(); _compact_control(button,selected)
+		button.tooltip_text="Fit to an existing wall. Hover previews the exact price, including any trade-in."
+		tools_box.add_child(button); window_buttons[style]=button
+	var remove := _button("Remove window",func(): _select_window(""),window_style.is_empty()); remove.add_theme_font_size_override("font_size",12); _compact_control(remove,window_style.is_empty())
+	remove.disabled=not _window_request.is_empty(); tools_box.add_child(remove); window_buttons[""]=remove
+	var note := _label("Walls stay solid. Old windows return 60% when removed or replaced.",12,Style.MUTED)
+	note.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; note.custom_minimum_size.x=200; tools_box.add_child(note)

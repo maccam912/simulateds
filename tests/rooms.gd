@@ -10,7 +10,7 @@ func _initialize() -> void:
 func _fresh() -> void:
 	world=World.new(); world.initialize(); world.ensure_family("owner","Alex"); world.ensure_family("neighbor","Violet")
 	lot=world.state.lots.lot_1
-	lot.floors=[]; lot.walls=[]; lot.doors=[]; lot.objects=[]
+	lot.floors=[]; lot.walls=[]; lot.doors=[]; lot.windows={}; lot.objects=[]
 	assert(world.apply_command("owner",{"type":"build_begin","lot_id":"lot_1"}).ok)
 
 func _room(rotation: int=0) -> Dictionary:

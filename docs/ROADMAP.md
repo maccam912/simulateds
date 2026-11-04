@@ -49,13 +49,17 @@ with separate places, fun/social restoration, and a tabletop pastime preference.
 People cards discover ongoing games and let a visiting resident join or wait,
 preserving their existing planned activities. Reusable household routines now
 save one to six care/recreation activities, resolve current reachable furnishings,
-and append to either resident’s existing plan.
+and append to either resident’s existing plan. Three window styles now mount to
+solid walls, with exact trade-in prices, construction history, and cutaway
+presentation.
 See [the playtest log](PLAYTEST_LOG.md) for evidence
 and current usability priorities.
 
 ## 1. Make homebuilding dependable
 
-- Edge-based walls, room detection, window and door orientation, and roofs.
+- Edge-based walls, room detection, door orientation, and roofs. Wall-mounted
+  windows with automatic direction, three styles, and cutaway presentation are
+  implemented.
 - Drag painting and richer selection; placement previews, furniture moves,
   two-corner rooms, rectangle decoration, room-aware floor fill, undo/redo, and
   exact undo refunds are implemented. Add broader architectural options.

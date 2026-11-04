@@ -143,6 +143,30 @@ func _client(index: String) -> void:
 	# Ownership is enforced on the host, even for syntactically valid commands.
 	await _command({"type": "build_begin", "lot_id": host_home}, false)
 	await _command({"type": "build_begin", "lot_id": home})
+	for _attempt in range(50):
+		if session.state.lots[home].building: break
+		await create_timer(0.1).timeout
+	var window_intent := {"type":"set_window","lot_id":home,"x":7,"y":3,"style":"picture" if index=="1" else "shutters","revision":session.state.lots[home].revision}
+	var window_price: int=preload("res://game/windows.gd").inspect(session.state.lots[home],window_intent).cost
+	var window_funds: int=session.state.lots[home].funds
+	await _command(window_intent); await _command(window_intent,false)
+	for _attempt in range(50):
+		if session.state.lots[home].windows.get("7,3")==window_intent.style: break
+		await create_timer(0.1).timeout
+	assert(session.state.lots[home].windows.get("7,3")==window_intent.style and session.state.lots[home].funds==window_funds-window_price,"Own window style and exact preview price replicate")
+	assert(session.state.lots[home].walls.has([7,3]) and not session.world._walkable(session.state.lots[home],Vector2i(7,3)))
+	var foreign_window: Dictionary=window_intent.duplicate(); foreign_window.lot_id=host_home; foreign_window.revision=session.state.lots[host_home].revision
+	await _command(foreign_window,false)
+	await _command({"type":"build_undo","lot_id":home,"revision":session.state.lots[home].revision})
+	for _attempt in range(50):
+		if not session.state.lots[home].windows.has("7,3"): break
+		await create_timer(0.1).timeout
+	assert(not session.state.lots[home].windows.has("7,3") and session.state.lots[home].funds==window_funds)
+	await _command({"type":"build_redo","lot_id":home,"revision":session.state.lots[home].revision})
+	for _attempt in range(50):
+		if session.state.lots[home].windows.get("7,3")==window_intent.style: break
+		await create_timer(0.1).timeout
+	assert(session.state.lots[home].windows.get("7,3")==window_intent.style)
 	await _command({"type": "place", "lot_id": home, "kind": "floor", "x": 0, "y": 0})
 	for _attempt in range(50):
 		if [0,0] in session.state.lots[home].floors: break
@@ -377,6 +401,7 @@ func _client(index: String) -> void:
 	assert(not session.state.families[identity].home_news.report.pending,"Acknowledged recap did not replicate")
 	await _command(postcard,false)
 	assert(session.home_lot() == home, "Reconnect changed lot ownership")
+	assert(session.state.lots[home].windows.get("7,3")==window_intent.style and session.state.lots[home].walls.has([7,3]),"Reconnect retains the mounted window without opening the wall")
 	assert(session.state.families[identity].routines.entries[2].name=="Quiet time "+index and session.state.families[identity].routines.entries[2].steps==["bookshelf","table"],"Reconnect retains the independent routine library")
 	assert(int(preload("res://game/friendships.gd").bond(session.state,member_id,companion_id).get("score",0))==32,"Reconnect lost the friendship")
 	assert(session.state.families[identity].name=="Gardeners "+index and session.state.families[identity].members[1].appearance.style==1,"Reconnect lost household identity")

@@ -55,7 +55,7 @@ func _run() -> void:
 	var first: Dictionary=residents[0]; var second: Dictionary=residents[1]
 	var lot: Dictionary=session.state.lots.lot_1
 	var original: Dictionary=lot.duplicate(true)
-	lot.objects=[]; lot.walls=[]; lot.doors=[]
+	lot.objects=[]; lot.walls=[]; lot.doors=[]; lot.windows={}
 	var directions := [Vector2i(1,1),Vector2i.RIGHT,Vector2i(1,-1),Vector2i.UP,Vector2i(-1,-1),Vector2i.LEFT,Vector2i(-1,1),Vector2i.DOWN]
 	for index in range(residents.size()):
 		var member: Dictionary=residents[index]
@@ -77,7 +77,7 @@ func _run() -> void:
 	for index in range(residents.size()):
 		session.world._clear_member(residents[index])
 		if index>1: residents[index].lot_id="lot_2"
-	lot.objects=original.objects; lot.walls=original.walls; lot.doors=original.doors; lot.revision+=1
+	lot.objects=original.objects; lot.walls=original.walls; lot.doors=original.doors; lot.windows=original.windows; lot.revision+=1
 	view.center_lot()
 	for rotation in range(4):
 		var bed: Dictionary=lot.objects.filter(func(item: Dictionary): return item.kind=="bed")[0]

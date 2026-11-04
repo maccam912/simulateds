@@ -2,6 +2,7 @@ extends RefCounted
 ## A bounded, pure plan used by previews and the authoritative room command.
 const Rules = preload("res://game/build_rules.gd")
 const Catalog = preload("res://game/catalog.gd")
+const Windows = preload("res://game/windows.gd")
 
 static func inspect(lot: Dictionary, command: Dictionary, residents: Array) -> Dictionary:
 	for key: String in ["x","y","end_x","end_y"]:
@@ -33,14 +34,19 @@ static func inspect(lot: Dictionary, command: Dictionary, residents: Array) -> D
 				if lot.walls.has(cell): plan.remove_walls.append(cell)
 			else: plan.walls.append(cell)
 	plan.cost=plan.floors.size()*int(Catalog.ITEMS.floor.cost)+plan.walls.size()*int(Catalog.ITEMS.wall.cost)+plan.doors.size()*int(Catalog.ITEMS.door.cost)
+	var refund := 0
+	for cell: Array in plan.remove_walls: refund+=Windows.resale(lot,int(cell[0]),int(cell[1]))
+	plan.cost-=refund; plan.refund=refund
 	if int(plan.cost)==0: return _no("This room is already built. Choose another corner.")
 	if int(plan.cost)>int(lot.funds): return _no("Room costs § %d · Need § %d more." % [plan.cost,int(plan.cost)-int(lot.funds)])
 	plan.message="%d × %d room · § %d · Click to build" % [width,depth,plan.cost]
+	if refund>0: plan.message+=" · Includes §%d window trade-in" % refund
 	return plan
 
 static func apply(lot: Dictionary, plan: Dictionary) -> void:
 	for cell: Array in plan.remove_walls:
 		lot.walls.erase(cell)
+		Windows.remove(lot,int(cell[0]),int(cell[1]))
 		preload("res://game/finishes.gd").remove(lot,"wall",int(cell[0]),int(cell[1]))
 	for key: String in ["floors","walls","doors"]:
 		for cell: Array in plan[key]: lot[key].append(cell.duplicate())
