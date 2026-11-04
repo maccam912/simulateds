@@ -37,7 +37,7 @@ static func inspect(lot: Dictionary, command: Dictionary, residents: Array) -> D
 			for x in range(cell.x,cell.x+footprint.x):
 				var tile := Vector2i(x,y)
 				if x<0 or y<0 or x>=16 or y>=16: return _no("Keep the whole furnishing inside the lot.")
-				if not lot.floors.has([x,y]): return _no("Place floor beneath the whole furnishing.")
+				if kind!="garden_bed" and not lot.floors.has([x,y]): return _no("Place floor beneath the whole furnishing.")
 				if lot.walls.has([x,y]) or lot.doors.has([x,y]): return _no("Leave walls and doorways clear.")
 				if residents.has(tile): return _no("A resident is standing here.")
 				if _furniture_at(lot,tile,str(object.get("id",""))): return _no("Another furnishing is in the way.")

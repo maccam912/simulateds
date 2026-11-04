@@ -117,6 +117,15 @@ error for the player to decipher.
 
 ## Motion
 
+Gardens show the result of a resident's effort in the world: raised wooden beds,
+dark watered soil, small shoots, taller foliage, and visibly ripe vegetables.
+Dry soil lightens without making the plant look dead. A small brass exclamation
+or check marks water needs or readiness, with explicit text in hover and the
+garden panel. Growth and water use separate bars; neither requires interpreting
+color alone. Planting uses a hand trowel, watering a can, and harvesting a basket.
+The panel keeps controls stable while growth updates and names the resident who
+has reserved the bed. Crop ownership is explained directly when visiting.
+
 Motion acknowledges a change and lets the player track it. It must not delay an
 action or make the player wait through repeated introductions.
 

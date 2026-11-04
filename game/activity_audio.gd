@@ -2,6 +2,7 @@ extends RefCounted
 ## Presentation events derived from visible movement and accepted task progress.
 ## Nothing here advances a task, changes a need, or stores gameplay state.
 const ACTIVITIES := {
+	"garden_plant":["page",0.0], "garden_water":["water",4.0], "garden_harvest":["page",0.0],
 	"bookshelf":["page",5.0], "plant":["water",4.0], "table":["tea",5.0], "game_table":["game_piece",5.0],
 	"fridge":["meal",4.0], "shower":["shower",4.0], "toilet":["water",0.0],
 	"bed":["fabric",0.0], "sofa":["fabric",0.0], "tv":["television",6.0], "chat":["chat",5.0]

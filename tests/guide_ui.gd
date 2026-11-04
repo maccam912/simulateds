@@ -110,6 +110,8 @@ func _run() -> void:
 	assert(app.page=="game" and app.game._catalog_category=="finishes" and app.game.catalog_buttons.has("finish_floor"))
 	app.open_guide(); await _action("catalog",1)
 	assert(app.page=="game" and app.game._catalog_category=="all")
+	app.open_guide(); await _action("garden")
+	assert(app.page=="game" and session.state.lots[home].building and app.game.selected_tool=="garden_bed")
 	app.game._send({"type":"build_cancel","lot_id":home})
 	app.open_guide(); await _action("people",2)
 	assert(app.page=="game" and app.game._context_page=="people")

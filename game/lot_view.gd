@@ -5,6 +5,7 @@ signal hovered(cell: Vector2i)
 signal entity_clicked(target: Dictionary)
 
 const Catalog = preload("res://game/catalog.gd")
+const Gardens = preload("res://game/gardens.gd")
 const BuildRules = preload("res://game/build_rules.gd")
 const RoomPlan = preload("res://game/room_plan.gd")
 const Finishes = preload("res://game/finishes.gd")
@@ -110,7 +111,9 @@ func _update_activity_audio(delta: float) -> void:
 				if not Rect2(Vector2.ZERO,size).has_point(point): continue
 				var cell := motion.position(member)
 				var task: Dictionary=member.get("task",{})
-				residents.append({"id":str(member.id),"cell":cell,"position":get_global_transform_with_canvas()*point,"kind":str(_activity_pose(member).get("kind","")),"task":str(task.get("id","")),"elapsed":float(task.get("elapsed",0.0)),"walking":motion.moving(str(member.id)) or not task.get("path",[]).is_empty(),"indoors":[roundi(cell.x),roundi(cell.y)] in lot.floors})
+				var sound_kind := str(_activity_pose(member).get("kind",""))
+				if sound_kind=="garden_bed": sound_kind="garden_"+str(task.get("garden_action","water"))
+				residents.append({"id":str(member.id),"cell":cell,"position":get_global_transform_with_canvas()*point,"kind":sound_kind,"task":str(task.get("id","")),"elapsed":float(task.get("elapsed",0.0)),"walking":motion.moving(str(member.id)) or not task.get("path",[]).is_empty(),"indoors":[roundi(cell.x),roundi(cell.y)] in lot.floors})
 				sources[str(member.id)]={"position":get_global_transform_with_canvas()*point,"task":str(task.get("id",""))}
 	Soundscape.update_world_sources(sources)
 	for event: Dictionary in activity_audio.sample(key,residents,delta,active): Soundscape.play_world(event)
@@ -536,11 +539,14 @@ func _draw_hover() -> void:
 		if hover_target.kind=="game_table":
 			var count := Tabletop.players(world,lot_id,str(hover_target.id),false).size()
 			detail="%d/4 places · Fun + social together · Click to %s" % [count,"queue" if count>=Tabletop.CAPACITY else "join"]
-		if bool(item.get("exclusive",false)):
+		if bool(item.get("exclusive",false)) and hover_target.kind!="garden_bed":
 			for family: Dictionary in world.families.values():
 				for resident: Dictionary in family.members:
 					if resident.lot_id == lot_id and resident.task.get("target_id") == hover_target.id:
 						detail = "In use by " + str(resident.name) + " · Click to queue"
+		if hover_target.kind=="garden_bed":
+			for object: Dictionary in world.lots[lot_id].objects:
+				if object.id==hover_target.id: detail=Gardens.summary(object.garden)+" · Click to inspect"; break
 		var dimensions := Catalog.footprint(str(hover_target.kind),int(hover_target.rotation))
 		_diamond(float(hover_target.x),float(hover_target.y),dimensions.x,dimensions.y,Color(0.95,0.95,0.75,0.14),2,Color("fff2bd"))
 	var width := maxf(_font.get_string_size(title,HORIZONTAL_ALIGNMENT_LEFT,-1,14).x,_font.get_string_size(detail,HORIZONTAL_ALIGNMENT_LEFT,-1,12).x) + 24
@@ -612,6 +618,7 @@ func _furnishing(obj: Dictionary,s: float) -> void:
 	_diamond(x+0.12,y+0.2,w,d,Color(0.18,0.17,0.13,0.13))
 	_drawing_target = {"type":"object","id":obj.id,"kind":kind,"x":obj.x,"y":obj.y,"rotation":obj.get("rotation",0)}
 	match kind:
+		"garden_bed": _garden_furnishing(obj,s)
 		"bed":
 			_block(x+0.05,y+0.05,w-0.1,d-0.1,10*s,Color("785648"))
 			_block(x+0.08,y+0.08,w-0.16,d-0.16,6*s,Color("e9e4cd"),10*s)
@@ -678,6 +685,32 @@ func _furnishing(obj: Dictionary,s: float) -> void:
 	_drawing_target = {}
 	_art_object = {}
 
+func _garden_furnishing(object: Dictionary,s: float) -> void:
+	var x: float=object.x; var y: float=object.y
+	var bed: Dictionary=object.get("garden",Gardens.create())
+	_block(x+0.04,y+0.04,1.92,0.92,7*s,Color("906e50"))
+	_diamond(x+0.15,y+0.15,1.7,0.7,Color("68533c") if float(bed.water)>0 else Color("9a805b"),7.5*s)
+	for row in range(2):
+		for column in range(3):
+			var p := grid_point(x+0.38+column*0.6,y+0.32+row*0.36)+Vector2(0,-8*s)
+			if str(bed.crop).is_empty():
+				draw_line(p+Vector2(-5,0)*s,p+Vector2(5,0)*s,Color("776045"),2*s,true); continue
+			var progress := clampf(float(bed.growth)/float(Gardens.CROPS[bed.crop].seconds),0.0,1.0)
+			var tall := 4.0+progress*(20.0 if bed.crop=="tomato" else 8.0)
+			var top := p+Vector2(0,-tall*s)
+			draw_line(p,top,Color("496f40"),2*s,true)
+			for leaf in range(3):
+				draw_circle(top+Vector2((-1 if leaf%2==0 else 1)*(2+progress*3),leaf*3)*s,(2+progress*2)*s,Color("729858"))
+			if progress>0.65:
+				var fruit: Color=Color(str(Gardens.CROPS[bed.crop].color)) if Gardens.ripe(bed) else Color("91ad59")
+				draw_circle(top+Vector2(4,7)*s,(2.2+progress)*s,fruit)
+				if bed.crop=="tomato": draw_circle(top+Vector2(-3,12)*s,2.7*s,fruit)
+			var hit := Rect2(top-Vector2(8,5)*s,Vector2(16,tall+8)*s)
+			_hit_regions.append({"polygon":PackedVector2Array([hit.position,Vector2(hit.end.x,hit.position.y),hit.end,Vector2(hit.position.x,hit.end.y)]),"target":_drawing_target})
+	if not str(bed.crop).is_empty() and (Gardens.ripe(bed) or float(bed.water)<=0.000001):
+		var p := grid_point(x+1,y+0.5)+Vector2(0,-40*s)
+		draw_circle(p,8*s,Color("edc98b")); draw_string(_font,p+Vector2(-3,4)*s,"✓" if Gardens.ripe(bed) else "!",HORIZONTAL_ALIGNMENT_LEFT,-1,maxi(10,roundi(12*s)),Color("142329"))
+
 func _resident(member: Dictionary, family: Dictionary,s: float) -> void:
 	var pose := _activity_pose(member)
 	var p := resident_anchor(member)
@@ -704,6 +737,7 @@ func _resident(member: Dictionary, family: Dictionary,s: float) -> void:
 	var lateral := ResidentFacing.project(Vector2(direction.y,-direction.x))
 	var facing := forward.normalized()
 	var kind := str(pose.get("kind",""))
+	if kind=="garden_bed": kind="garden_"+str(member.get("task",{}).get("garden_action","water"))
 	var behind: bool=facing.y< -0.2 and kind not in ["chat","tv","shower"]
 	if behind: _activity_prop(p+forward*6*s,kind,s,reduced,facing,skin)
 	for side: float in [-1.0,1.0]:
@@ -770,12 +804,20 @@ func _activity_prop(p: Vector2,kind: String,s: float,reduced: bool,facing: Vecto
 			draw_rect(Rect2(p+Vector2(4,-20)*s,Vector2(7,7)*s),Color("f4e5cb"))
 			draw_arc(p+Vector2(12,-17)*s,3*s,-PI*0.5,PI*0.5,10,Color("f4e5cb"),1.5*s,true)
 			if kind=="table": draw_line(p+Vector2(7,-24)*s,p+Vector2(8,-29)*s,Color(1,0.98,0.86,0.7),1*s,true)
-		"plant":
+		"plant", "garden_water":
 			draw_circle(p+Vector2(9,-17)*s,5*s,Color("719b91"))
 			draw_line(p+Vector2(12,-18)*s,p+Vector2(19,-13)*s,Color("719b91"),3*s,true)
 			for index in range(3):
 				var fall := float(index)*4.0 if reduced else fmod(_time*14+float(index)*5,15.0)
 				draw_circle(p+Vector2(18+index*2,-12+fall)*s,1*s,Color("cee6dd"))
+		"garden_plant":
+			var lift := 0.0 if reduced else sin(_time*4.0)*2.0
+			draw_line(p+Vector2(7,-21)*s,p+Vector2(15,-14+lift)*s,Color("ac8158"),3*s,true)
+			_poly([p+Vector2(12,-14+lift)*s,p+Vector2(18,-17+lift)*s,p+Vector2(20,-10+lift)*s],Color("9caaa3"))
+		"garden_harvest":
+			draw_arc(p+Vector2(12,-16)*s,7*s,PI,TAU,12,Color("b68e60"),2*s,true)
+			draw_rect(Rect2(p+Vector2(4,-15)*s,Vector2(16,9)*s),Color("bd9868"))
+			for index in range(3): draw_circle(p+Vector2(7+index*5,-15)*s,3*s,Color("d67954"))
 		"shower":
 			for index in range(4):
 				var fall := float(index)*5.0 if reduced else fmod(_time*22+index*9,30.0)

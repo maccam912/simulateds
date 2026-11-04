@@ -548,13 +548,13 @@ func _guide_action(action: String) -> void:
 		"mail": open_mail()
 		"connect": game._open_connection()
 		"save": open_saves("save")
-		"build","catalog","move","decorate":
+		"build","catalog","move","decorate","garden":
 			var family: Dictionary=game._family()
 			if family.is_empty(): return
 			game._select_lot(str(family.home_lot))
 			if action=="decorate":
 				game._clear_catalog_filters(); game._catalog_category="finishes"; game.catalog_category.select(game.BuildCatalog.CATEGORIES.keys().find("finishes"))
 			else: game._clear_catalog_filters()
-			game._select_build_tool("move" if action=="move" else "room" if action=="build" else "floor")
+			game._select_build_tool("garden_bed" if action=="garden" else "move" if action=="move" else "room" if action=="build" else "floor")
 			if not Session.state.lots[family.home_lot].building: game._toggle_build()
 			else: game._refresh(); game._show_tray(game.context_panel,true)

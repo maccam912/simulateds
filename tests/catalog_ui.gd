@@ -62,7 +62,7 @@ func _run() -> void:
 	var untouched: Dictionary=session.world.snapshot()
 	var field_id: int=game.catalog_search.get_instance_id()
 	await _search("bed")
-	assert(game.catalog_buttons.keys()==["bed"] and lot.building and game.build_rotation==0,"Typing B/R shortcuts in search does not change game modes or rotate")
+	assert(game.catalog_buttons.keys()==["bed","garden_bed"] and lot.building and game.build_rotation==0,"Both kinds of bed are discoverable without search typing changing modes or rotation")
 	for index in range(5): game._refresh(); await process_frame
 	assert(game.catalog_search.has_focus() and game.catalog_search.get_instance_id()==field_id)
 	assert(session.world.state==untouched and ground_clicks.is_empty(),"Browsing and typing cannot purchase or click through into the house")

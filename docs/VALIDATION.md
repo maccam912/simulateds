@@ -382,3 +382,34 @@ leaving presentation time active; deliberate player pause freezes both. Final
 clock hover styling keeps the selected pace readable under the pointer. Captures
 are ignored `build/clock-*.png`; these remain automated native checks, not human
 family, physical Android, or cross-platform visual playtests.
+
+## Kitchen gardens
+
+`GARDENS_PASS` covers lawn placement, shared read-only activity previews, exact
+seed/harvest amounts, full-duration work at full needs, cancellation without
+spending or practice, one resident reserving a bed, malformed/stale/replayed
+commands, safe dry/ripe waits, growth during simulated absence, visitor watering,
+ownership, bounded hobby practice, budget changes, and no autonomous spending or
+harvesting. Crops survive moves, undo, discard, JSON saves, and runtime snapshots;
+disk load clears unfinished work. Malformed crop/task data rejects restoration
+atomically, and worlds without garden beds still load.
+
+All 50 local suites passed, followed by real Iroh host/two-client/reconnect and
+dedicated startup. Each actual client grows a different crop with its second
+resident while its first resident completes the existing care, plans, hobbies,
+conversation, and visiting flow. Crop choice, revision, growth, and dry bounds
+survive reconnect. An older catalog assertion now expects both the Cloud bed and
+garden bed for “bed”; typing protections and first-result selection stay covered.
+The preceding clock checkpoint passed all four platform CI builds/exports.
+
+Native standard and compact/125% checks use actual placement, bed picking, seed
+and care buttons, unaffordable seed feedback, accepted plans, planting/watering/
+harvest props, growth stages, dry/ripe states, snapshots, visitor restrictions,
+and live planting/harvest rustle and water cues. The compact guide and catalog
+checks passed with the new entry. Final panel polish names the resident doing
+the work and clears completed acknowledgements; failures remain actionable, and
+an acknowledgement alone cannot invent accepted work. Captures are ignored
+`build/garden-*.png`. These are automated native checks, not human family,
+physical-device, overnight-host, or impaired-network visual playtests.
+Final compact checks also cover all four bed rotations with a ripe crop, visible
+surface picking, the full-duration Plan tooltip, failure recovery, and mixer cues.

@@ -30,6 +30,9 @@ settling covers beds/sofas; liquid textures cover watering and bathroom activity
 Textures are sparse accents, not appliance loops or simulated room acoustics.
 The game table uses a short, damped wooden click for moving a piece, sampled
 from accepted activity progress every five simulation seconds.
+Garden planting/harvesting reuse the quiet papery rustle as a seed/leaf accent;
+watering uses the existing liquid texture. These follow the accepted garden task,
+with the same positional voices, mute behavior, and overall rate limits.
 
 A presentation sampler follows displayed walking and actual task progress.
 Repeated snapshots produce no repeated sounds, teleports produce no footsteps,

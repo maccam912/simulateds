@@ -1084,3 +1084,45 @@ recreation mostly changes meters and journals. Watering the existing houseplant
 never visibly changes it. Next: a small gardening loop with planting, visible
 growth, tending, and harvesting, giving residents a lasting project and a reason
 to return while keeping absent households forgiving and host-owned.
+
+## 2026-11-04 · A garden that grows
+
+A §180 kitchen garden bed now fits on the lawn or on a floor. Radishes cost §10
+to plant and yield §45 after 4½ game hours of watered growth; tomatoes cost §20
+and yield §95 after 9 hours. Residents plant, water, and harvest through their
+ordinary plans. One resident reserves the bed while queued or working, and full
+needs do not skip the work. Seed costs and harvest funds apply only on completion;
+cancelling before completion does not spend seeds or award practice.
+
+Soil darkens when watered, shoots grow into distinct crops, and a small brass
+marker flags dryness or readiness. Hover and the stable garden panel explain the
+same state in words. Gardening has trowel, watering-can, and basket props with
+quiet seed/leaf rustle and watering cues. The panel names the active gardener and
+clears old queue acknowledgements. The guide opens the real garden-bed catalog
+entry, and the live Plan shows the specific work and its full remaining time.
+
+Dry plants stop growing but never die; ripe crops wait. Growth continues while
+an owner is absent and the host runs, until the bed needs water. Visitors can
+water, while planting and harvesting belong to the owner. Construction freezes
+the crop; moving, undoing, discarding, saving, and reconnecting preserve it.
+Successful work uses existing bounded gardening practice and wish rewards.
+Autonomy does not buy seeds or create unattended harvest income.
+
+Validation: all 50 local suites, actual Iroh host/two-client/reconnect checks, and
+dedicated startup passed. Model tests cover budgets, cancellation, duplicate and
+malformed commands, exclusive plans, stale saved tasks, growth, safe absence,
+visitor help, strict save validation, and construction history. Each real client
+grows a distinct crop with its second resident while its first keeps playing.
+Native standard and compact flows cover placement, all crop stages, real buttons,
+full-duration plans, budget feedback, props/audio, state replacement, visitor
+restrictions, and pending replies. Catalog search now correctly returns both
+kinds of bed; its former single-result test was updated. The guide/catalog native
+checks pass, and the previous clock checkpoint passed all four platform builds.
+Human family/device play and overnight hosting remain open.
+
+Fresh assessment: gardening gives ordinary recreation a visible, lasting result.
+It also makes an existing feedback gap more noticeable: a planned activity can
+finish, be cancelled, or become unavailable while the player watches another
+resident, and then simply disappear from Plan. Next: a compact recent-outcomes
+view in the resident plan, including clear completion/cancellation/failure
+reasons, so managing both residents remains understandable.

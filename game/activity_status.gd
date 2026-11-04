@@ -26,8 +26,9 @@ static func sample(member: Dictionary, lot: Dictionary) -> Dictionary:
 		var rate := float(World.personal_activity_rates(member,kind).get(need,0.0))-float(World.DECAY.get(need,0.0))
 		var until_full := maxf(0.0,99.0-float(member.get("needs",{}).get(need,0.0)))/maxf(0.01,rate)
 		var minimum := 0.0 if task.get("automatic",false) else World.MIN_ACTIVITY_TIME
-		remaining=minf(remaining,maxf(until_full,maxf(0.0,minimum-elapsed)))
+		if kind!="garden_bed": remaining=minf(remaining,maxf(until_full,maxf(0.0,minimum-elapsed)))
 		label=str(World.ACTION_NAMES.get(kind,"Enjoying home"))
+		if kind=="garden_bed": label=str(task.get("label","Gardening"))
 		if kind=="game_table" and action=="Playing together": label="Playing together · Fun + social"
 	var minutes := maxi(1,ceili(remaining*World.MINUTES_PER_SECOND))
 	var detail := label+" · ~%d min left" % minutes if remaining>0.1 else "Finishing up"

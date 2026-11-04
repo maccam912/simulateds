@@ -54,6 +54,10 @@ solid walls, with exact trade-in prices, construction history, and cutaway
 presentation. Solo pause and 1×/2×/4× controls now advance needs, movement, and
 activities through consistent fixed steps, with rebindable shortcuts and a
 shared-clock lock when hosting or visiting a networked neighborhood.
+Kitchen garden beds now support two crop choices, visible growth, deliberate
+plant/water/harvest plans, visitor watering, gardening practice, and safe waits
+when dry or ripe. Crop state follows furnishing moves, history, saves, and
+reconnects; it does not create unattended income.
 See [the playtest log](PLAYTEST_LOG.md) for evidence
 and current usability priorities.
 

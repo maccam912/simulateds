@@ -324,3 +324,17 @@ secondary benefit (comfort from reading/cooking, fun from gardening). You can
 keep enjoying an activity after the daily practice limit. Milestones appear in
 the personal journal. Autonomy uses learned benefits without earning practice,
 and being away never removes progress.
+
+**Kitchen garden beds** cost §180 and fit on grass or floor. In live mode, click a
+bed and choose radishes (§10 seeds, §45 harvest) or tomatoes (§20 seeds, §95
+harvest). They need 4½ or 9 game hours of watered growth. Planting, watering, and
+harvesting are deliberate resident activities; one resident reserves a bed while
+it is in their plan. Full needs do not skip the work. Seeds are paid for and
+harvest income is awarded only when the work finishes.
+
+Dry crops stop growing without dying; ripe crops wait indefinitely. Growth
+continues while you are away if the host is running and the bed has water.
+Construction freezes the crop, and moving, undoing, discarding, saving, and
+reconnecting preserve it. Visitors can help water, but only the lot's household
+can plant or harvest. Completed work restores comfort and uses the existing
+gardening hobby/wish rewards; autonomy never buys seeds or harvests crops.

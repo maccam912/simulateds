@@ -250,7 +250,21 @@ func _client(index: String) -> void:
 		if session.world.build_access(session.state.lots[home]).ok: break
 		await create_timer(0.1).timeout
 	assert(session.world.build_access(session.state.lots[home]).ok,"Repairing the doorway clears access in the replicated draft")
+	await _command({"type":"place","lot_id":home,"kind":"garden_bed","x":6,"y":13})
+	var garden_id := ""
+	for _attempt in range(50):
+		for object: Dictionary in session.state.lots[home].objects:
+			if object.kind=="garden_bed": garden_id=str(object.id)
+		if not garden_id.is_empty(): break
+		await create_timer(0.1).timeout
+	assert(not garden_id.is_empty() and not session.state.lots[home].floors.has([6,13]),"A lawn garden replicates without inventing a floor")
 	await _command({"type": "build_end", "lot_id": home})
+	var gardener: String=session.state.families[identity].members[1].id
+	await _command({"type":"autonomy","member_id":gardener,"enabled":false})
+	await _command({"type":"cancel","member_id":gardener})
+	var garden_crop := "radish" if index=="1" else "tomato"
+	var plant := {"type":"garden","member_id":gardener,"lot_id":home,"target_id":garden_id,"action":"plant","crop":garden_crop,"revision":0}
+	await _command(plant); await _command(plant,false)
 	await _command({"type":"autonomy","member_id":member_id,"enabled":false})
 	await _command({"type":"cancel","member_id":member_id})
 	await _command({"type":"care","member_id":member_id,"need":"hunger"})
@@ -335,6 +349,9 @@ func _client(index: String) -> void:
 		await create_timer(0.1).timeout
 	assert(int(session.state.families[identity].members[0].hobbies.reading.sessions)==practices_before+1,"Completed reading did not replicate hobby progress")
 	var companion_id: String=session.state.families[identity].members[1].id
+	var garden: Dictionary=session.world._object(session.state.lots[home],garden_id).garden
+	assert(garden.crop==garden_crop and garden.revision==1 and garden.growth>0,"A second resident's completed planting and continued growth replicate while the first follows their own plan")
+	await _command(plant,false)
 	await _command({"type":"autonomy","member_id":companion_id,"enabled":false})
 	await _command({"type":"cancel","member_id":companion_id})
 	await _command({"type":"interact","member_id":member_id,"lot_id":home,"target_id":companion_id})
@@ -399,6 +416,7 @@ func _client(index: String) -> void:
 	var hobbies_before: Dictionary=session.state.families[identity].members[0].hobbies.duplicate(true)
 	var journal_before: Array=session.state.families[identity].members[0].wishes.journal.duplicate(true)
 	var funds: float = session.state.lots[home].funds
+	var garden_before: Dictionary=session.world._object(session.state.lots[home],garden_id).garden.duplicate(true)
 	session.leave()
 	await create_timer(0.7).timeout
 	await _connect()
@@ -412,6 +430,8 @@ func _client(index: String) -> void:
 	assert(not session.state.families[identity].home_news.report.pending,"Acknowledged recap did not replicate")
 	await _command(postcard,false)
 	assert(session.home_lot() == home, "Reconnect changed lot ownership")
+	garden=session.world._object(session.state.lots[home],garden_id).garden
+	assert(garden.crop==garden_before.crop and garden.revision==garden_before.revision and garden.growth>=garden_before.growth and garden.growth<=45.000001,"Reconnect retains crops; unattended growth stops safely when the planted water runs out")
 	assert(session.state.lots[home].windows.get("7,3")==window_intent.style and session.state.lots[home].walls.has([7,3]),"Reconnect retains the mounted window without opening the wall")
 	assert(session.state.families[identity].routines.entries[2].name=="Quiet time "+index and session.state.families[identity].routines.entries[2].steps==["bookshelf","table"],"Reconnect retains the independent routine library")
 	assert(int(preload("res://game/friendships.gd").bond(session.state,member_id,companion_id).get("score",0))==32,"Reconnect lost the friendship")

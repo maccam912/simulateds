@@ -17,6 +17,7 @@ const Appearance = preload("res://game/appearance.gd")
 const Tabletop = preload("res://game/tabletop.gd")
 const BuildAccess = preload("res://game/build_access.gd")
 const Routines = preload("res://game/routines.gd")
+const Gardens = preload("res://game/gardens.gd")
 const HouseholdProfile = preload("res://game/household_profile.gd")
 const GRID_SIZE := 16
 const SCHEMA := 1
@@ -320,7 +321,12 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 		var result := apply_command(profile_id,{"type":"interact","member_id":member.id,"lot_id":lot_id,"target_id":option.target_id})
 		if result.ok: result.message="Tabletop game added to your plan."
 		return result
-	if type == "move":
+	if type=="garden":
+		var option := garden_option(profile_id,str(member.id),str(lot_id),command.get("target_id"),command.get("action"),command.get("crop",""))
+		if not option.ok: return option
+		if not _integer(command.get("revision")) or int(command.revision)!=int(option.revision): return _result(false,"This garden bed changed. Choose from its current activities.")
+		_queue_action(member,{"type":"interact","target_id":command.target_id,"garden_action":command.action,"crop":command.get("crop",""),"garden_revision":int(option.revision)})
+	elif type == "move":
 		if not _valid_coord(command.get("x")) or not _valid_coord(command.get("y")):
 			return _result(false, "Choose a tile inside the lot.")
 		var goal := Vector2i(int(command.x), int(command.y))
@@ -342,6 +348,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 				return _result(false, "There is no path to chat with that resident.")
 			_queue_action(member, {"type":"interact", "target_id":target_id, "target_kind":"member"})
 		else:
+			if object.kind=="garden_bed": return _result(false,"Open the garden bed to choose planting, watering, or harvesting.")
 			if not _can_reach_object(lot, _position(member), object):
 				return _result(false, "There is no path to use that furnishing.")
 			_queue_action(member, {"type":"interact", "target_id":target_id})
@@ -353,6 +360,55 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 	if member.task.is_empty():
 		_start_next(member, lot)
 	return _result(true, "Action queued.")
+
+func garden_option(profile_id: String,member_id: String,lot_id: String,target_id: Variant,action: Variant,crop: Variant="") -> Dictionary:
+	var family: Dictionary=state.families.get(profile_id,{})
+	if family.is_empty(): return _result(false,"Join a household first.")
+	var member := _member(family,member_id)
+	if member.is_empty(): return _result(false,"Select a resident from your household.")
+	var lot: Dictionary=state.lots.get(lot_id,{})
+	if lot.is_empty(): return _result(false,"That garden is no longer here.")
+	if member.lot_id!=lot_id: return _result(false,"Visit this lot before gardening.")
+	if lot.building or state.lots[family.home_lot].building: return _result(false,"Finish construction before gardening.")
+	if not target_id is String: return _result(false,"Choose a garden bed.")
+	var object := _object(lot,target_id)
+	if object.get("kind")!="garden_bed": return _result(false,"Choose a garden bed.")
+	var option := Gardens.inspect(object.garden,action,crop,lot.owner==profile_id,int(lot.funds))
+	if not option.ok: return option
+	for household: Dictionary in state.families.values():
+		for resident: Dictionary in household.members:
+			if resident.lot_id!=lot_id: continue
+			var tasks: Array=resident.queue.duplicate(); tasks.append(resident.task)
+			for task: Dictionary in tasks:
+				if task.get("target_id")==target_id and task.has("garden_action"):
+					return _result(false,"Already in "+str(resident.name)+"'s plan.")
+	if member.queue.size()>=MAX_QUEUE: return _result(false,"The action queue is full (8 actions).")
+	if not _can_reach_object(lot,_position(member),object): return _result(false,"There is no path to this garden bed.")
+	option.revision=int(object.garden.revision)
+	return option
+
+func _garden_task_option(member: Dictionary,lot: Dictionary,object: Dictionary,task: Dictionary) -> Dictionary:
+	if object.get("kind")!="garden_bed" or not Gardens.valid_task(task): return _result(false,"This garden activity is no longer available.")
+	if int(task.garden_revision)!=int(object.garden.revision): return _result(false,"The garden changed before this activity.")
+	var owner: bool=state.families.get(lot.owner,{}).get("members",[]).has(member)
+	return Gardens.inspect(object.garden,task.garden_action,task.crop,owner,int(lot.funds))
+
+func _tick_garden(member: Dictionary,lot: Dictionary,object: Dictionary,task: Dictionary,delta: float) -> void:
+	var option := _garden_task_option(member,lot,object,task)
+	if not option.ok:
+		member.task={}; member.action=str(option.message); return
+	member.action=str(option.label)
+	var rates := personal_activity_rates(member,"plant")
+	for need: String in rates:
+		member.needs[need]=minf(100.0,float(member.needs[need])+float(rates[need])*delta)
+	task.remaining-=delta
+	if float(task.remaining)>0.000001: return
+	if not _adjust_funds(str(lot.id),-int(option.cost)):
+		member.task={}; member.action="The household budget changed"; return
+	Gardens.apply(object.garden,str(task.garden_action),str(task.crop))
+	_finish_hobby(member,task,"plant"); _finish_wish(member,task,"plant")
+	_event(str(member.name)+" finished: "+str(option.label).to_lower()+(" · §%d earned." % -int(option.cost) if int(option.cost)<0 else "."))
+	member.task={}; member.action="Garden tended"
 
 func move_option(profile_id: String,member_id: String,lot_id: String,goal: Vector2i) -> Dictionary:
 	# Shared, read-only reachability for ground previews and accepted commands.
@@ -454,6 +510,10 @@ func step(delta: float) -> void:
 			_adjust_funds(str(home.id),allowance)
 			if HomeNews.away(family): family.home_news.allowance+=allowance
 		_event("A new day. Households received their living allowance.")
+	for lot: Dictionary in state.lots.values():
+		if lot.building: continue
+		for object: Dictionary in lot.objects:
+			if object.kind=="garden_bed": Gardens.grow(object.garden,delta)
 	for family: Dictionary in state.families.values():
 		if HomeNews.away(family): family.home_news.minutes+=delta*MINUTES_PER_SECOND
 		if state.lots[family.home_lot].building:
@@ -526,6 +586,8 @@ func _tick_member(member: Dictionary, lot: Dictionary, delta: float) -> void:
 	if object.is_empty():
 		member.task = {}
 		return
+	if object.kind=="garden_bed" or task.has("garden_action"):
+		_tick_garden(member,lot,object,task,delta); return
 	var definition: Dictionary = Catalog.ITEMS[object.kind]
 	member.action = ACTION_NAMES.get(object.kind, "Enjoying home")
 	var need: String = definition.need
@@ -616,7 +678,7 @@ func care_option(member: Dictionary, need: String) -> Dictionary:
 	for object: Dictionary in lot.objects:
 		# Secondary comfort from sleeping is recognized in the plan, but a care
 		# shortcut for comfort should choose a short break, not send someone to bed.
-		if Catalog.ITEMS[object.kind].need!=need: continue
+		if object.kind=="garden_bed" or Catalog.ITEMS[object.kind].need!=need: continue
 		var goals := _interaction_cells(lot,object)
 		var path := _path(lot,_position(member),goals)
 		if path.is_empty() and not goals.has(_position(member)): continue
@@ -749,6 +811,7 @@ func _choose_autonomy(member: Dictionary, lot: Dictionary) -> void:
 	var candidates: Array[Dictionary]=[]
 	var urgent := false
 	for object: Dictionary in lot.objects:
+		if object.kind=="garden_bed": continue # Crops need deliberate plans, never automatic spending/harvesting.
 		if not _object_user(str(lot.id),object,str(member.id)).is_empty(): continue
 		if object.kind=="game_table":
 			var places := _game_places(member,lot,object)
@@ -785,6 +848,10 @@ func _start_next(member: Dictionary, lot: Dictionary) -> void:
 	var game_places: Array=[]
 	if pending.type == "interact" and pending.get("target_kind", "object") == "object":
 		var furnishing := _object(lot,str(pending.target_id))
+		if furnishing.get("kind")=="garden_bed" or pending.has("garden_action"):
+			var garden := _garden_task_option(member,lot,furnishing,pending)
+			if not garden.ok:
+				member.queue.pop_front(); member.action=str(garden.message); return
 		var user := _object_user(str(lot.id),furnishing,str(member.id))
 		if not user.is_empty():
 			member.action = "Waiting for " + str(user.name) + " · " + str(Catalog.ITEMS[furnishing.kind].name)
@@ -817,6 +884,9 @@ func _start_next(member: Dictionary, lot: Dictionary) -> void:
 		goals = game_places if object.kind=="game_table" else _interaction_cells(lot, object)
 		task.remaining = float(Catalog.ITEMS[object.kind].duration)
 		task.label = str(Catalog.ITEMS[object.kind].name)
+		if object.kind=="garden_bed":
+			task.remaining=float(Gardens.DURATIONS[task.garden_action])
+			task.label=Gardens.label(str(task.garden_action),str(task.crop) if task.garden_action=="plant" else str(object.garden.crop))
 	var route := _path(lot, _position(member), goals)
 	if route.is_empty() and not goals.has(_position(member)):
 		member.action = "Cannot reach destination"
@@ -925,7 +995,9 @@ func _clear_member(member: Dictionary, label: String = "Taking it easy") -> void
 func _new_object(kind: String, x: int, y: int, rotation: int) -> Dictionary:
 	var id := "object_%d" % int(state.next_object)
 	state.next_object += 1
-	return {"id":id, "kind":kind, "x":x, "y":y, "rotation":rotation}
+	var object := {"id":id, "kind":kind, "x":x, "y":y, "rotation":rotation}
+	if kind=="garden_bed": object.garden=Gardens.create()
+	return object
 
 func _tile_key(kind: String) -> String:
 	return {"floor":"floors", "wall":"walls", "door":"doors"}.get(kind, "")
@@ -1087,6 +1159,8 @@ func _normalize_numbers() -> void:
 		for object: Dictionary in lot.objects:
 			for key: String in ["x", "y", "rotation"]:
 				object[key] = int(object[key])
+			if object.kind=="garden_bed":
+				for key: String in ["revision","harvests"]: object.garden[key]=int(object.garden[key])
 	for family: Dictionary in state.families.values():
 		HomeNews.normalize(family)
 		if not family.has("routines"): family.routines=Routines.create()
@@ -1174,8 +1248,10 @@ func _valid_state(data: Dictionary) -> bool:
 			if not str(object.id).begins_with("object_") or not str(object.id).trim_prefix("object_").is_valid_int() or int(str(object.id).trim_prefix("object_")) >= int(data.next_object):
 				return false
 			object_ids[object.id] = true
+			if object.kind=="garden_bed" and not Gardens.valid(object.get("garden")): return false
+			if object.kind!="garden_bed" and object.has("garden"): return false
 			for cell: Vector2i in _object_cells(object):
-				if not _inside(cell) or occupied.has(cell) or not floor_cells.has(cell):
+				if not _inside(cell) or occupied.has(cell) or (object.kind!="garden_bed" and not floor_cells.has(cell)):
 					return false
 				occupied[cell] = true
 		if not Finishes.valid(lot) or not Windows.valid(lot): return false
@@ -1237,6 +1313,8 @@ func _adjust_funds(lot_id: String, amount: int) -> bool:
 func _valid_task(value: Variant, active: bool) -> bool:
 	if not value is Dictionary or not value.get("type") in ["move", "interact"]:
 		return false
+	if value.has("garden_action") or value.has("garden_revision") or value.has("crop"):
+		if not Gardens.valid_task(value): return false
 	if value.has("routine_id") or value.has("routine_name"):
 		if value.type!="interact" or not Routines.valid_id(value.get("routine_id")) or not HouseholdProfile.valid_name(value.get("routine_name"),32): return false
 	if value.has("social_started") and (not _integer(value.social_started) or float(value.social_started)<0 or float(value.social_started)>9007199254740991): return false
