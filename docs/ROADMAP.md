@@ -34,7 +34,8 @@ have five persistent ranks, bounded deliberate practice, activity bonuses, and a
 Hobbies panel. The build catalog now offers categories, search by name/use,
 selected-item details, and compact editing controls. An optional first-day guide
 and live controls reference now lead into the existing systems without adding
-permanent HUD clutter.
+permanent HUD clutter. Resident favorites now gently influence autonomous leisure
+choices, with editable preferences and a visible daily-plan explanation.
 See [the playtest log](PLAYTEST_LOG.md) for evidence
 and current usability priorities.
 
@@ -55,7 +56,7 @@ understandable result. Fuzz placement and reopening around residents/visitors.
 ## 2. Make families expressive
 
 - Household creation, traits, and preferences. Names and a palette-based
-  appearance editor are implemented for both existing residents.
+  appearance editor and favorite pastimes are implemented for both residents.
 - Visible action queues, interruption rules, autonomy controls, and thought icons.
 - Object reservations, shared activities, conversations, and basic relationships
   are implemented. Add richer shared recreation and personality-driven choices.
@@ -67,7 +68,8 @@ complete a shared activity without either player controlling the other's family.
 
 ## 3. Make asynchronous life rewarding
 
-- Player-selected caretaker schedules and a bounded activity journal.
+- An accurate return recap, player-selected caretaker schedules, and a bounded
+  activity journal.
 - Simple employment/activity income, bills, and affordable upgrades.
 - Host-approved invitations and household guest/privacy settings.
 - Profile backup/recovery and world administration.

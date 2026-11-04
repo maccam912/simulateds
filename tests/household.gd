@@ -19,10 +19,14 @@ func _run() -> void:
 	var original: Dictionary=world.snapshot()
 	var command := _command(); command.name="The Koskis"
 	command.members[0].name="Matt"; command.members[0].appearance={"skin":4,"hair":0,"shirt":6,"style":2}
+	command.members[0].favorite="reading"; command.members[1].favorite="gardening"
 	command.members[1].name="Violet"; command.members[1].appearance={"skin":1,"hair":2,"shirt":3,"style":1}
 	assert(world.apply_command("owner",command).ok)
 	assert(family.name=="The Koskis" and family.members[1].name=="Violet" and family.members[0].appearance.shirt==6)
 	assert(family.members[0].wishes==original.families.owner.members[0].wishes and world.state.lots==original.lots,"Identity changes preserve money, homes, wishes, and needs")
+	assert(family.members[0].favorite=="reading" and family.members[1].favorite=="gardening")
+	var legacy_command := _command()
+	assert(world.apply_command("owner",legacy_command).ok and family.members[0].favorite=="reading" and family.members[1].favorite=="gardening","Older identity requests preserve current favorites")
 	var accepted: Dictionary=world.snapshot()
 	assert(not world.apply_command("owner",command).ok and world.snapshot()==accepted,"Stale editors cannot overwrite newer choices")
 	command=_command(); command.members[1].id=world.state.families.neighbor.members[0].id
@@ -35,6 +39,9 @@ func _run() -> void:
 	for bad in [{"skin":0,"hair":0,"shirt":99,"style":0},{"skin":-1,"hair":0,"shirt":0,"style":0},{"skin":1.5,"hair":0,"shirt":0,"style":0},{"skin":0,"hair":0,"shirt":0},"blue"]:
 		command=_command(); command.members[1].appearance=bad
 		assert(not world.apply_command("owner",command).ok and world.snapshot()==accepted,"Appearance values stay within the supported palette")
+	for bad: Variant in ["unknown",null,{},7]:
+		command=_command(); command.members[0].favorite="tea"; command.members[1].favorite=bad
+		assert(not world.apply_command("owner",command).ok and world.snapshot()==accepted,"Invalid second favorite leaves the entire household untouched")
 	var loaded := World.new()
 	assert(loaded.restore(JSON.parse_string(JSON.stringify(world.snapshot()))))
 	assert(loaded.state.families.owner.members[1].appearance==family.members[1].appearance,"Appearance survives JSON and numeric normalization")
@@ -49,7 +56,7 @@ func _run() -> void:
 	assert(world.apply_command("owner",{"type":"rename_family","name":"Matthew"}).ok and family.name=="The Koskis","Profile name changes preserve a custom household name")
 	command=_command(); command.name="😀".repeat(64)
 	for member: Dictionary in command.members:
-		member.id="a".repeat(64)+"_1"; member.name="😀".repeat(32)
+		member.id="a".repeat(64)+"_1"; member.name="😀".repeat(32); member.favorite="television"
 	assert(JSON.stringify({"type":"command","id":2147483647,"intent":command}).to_utf8_buffer().size()<=1024,"Largest ordinary editor request fits the transport packet")
 	print("HOUSEHOLD_PASS")
 	quit()

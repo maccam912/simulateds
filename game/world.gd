@@ -10,6 +10,7 @@ const Friendships = preload("res://game/friendships.gd")
 const Mailbox = preload("res://game/mailbox.gd")
 const Wellbeing = preload("res://game/wellbeing.gd")
 const Finishes = preload("res://game/finishes.gd")
+const Pastimes = preload("res://game/pastimes.gd")
 const Appearance = preload("res://game/appearance.gd")
 const HouseholdProfile = preload("res://game/household_profile.gd")
 const GRID_SIZE := 16
@@ -70,6 +71,7 @@ func ensure_family(profile_id: String, display_name: String) -> String:
 			member.wishes=Wishes.create(str(member.id),int(state.day))
 			member.hobbies=Hobbies.create(int(state.day))
 			member.appearance=Appearance.defaults(member)
+			member.favorite=Pastimes.initial(member)
 		state.families[profile_id] = {"id":profile_id, "name":clean_name + " household", "home_lot":lot_id, "online":false, "identity_revision":0, "members":members}
 		Friendships.ensure_housemates(state,state.families[profile_id])
 		state.families[profile_id].mailbox=Mailbox.create(int(state.day))
@@ -576,14 +578,23 @@ func _choose_autonomy(member: Dictionary, lot: Dictionary) -> void:
 	# reachable affordance instead of repeatedly retrying one unsatisfiable need.
 	var best: Dictionary = {}
 	var best_score := 100000.0
+	var candidates: Array[Dictionary]=[]
+	var urgent := false
 	for object: Dictionary in lot.objects:
 		if not _object_user(str(lot.id),object,str(member.id)).is_empty(): continue
 		var need: String = Catalog.ITEMS[object.kind].need
 		var value := float(member.needs[need])
 		if value >= 78.0 or not _can_reach_object(lot, _position(member), object):
 			continue
+		candidates.append({"object":object,"need":value})
+		urgent=urgent or value<=Pastimes.URGENT
+	for candidate: Dictionary in candidates:
+		var object: Dictionary=candidate.object
+		var value: float=candidate.need
+		if urgent and value>Pastimes.URGENT: continue
 		var distance := _position(member).distance_to(Vector2i(int(object.x), int(object.y)))
 		var score := value + distance * 0.2
+		if not urgent and Pastimes.matches(member,str(object.kind)): score-=Pastimes.PREFERENCE
 		if score < best_score:
 			best = object
 			best_score = score
@@ -889,6 +900,7 @@ func _normalize_numbers() -> void:
 	for family: Dictionary in state.families.values():
 		family.identity_revision=int(family.get("identity_revision",0))
 		for member: Dictionary in family.members:
+			if not member.has("favorite"): member.favorite="variety"
 			if not member.has("appearance"): member.appearance=Appearance.defaults(member)
 			for key: String in member.appearance: member.appearance[key]=int(member.appearance[key])
 			if not member.has("wishes"): member.wishes=Wishes.create(str(member.id),int(state.day))
@@ -987,6 +999,7 @@ func _valid_state(data: Dictionary) -> bool:
 				return false
 			if not member.get("autonomy", true) is bool or not _integer(member.get("next_action", 1)) or float(member.get("next_action", 1)) < 1 or float(member.get("next_action", 1)) > 9007199254740000:
 				return false
+			if member.has("favorite") and not Pastimes.valid(member.favorite): return false
 			if member.has("appearance") and not Appearance.valid(member.appearance): return false
 			if member.has("wishes") and not Wishes.valid(member.wishes,int(data.day)): return false
 			if member.has("hobbies") and not Hobbies.valid(member.hobbies,int(data.day)): return false

@@ -13,6 +13,7 @@ const Wishes = preload("res://game/wishes.gd")
 const Hobbies = preload("res://game/hobbies.gd")
 const Friendships = preload("res://game/friendships.gd")
 const Portrait = preload("res://game/resident_portrait.gd")
+const Pastimes = preload("res://game/pastimes.gd")
 const Appearance = preload("res://game/appearance.gd")
 const Wellbeing = preload("res://game/wellbeing.gd")
 const Finishes = preload("res://game/finishes.gd")
@@ -61,6 +62,7 @@ var plan_panel: PanelContainer
 var plan_box: VBoxContainer
 var plan_title: Label
 var autonomy_button: Button
+var pastime_label: Label
 var _plan_signature := ""
 var need_bars: Dictionary = {}
 var need_values: Dictionary = {}
@@ -230,7 +232,7 @@ func _build_ui() -> void:
 	household_button.add_theme_font_size_override("font_size",11)
 	var edit_style := Style.box(Style.PANEL,3,Style.EDGE); edit_style.content_margin_top=2; edit_style.content_margin_bottom=2; edit_style.content_margin_left=8; edit_style.content_margin_right=8
 	household_button.add_theme_stylebox_override("normal",edit_style)
-	household_button.tooltip_text="Household names and appearance"; family_head.add_child(household_button)
+	household_button.tooltip_text="Household names, appearance, and favorite pastimes"; family_head.add_child(household_button)
 	family_box = _vbox(family_column,5)
 
 	var needs_panel := _hud_panel(Rect2(228,-164,600,148),Vector2(0,1))
@@ -252,6 +254,8 @@ func _build_ui() -> void:
 	autonomy_button = _button("Autonomy: on",func(): _send({"type":"autonomy","member_id":selected_member,"enabled":not bool(_member().get("autonomy",true))}))
 	autonomy_button.tooltip_text="When on, this resident tends their own needs between your orders. Your orders always take priority."
 	plan.add_child(autonomy_button)
+	pastime_label=_label("",13,Style.MUTED); plan.add_child(pastime_label)
+	pastime_label.tooltip_text="Change this in Household. A favorite nudges free-time choices; urgent needs and your orders come first."
 	var plan_scroll := ScrollContainer.new(); plan_scroll.size_flags_vertical=Control.SIZE_EXPAND_FILL; plan_scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED; plan.add_child(plan_scroll)
 	plan_box = _vbox(plan_scroll,5); plan_box.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	var bars := HBoxContainer.new(); bars.add_theme_constant_override("separation",12); needs.add_child(bars)
@@ -426,7 +430,7 @@ func _refresh() -> void:
 		_family_signature=family_signature; _clear(family_box)
 		for resident in family.get("members",[]):
 			var b := _button(("●  " if str(resident.id)==selected_member else "○  ")+str(resident.name),func(): selected_member=str(resident.id); viewed_lot=str(resident.lot_id); _refresh())
-			b.alignment=HORIZONTAL_ALIGNMENT_LEFT; b.clip_text=true; b.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; b.tooltip_text=str(resident.name); family_box.add_child(b)
+			b.alignment=HORIZONTAL_ALIGNMENT_LEFT; b.clip_text=true; b.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; b.tooltip_text=str(resident.name)+" · Unwinds with: "+Pastimes.label(resident); family_box.add_child(b)
 	if not member.is_empty():
 		needs_title.text=str(member.name)+"  /  "+str(member.get("action","Enjoying the day"))
 		queue_label.text="Plan · %d" % (member.get("queue",[]).size() + (0 if member.get("task",{}).is_empty() else 1))
@@ -492,11 +496,12 @@ func _refresh() -> void:
 
 func _refresh_plan(member: Dictionary) -> void:
 	plan_title.text = str(member.name) + "’s day"
+	pastime_label.text="Unwinds with: "+Pastimes.label(member)
 	autonomy_button.text = "Autonomy: " + ("on" if member.get("autonomy",true) else "off")
 	var tasks: Array = []
 	if not member.task.is_empty(): tasks.append(member.task)
 	tasks.append_array(member.queue)
-	var signature := selected_member + str(member.get("autonomy",true)) + str(member.task.get("id","")) + (str(member.action) if member.task.is_empty() else "")
+	var signature := selected_member + Pastimes.of(member) + str(member.get("autonomy",true)) + str(member.task.get("id","")) + (str(member.action) if member.task.is_empty() else "")
 	for task: Dictionary in tasks: signature += str(task.get("id",""))
 	if signature == _plan_signature: return
 	_plan_signature = signature
@@ -509,8 +514,10 @@ func _refresh_plan(member: Dictionary) -> void:
 		var current: bool = task == member.task
 		var title := _task_title(task,member)
 		var waiting: bool = member.task.is_empty() and task == member.queue[0] and str(member.action).begins_with("Waiting")
-		var label := _label(("NOW  " if current else "WAIT  " if waiting else "NEXT  ") + title + (" · auto" if task.get("automatic",false) else ""),13,Style.GREEN if current else Style.TEXT)
-		label.size_flags_horizontal=Control.SIZE_EXPAND_FILL; label.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; label.tooltip_text=title; row.add_child(label)
+		var favorite: bool=bool(task.get("automatic",false)) and Pastimes.matches(member,Session.world.task_activity(task,str(member.lot_id)))
+		var suffix := " · auto · favorite" if favorite else " · auto" if task.get("automatic",false) else ""
+		var label := _label(("NOW  " if current else "WAIT  " if waiting else "NEXT  ") + title + suffix,13,Style.GREEN if current else Style.TEXT)
+		label.size_flags_horizontal=Control.SIZE_EXPAND_FILL; label.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; label.tooltip_text=title+(" · A favorite pastime, chosen autonomously." if favorite else ""); row.add_child(label)
 		var action_id := str(task.get("id",""))
 		var cancel := _button("×",func(): _send({"type":"remove_action","member_id":str(member.id),"action_id":action_id}))
 		cancel.tooltip_text="Cancel " + title; row.add_child(cancel)

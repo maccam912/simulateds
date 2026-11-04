@@ -142,6 +142,16 @@ must be silent. Headless hosts do not create audio playback. Important
 information is never conveyed only through sound. Later recordings and richer
 ambience should retain these bus boundaries and comparable loudness.
 
+## Everyday personality
+
+A favorite pastime is a preference, not a level or a reward multiplier. Reading,
+television, gardening, and tea influence choices only among useful reachable
+activities. Urgent needs and deliberate plans take priority; “A little of
+everything” keeps neutral choices. Edit the preference alongside names and looks.
+Show it in the daily plan and explain autonomous favorite activities there, rather
+than adding another persistent HUD panel. Existing saves remain neutral until
+edited, and residents do not lose progress or earn unattended wish/hobby rewards.
+
 ## Screen and state grammar
 
 | Screen | Purpose and behavior |

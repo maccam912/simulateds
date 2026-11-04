@@ -116,9 +116,13 @@ or shell expressions.
   personal journal. **Hobbies** tracks reading, gardening, and cooking, with five
   lasting ranks and useful activity bonuses. Wishes never expire; completed sets can renew on a later day.
 - **Edit** beside Household (or **Household** in the game menu) changes the
-  household name, both resident names, clothing/skin/hair colors, and hair style.
+  household name, both resident names, clothing/skin/hair colors, hair style, and
+  favorite pastimes (reading, television, gardening, tea, or a little of everything).
   Preview your choices, then Apply changes; Cancel or Escape leaves them alone.
   Choices belong to this neighborhood and persist through saves and reconnects.
+  Favorites gently influence autonomous choices when needs are similar; urgent
+  care and your orders come first. Plan shows the selected resident’s preference.
+  Existing saves start neutral, and automatic leisure earns no wish or hobby progress.
 - **People** shows the selected resident’s relationships and offers Visit or Chat.
   Two completed catch-ups per pair per day build a shared friendship when both
   households are online. Milestones appear in both journals. Busy residents finish

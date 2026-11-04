@@ -1,4 +1,5 @@
 extends RefCounted
+const Pastimes = preload("res://game/pastimes.gd")
 const Appearance = preload("res://game/appearance.gd")
 
 static func valid_name(value: Variant, limit: int) -> bool:
@@ -17,17 +18,20 @@ static func edit(family: Dictionary, command: Dictionary) -> Dictionary:
 	var updates := {}
 	for member: Variant in members:
 		if not member is Dictionary or not member.get("id") is String: return _no("Choose a member of your household.")
-		var owned := false
+		var owned: Dictionary = {}
 		for resident: Dictionary in family.members:
-			if resident.id==member.id: owned=true
-		if not owned or updates.has(member.id): return _no("You can only edit each of your own residents once.")
+			if resident.id==member.id: owned=resident
+		if owned.is_empty() or updates.has(member.id): return _no("You can only edit each of your own residents once.")
 		if not valid_name(member.get("name"),32): return _no("Resident names need 1 to 32 characters on one line.")
 		if not Appearance.valid(member.get("appearance")): return _no("Choose colors and hair from the available palette.")
-		updates[member.id]={"name":member.name.strip_edges(),"appearance":member.appearance.duplicate()}
+		var favorite: Variant=member.get("favorite",Pastimes.of(owned))
+		if not Pastimes.valid(favorite): return _no("Choose a pastime from the available list.")
+		updates[member.id]={"name":member.name.strip_edges(),"appearance":member.appearance.duplicate(),"favorite":favorite}
 	# Everything is checked before applying either resident's changes.
 	family.name=command.name.strip_edges()
 	for member: Dictionary in family.members:
 		member.name=updates[member.id].name
+		member.favorite=updates[member.id].favorite
 		member.appearance=updates[member.id].appearance
 		for key: String in member.appearance: member.appearance[key]=int(member.appearance[key])
 	family.identity_revision=int(family.get("identity_revision",0))+1

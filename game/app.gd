@@ -467,7 +467,7 @@ func open_household() -> void:
 	if family.is_empty() or Session.role=="joining": return
 	previous_page="pause" if page=="pause" else "game"
 	_pending_household.clear()
-	_show_page("household","Your household","Give your residents a name and a look of their own.")
+	_show_page("household","Your household","Choose their names, look, and favorite ways to unwind.")
 	household_editor=HouseholdEditor.new(); menu_content.add_child(household_editor)
 	household_editor.setup(family,_household_context())
 	var space := Control.new(); space.size_flags_vertical=Control.SIZE_EXPAND_FILL; menu_content.add_child(space)
@@ -501,7 +501,7 @@ func _household_changed() -> void:
 	for expected: Dictionary in _pending_household.members:
 		var found := false
 		for member: Dictionary in family.get("members",[]):
-			if member.id==expected.id and member.name==str(expected.name).strip_edges() and member.get("appearance",{})==expected.appearance: found=true
+			if member.id==expected.id and member.name==str(expected.name).strip_edges() and member.get("appearance",{})==expected.appearance and member.get("favorite","variety")==expected.favorite: found=true
 		if not found: return
 	_pending_household.clear()
 	Soundscape.play_ui("confirm")

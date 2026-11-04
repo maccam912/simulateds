@@ -462,3 +462,40 @@ leisure choices on their own. Next: distinct, editable leisure preferences that
 influence autonomy while keeping urgent needs and explicit player plans first.
 Make the difference visible in ordinary play, without unattended reward farming
 or penalties for being away.
+
+
+## 2026-11-04 · A favorite way to unwind
+
+Residents now have editable favorites: reading, television, gardening, tea, or a
+little of everything. New housemates start with distinct preferences; older saves
+keep neutral choices. A favorite gives a small advantage among reachable useful
+activities when needs are similar. Any available urgent care disables that bias.
+Missing or blocked furniture still permits other care. Explicit orders and the
+autonomy switch retain priority. Automatic favorites restore needs without earning
+hobby practice, wish rewards, or extra funds, including while a household is away.
+
+The household editor includes a pastime selector on each resident card. A shorter
+portrait preview keeps every color and selector plus Apply/Cancel visible at
+1280×720/125% UI scale. The daily plan shows “Unwinds with” and marks an automatic
+favorite activity. Changes are atomic, owned, revision checked, saved, and
+replicated. An older identity request that lacks the new field preserves the
+current favorite instead of clearing it.
+
+Validation: all twenty-two suites, real Iroh host/two-client identity replication
+and reconnect, and dedicated-server startup passed. Focused checks cover all four
+preferences, neutral choices, urgent care, modest preference strength, unreachable
+favorites, an absent urgent furnishing, manual orders, disabled autonomy, live
+idle selection, absence, old saves, malformed snapshots, and atomic invalid edits.
+The maximum ordinary Unicode edit still fits the 1,024-byte packet. Graphical
+household input runs passed at 1440×900 and 1280×720/125% UI scale; captured editor
+and plan screens were inspected. An initial misplaced local-variable declaration
+caused a compile error in the focused test, corrected before the passing suite.
+The preceding guide checkpoint passed all four platform CI jobs. These are agent
+checks; physical Android and human family playtests remain outstanding.
+
+Fresh assessment: residents now have a small recognizable difference in everyday
+behavior, and the preference is visible without growing the permanent HUD. The
+next useful improvement is an accurate, dismissible return recap for asynchronous
+play: how much neighborhood time passed, what allowance arrived, and which
+postcards await. Record actual host simulation facts, avoid invented events or
+wall-clock catch-up, and keep the recap from interrupting an active visit or build.

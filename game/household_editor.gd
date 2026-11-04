@@ -1,5 +1,6 @@
 extends VBoxContainer
 const Style = preload("res://game/style.gd")
+const Pastimes = preload("res://game/pastimes.gd")
 const Appearance = preload("res://game/appearance.gd")
 const Portrait = preload("res://game/resident_portrait.gd")
 var draft: Dictionary
@@ -7,6 +8,7 @@ var family_name: LineEdit
 var member_names: Array[LineEdit]=[]
 var portraits: Array[Control]=[]
 var hair_controls: Array[OptionButton]=[]
+var pastime_controls: Array[OptionButton]=[]
 var swatches: Array[Dictionary]=[]
 var context_key := ""
 
@@ -21,6 +23,7 @@ func setup(family: Dictionary, context: String) -> void:
 	for index in range(draft.members.size()):
 		var member: Dictionary=draft.members[index]
 		member.appearance=Appearance.of(member).duplicate()
+		member.favorite=Pastimes.of(member)
 		var card := PanelContainer.new(); card.size_flags_horizontal=Control.SIZE_EXPAND_FILL; cards.add_child(card)
 		var style := Style.box(Color("1e3238"),6,Style.EDGE)
 		style.content_margin_left=10; style.content_margin_right=10; style.content_margin_top=10; style.content_margin_bottom=10
@@ -29,7 +32,7 @@ func setup(family: Dictionary, context: String) -> void:
 		body.add_child(_label("RESIDENT %d" % (index+1),11))
 		var name := LineEdit.new(); name.text=str(member.name); name.max_length=32
 		name.placeholder_text="Resident name"; body.add_child(name); member_names.append(name)
-		var portrait := Portrait.new(); portrait.look=member.appearance.duplicate(); body.add_child(portrait); portraits.append(portrait)
+		var portrait := Portrait.new(); portrait.look=member.appearance.duplicate(); body.add_child(portrait); portrait.custom_minimum_size.y=64; portraits.append(portrait)
 		var hair_row := HBoxContainer.new(); body.add_child(hair_row); hair_row.add_child(_label("Hair style",13))
 		var hair := OptionButton.new(); hair_controls.append(hair); hair.size_flags_horizontal=Control.SIZE_EXPAND_FILL; hair_row.add_child(hair)
 		for label: String in Appearance.STYLES: hair.add_item(label)
@@ -45,6 +48,13 @@ func setup(family: Dictionary, context: String) -> void:
 				button.pressed.connect(func(): _choose(index,key,choice))
 				row.add_child(button)
 				swatches.append({"button":button,"member":index,"key":key,"choice":choice,"color":colors[choice]})
+		var pastime_row := HBoxContainer.new(); body.add_child(pastime_row); pastime_row.add_child(_label("Pastime",13))
+		var pastime := OptionButton.new(); pastime_controls.append(pastime); pastime.fit_to_longest_item=false
+		pastime.size_flags_horizontal=Control.SIZE_EXPAND_FILL; pastime_row.add_child(pastime)
+		pastime.tooltip_text="A favorite way to unwind. Nudges autonomous choices when needs are similar; urgent care and your orders come first."
+		for key: String in Pastimes.ORDER: pastime.add_item(Pastimes.LABELS[key])
+		pastime.select(Pastimes.ORDER.find(member.favorite))
+		pastime.item_selected.connect(func(choice): _choose_pastime(index,choice))
 	_refresh_swatches()
 	Soundscape.attach_controls(self)
 
@@ -59,6 +69,10 @@ func _choose(index: int, key: String, choice: int) -> void:
 	portraits[index].look=draft.members[index].appearance.duplicate()
 	portraits[index].queue_redraw()
 	_refresh_swatches()
+
+func _choose_pastime(index: int, choice: int) -> void:
+	draft.members[index].favorite=Pastimes.ORDER[choice]
+	pastime_controls[index].select(choice)
 
 func _refresh_swatches() -> void:
 	for entry: Dictionary in swatches:
@@ -76,7 +90,7 @@ func _refresh_swatches() -> void:
 func payload() -> Dictionary:
 	var members: Array=[]
 	for index in range(draft.members.size()):
-		members.append({"id":draft.members[index].id,"name":member_names[index].text,"appearance":draft.members[index].appearance.duplicate()})
+		members.append({"id":draft.members[index].id,"name":member_names[index].text,"appearance":draft.members[index].appearance.duplicate(),"favorite":draft.members[index].favorite})
 	return {"type":"household_edit","name":family_name.text,"members":members,"revision":int(draft.get("identity_revision",0))}
 
 func set_pending(pending: bool) -> void:
