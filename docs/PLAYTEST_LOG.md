@@ -1160,3 +1160,39 @@ editor. Next: an explicit **Use current plan** draft in Routines, with a reviewa
 list and clear handling of movement, garden work, and other unsupported steps.
 It should save through the existing routine command and leave current activities
 running unchanged.
+
+## Turn a live household plan into a routine
+
+Clicking the fridge, shower, and bookshelf is a natural way to arrange a morning,
+but saving that plan previously meant entering its steps again in Routines.
+Added **Use current plan** beside New routine. It opens an ordinary editable draft
+from the active deliberate activity and queued reusable activities, in order and
+with repeats preserved. Walking, conversations, crop work, automatic care, and
+missing targets are listed as omitted with original positions and reasons.
+A long plan keeps all its reusable steps; the player chooses which to remove to
+reach the six-step save limit. The source plan keeps running, and switching
+residents or receiving snapshots cannot rewrite the open draft.
+
+Native playtests clicked actual furnishings, captured their three-step sequence,
+changed its order, and saved it without altering accepted tasks. A mixed plan
+clearly explained its omitted walk and chat. A nine-step draft required three
+explicit removals, and a full library explained how to make space. A stale save
+kept both the copied steps and their source explanation for review. The compact
+125% layout left the omission details, step controls, and limit guidance readable;
+all controls remained reachable by scrolling and keyboard focus. The automation
+needed to wait for freshly rebuilt controls to finish layout before targeting
+them; final standard and compact native passes both succeeded.
+
+All 54 local suites, actual Iroh host/two-client/reconnect, and dedicated startup
+passed. Both clients saved their own copied routine and retained it after
+reconnect. The preceding history checkpoint passed all four platform builds.
+Human family sessions, physical devices, and an overnight shared-host soak remain
+open validation work.
+
+Fresh assessment: routine editing now connects directly to ordinary play, and
+recent results make completed care understandable. Another menu refinement would
+add less than a new visible leisure activity. Next: a music corner with dancing,
+so residents can enjoy the house alone or alongside willing visitors. Keep
+participation in each resident's own plan, use distinct available floor positions,
+and make sound obey the established mixer and reduced-motion settings. This is
+the next proposed increment, not an implemented feature of this checkpoint.

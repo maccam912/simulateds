@@ -9,6 +9,11 @@ var scroll: ScrollContainer
 var status: Label
 var subtitle: Label
 var new_button: Button
+var from_plan_button: Button
+var capture_hint: Label
+var source_note: Label
+var draft_source: Dictionary={}
+var _capture: Dictionary={}
 var run_buttons: Dictionary={}
 var edit_buttons: Dictionary={}
 var delete_buttons: Dictionary={}
@@ -44,12 +49,13 @@ func refresh(member_id: String) -> void:
 	var family: Dictionary=Session.state.get("families",{}).get(Session.profile_id,{})
 	if family.is_empty(): return
 	var context := str([Session.role,Session.profile_id,family.home_lot])
-	if context!=_context: _context=context; draft={}; pending={}; _signature=""
+	if context!=_context: _context=context; draft={}; draft_source={}; pending={}; _signature=""
 	var board: Dictionary=family.routines
 	var member: Dictionary={}
 	for resident: Dictionary in family.members:
 		if resident.id==member_id: member=resident; break
 	if member.is_empty(): return
+	_capture=Routines.capture_plan(member,Session.state.lots[member.lot_id])
 	subtitle.text="For "+str(member.name)+" · Saved routines are shared by both residents."
 	_options={}
 	for entry: Dictionary in board.entries: _options[entry.id]=Session.world.routine_option(Session.profile_id,member_id,str(entry.id))
@@ -61,12 +67,12 @@ func refresh(member_id: String) -> void:
 			for task: Dictionary in tasks:
 				if task.get("routine_id")==pending.routine_id: applied=true
 		if applied:
-			if pending.type=="routine_save": draft={}
+			if pending.type=="routine_save": draft={}; draft_source={}
 			pending={}; _acknowledged=false; _signature=""
 	if not draft.is_empty():
 		if pending.is_empty() and int(board.revision)!=_revision: status.text="The saved library changed. Back returns to its latest version; your draft is still here."
 		_set_pending(); return
-	var signature := str([board,_options,member_id,pending])
+	var signature := str([board,_options,member_id,pending,_capture])
 	if signature!=_signature:
 		_signature=signature
 		var focus_key := ""; var focus_kind := ""
@@ -78,8 +84,19 @@ func refresh(member_id: String) -> void:
 
 func _library(board: Dictionary) -> void:
 	_clear(); run_buttons.clear(); edit_buttons.clear(); delete_buttons.clear(); step_controls.clear(); step_buttons.clear()
+	var create_row := HBoxContainer.new(); body.add_child(create_row)
 	new_button=_button("New routine",func(): _edit({"id":"","name":"","steps":["fridge"]}))
-	new_button.disabled=board.entries.size()>=Routines.MAX_ROUTINES or not pending.is_empty(); body.add_child(new_button)
+	new_button.disabled=board.entries.size()>=Routines.MAX_ROUTINES or not pending.is_empty(); create_row.add_child(new_button)
+	from_plan_button=_button("Use current plan",_use_current_plan); from_plan_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; create_row.add_child(from_plan_button)
+	from_plan_button.disabled=new_button.disabled or _capture.get("steps",[]).is_empty()
+	from_plan_button.set_meta("routine_control","capture"); new_button.set_meta("routine_control","new")
+	capture_hint=_label("",12,Style.MUTED); capture_hint.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; capture_hint.custom_minimum_size.x=360; body.add_child(capture_hint)
+	if board.entries.size()>=Routines.MAX_ROUTINES: capture_hint.text="All four slots are in use. Edit or remove a routine to make space."
+	elif _capture.get("steps",[]).is_empty():
+		capture_hint.text="Plan some care or recreation for "+str(_capture.get("resident","this resident"))+", then copy it here."
+		if not _capture.get("omitted",[]).is_empty(): capture_hint.text="This plan has no reusable activities. Walking, conversations, garden work, and automatic care are not copied."
+	else: capture_hint.text="Copy %d %s from %s’s plan. Review before saving." % [_capture.steps.size(),"activity" if _capture.steps.size()==1 else "activities",str(_capture.resident)]
+	from_plan_button.tooltip_text=capture_hint.text+" Current activities keep running. Walking, conversations, garden work, and automatic care are left out and explained in the draft."
 	for entry: Dictionary in board.entries:
 		var card := PanelContainer.new(); card.add_theme_stylebox_override("panel",Style.box(Style.PANEL,5,Style.EDGE)); body.add_child(card)
 		var content := VBoxContainer.new(); content.add_theme_constant_override("separation",6); card.add_child(content)
@@ -98,8 +115,21 @@ func _library(board: Dictionary) -> void:
 		for pair: Array in [[run,"run"],[edit,"edit"],[remove,"delete"]]: pair[0].set_meta("routine_id",id); pair[0].set_meta("routine_control",pair[1])
 	if board.entries.is_empty(): body.add_child(_label("Save a sequence of care and recreation to use again.",13,Style.MUTED))
 
-func _edit(entry: Dictionary) -> void:
+func _use_current_plan() -> void:
 	if not pending.is_empty(): return
+	var family: Dictionary=Session.state.get("families",{}).get(Session.profile_id,{})
+	if family.is_empty() or family.routines.entries.size()>=Routines.MAX_ROUTINES: refresh(_member); return
+	for member: Dictionary in family.members:
+		if member.id!=_member: continue
+		var captured := Routines.capture_plan(member,Session.state.lots[member.lot_id])
+		if captured.steps.is_empty():
+			status.text="The plan changed; no reusable activities remain."; refresh(_member); return
+		_edit({"id":"","name":"","steps":captured.steps},captured)
+		return
+
+func _edit(entry: Dictionary, source: Dictionary={}) -> void:
+	if not pending.is_empty(): return
+	draft_source=source.duplicate(true)
 	draft=entry.duplicate(true); _revision=int(Session.state.families[Session.profile_id].routines.revision); status.text=""
 	_editor(); name_field.grab_focus(); name_field.select_all(); scroll.scroll_vertical=0
 
@@ -109,7 +139,10 @@ func focus_entry() -> void:
 	elif is_instance_valid(new_button) and not new_button.disabled: new_button.grab_focus()
 
 func _editor() -> void:
-	_clear(); step_controls.clear(); step_buttons.clear()
+	_clear(); step_controls.clear(); step_buttons.clear(); source_note=null
+	if not draft_source.is_empty():
+		source_note=_label("Copied %d %s from %s’s plan. Current activities keep running. Review this draft, then name and save it." % [draft_source.steps.size(),"activity" if draft_source.steps.size()==1 else "activities",str(draft_source.resident)],12,Style.GREEN)
+		source_note.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; source_note.custom_minimum_size.x=360; body.add_child(source_note)
 	var name_row := HBoxContainer.new(); body.add_child(name_row); name_row.add_child(_label("Name",13))
 	name_field=LineEdit.new(); name_field.max_length=32; name_field.placeholder_text="A familiar part of the day"; name_field.text=str(draft.name); name_field.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	name_row.add_child(name_field); name_field.text_changed.connect(func(value: String): draft.name=value)
@@ -124,10 +157,19 @@ func _editor() -> void:
 		step_buttons.append({"up":up,"down":down,"remove":remove})
 	add_button=_button("+ Add activity",func(): draft.steps.append("bookshelf"); _editor(); _focus_step(draft.steps.size()-1)); add_button.disabled=draft.steps.size()>=Routines.MAX_STEPS; body.add_child(add_button)
 	var note := _label("One to six activities. Furnishings are chosen on the resident's current lot each time you add the routine.",12,Style.MUTED)
+	if draft.steps.size()>Routines.MAX_STEPS:
+		note.text="%d activities copied. Remove %d to keep at most six before saving. Nothing has been cut from the draft." % [draft.steps.size(),draft.steps.size()-Routines.MAX_STEPS]
+		note.add_theme_color_override("font_color",Style.GOLD)
 	note.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; note.custom_minimum_size.x=360; body.add_child(note)
+	if not draft_source.get("omitted",[]).is_empty():
+		var omitted := _label("Left out of the copied plan",13,Style.GOLD); body.add_child(omitted)
+		for skipped: Dictionary in draft_source.omitted:
+			var explanation := _label("%d. %s · %s" % [int(skipped.position),str(skipped.title),str(skipped.reason)],12,Style.MUTED)
+			explanation.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; explanation.custom_minimum_size.x=360; body.add_child(explanation)
 	var footer := HBoxContainer.new(); body.add_child(footer)
 	back_button=_button("Back",_back); footer.add_child(back_button)
 	save_button=_button("Save routine",func(): _request({"type":"routine_save","routine_id":str(draft.id),"revision":_revision,"name":str(draft.name),"steps":draft.steps.duplicate()})); save_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; footer.add_child(save_button)
+	_set_pending()
 	Soundscape.attach_controls(self)
 
 func _move_step(index: int,direction: int) -> void:
@@ -165,11 +207,12 @@ func _set_pending() -> void:
 		step_buttons[index].down.disabled=busy or index==step_controls.size()-1
 		step_buttons[index].remove.disabled=busy
 	add_button.disabled=busy or draft.steps.size()>=Routines.MAX_STEPS
-	save_button.disabled=busy; back_button.disabled=busy
+	save_button.disabled=busy or not Routines.valid_steps(draft.steps); back_button.disabled=busy
+	save_button.tooltip_text="Keep one to six activities before saving." if not Routines.valid_steps(draft.steps) else "Save this recipe without changing the current plan."
 
 func _back() -> void:
 	if not pending.is_empty(): return
-	draft={}; _signature=""; status.text=""; refresh(_member)
+	draft={}; draft_source={}; _signature=""; status.text=""; refresh(_member)
 
 func escape() -> void:
 	if not draft.is_empty() and pending.is_empty(): _back()
@@ -185,7 +228,7 @@ func _restore_focus(id: String,kind: String,offset: int) -> void:
 	if not draft.is_empty(): return
 	scroll.scroll_vertical=offset
 	if not is_visible_in_tree() or get_viewport().gui_get_focus_owner()!=null: return
-	var target: Button=run_buttons.get(id) if kind=="run" else edit_buttons.get(id) if kind=="edit" else delete_buttons.get(id)
+	var target: Button=from_plan_button if kind=="capture" else new_button if kind=="new" else run_buttons.get(id) if kind=="run" else edit_buttons.get(id) if kind=="edit" else delete_buttons.get(id)
 	if target==null or target.disabled: target=edit_buttons.get(id,new_button)
 	if target!=null and not target.disabled: target.grab_focus()
 

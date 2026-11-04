@@ -242,6 +242,16 @@ time. Switching residents starts at their newest result. Ordinary snapshot
 refreshes preserve rows, scroll, and keyboard focus. Automatic care never fills
 the history, and reading it never reissues an action or spends household money.
 
+**Use current plan** starts a draft from accepted activities on the selected
+resident's current lot. Include the active deliberate activity and upcoming
+care/recreation in order, including repeats. Explain every omitted walking,
+conversation, crop, automatic, or missing-target action by its original plan
+position. Never silently trim a long plan: retain all reusable steps locally and
+require the player to reduce it to six before Save becomes available. Show who
+the draft came from and make clear that the live plan keeps running. Changing
+residents or receiving a new snapshot cannot rewrite an open draft. Use the
+existing name, reorder, remove, Back, and host-confirmed Save controls.
+
 Keep reusable care and leisure sequences inside **Plan → Routines**, in one
 floating library/editor over the live world. Warm names such as Morning care and
 Wind down describe a familiar part of the day. Show the ordered activities and

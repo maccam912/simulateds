@@ -60,7 +60,9 @@ when dry or ripe. Crop state follows furnishing moves, history, saves, and
 reconnects; it does not create unattended income. Each resident’s Plan now also
 retains eight recent deliberate outcomes, including completion, cancellation,
 and interruption reasons, with game time and routine provenance. These persist
-through saves and reconnects without filling up with autonomous care.
+through saves and reconnects without filling up with autonomous care. Routines can
+now start from the selected resident’s current plan, with an editable copy,
+explicit omissions, and a review step for plans longer than six activities.
 See [the playtest log](PLAYTEST_LOG.md) for evidence
 and current usability priorities.
 

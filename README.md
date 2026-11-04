@@ -164,6 +164,10 @@ or shell expressions.
   full plan explain why the routine cannot be added. Editing/removing a saved
   routine leaves activities already in a plan intact. Routines persist through
   saves and reconnects; they run when you choose, without a repeating schedule.
+  **Use current plan** copies care and recreation into an editable draft. It keeps
+  repeated activities and explains omitted walking, conversations, garden work,
+  and automatic care. Long plans keep every reusable step for you to trim to six.
+  Review, name, and save the recipe; the current plan keeps running unchanged.
 - **Edit** beside Household (or **Household** in the game menu) changes the
   household name, both resident names, clothing/skin/hair colors, hair style, and
   favorite pastimes (reading, television, gardening, tea, tabletop games, or a little of everything).

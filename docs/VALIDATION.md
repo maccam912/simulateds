@@ -439,3 +439,31 @@ native playtests, not evidence of human family or physical-device play.
 
 The preceding garden commit passed all four platform CI jobs. CI for this
 checkpoint is tracked separately after push.
+
+## Routines copied from current plans
+
+All 54 local suites passed, followed by real Iroh host/two-client/reconnect and
+dedicated startup checks. `tests/routine_capture.gd` covers exact active/upcoming
+order, repeated steps, autonomous exclusion, position-specific omissions for
+walking/conversation/crop/missing-target work, read-only capture, draft isolation,
+nine-step capture without truncation, host rejection of an oversized recipe,
+reviewed saving without altering current work, use by the second resident on a
+neighbor's furnishings, runtime snapshots, and disk saves. Both real clients
+copy their accepted mixed plan into a recipe, save via the normal authority
+command, reject a duplicate stale save, and retain the copy across reconnects.
+
+`tests/routine_capture_ui.gd` passed through native injected mouse/keyboard input
+at 1440×900 and at 1280×720 with 125% UI scale. The flow clicks actual fridge,
+shower, and bookshelf surfaces; copies and edits their order; names/saves the
+recipe; reviews mixed-plan omissions; changes residents while retaining the
+source draft; trims nine steps to six; handles a full library; and retains a
+copied draft after an actual stale revision rejection. The first harness pass
+tried scrolling a freshly rebuilt control before layout had settled; waiting for
+layout before targeting the control fixed the test. Both final native passes
+completed. Visual inspection of ignored `build/routine-capture-*.png` confirmed
+readable omissions, original positions, and disabled-save limit guidance within
+the existing routine panel. This remains automated native validation, not human
+family or physical-device testing.
+
+The preceding activity-history checkpoint passed macOS, Linux, Windows, and
+Android CI. This checkpoint's platform build result is tracked after push.

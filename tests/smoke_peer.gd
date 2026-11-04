@@ -321,6 +321,15 @@ func _client(index: String) -> void:
 	for step in range(2):
 		assert(routine_plan.queue[step+2].routine_name=="Quiet time "+index and routine_plan.queue[step+2].routine_id=="routine_3")
 		assert(session.world.task_activity(routine_plan.queue[step+2],home)==["bookshelf","table"][step],"Host resolves each activity to a reachable local furnishing in order")
+	var captured_plan := preload("res://game/routines.gd").capture_plan(routine_plan,session.state.lots[home])
+	assert(captured_plan.steps==["bookshelf","table"] and captured_plan.omitted.size()==3,"Client copies accepted reusable activities while explaining its three walking orders")
+	var save_copy := {"type":"routine_save","routine_id":"","revision":session.state.families[identity].routines.revision,"name":"Copied plan "+index,"steps":captured_plan.steps}
+	await _command(save_copy)
+	await _command(save_copy,false)
+	for _attempt in range(30):
+		if session.state.families[identity].routines.entries.size()==4: break
+		await create_timer(0.1).timeout
+	assert(session.state.families[identity].routines.entries[3].steps==captured_plan.steps,"Reviewed copied steps save through the normal host authority command")
 	var foreign_routine: Dictionary=run_routine.duplicate(); foreign_routine.member_id=session.state.families[str(session.state.lots[host_home].owner)].members[0].id
 	await _command(foreign_routine,false)
 	await _command(reorder,false)
@@ -445,6 +454,7 @@ func _client(index: String) -> void:
 	garden=session.world._object(session.state.lots[home],garden_id).garden
 	assert(garden.crop==garden_before.crop and garden.revision==garden_before.revision and garden.growth>=garden_before.growth and garden.growth<=45.000001,"Reconnect retains crops; unattended growth stops safely when the planted water runs out")
 	assert(session.state.lots[home].windows.get("7,3")==window_intent.style and session.state.lots[home].walls.has([7,3]),"Reconnect retains the mounted window without opening the wall")
+	assert(session.state.families[identity].routines.entries[3].name=="Copied plan "+index and session.state.families[identity].routines.entries[3].steps==["bookshelf","table"],"Reconnect retains the reviewed copied routine")
 	assert(session.state.families[identity].routines.entries[2].name=="Quiet time "+index and session.state.families[identity].routines.entries[2].steps==["bookshelf","table"],"Reconnect retains the independent routine library")
 	assert(int(preload("res://game/friendships.gd").bond(session.state,member_id,companion_id).get("score",0))==32,"Reconnect lost the friendship")
 	assert(session.state.families[identity].name=="Gardeners "+index and session.state.families[identity].members[1].appearance.style==1,"Reconnect lost household identity")

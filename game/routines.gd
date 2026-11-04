@@ -15,6 +15,28 @@ static func find(board: Dictionary,id: String) -> Dictionary:
 		if entry.id==id: return entry
 	return {}
 
+static func capture_plan(member: Dictionary, lot: Dictionary) -> Dictionary:
+	# A local draft of accepted work, never a mutation or a new simulation order.
+	# Keep every reusable step, including repeats. The editor handles the limit.
+	var result := {"resident":str(member.get("name","Resident")),"steps":[],"omitted":[]}
+	var tasks: Array=[]
+	if not member.get("task",{}).is_empty(): tasks.append(member.task)
+	tasks.append_array(member.get("queue",[]))
+	var furnishings := {}
+	for object: Dictionary in lot.get("objects",[]): furnishings[str(object.id)]=str(object.kind)
+	for index in range(tasks.size()):
+		var task: Dictionary=tasks[index]
+		var reason := ""
+		var kind: String=furnishings.get(str(task.get("target_id","")),"")
+		if task.get("automatic",false): reason="Chosen autonomously, not part of your deliberate plan."
+		elif task.get("type")=="move": reason="Walking destinations are specific to this lot."
+		elif task.get("target_kind")=="member": reason="Conversations need a particular resident."
+		elif task.has("garden_action") or kind=="garden_bed": reason="Garden work depends on the crop and its current condition."
+		elif not kind in ACTIVITIES: reason="This furnishing is no longer available."
+		if reason.is_empty(): result.steps.append(kind)
+		else: result.omitted.append({"position":index+1,"title":str(task.get("title",task.get("label","Activity"))),"reason":reason})
+	return result
+
 static func valid_steps(value: Variant) -> bool:
 	if not value is Array or value.is_empty() or value.size()>MAX_STEPS: return false
 	for step: Variant in value:
