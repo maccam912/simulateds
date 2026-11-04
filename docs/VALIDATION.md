@@ -83,7 +83,7 @@ service mode was not repeated for this update.
 ## Still open
 
 The subsequent feature checks are recorded in [PLAYTEST_LOG.md](PLAYTEST_LOG.md).
-The current local suite contains 66 model/application suites, plus real Iroh
+The current local suite contains 68 model/application suites, plus real Iroh
 host/two-client reconnect and dedicated-server startup. The room-construction
 checkpoint passed Linux, Windows, macOS, and Android CI builds/exports. The later
 household checkpoint passed the three desktop jobs; Android built, tested,
@@ -646,3 +646,34 @@ colors, colored room duplication, and reconnect retention. It waits for the
 accepted construction snapshot before submitting the next revision-bound color
 command. Dedicated startup passed. The room-copy checkpoint passed all four
 platform CI jobs; physical-device and human-family evidence remains open.
+
+
+## Construction access forecasts
+
+All 68 local suites passed, followed by the actual Iroh host/two-client/reconnect
+scenario and dedicated startup. New model checks compare complete forecast
+reports with the authoritative result of accepted draft edits, including 160
+seeded placement/movement trials, all four room doorway orientations, gate
+obstructions, newly inaccessible furnishings, old problems, partial repairs,
+invalid placement, and unchanged source state. Warnings do not reject drafts;
+Finish building still rejects inaccessible homes.
+
+Native injected-input flows passed at 1440×900 and 1280×720 / 125% UI scale.
+They place a table that blocks the fridge, inspect the warning, reject Finish,
+move the table to repair access, undo/redo, close and reopen the entrance, and
+rotate a kitchen divider from blocked to clear. Assertions check preview purity,
+exact accepted reports, budget, capped badges, and text/badge/HUD separation.
+Reviewed captures are in ignored `build/build-impact-*.png`. Screenshot review
+caught footprint lines drawing across the explanation; the final draw order
+keeps the label on top. The native test aligns the OS pointer with injected input
+to avoid unrelated mouse-exit events clearing its hover.
+
+Final targeted standard/compact native runs also replace the active world with
+a different layout at the same lot ID, revision, funds, and resident positions.
+The cached forecast correctly refreshes; the updated Building guide check passes.
+
+The multiplayer scenario computes both the entrance-blocking forecast and its
+repair on the client, then compares each with the host's replicated report.
+No protocol or save fields changed. The furnishing-colors checkpoint passed all
+four CI platform jobs. Human-family, physical-device, and overnight hosting
+checks remain open.

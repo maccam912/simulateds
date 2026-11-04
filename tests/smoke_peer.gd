@@ -323,19 +323,33 @@ func _client(index: String) -> void:
 		if session.state.lots[home].finishes.floor.get("7,7")=="walnut": break
 		await create_timer(0.1).timeout
 	assert(session.state.lots[home].finishes.floor.get("7,7")=="walnut")
-	await _command({"type":"place","lot_id":home,"kind":"wall","x":8,"y":11})
+	var people: Array=session.state.families[identity].members
+	var positions: Array=[]
+	for member: Dictionary in people: positions.append(Vector2i(int(member.x),int(member.y)))
+	var closing := {"type":"place","lot_id":home,"kind":"wall","x":8,"y":11}
+	var before_preview: Dictionary=session.world.snapshot()
+	var closing_plan: Dictionary=preload("res://game/build_rules.gd").inspect(session.state.lots[home],closing,positions)
+	var closing_impact: Dictionary=preload("res://game/build_impact.gd").inspect(session.state.lots[home],closing,closing_plan,people)
+	assert(closing_plan.ok and closing_impact.warning and not closing_impact.introduced.is_empty() and session.world.snapshot()==before_preview,"A remote builder sees access consequences without making a speculative edit")
+	await _command(closing)
 	for _attempt in range(50):
 		if not session.world.build_access(session.state.lots[home]).ok: break
 		await create_timer(0.1).timeout
 	var access: Dictionary=session.world.build_access(session.state.lots[home])
 	assert(not access.ok and not access.issues.is_empty(),"A client derives blocked access from its accepted draft snapshot")
+	assert(access==closing_impact.after,"The accepted host layout has exactly the previewed access consequence")
 	await _command({"type":"build_end","lot_id":home},false)
 	assert(session.last_action_message==access.message,"The client's access explanation matches the actual host rejection")
-	await _command({"type":"place","lot_id":home,"kind":"door","x":8,"y":11})
+	var repair := {"type":"place","lot_id":home,"kind":"door","x":8,"y":11}
+	var repair_plan: Dictionary=preload("res://game/build_rules.gd").inspect(session.state.lots[home],repair,positions)
+	var repair_impact: Dictionary=preload("res://game/build_impact.gd").inspect(session.state.lots[home],repair,repair_plan,people)
+	assert(repair_impact.ok and repair_impact.resolved.size()==access.issues.size())
+	await _command(repair)
 	for _attempt in range(50):
 		if session.world.build_access(session.state.lots[home]).ok: break
 		await create_timer(0.1).timeout
 	assert(session.world.build_access(session.state.lots[home]).ok,"Repairing the doorway clears access in the replicated draft")
+	assert(session.world.build_access(session.state.lots[home])==repair_impact.after)
 	await _command({"type":"place","lot_id":home,"kind":"garden_bed","x":6,"y":13})
 	var garden_id := ""
 	for _attempt in range(50):

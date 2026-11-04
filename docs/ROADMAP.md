@@ -90,8 +90,10 @@ and current usability priorities.
 - Furniture material colors now offer six named choices, in-world preview, free
   recoloring, undo/redo, and preservation through moves, copies, and saves.
 - Shared entrance routing checks and an access overlay now locate blocked
-  furnishings and residents, with camera focus and direct repair tools. Extend
-  routing as architectural options become richer.
+  furnishings and residents, with camera focus and direct repair tools. Placement,
+  movement, and room previews now name access consequences before applying an
+  edit, distinguishing new problems, existing problems, and repairs. Extend routing
+  as architectural options become richer.
 - Camera pan/zoom/rotation and a clear cutaway-wall policy.
 
 Exit: construct a small home from an empty lot; every essential object is usable;

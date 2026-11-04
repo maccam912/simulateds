@@ -532,3 +532,25 @@ personalization choice, with no purchase, resale premium, or care effect.
 Previews must not mutate accepted state, and the pending appearance waits for
 the matching host snapshot. Store only a bounded optional style name on the
 furnishing, preserving it through moves, room copies, and persistence.
+
+
+### Construction consequences
+
+Show access consequences in the existing placement preview before purchase.
+Green means the proposed layout retains access; amber means a valid draft edit
+leaves a problem to repair; red still means the edit itself is unavailable.
+Name a newly blocked furnishing or resident, then give a count for additional
+problems. Say when a problem already existed, and recognize full or partial
+repairs. Keep the flexible draft workflow and authoritative Finish building gate.
+
+Tint newly disconnected floor amber and use at most six small exclamation
+badges to locate affected furnishings or residents. These badges are visual
+only: they must not consume placement clicks. Keep badges and explanations
+clear of the HUD and each other. Draw the explanation after the placement
+outline so geometry cannot strike through its text. When Access is open, show
+the proposed layout's reachability, including a repair's restored route.
+
+Forecast from a copied, validated layout using the same access rules as the
+host. Hovering changes no funds, history, identities, or simulation. Invalidate
+forecasts on layout, resident, tool, rotation, and world changes. The guide
+explains all three placement colors in plain language.

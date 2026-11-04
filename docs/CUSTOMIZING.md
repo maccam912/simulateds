@@ -9,6 +9,7 @@ household or an absent player.
 | `game/catalog.gd` | Furniture prices, footprints, need effects, duration, labels, and color hints |
 | `game/room_copy.gd` | Pure enclosed-room capture, rotation, price/access inspection, and surface application; authority allocates fresh furnishing IDs |
 | `game/furniture_colors.gd` | Named material palette, optional validated object color, and pure recoloring preview; missing metadata preserves legacy art |
+| `game/build_impact.gd` | Pure before/after access forecasts for validated placement, movement, and room drafts; reports new problems and repairs without changing authority rules |
 | `game/world.gd` | Serializable neighborhood state; ownership, construction, pathfinding, actions, autonomy, and needs |
 | `game/main.gd` | Main scene UI, selection, tool catalog, connection panel, and command submission |
 | `game/lot_view.gd` | Isometric rendering, tile picking, placement preview, pan, and zoom |

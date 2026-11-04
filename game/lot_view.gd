@@ -7,6 +7,7 @@ signal entity_clicked(target: Dictionary)
 const Catalog = preload("res://game/catalog.gd")
 const Gardens = preload("res://game/gardens.gd")
 const BuildRules = preload("res://game/build_rules.gd")
+const BuildImpact = preload("res://game/build_impact.gd")
 const RoomPlan = preload("res://game/room_plan.gd")
 const RoomCopy = preload("res://game/room_copy.gd")
 const FurnitureColors = preload("res://game/furniture_colors.gd")
@@ -67,6 +68,8 @@ var _preview_finish := ""
 var preview_result: Dictionary = {}
 var _preview_signature := ""
 var _preview_spaces: Dictionary={}
+var placement_impact: Dictionary={}
+var impact_markers: Dictionary={}
 var leisure_report: Dictionary={}
 var leisure_markers: Array=[]
 var _leisure_key := ""
@@ -307,6 +310,7 @@ func _draw() -> void:
 	leisure_report={}; leisure_markers.clear()
 	resident_labels.clear()
 	access_markers.clear()
+	impact_markers.clear(); placement_impact={}
 	_drawing_target = {}
 	_layout()
 	light=Daylight.sample(float(world.get("day_minutes",480)))
@@ -326,6 +330,11 @@ func _draw() -> void:
 	for cell in lot.get("walls", []): walls[Vector2i(int(cell[0]),int(cell[1]))] = true
 	for cell in lot.get("doors", []): doors[Vector2i(int(cell[0]),int(cell[1]))] = true
 	_update_finish_preview(lot)
+	if building and not access_inspecting and _in_bounds(hover_cell):
+		if build_kind=="room" and room_anchor.x>=0 and not room_pending:
+			_update_room_preview(lot); placement_impact=preview_result.get("impact",{})
+		elif Catalog.ITEMS.has(build_kind) or (build_kind=="move" and not build_object_id.is_empty()):
+			_update_preview(lot); placement_impact=preview_result.get("impact",{})
 	_update_window_preview(lot)
 	window_regions.clear()
 	# Planting sits along the property edges without boxing the entire view in.
@@ -355,6 +364,7 @@ func _draw() -> void:
 				_draw_floor_finish(x,y,Finishes.PALETTES.floor[_surface_finish(lot,"floor",x,y)])
 	if building and build_kind=="finish_floor" and finish_selection=="room" and not access_inspecting: _draw_room_finish_ground()
 	if building and access_visible: _draw_access_ground(lot)
+	_draw_impact_ground()
 	_draw_walk_ground(scale_factor)
 	# Paint rear walls first. Near walls use a low cutaway for readable interiors.
 	for depth in range(31):
@@ -401,7 +411,7 @@ func _draw() -> void:
 			_resident(entity.member, entity.family,scale_factor)
 	_draw_street_lights(scale_factor)
 	_draw_resident_overlays(entities,scale_factor)
-	if building and access_visible: _draw_access_issues(scale_factor)
+	if building and access_visible and (placement_impact.is_empty() or access_inspecting): _draw_access_issues(scale_factor)
 	hover_target = hit_target(_pointer)
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if (not building and not hover_target.is_empty()) or (building and access_inspecting and hover_target.get("type")=="access") else Control.CURSOR_ARROW
 	if building and access_inspecting: pass
@@ -416,6 +426,9 @@ func _draw() -> void:
 		var outline := Color("f8f3c7")
 		var footprint := Vector2i.ONE
 		var preview_cell := hover_cell
+		var hint_message := ""
+		var hint_valid := false
+		var hint_tone := Color.TRANSPARENT
 		if building and build_kind!="erase" and (build_kind!="move" or not build_object_id.is_empty()):
 			_update_preview(lot)
 			var kind := build_kind
@@ -425,28 +438,34 @@ func _draw() -> void:
 			footprint=Catalog.footprint(kind,build_rotation)
 			tint=Color(0.62,0.88,0.49,0.42) if preview_result.get("ok",false) else Color(0.93,0.32,0.26,0.45)
 			outline=Color("d8f1b2") if preview_result.get("ok",false) else Color("ffab8f")
+			if placement_impact.get("warning",false):
+				outline=Color("efc77d"); tint=Color(outline,0.30)
 			var message := str(preview_result.get("message",""))
+			if not placement_impact.get("message","").is_empty(): message+="\n"+str(placement_impact.message)
 			if not _preview_spaces.is_empty():
 				_draw_leisure_places(_preview_spaces)
 				message+="\n"+Leisure.layout_text(_preview_spaces)+" · ○ Open  × Blocked / no path"
-			_draw_preview_label(message,bool(preview_result.get("ok",false)))
+			hint_message=message; hint_valid=bool(preview_result.get("ok",false))
+			if placement_impact.get("warning",false): hint_tone=Color("efc77d")
 		elif building and build_kind in ["erase","move"] and hover_target.get("type")=="object":
 			preview_cell=Vector2i(int(hover_target.x),int(hover_target.y))
 			footprint=Catalog.footprint(str(hover_target.kind),int(hover_target.rotation))
 			var item: Dictionary=Catalog.ITEMS[hover_target.kind]
 			if build_kind=="erase":
 				tint=Color(0.94,0.4,0.3,0.35)
-				_draw_preview_label("Sell " + str(item.name) + " · § %d" % int(float(item.cost)*0.6),false)
+				hint_message="Sell " + str(item.name) + " · § %d" % int(float(item.cost)*0.6)
 			else:
 				var message := "Move " + str(item.name) + " · Click to select"
 				if Leisure.KINDS.has(hover_target.kind):
 					var report := _leisure_spaces(lot,hover_target,true)
 					_draw_leisure_places(report); message+="\n"+Leisure.layout_text(report)+" · ○ Open  × Blocked / no path"
-				_draw_preview_label(message,true)
+				hint_message=message; hint_valid=true
 		elif building and build_kind=="erase":
 			tint=Color(0.94,0.4,0.3,0.35)
-			if not Windows.at(lot,hover_cell.x,hover_cell.y).is_empty(): _draw_preview_label("Remove window · Refund §%d · Wall stays" % Windows.resale(lot,hover_cell.x,hover_cell.y),false)
+			if not Windows.at(lot,hover_cell.x,hover_cell.y).is_empty(): hint_message="Remove window · Refund §%d · Wall stays" % Windows.resale(lot,hover_cell.x,hover_cell.y)
 		_diamond(preview_cell.x,preview_cell.y,footprint.x,footprint.y,tint,4,outline)
+		_draw_impact_badges()
+		if not hint_message.is_empty(): _draw_preview_label(hint_message,hint_valid,hint_tone)
 	if not building and not hover_target.is_empty(): _draw_hover()
 	elif not walking.preview.is_empty(): _draw_walk_hint()
 	if lot.building:
@@ -524,11 +543,12 @@ func _draw_walk_hint() -> void:
 	draw_string(_font,at+Vector2(12,39),detail,HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("bdd89e") if preview.ok else Color("e8a18a"))
 
 func _draw_access_ground(lot: Dictionary) -> void:
-	var reachable: Dictionary=access_report.get("reachable",{})
+	var report: Dictionary=placement_impact.get("after",access_report)
+	var reachable: Dictionary=report.get("reachable",{})
 	for tile: Array in lot.floors:
 		var cell := Vector2i(int(tile[0]),int(tile[1]))
 		if reachable.has(cell): _diamond(cell.x,cell.y,1,1,Color(0.52,0.79,0.61,0.25),1)
-	for cell: Vector2i in access_report.get("unreachable",[]):
+	for cell: Vector2i in report.get("unreachable",[]):
 		_diamond(cell.x,cell.y,1,1,Color(0.89,0.40,0.32,0.30),1,Color("efab91"))
 	_diamond(8,14,1,1,Color(0.93,0.79,0.55,0.45),2,Color("ffe3a2"))
 	var gate := grid_point(8.5,14.5)+Vector2(0,18)
@@ -553,16 +573,23 @@ func _draw_access_issues(s: float) -> void:
 		if access_inspecting:
 			_hit_regions.append({"polygon":PackedVector2Array([rect.position,Vector2(rect.end.x,rect.position.y),rect.end,Vector2(rect.position.x,rect.end.y)]),"target":{"type":"access","id":str(issue.key)}})
 
-func _update_preview(lot: Dictionary) -> void:
-	var signature := str([lot_id,lot.revision,lot.funds,hover_cell,build_kind,build_rotation,build_object_id])
-	if signature==_preview_signature: return
-	_preview_signature=signature
+func _build_residents() -> Array:
 	var residents: Array=[]
 	for family: Dictionary in world.families.values():
 		for member: Dictionary in family.members:
-			if member.lot_id==lot_id: residents.append(Vector2i(int(member.x),int(member.y)))
+			if member.lot_id==lot_id: residents.append({"id":str(member.id),"name":str(member.name),"x":int(member.x),"y":int(member.y)})
+	return residents
+
+func _update_preview(lot: Dictionary) -> void:
+	var people := _build_residents()
+	var signature := str([Session.world.get_instance_id(),lot_id,lot.revision,lot.funds,hover_cell,build_kind,build_rotation,build_object_id,people])
+	if signature==_preview_signature: return
+	_preview_signature=signature
+	var residents: Array=[]
+	for member: Dictionary in people: residents.append(Vector2i(member.x,member.y))
 	var command := {"type":"move_object" if build_kind=="move" else "place","kind":build_kind,"object_id":build_object_id,"x":hover_cell.x,"y":hover_cell.y,"rotation":build_rotation}
 	preview_result=BuildRules.inspect(lot,command,residents)
+	preview_result.impact=BuildImpact.inspect(lot,command,preview_result,people)
 	_preview_spaces={}
 	if preview_result.get("ok",false) and Leisure.KINDS.has(preview_result.kind):
 		var draft := lot.duplicate(true)
@@ -572,9 +599,21 @@ func _update_preview(lot: Dictionary) -> void:
 		draft.objects.append(candidate)
 		_preview_spaces=Leisure.spaces({},draft,candidate)
 
+func _update_room_preview(lot: Dictionary) -> void:
+	var people := _build_residents()
+	var signature := str(["room",Session.world.get_instance_id(),lot_id,lot.revision,lot.funds,hover_cell,room_anchor,build_rotation,people])
+	if signature==_preview_signature: return
+	_preview_signature=signature
+	var residents: Array=[]
+	for member: Dictionary in people: residents.append(Vector2i(member.x,member.y))
+	var command := {"type":"build_room","x":room_anchor.x,"y":room_anchor.y,"end_x":hover_cell.x,"end_y":hover_cell.y,"rotation":build_rotation}
+	preview_result=RoomPlan.inspect(lot,command,residents)
+	preview_result.impact=BuildImpact.inspect(lot,command,preview_result,people)
+
 func _fit_inspection(preferred: Rect2) -> Rect2:
 	var bounds := Rect2(Vector2(8,8),size-Vector2(16,16))
 	var avoid: Array[Rect2]=overlay_rects.duplicate()
+	for marker: Rect2 in impact_markers.values(): avoid.append(marker.grow(6))
 	if not leisure_markers.is_empty():
 		var places := Rect2(leisure_markers[0].point,Vector2.ONE)
 		for marker: Dictionary in leisure_markers: places=places.expand(marker.point)
@@ -585,7 +624,7 @@ func _fit_inspection(preferred: Rect2) -> Rect2:
 	# Keep the explanation available when the compact HUD leaves no alternative.
 	return fitted if fitted.has_area() else ResidentCues.fit(preferred,bounds,overlay_rects)
 
-func _draw_preview_label(message: String, valid: bool) -> void:
+func _draw_preview_label(message: String, valid: bool, tone: Color=Color.TRANSPARENT) -> void:
 	var lines := message.split("\n")
 	var width := 0.0
 	for line: String in lines: width=maxf(width,_font.get_string_size(line,HORIZONTAL_ALIGNMENT_LEFT,-1,12).x+24)
@@ -596,7 +635,7 @@ func _draw_preview_label(message: String, valid: bool) -> void:
 	position=preview_label_rect.position
 	draw_style_box(preload("res://game/style.gd").box(Color("1c2a2f"),6),preview_label_rect)
 	for index in range(lines.size()):
-		draw_string(_font,position+Vector2(12,20+18*index),lines[index],HORIZONTAL_ALIGNMENT_LEFT,width-24,12,Color("d8f1b2") if valid else Color("ffab8f"))
+		draw_string(_font,position+Vector2(12,20+18*index),lines[index],HORIZONTAL_ALIGNMENT_LEFT,width-24,12,tone if tone.a>0 else Color("d8f1b2") if valid else Color("ffab8f"))
 
 func _leisure_spaces(lot: Dictionary, object: Dictionary, layout_only: bool=false) -> Dictionary:
 	var reservations: Array=[]
@@ -1213,19 +1252,13 @@ func _draw_room_preview(lot: Dictionary) -> void:
 		_diamond(hover_cell.x,hover_cell.y,1,1,Color(0.85,0.94,0.65,0.2),3,Color("f8edb7"))
 		_draw_preview_label("Room · Click the first corner",true)
 		return
-	var signature := str(["room",lot_id,lot.revision,lot.funds,hover_cell,room_anchor,build_rotation])
-	if signature!=_preview_signature:
-		_preview_signature=signature
-		var residents: Array=[]
-		for family: Dictionary in world.families.values():
-			for member: Dictionary in family.members:
-				if member.lot_id==lot_id: residents.append(Vector2i(int(member.x),int(member.y)))
-		preview_result=RoomPlan.inspect(lot,{"x":room_anchor.x,"y":room_anchor.y,"end_x":hover_cell.x,"end_y":hover_cell.y,"rotation":build_rotation},residents)
+	_update_room_preview(lot)
 	var low := Vector2i(mini(room_anchor.x,hover_cell.x),mini(room_anchor.y,hover_cell.y))
 	var high := Vector2i(maxi(room_anchor.x,hover_cell.x),maxi(room_anchor.y,hover_cell.y))
 	var valid := bool(preview_result.get("ok",false))
 	var tint := Color(0.64,0.9,0.49,0.23) if valid else Color(0.94,0.36,0.3,0.3)
 	var outline := Color("d8f1b2") if valid else Color("ffab8f")
+	if placement_impact.get("warning",false): outline=Color("efc77d"); tint=Color(outline,0.23)
 	_diamond(low.x,low.y,high.x-low.x+1,high.y-low.y+1,tint,3,outline)
 	if valid:
 		var s := _cell.x/48.0
@@ -1234,7 +1267,10 @@ func _draw_room_preview(lot: Dictionary) -> void:
 		for cell: Array in preview_result.doors:
 			_diamond(int(cell[0]),int(cell[1]),1,1,Color(1.0,0.81,0.4,0.75),5,Color("fff0ba"))
 	_diamond(room_anchor.x,room_anchor.y,1,1,Color(1,0.94,0.65,0.25),4,Color("fff0ba"))
-	_draw_preview_label(str(preview_result.get("message","")),valid)
+	_draw_impact_badges()
+	var message := str(preview_result.get("message",""))
+	if not placement_impact.get("message","").is_empty(): message+="\n"+str(placement_impact.message)
+	_draw_preview_label(message,valid,Color("efc77d") if placement_impact.get("warning",false) else Color.TRANSPARENT)
 
 
 func _update_window_preview(lot: Dictionary) -> void:
@@ -1295,3 +1331,24 @@ func _draw_furniture_color() -> void:
 		_diamond(int(color_preview.x),int(color_preview.y),size.x,size.y,Color.TRANSPARENT,2,Color("b9de99"))
 	if not _in_bounds(hover_cell) and color_request.is_empty(): return
 	_draw_preview_label("Applying color…" if not color_request.is_empty() else str(color_preview.message),bool(color_preview.ok) or color_preview.get("reason")=="unchanged")
+
+func _draw_impact_ground() -> void:
+	for cell: Vector2i in placement_impact.get("lost_floor",[]):
+		_diamond(cell.x,cell.y,1,1,Color(0.93,0.66,0.32,0.27),2,Color(0.94,0.73,0.41,0.55))
+
+func _draw_impact_badges() -> void:
+	if not placement_impact.get("warning",false): return
+	var issues: Array=placement_impact.introduced if not placement_impact.introduced.is_empty() else placement_impact.after.issues
+	var occupied: Array[Rect2]=overlay_rects.duplicate()
+	var bounds := Rect2(Vector2(8,8),size-Vector2(16,16))
+	var s := _cell.x/48.0
+	for index in range(mini(6,issues.size())):
+		var issue: Dictionary=issues[index]
+		_diamond(issue.cell.x,issue.cell.y,issue.footprint.x,issue.footprint.y,Color(0.93,0.66,0.32,0.18),4,Color("efc77d"))
+		var point := grid_point(issue.center.x,issue.center.y)+Vector2(0,-43*s)
+		var rect := ResidentCues.fit(Rect2(point-Vector2(12,12),Vector2(24,24)),bounds,occupied)
+		if not rect.has_area(): continue
+		occupied.append(rect); impact_markers[str(issue.key)]=rect
+		draw_line(grid_point(issue.center.x,issue.center.y)+Vector2(0,-12*s),rect.get_center(),Color("efc77d"),1.5,true)
+		draw_style_box(preload("res://game/style.gd").box(Color("efc77d"),4,Color("ffe9b5")),rect)
+		draw_string(_font,rect.get_center()+Vector2(-2,5),"!",HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("503a27"))

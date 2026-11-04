@@ -111,6 +111,11 @@ or shell expressions.
   tile. **Sell** removes something; **R** rotates placement. **Move** rearranges
   furniture for free. Choose
   **Finish building** to resume life on the lot.
+- Placement, Move, and Room previews warn in amber when an edit would cut off
+  furniture or residents. The label names the new problem, badges locate it, and
+  newly disconnected floor is highlighted. Draft placement is still allowed;
+  restore access before finishing. Repair previews turn green when the home is
+  ready. Existing problems are identified separately from problems the edit adds.
 - **Access** in the construction controls shows connected floor in green and cut
   off floor in coral. Numbered markers and Find buttons locate trapped residents
   or inaccessible furniture. Add a door, move furniture, or remove an obstruction;

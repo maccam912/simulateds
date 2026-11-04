@@ -1406,3 +1406,37 @@ that consequence in the placement preview, naming the affected furnishing and
 showing the route problem before purchase. Keep draft editing flexible while
 making the consequence visible. This is proposed next work, not implemented
 behavior in this checkpoint.
+
+
+## See access problems before placing an edit
+
+Placement, Move, and Room previews now identify the access consequence of the
+proposed layout. Amber text names a newly blocked furnishing or resident, small
+badges locate it, and newly cut-off floor is tinted. Existing problems and repairs
+have distinct wording. A green repair explains when the home is ready to finish.
+Draft edits stay flexible, with the same authoritative Finish building gate.
+
+All 68 local suites, the real Iroh host/two-client/reconnect scenario, and dedicated
+startup passed. Standard and compact native input flows exercised blocking the
+fridge with a game table, repairing it with Move, undo/redo, closing and reopening
+the entrance, and changing a room's doorway side. Predicted reports matched the
+accepted layouts and hover changed no world state. The warning did not consume
+placement clicks. Screenshot inspection found an outline crossing warning text;
+drawing the label last fixed it. A test's real OS pointer needed to follow its
+injected hover, and a supposedly clear furniture destination actually blocked
+the television; the final fixture uses a genuinely accessible location without
+relaxing routing checks. These are automated native and network checks, not
+human-family playtests.
+
+Final review found that a loaded world could reuse a preview when its lot ID and
+revision matched the previous world. Preview keys now include the active model
+identity, and both native layouts passed a replacement-world regression check.
+The updated Building guide passed as well.
+
+Fresh assessment: building now gives useful feedback at the moment of a decision,
+and decorating has enough range to make households distinct. The next impactful
+work should return to the residents: a creative recreation activity such as
+painting, with visible progress and something personal to keep in the home.
+Start with a small complete loop, preserve ownership and always-on safety, and
+avoid making it an unattended income source. This is proposed next work, not
+implemented behavior in this checkpoint.
