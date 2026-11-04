@@ -25,7 +25,8 @@ exclusive private furnishings, shape-based picking, free furniture moves,
 placement validation previews, 32-edit construction undo/redo, and persistent
 personal wishes/journals, resident movement/activity presentation, day/night
 lighting, two-corner room construction with a shared cost/obstruction preview,
-household names/appearance, and persistent friendships with a People panel.
+household names/appearance, persistent friendships with a People panel, and
+household postcards with optional gifts for asynchronous play.
 See [the playtest log](PLAYTEST_LOG.md) for evidence
 and current usability priorities.
 
@@ -61,7 +62,8 @@ complete a shared activity without either player controlling the other's family.
 - Simple employment/activity income, bills, and affordable upgrades.
 - Host-approved invitations and household guest/privacy settings.
 - Profile backup/recovery and world administration.
-- Optional durable messages or gifts that do not require both people online.
+- Durable household postcards and escrowed money gifts are implemented. Extend
+  the asynchronous loop with meaningful household activities and return summaries.
 
 Exit: a household can remain absent for several real days without irreversible
 harm; returning players get a concise accurate summary; no absent family earns

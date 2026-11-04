@@ -51,6 +51,7 @@ func _host() -> void:
 	file.close()
 	var home: String = session.home_lot()
 	var recalled := false
+	var delivered: Dictionary={}
 	for _index in range(700):
 		await create_timer(0.1).timeout
 		var visitors := 0
@@ -58,13 +59,21 @@ func _host() -> void:
 			if family_id == session.profile_id:
 				continue
 			var family: Dictionary = session.state.families[family_id]
+			if recalled and not family.online and not delivered.has(family_id):
+				await _command({"type":"mail_send","recipient":family_id,"sequence":session.state.families[session.profile_id].mailbox.next_sent,"note":"A postcard left while you were away.","gift":0})
+				delivered[family_id]=true
 			if family.online and family.members[0].lot_id == home:
 				visitors += 1
 		if visitors == 2 and not recalled:
 			await _command({"type": "build_begin", "lot_id": home})
 			recalled = true
+		for postcard: Dictionary in session.state.families[session.profile_id].mailbox.items:
+			if not postcard.claimed:
+				await _command({"type":"mail_read","id":postcard.id})
+				await _command({"type":"mail_claim","id":postcard.id})
 		if recalled and FileAccess.file_exists(ticket_path + ".1.done") and FileAccess.file_exists(ticket_path + ".2.done") and session.players.size() == 1:
 			assert(session.state.families.size() == 3, "Reconnect created duplicate families")
+			assert(delivered.size()==2 and session.state.families[session.profile_id].mailbox.items.size()==2,"Offline delivery and client gift postcards both reached the host")
 			for family_id in session.state.families:
 				if family_id != session.profile_id:
 					assert(not session.state.families[family_id].online, "Disconnect did not enable caretaker")
@@ -174,6 +183,13 @@ func _client(index: String) -> void:
 		if int(preload("res://game/friendships.gd").bond(session.state,member_id,companion_id).get("score",0))==32: break
 		await create_timer(0.1).timeout
 	assert(int(preload("res://game/friendships.gd").bond(session.state,member_id,companion_id).get("score",0))==32,"Completed chat did not replicate friendship progress")
+	var postcard := {"type":"mail_send","recipient":session.state.lots[host_home].owner,"note":"Thanks for hosting the neighborhood!","gift":100,"sequence":1}
+	await _command(postcard)
+	await _command(postcard,false)
+	for _attempt in range(50):
+		if int(session.state.families[identity].mailbox.next_sent)==2: break
+		await create_timer(0.1).timeout
+	assert(int(session.state.families[identity].mailbox.next_sent)==2,"Postcard delivery did not replicate")
 	await _command({"type": "visit", "lot_id": host_home, "member_id": member_id})
 	var recalled := false
 	for _attempt in range(300):
@@ -188,6 +204,8 @@ func _client(index: String) -> void:
 	session.leave()
 	await create_timer(0.7).timeout
 	await _connect()
+	assert(session.state.families[identity].mailbox.items.size()==1 and not session.state.families[identity].mailbox.items[0].read,"A postcard delivered while disconnected is waiting on reconnect")
+	await _command(postcard,false)
 	assert(session.home_lot() == home, "Reconnect changed lot ownership")
 	assert(int(preload("res://game/friendships.gd").bond(session.state,member_id,companion_id).get("score",0))==32,"Reconnect lost the friendship")
 	assert(session.state.families[identity].name=="Gardeners "+index and session.state.families[identity].members[1].appearance.style==1,"Reconnect lost household identity")

@@ -38,6 +38,30 @@ func _run() -> void:
 	app._apply_household()
 	assert(app.page=="household" and not app.household_apply.disabled and not app.message_label.text.is_empty(),"Invalid names leave an editable form with feedback")
 	app._back()
+	# Mail drafts remain local; explicit delivery/collection changes saved state.
+	session.world.ensure_family("mail_neighbor","Violet")
+	app.game.mail_requested.emit()
+	assert(app.page=="mail" and session.menu_paused)
+	app.mail_panel.write_button.pressed.emit()
+	app.mail_panel.note_input.text="Tea on the porch next time?"
+	app.mail_panel.note_input.text_changed.emit(app.mail_panel.note_input.text)
+	assert(not app.mail_panel.send_button.disabled and session.state.families.mail_neighbor.mailbox.items.is_empty())
+	app.mail_panel.send_button.pressed.emit()
+	assert(session.state.families.mail_neighbor.mailbox.items.size()==1 and app.mail_panel.pending.is_empty())
+	assert(session.world.apply_command("mail_neighbor",{"type":"mail_send","recipient":session.profile_id,"note":"Yes please! A little something for the garden.","gift":100,"sequence":1}).ok)
+	session.world_changed.emit(); app.game._refresh()
+	assert(app.game.mail_button.text=="Mail · 1")
+	var mail_id: String=family.mailbox.items[0].id
+	app.mail_panel.open_buttons[mail_id].pressed.emit()
+	assert(family.mailbox.items[0].read and app.mail_panel.archive_button.disabled)
+	var mail_funds: int=session.state.lots[family.home_lot].funds
+	app.mail_panel.claim_button.pressed.emit()
+	assert(session.state.lots[family.home_lot].funds==mail_funds+100 and not app.mail_panel.archive_button.disabled)
+	app.mail_panel.archive_button.pressed.emit()
+	assert(family.mailbox.items.is_empty() and app.mail_panel.view=="inbox")
+	app.mail_panel.write_button.pressed.emit(); app.mail_panel.note_input.grab_focus()
+	await _key(KEY_ESCAPE)
+	assert(app.page=="game","Escape closes Mail even with keyboard focus in the note field")
 	await _key(KEY_ESCAPE)
 	assert(app.page=="pause" and session.menu_paused,"Escape opens pause")
 	app.open_settings()
@@ -59,12 +83,14 @@ func _run() -> void:
 	await _key(KEY_ESCAPE)
 	assert(not app.console.is_open() and app.page=="game" and not session.menu_paused,"Escape closes console without opening pause")
 	app.open_saves("save")
+	var previous_ids: Array=[]
+	for row: Dictionary in session.list_saves(): previous_ids.append(str(row.id))
 	app.slot_name.text="Menu flow test"
 	app._perform_save("")
 	assert(app.message_label.text.length()>0,"Save menu reports result")
 	var id:=""
 	for row in session.list_saves():
-		if row.name=="Menu flow test" and row.valid: id=row.id
+		if row.name=="Menu flow test" and row.valid and not previous_ids.has(str(row.id)): id=row.id
 	assert(not id.is_empty(),"Named save appears in menu library")
 	lot.funds+=987
 	app.open_saves("load")

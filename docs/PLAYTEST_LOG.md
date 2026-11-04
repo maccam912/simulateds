@@ -247,3 +247,36 @@ different schedules still have little to leave for each other. Next: persistent
 household postcards and small optional gifts, with a clear unread indicator,
 bounded storage, and host-authoritative delivery that works while recipients are
 away. Gifts must preserve exact funds through construction undo and save/reload.
+
+## 2026-11-04 · Something in the mailbox
+
+Households can leave a 120-character postcard for each neighbor once per game day,
+optionally attaching §100 or §250. Delivery charges the sender; the recipient
+explicitly collects the gift once. Mail waits while a household is disconnected.
+The inbox holds 24 postcards, with unread HUD counts and read/collect/archive
+actions. Full inboxes reject new mail without charging or dropping existing mail.
+Mail persists in the shared world; it is not a private messaging service. Plain
+postcards can be sent during construction, while sending money requires finishing
+the draft. Collecting a gift updates live, undo/redo, and committed budgets.
+
+Validation: sixteen model/application suites passed (the updated app-flow suite
+was rerun after fixing its selection of an older, same-named test save). The real
+Iroh host/two-client test passed with gifts sent by clients, repeat-send rejection,
+host collection during construction, and postcards delivered during disconnect
+waiting unread on reconnect. Dedicated startup also passed. Model checks cover
+ownership, malformed input, capacity, per-recipient daily bounds, legacy saves,
+JSON round-trips, gift collection through undo/redo/discard/save, and packet size.
+Graphical mouse-input checks passed at 1440×900 and 1280×720/125% UI scale. Visual
+review found Back could return to the main menu when Mail was opened before other
+menus; the return destination is now explicit and asserted. The compact compose
+layout now keeps the full form visible. No external messages were sent.
+
+The cache-cleanup checkpoint and friendship checkpoint both completed all four CI
+platform jobs successfully, including Android. Physical devices remain untested.
+
+Fresh assessment: neighbors can now leave a personal reason to return. The central
+household loop still gives little help deciding what to do when several needs are
+low. Next: a readable resident mood and contextual care actions that take the
+player directly to an appropriate reachable activity, while preserving manual
+plans and respecting busy furniture. Reassess the balance through a longer live
+household playtest before expanding careers or inventory.

@@ -3,6 +3,7 @@ extends Control
 signal pause_requested
 signal save_menu_requested
 signal household_requested
+signal mail_requested
 
 const Style = preload("res://game/style.gd")
 const Catalog = preload("res://game/catalog.gd")
@@ -27,6 +28,7 @@ var visit_button: Button
 var home_button: Button
 var family_box: VBoxContainer
 var household_button: Button
+var mail_button: Button
 var lots_box: VBoxContainer
 var tools_box: VBoxContainer
 var context_box: VBoxContainer
@@ -173,7 +175,8 @@ func _build_ui() -> void:
 	location_box.add_child(lot_subtitle)
 	var location_actions := HBoxContainer.new(); location_box.add_child(location_actions)
 	location_actions.add_child(_button("Neighborhood",func(): _show_tray(neighborhood_panel,not neighborhood_panel.visible)))
-	location_actions.add_child(_button("Center view",func(): lot_view.zoom=1.0; lot_view.pan=Vector2.ZERO))
+	var center := _button("Center",func(): lot_view.zoom=1.0; lot_view.pan=Vector2.ZERO); center.tooltip_text="Center view · Reset pan and zoom"; location_actions.add_child(center)
+	mail_button=_button("Mail",func(): mail_requested.emit()); location_actions.add_child(mail_button)
 
 	neighborhood_panel = _hud_panel(Rect2(16,146,260,330))
 	neighborhood_panel.visible = false
@@ -309,6 +312,10 @@ func _refresh() -> void:
 		selected_member=str(family.members[0].id); member=_member()
 	var lot: Dictionary = state.get("lots",{}).get(viewed_lot,{})
 	household_button.disabled=family.is_empty() or Session.role=="joining"
+	mail_button.disabled=family.is_empty() or Session.role=="joining"
+	var unread := preload("res://game/mailbox.gd").unread(family.get("mailbox",{}))
+	mail_button.text="Mail · %d" % unread if unread>0 else "Mail"
+	mail_button.add_theme_color_override("font_color",Style.GOLD if unread>0 else Style.TEXT)
 	var mine := str(lot.get("owner",""))==str(Session.profile_id)
 	var building := bool(lot.get("building",false))
 	if not building:

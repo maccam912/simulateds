@@ -108,6 +108,12 @@ or shell expressions.
   Two completed catch-ups per pair per day build a shared friendship when both
   households are online. Milestones appear in both journals. Busy residents finish
   their own plans first, and friendships never decay while someone is away.
+- **Mail** leaves a postcard for another household, even while they are away.
+  Send one per household per game day, with an optional §100 or §250 gift. Gifts
+  are charged on delivery and collected once by the recipient. The inbox holds
+  24 postcards; read them and collect gifts before archiving to make room. The
+  host saves mail with the shared neighborhood. Postcards are shared world data,
+  not private messages outside the game.
 - The world fills the window behind the HUD. **Activities** opens the optional
   action tray; construction opens the catalog. **Escape** closes either tray.
 - Scroll to zoom and middle-drag to pan. **F11** toggles fullscreen.

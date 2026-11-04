@@ -4,6 +4,7 @@ const Style = preload("res://game/style.gd")
 const GameScene = preload("res://game/main.tscn")
 const Console = preload("res://game/debug_console.gd")
 const HouseholdEditor = preload("res://game/household_editor.gd")
+const MailPanel = preload("res://game/mail_panel.gd")
 var game: Control
 var console: Control
 var menu_root: Control
@@ -25,6 +26,7 @@ var _booted := false
 var household_editor: Control
 var household_apply: Button
 var _pending_household: Dictionary = {}
+var mail_panel: Control
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -39,6 +41,7 @@ func _ready() -> void:
 	game.pause_requested.connect(open_pause)
 	game.save_menu_requested.connect(func(): open_saves("save"))
 	game.household_requested.connect(open_household)
+	game.mail_requested.connect(open_mail)
 	Session.action_result.connect(_household_result)
 	Session.world_changed.connect(_household_changed)
 	menu_root = Control.new()
@@ -96,8 +99,8 @@ func _show_page(value: String, title: String = "", subtitle: String = "") -> voi
 	menu_root.add_child(menu_panel)
 	menu_panel.anchor_left=0.5; menu_panel.anchor_right=0.5
 	menu_panel.anchor_top=0.5; menu_panel.anchor_bottom=0.5
-	var width := 720.0 if value in ["settings","save","load","household"] else 440.0
-	var height := 600.0 if value in ["settings","save","load","household"] else 490.0
+	var width := 720.0 if value in ["settings","save","load","household","mail"] else 440.0
+	var height := 600.0 if value in ["settings","save","load","household","mail"] else 490.0
 	if value=="splash": height=230
 	menu_panel.offset_left=-width/2; menu_panel.offset_right=width/2
 	menu_panel.offset_top=-height/2; menu_panel.offset_bottom=height/2
@@ -334,7 +337,7 @@ func _option_setting(parent: Node,key: String,title: String,values: Array,labels
 func _input(event: InputEvent) -> void:
 	# LineEdit consumes its cancel key before unhandled input. Household Escape
 	# closes the preview even while a name field has keyboard focus.
-	if page=="household" and event is InputEventKey and event.pressed and event.keycode==KEY_ESCAPE and (console==null or not console.is_open()):
+	if page in ["household","mail"] and event is InputEventKey and event.pressed and event.keycode==KEY_ESCAPE and (console==null or not console.is_open()):
 		_back(); get_viewport().set_input_as_handled(); return
 	if page=="splash" and _booted and event is InputEventMouseButton and event.pressed:
 		show_main(); get_viewport().set_input_as_handled(); return
@@ -433,6 +436,13 @@ func _focus_menu() -> void:
 
 func _household_context() -> String:
 	return str(Session.role)+":"+str(Session.profile_id)+":"+str(game._family().get("home_lot",""))
+
+func open_mail() -> void:
+	if game._family().is_empty(): return
+	previous_page="game"
+	_show_page("mail","Mailbox","Little things to come home to.")
+	mail_panel=MailPanel.new(); menu_content.add_child(mail_panel)
+	menu_content.add_child(_button("Back to neighborhood",_back))
 
 func open_household() -> void:
 	var family: Dictionary=game._family()

@@ -6,6 +6,7 @@ const BuildRules = preload("res://game/build_rules.gd")
 const RoomPlan = preload("res://game/room_plan.gd")
 const Wishes = preload("res://game/wishes.gd")
 const Friendships = preload("res://game/friendships.gd")
+const Mailbox = preload("res://game/mailbox.gd")
 const Appearance = preload("res://game/appearance.gd")
 const HouseholdProfile = preload("res://game/household_profile.gd")
 const GRID_SIZE := 16
@@ -66,6 +67,7 @@ func ensure_family(profile_id: String, display_name: String) -> String:
 			member.appearance=Appearance.defaults(member)
 		state.families[profile_id] = {"id":profile_id, "name":clean_name + " household", "home_lot":lot_id, "online":false, "identity_revision":0, "members":members}
 		Friendships.ensure_housemates(state,state.families[profile_id])
+		state.families[profile_id].mailbox=Mailbox.create(int(state.day))
 		_event(clean_name + " moved into " + str(lot.name) + ".")
 		return lot_id
 	return ""
@@ -94,6 +96,8 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 		return _result(false, "Unknown action.")
 	var family: Dictionary = state.families[profile_id]
 	if type == "household_edit": return HouseholdProfile.edit(family,command)
+	if type in ["mail_send","mail_read","mail_claim","mail_archive"]:
+		return Mailbox.apply(state,profile_id,command,_adjust_funds)
 	if type == "rename_family":
 		var value: Variant = command.get("name")
 		if not value is String or value.strip_edges().is_empty() or value.length() > 24:
@@ -804,6 +808,7 @@ func _normalize_numbers() -> void:
 					tile[0] = int(tile[0])
 					tile[1] = int(tile[1])
 	Friendships.normalize(state)
+	Mailbox.normalize(state)
 
 func _valid_state(data: Dictionary) -> bool:
 	if data.get("schema") != SCHEMA or not data.get("lots") is Dictionary or data.lots.size() != MAX_FAMILIES or not data.get("families") is Dictionary or data.families.size() > MAX_FAMILIES:
@@ -892,9 +897,22 @@ func _valid_state(data: Dictionary) -> bool:
 				if not _number(member.needs.get(need)) or float(member.needs[need]) < 0 or float(member.needs[need]) > 100:
 					return false
 	if data.has("friendships") and not Friendships.valid(data.friendships,members_seen,int(data.day),int(data.tick)): return false
+	if not Mailbox.valid(data): return false
 	for lot: Dictionary in data.lots.values():
 		if not str(lot.owner).is_empty() and not data.families.has(lot.owner):
 			return false
+	return true
+
+func _adjust_funds(lot_id: String, amount: int) -> bool:
+	# External income belongs to the household, not its construction draft.
+	# Check every reversible balance before changing any of them.
+	var balances: Array=[state.lots[lot_id]]
+	if _build_backups.has(lot_id): balances.append(_build_backups[lot_id])
+	if _build_history.has(lot_id):
+		for branch: String in ["undo","redo"]: balances.append_array(_build_history[lot_id][branch])
+	for balance: Dictionary in balances:
+		if int(balance.funds)+amount<0 or int(balance.funds)+amount>1000000000: return false
+	for balance: Dictionary in balances: balance.funds=int(balance.funds)+amount
 	return true
 
 func _valid_task(value: Variant, active: bool) -> bool:
