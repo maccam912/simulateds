@@ -1,0 +1,150 @@
+extends Node
+signal shutdown_finished
+## Original generated music and UI sounds. Mix controls live on named audio buses.
+const MUSIC_PATHS := {"menu":"res://assets/audio/menu.wav","live":"res://assets/audio/live.wav","build":"res://assets/audio/build.wav"}
+const EFFECT_PATHS := {"hover":"res://assets/audio/hover.wav","click":"res://assets/audio/click.wav","confirm":"res://assets/audio/confirm.wav","error":"res://assets/audio/error.wav","save":"res://assets/audio/save.wav","build":"res://assets/audio/place.wav"}
+var context := "silent"
+var enabled := false
+var _music: Array[AudioStreamPlayer]=[]
+var _effects: Array[AudioStreamPlayer]=[]
+var _ambience: AudioStreamPlayer
+var _streams: Dictionary={}
+var _active_music:=0
+var _effect_cursor:=0
+var _last_hover:=0
+var _fade: Tween
+var _shutdown_pending := false
+var _shutdown_complete := false
+
+func _ready() -> void:
+	enabled=DisplayServer.get_name()!="headless" and not OS.has_feature("dedicated_server") and not "--server" in OS.get_cmdline_user_args() and not "--native-smoke" in OS.get_cmdline_user_args()
+	process_mode=Node.PROCESS_MODE_ALWAYS
+	if not enabled: return
+	for index in range(2):
+		var player:=AudioStreamPlayer.new()
+		player.bus="Music"
+		player.volume_db=-60
+		add_child(player)
+		_music.append(player)
+	for index in range(5):
+		var player:=AudioStreamPlayer.new()
+		player.bus="Effects"
+		add_child(player)
+		_effects.append(player)
+	_ambience=AudioStreamPlayer.new()
+	_ambience.bus="Ambience"
+	_ambience.volume_db=-60
+	_ambience.stream=_stream("res://assets/audio/garden.wav",true)
+	add_child(_ambience)
+
+func _stream(path: String,looping: bool=false) -> AudioStream:
+	if _streams.has(path): return _streams[path]
+	var source:=load(path) as AudioStreamWAV
+	if source==null: return null
+	var stream:=source.duplicate() as AudioStreamWAV
+	if looping:
+		stream.loop_mode=AudioStreamWAV.LOOP_FORWARD
+		stream.loop_begin=0
+		stream.loop_end=int(stream.get_length()*stream.mix_rate)
+	_streams[path]=stream
+	return stream
+
+func set_context(next_context: String) -> void:
+	if not next_context in ["menu","live","build","silent"] or next_context==context: return
+	context=next_context
+	if not enabled: return
+	if _fade!=null and _fade.is_valid(): _fade.kill()
+	var duration:=0.15 if Preferences.values.reduced_motion else 1.1
+	_fade=create_tween().set_parallel(true)
+	if next_context=="silent":
+		for player in _music:
+			_fade.tween_property(player,"volume_db",-60.0,duration)
+		_fade.tween_property(_ambience,"volume_db",-60.0,duration)
+		_fade.finished.connect(_stop_silent)
+		return
+	var previous: AudioStreamPlayer=_music[_active_music]
+	_active_music=1-_active_music
+	var current: AudioStreamPlayer=_music[_active_music]
+	current.stream=_stream(MUSIC_PATHS[next_context],true)
+	current.volume_db=-60
+	current.play()
+	_fade.tween_property(previous,"volume_db",-60.0,duration)
+	_fade.tween_property(current,"volume_db",-5.0,duration)
+	if next_context in ["live","build"]:
+		if not _ambience.playing: _ambience.play()
+		_fade.tween_property(_ambience,"volume_db",-2.0,duration)
+	else:
+		_fade.tween_property(_ambience,"volume_db",-60.0,duration)
+
+func _stop_silent() -> void:
+	if context!="silent": return
+	for player in _music: player.stop()
+	_ambience.stop()
+
+func play_ui(event: String) -> void:
+	if not enabled or not EFFECT_PATHS.has(event): return
+	if event=="hover":
+		var now:=Time.get_ticks_msec()
+		if now-_last_hover<100: return
+		_last_hover=now
+	var player: AudioStreamPlayer=_effects[_effect_cursor]
+	_effect_cursor=(_effect_cursor+1)%_effects.size()
+	player.stream=_stream(EFFECT_PATHS[event])
+	player.volume_db=-8.0 if event=="hover" else -2.0
+	player.play()
+
+func attach_controls(root: Node) -> void:
+	# Attach once, and observe newly generated catalog/menu controls as they arrive.
+	if root==null or root.has_meta("simulateds_audio_hook"): return
+	root.set_meta("simulateds_audio_hook",true)
+	root.child_entered_tree.connect(attach_controls)
+	if root is BaseButton:
+		var button := root as BaseButton
+		button.pressed.connect(func(): play_ui("click"))
+		button.mouse_entered.connect(func():
+			if is_instance_valid(button) and not button.disabled: play_ui("hover"))
+		button.focus_entered.connect(func():
+			if is_instance_valid(button) and not button.disabled: play_ui("hover"))
+	for child in root.get_children(): attach_controls(child)
+
+func shutdown() -> void:
+	# Release playback references before SceneTree destroys the audio server.
+	# Explicitly clearing streams also releases resources cached for UI effects.
+	enabled=false
+	context="silent"
+	if _fade!=null and _fade.is_valid(): _fade.kill()
+	_fade=null
+	for player in _music+_effects:
+		if is_instance_valid(player):
+			player.stop()
+			player.stream=null
+	if is_instance_valid(_ambience):
+		_ambience.stop()
+		_ambience.stream=null
+	_streams.clear()
+
+func shutdown_and_wait() -> void:
+	# AudioStreamPlayer.stop is consumed by the audio mixer asynchronously. Keep
+	# the tree alive briefly so its final playback references are released before
+	# Godot tears AudioServer down. Window close and Quit both await this boundary.
+	if _shutdown_complete: return
+	if _shutdown_pending:
+		await shutdown_finished
+		return
+	_shutdown_pending=true
+	var had_audio:=enabled
+	shutdown()
+	var tree:=get_tree()
+	if tree!=null:
+		await tree.process_frame
+		if had_audio:
+			await tree.create_timer(0.15,true,false,true).timeout
+	_shutdown_complete=true
+	_shutdown_pending=false
+	shutdown_finished.emit()
+
+func _exit_tree() -> void:
+	shutdown()
+	_music.clear()
+	_effects.clear()
+	_ambience=null

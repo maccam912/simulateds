@@ -1,0 +1,119 @@
+name: Build and test
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+jobs:
+  build:
+    name: ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux
+            os: ubuntu-24.04
+          - platform: windows
+            os: windows-2022
+          - platform: macos
+            os: macos-15
+          - platform: android
+            os: ubuntu-24.04
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - uses: dtolnay/rust-toolchain@1.98.1
+        with:
+          components: rustfmt, clippy
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            native/iroh/target
+          key: rust-${{ runner.os }}-${{ matrix.platform }}-${{ hashFiles('rust-toolchain.toml', 'native/iroh/Cargo.lock') }}
+      - uses: actions/cache@v4
+        with:
+          path: .tools
+          key: godot-${{ runner.os }}-${{ matrix.platform }}-${{ hashFiles('tools/versions.json') }}
+      - name: Rust checks
+        if: matrix.platform == 'linux'
+        run: |
+          cargo fmt --manifest-path native/iroh/Cargo.toml --check
+          cargo clippy --locked --manifest-path native/iroh/Cargo.toml -- -D warnings
+      - uses: actions/setup-java@v4
+        if: matrix.platform == 'android'
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        if: matrix.platform == 'android'
+        with:
+          packages: platform-tools
+          log-accepted-android-sdk-licenses: false
+      - name: Install Android SDK and NDK
+        if: matrix.platform == 'android'
+        run: sdkmanager 'platforms;android-36' 'build-tools;35.0.1' 'ndk;28.1.13356709'
+      - name: Build native host extension
+        run: python tools/build_native.py
+      - name: Import and test host plus two clients
+        run: python tools/check.py
+      - name: Build Android extension
+        if: matrix.platform == 'android'
+        run: python tools/build_native.py android
+      - name: Export game
+        run: python tools/export.py ${{ matrix.platform }} --skip-build
+      - name: Export dedicated server
+        if: matrix.platform == 'linux'
+        run: python tools/export.py server --skip-build
+      - name: Upload games
+        uses: actions/upload-artifact@v4
+        with:
+          name: game-${{ matrix.platform }}
+          path: build/artifacts/*
+          if-no-files-found: error
+      - name: Upload native libraries
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ matrix.platform }}
+          path: native/bin/*
+          if-no-files-found: error
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs-${{ matrix.platform }}
+          path: build/smoke/*.log
+          if-no-files-found: ignore
+
+  release:
+    name: Publish tagged release
+    if: startsWith(github.ref, 'refs/tags/v') && github.event_name == 'push'
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: game-*
+          merge-multiple: true
+          path: release
+      - name: Publish release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: gh release create "$RELEASE_TAG" release/* --verify-tag --generate-notes --title "$RELEASE_TAG"

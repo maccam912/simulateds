@@ -1,0 +1,15 @@
+.godot/
+.tools/
+/build/
+native/iroh/target/
+native/bin/
+addons/iroh/iroh.gdextension
+addons/iroh/iroh.gdextension.uid
+addons/iroh_android/bin/
+/android/
+__pycache__/
+*.pyc
+*.keystore
+*.jks
+export_credentials.cfg
+.DS_Store

@@ -1,0 +1,34 @@
+config_version=5
+
+[application]
+config/name="Simulateds"
+run/main_scene="res://game/app.tscn"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+config/icon="res://icon.svg"
+
+[autoload]
+Preferences="*res://game/preferences.gd"
+Soundscape="*res://game/audio_director.gd"
+Session="*res://network/session.gd"
+Rooms="*res://network/rooms.gd"
+
+[network]
+iroh/rendezvous_url="https://iroh-rendezvous.maccam912.workers.dev"
+iroh/session_id="simulateds/1"
+
+[display]
+window/size/viewport_width=1440
+window/size/viewport_height=900
+window/size/window_width_override=1440
+window/size/window_height_override=900
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/vram_compression/import_etc2_astc=true
+environment/defaults/default_clear_color=Color(0.055, 0.082, 0.098, 1)
+
+[editor_plugins]
+enabled=PackedStringArray("res://addons/iroh_android/plugin.cfg")

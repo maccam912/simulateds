@@ -1,0 +1,165 @@
+# Persistent neighborhood networking
+
+Simulateds uses the source and native transport from
+[maccam912/godot-iroh-template](https://github.com/maccam912/godot-iroh-template).
+The Rust extension keeps Iroh 1.4.1, direct connections, relay fallback, bounded
+queues and explicit `MultiplayerPeer` packets. The application ALPN and room-code
+namespace are both `simulateds/1`. The transport does not use high-level Godot RPCs.
+
+## Authority and time
+
+The host owns one `game/world.gd` model, advances it at 10 Hz, and saves it every
+10 seconds and after accepted construction commands. A client submits a command;
+the host binds it to that connection's family, validates it in the model and sends
+an acknowledgement. Clients never author funds, needs, ownership or positions.
+There are four persistent lots, one family per lot, and at most four simultaneous
+connections including the host. An allocated lot stays allocated after logout.
+
+Each player can build or control their own family independently. Construction is
+a lot-local transaction: visitors return home, residents freeze, other lots keep
+running. Finishing commits the layout after walkability checks. Disconnect rolls
+back the unfinished transaction and enables caretaker behavior. Saved snapshots
+contain the last committed layout, so a crash also cancels unfinished construction.
+Visitors cannot enter a lot under construction. The host remains required for
+asynchronous play; no simulation catchup runs while the host process is stopped.
+There is no host migration or offline merge.
+
+## Identity
+
+`user://profile.json` stores a randomly generated 256-bit bearer credential and
+family display name. The host derives the persistent family ID from its SHA-256
+hash, never from a client-supplied family ID. Reconnecting with that credential
+reclaims the same household. Two simultaneous connections with the same identity
+are rejected. The local host reserves its profile's family; a dedicated server
+keeps that family in caretaker mode.
+
+The profile file is a credential: keep it private and copy it deliberately if
+moving a family to another device. Losing it loses automatic access to that
+family; account recovery, invitations, host moderation and lot reassignment are
+future work. Display names are labels, not login identities. A four-letter room
+code is discovery, not authentication; anyone with a valid code/ticket can claim
+a free lot. The trusted host can inspect or modify the world. This foundation is
+intended for small trusted family sessions, not public adversarial servers.
+
+## Wire format and limits
+
+Protocol version 1 uses reliable, ordered channel 0. All packets are JSON encoded
+as UTF-8 and limited to 1,024 bytes, below the native 1,200-byte reliable ceiling.
+
+| Message | Direction | Purpose |
+| --- | --- | --- |
+| `hello` / `welcome` / `reject` | Both | Version, credential and household admission |
+| `command` / `ack` | Client / host | Validated intent, monotonic request ID and result |
+| `chunk` | Host | Bounded compressed full-world snapshots |
+| `chat` | Both | Optional 160-character room messages |
+
+Commands carry a per-connection increasing request ID. The host caches 64 replies
+and rejects older evicted IDs using a high-water mark, so replay cannot repeat a
+purchase. It accepts at most 30 new commands per peer per second. Clients allow
+16 pending actions, retry at 1.5-second intervals, and disconnect after four
+unsuccessful attempts rather than guessing whether an action happened.
+
+Twice per second the host serializes a snapshot, compresses it with DEFLATE, and
+splits it into chunks of at most 600 bytes before base64 encoding. Snapshots are
+capped at 512 KiB uncompressed / 75 KiB compressed / 128 chunks. Sending is paced
+at eight packets per frame total, round robin across peers. A peer already
+receiving a snapshot waits for the next one rather than accumulating an unbounded
+backlog. The client requires host ID 1, consistent snapshot ID/count/size and
+sequential chunk indices; a validated complete world replaces the visible state
+atomically. Partial, stale, oversized and malformed snapshots are ignored. A
+client disconnects after 20 seconds without an accepted snapshot.
+
+Full snapshots are deliberately simple for four small lots. Larger worlds will
+need interest subscriptions and deltas. These bounds are not an Internet-scale
+abuse-resistance claim. `tests/protocol.gd` exercises packet, replay and authority
+boundaries. `tests/smoke_peer.gd` runs real host/two-client building, visitor recall,
+and reconnect through Iroh.
+
+## Persistence
+
+`user://neighborhood.json` holds the authoritative world. Saving writes a temporary
+file then renames it, retaining the previous validated state as `.bak`. A corrupted
+primary save falls back to its valid backup. If neither can load, a temporary
+world opens with saving disabled, preserving the damaged files for recovery.
+The disk schema is validated before adopting state. World data is plain JSON;
+no executable Godot objects are deserialized.
+
+Joining saves and retains the local world separately. Received host state is not
+written to the client's local save. Leaving restores the local neighborhood.
+Network snapshots preserve online/construction/action state, whereas disk restores
+normalize sessions, release construction and resume caretaking.
+
+CLI arguments (after Godot's `--`) allow isolated profiles and servers:
+
+```sh
+python3 tools/godot.py --headless -- --server \
+  --save-path=/absolute/path/neighborhood.json \
+  --profile-path=/absolute/path/host-profile.json \
+  '--family-name=Host family'
+```
+
+The server prints `SIMULATEDS_SERVER_READY ticket=...` after starting. Keep the
+process running and share a current ticket. The graphical Host flow also obtains
+four-character codes through the template's existing owner-managed rendezvous
+service; it is discovery only, not the simulation server. Codes expire after ten
+minutes, can be refreshed, and are revoked on normal leave when the network is
+available. Existing Iroh connections outlive code expiry. See `network/rooms.gd`
+for cancellation and stale-HTTP-response handling inherited from the template.
+
+## API for presentation
+
+`Session.state` is read-only by convention and supplies the current world's
+dictionaries. Use `Session.profile_id`, `display_name`, `home_lot()`,
+`is_authority()`, `command(intent)` and `save_world()`; subscribe to
+`world_changed`, `status_changed(message)`, and `action_result(message)`.
+`Rooms.host()` / `Rooms.join(code_or_ticket)` handle discovery, while
+`Session.host()` / `join(ticket)` bypass it. `Session.leave()` restores local play.
+The model is transport-independent and can be tested without Iroh.
+
+## Front-end menus, named saves, and developer commands
+
+`Session.menu_paused` suspends simulation only in local offline play. The scene
+tree itself is never paused: room requests, network polling, snapshots and a
+hosting player's shared simulation continue while menus are open. Dedicated
+servers do not depend on the front end.
+
+The save menu calls `list_saves()`, `save_slot(name, id="")`, `load_slot(id)`, and
+`new_world(name)`. Named saves contain a versioned metadata envelope and the
+committed world, use validated opaque IDs rather than caller-supplied paths, and
+keep the previous valid version as a backup on explicit overwrite. The default
+library is `user://saves`; custom `--save-path` values receive a separate
+`<save-basename>-slots` library. `--slots-path` overrides that directory. The
+special read-only listing ID `autosave` represents the current active world.
+
+Loading and starting a new world require an offline session. A candidate world
+is fully validated, including room for the local profile, before any switch.
+The current world is saved both to its autosave and to a named recovery copy;
+then the candidate autosave is written before the live model is replaced. A
+failed validation or write leaves the active model intact. Corrupt named saves
+are listed with an error, or recover their previous valid backup when available.
+An unrecoverably damaged active autosave stays protected: save a named copy and
+restart with a new `--save-path` before switching worlds.
+
+`Session.execute_debug(line, selected_member_id="")` uses an explicit command
+registry; it does not evaluate GDScript, shell commands, paths, or arbitrary RPCs.
+`help` and `stats` work on clients. World mutations are accepted only on the host
+or offline authority. Console text is not sent through the command protocol.
+
+| Command | Behavior |
+| --- | --- |
+| `rosebud`, `motherlode` | Add 1,000 or 50,000 to the local authority's household. |
+| `money <amount>` | Set household funds, bounded to 0–10,000,000. |
+| `needs [all\|need] [value]` | Set the local household's needs, bounded to 0–100; no arguments restores all to 100. |
+| `time HH:MM` | Set time of day without changing the day count or paying an allowance. |
+| `speed <0..8>` | Adjust authority simulation speed; zero pauses simulation while networking remains live. |
+| `teleport <x> <y>` | Move the selected owned resident to a reachable, unoccupied tile. |
+| `cancel` | Clear the local household's action queues. |
+| `construction cancel` | Discard the local household's construction draft. |
+| `save` | Write the active autosave and report success or failure. |
+
+Money commands are rejected during construction to preserve the draft's budget
+transaction. Gameplay changes pass through bounded domain checks and appear in
+the neighborhood event history; normal snapshots replicate them. Speed is a
+runtime control, reset when changing worlds or leaving a session, and is not
+saved. This development console is intentionally available in the foundation;
+it is not a public-server moderation or privilege system.
