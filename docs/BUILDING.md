@@ -87,6 +87,15 @@ changes for your game; a built APK does not prove device behavior.
 4. Game ZIP/APK artifacts, SHA-256 files, native libraries, and test logs.
 5. A tag like `v0.1.0` creates a GitHub Release after all four matrix jobs pass.
 
+The macOS job uses the standard `macos-15-intel` runner after repeated Apple
+Silicon jobs expired without acquiring a runner. It still builds ARM64 and Intel
+native libraries, combines them into the universal library, and verifies the
+universal export and signatures. Hosted runtime checks execute the Intel slice;
+native Apple Silicon playtests remain a separate check. Rust caches include the
+runner architecture to keep host-built cache entries separate. Test artifacts
+include local suite logs and all three Iroh scenarios.
+See [GitHub's runner image labels](https://github.com/actions/runner-images#available-images).
+
 The release job alone has `contents: write`. Build/PR jobs need no signing secrets
 or access to private GitHub repositories. The default test exchanges full tickets
 and does not call the owner's code service. Internet access is still needed for

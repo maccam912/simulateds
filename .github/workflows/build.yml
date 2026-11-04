@@ -26,7 +26,9 @@ jobs:
           - platform: windows
             os: windows-2022
           - platform: macos
-            os: macos-15
+            # ARM hosted jobs repeatedly expired before acquiring a runner.
+            # Build both CPU slices on the standard Intel runner.
+            os: macos-15-intel
           - platform: android
             os: ubuntu-24.04
     runs-on: ${{ matrix.os }}
@@ -45,7 +47,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             native/iroh/target
-          key: rust-${{ runner.os }}-${{ matrix.platform }}-${{ hashFiles('rust-toolchain.toml', 'native/iroh/Cargo.lock') }}
+          key: rust-${{ runner.os }}-${{ runner.arch }}-${{ matrix.platform }}-${{ hashFiles('rust-toolchain.toml', 'native/iroh/Cargo.lock') }}
       - uses: actions/cache@v4
         with:
           path: .tools
@@ -100,7 +102,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-logs-${{ matrix.platform }}
-          path: build/smoke/*.log
+          path: |
+            build/checks/*.log
+            build/smoke/*.log
+            build/paintings_peer/*.log
+            build/meals_peer/*.log
           if-no-files-found: ignore
 
   release:

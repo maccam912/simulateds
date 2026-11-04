@@ -988,3 +988,14 @@ continuation. The headless run exposed pointer-exit events clearing a keyboard-
 focused roster; focus now independently keeps the preview visible. Both native
 meal-call layouts, the compact meal-wish playthrough, and editor import passed
 after that correction.
+
+
+## macOS hosted runner recovery
+
+Three successive preceding checkpoints passed Linux, Windows, and Android while
+macOS was cancelled before acquiring a runner or executing any steps. The workflow
+now targets the standard Intel macOS 15 runner, with architecture-specific Rust
+caches. Universal ARM64/Intel compilation and export verification remain enabled;
+local native playtests exercise Apple Silicon. `actionlint` and diff checks pass.
+The new hosted job and export result are pending at this checkpoint. Test-log
+artifacts now include the local suites and painting/meal Iroh scenarios.
