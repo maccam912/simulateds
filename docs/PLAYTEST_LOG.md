@@ -1126,3 +1126,37 @@ finish, be cancelled, or become unavailable while the player watches another
 resident, and then simply disappear from Plan. Next: a compact recent-outcomes
 view in the resident plan, including clear completion/cancellation/failure
 reasons, so managing both residents remains understandable.
+
+## Recent results in each resident’s Plan
+
+The previous garden playtest exposed how a completed or interrupted order simply
+vanished from Plan. Added **Plan → Recent**: eight deliberate outcomes per resident,
+with Done/Cancelled/Interrupted, a concrete reason, and neighborhood day/time.
+Routine names stay attached even after the recipe changes. Completed history
+survives saving and reconnecting; loading explicitly explains unfinished work
+that the existing load policy clears. Automatic care does not crowd out deliberate
+plans. Batch cancellations show the active order before its upcoming steps.
+
+Native standard and compact playtests completed a meal for Alex while Robin
+walked independently, cancelled a new order through the existing Plan controls,
+and inspected a furnishing interruption. Recent shows the correct resident's
+history, keeps keyboard focus and scroll stable on ordinary refresh, and returns
+to Upcoming without changing the simulation. The compact screenshot kept the
+result, reason, and timestamp readable inside the existing tray. Polished resident
+switching to start at the newest entry. Live task labels retain their existing
+lookup behavior; stored titles give missing targets a meaningful history entry.
+
+All 52 local suites, real Iroh host/two-client/reconnect, and dedicated startup
+passed. Native 1440×900 and compact 1280×720 at 125% passed, with a final compact
+rerun after polish. Both real clients observed exactly one cancelled result after
+a repeated rejected packet and retained completed gardening history on reconnect.
+The prior garden checkpoint passed macOS, Linux, Windows, and Android CI. Human
+family sessions, physical devices, and overnight hosting remain unverified.
+
+Fresh assessment: seeing finished care makes the resident plan easier to trust.
+Building a useful morning sequence directly by clicking furnishings is already
+natural, but saving that sequence for later requires recreating it in the routine
+editor. Next: an explicit **Use current plan** draft in Routines, with a reviewable
+list and clear handling of movement, garden work, and other unsupported steps.
+It should save through the existing routine command and leave current activities
+running unchanged.

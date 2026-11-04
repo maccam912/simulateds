@@ -413,3 +413,29 @@ an acknowledgement alone cannot invent accepted work. Captures are ignored
 physical-device, overnight-host, or impaired-network visual playtests.
 Final compact checks also cover all four bed rotations with a ripe crop, visible
 surface picking, the full-duration Plan tooltip, failure recovery, and mixer cues.
+
+## Recent activity outcomes
+
+All 52 local suites passed, followed by actual Iroh host/two-client/reconnect and
+dedicated startup checks. `tests/activity_log.gd` covers completion, fulfilled-need
+completion, individual and batch cancellation, bounded ordering, autonomous care
+exclusion, repeated/rejected commands, missing furnishings, blocked paths,
+conversation departure/completion, travel, construction recall, absence, runtime
+snapshots, disk-load interruption, routine provenance, legacy migration, and
+atomic rejection of corrupt history. Existing garden checks also verify actual
+planting and harvest outcomes. Both real clients receive one cancellation entry
+after a rejected repeat and preserve their gardener's completed history across
+reconnects.
+
+Native Godot input playtests passed at 1440×900 and at 1280×720 with 125% UI scale.
+They use actual injected mouse events to open Recent, cancel an upcoming action,
+switch residents, and return to Upcoming. The flow completes care, exercises an
+interrupted furnishing activity, scrolls a full eight-entry list, preserves focus
+and rows on refresh, and replaces the full replicated state. Captures are ignored
+`build/activity-log-*.png`. Visual inspection confirmed readable status/reason/
+time rows within the original floating Plan tray; no added HUD island or world
+frame. A final compact run passed after scroll/title polish. These are automated
+native playtests, not evidence of human family or physical-device play.
+
+The preceding garden commit passed all four platform CI jobs. CI for this
+checkpoint is tracked separately after push.

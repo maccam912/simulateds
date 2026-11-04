@@ -20,6 +20,7 @@ const Pastimes = preload("res://game/pastimes.gd")
 const Appearance = preload("res://game/appearance.gd")
 const Wellbeing = preload("res://game/wellbeing.gd")
 const ActivityStatus = preload("res://game/activity_status.gd")
+const ActivityLog = preload("res://game/activity_log.gd")
 const Finishes = preload("res://game/finishes.gd")
 const Windows = preload("res://game/windows.gd")
 const RoutinePanel = preload("res://game/routine_panel.gd")
@@ -74,6 +75,10 @@ var routines_button: Button
 var plan_panel: PanelContainer
 var plan_box: VBoxContainer
 var plan_scroll: ScrollContainer
+var recent_button: Button
+var _plan_recent := false
+var _recent_member := ""
+var recent_rows: Array[Control] = []
 var plan_controls: Dictionary = {}
 var plan_titles: Dictionary = {}
 var _plan_detail: Label
@@ -288,6 +293,12 @@ func _build_ui() -> void:
 	var plan_head := HBoxContainer.new(); plan.add_child(plan_head)
 	plan_title = _label("Your day",18); plan_title.size_flags_horizontal=Control.SIZE_EXPAND_FILL; plan_title.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; plan_head.add_child(plan_title)
 	routines_button=_button("Routines",_open_routines); routines_button.add_theme_font_size_override("font_size",12); plan_head.add_child(routines_button)
+	recent_button=_button("Recent",func():
+		_plan_recent=not _plan_recent; _plan_signature=""; plan_scroll.scroll_vertical=0; _refresh()
+	)
+	recent_button.add_theme_font_size_override("font_size",12)
+	recent_button.tooltip_text="The last eight activities you planned for this resident, with their results."
+	plan_head.add_child(recent_button)
 	plan_head.add_child(_button("×",func(): plan_panel.hide()))
 	autonomy_button = _button("Autonomy: on",func(): _send({"type":"autonomy","member_id":selected_member,"enabled":not bool(_member().get("autonomy",true))}))
 	autonomy_button.tooltip_text="When on, this resident tends their own needs between your orders. Your orders always take priority."
@@ -593,8 +604,13 @@ func _layout_notice() -> void:
 
 func _refresh_plan(member: Dictionary) -> void:
 	plan_title.text = str(member.name) + "’s day"
-	pastime_label.text="Unwinds with: "+Pastimes.label(member)
 	autonomy_button.text = "Autonomy: " + ("on" if member.get("autonomy",true) else "off")
+	recent_button.text="Upcoming" if _plan_recent else "Recent"
+	recent_button.tooltip_text="Return to the upcoming plan." if _plan_recent else "The last eight activities you planned for this resident, with their results."
+	pastime_label.text="Recent results · Your last eight planned activities" if _plan_recent else "Unwinds with: "+Pastimes.label(member)
+	pastime_label.tooltip_text="Most recent first. Autonomous activities stay out of this list." if _plan_recent else "Change this in Household. A favorite nudges free-time choices; urgent needs and your orders come first."
+	if _plan_recent:
+		_refresh_recent(member); return
 	var tasks: Array = []
 	if not member.task.is_empty(): tasks.append(member.task)
 	tasks.append_array(member.queue)
@@ -609,6 +625,7 @@ func _refresh_plan(member: Dictionary) -> void:
 		focus_action=str(focused.get_meta("plan_action","")); focus_control=str(focused.get_meta("plan_control",""))
 	var scroll_position := plan_scroll.scroll_vertical
 	_clear(plan_box)
+	recent_rows.clear()
 	plan_controls.clear()
 	plan_titles.clear(); _plan_detail=null; _plan_progress=null
 	if tasks.is_empty():
@@ -653,6 +670,31 @@ func _refresh_plan(member: Dictionary) -> void:
 	_update_plan_feedback(member)
 	call_deferred("_restore_plan_view",selected_member,focus_action,focus_control,scroll_position)
 
+func _refresh_recent(member: Dictionary) -> void:
+	var entries: Array=member.get("activity_log",[])
+	var signature := selected_member+"recent"+JSON.stringify(entries)
+	if signature==_plan_signature: return
+	_plan_signature=signature
+	var scroll_position := plan_scroll.scroll_vertical if _recent_member==selected_member else 0
+	_recent_member=selected_member
+	_clear(plan_box); recent_rows.clear(); plan_controls.clear(); plan_titles.clear()
+	_plan_detail=null; _plan_progress=null
+	if entries.is_empty():
+		var empty := _label("Nothing here yet. Activities you plan appear here when they finish or are interrupted.",13,Style.MUTED)
+		empty.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; empty.custom_minimum_size.x=270; plan_box.add_child(empty)
+	for entry: Dictionary in entries:
+		var row := _vbox(plan_box,3); recent_rows.append(row)
+		row.set_meta("activity_id",str(entry.id))
+		var color: Color=Style.GREEN if entry.outcome=="done" else Style.GOLD if entry.outcome=="failed" else Style.MUTED
+		var title := _label(str(ActivityLog.OUTCOMES[entry.outcome])+" · "+str(entry.title),13,color)
+		title.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; title.tooltip_text=str(entry.title); row.add_child(title)
+		var detail := _label(str(entry.reason),12,Style.TEXT); detail.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; row.add_child(detail)
+		var stamp := _label(ActivityLog.timestamp(entry),11,Style.MUTED); row.add_child(stamp)
+		if not str(entry.routine).is_empty(): stamp.text+=" · "+str(entry.routine)
+		stamp.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; stamp.tooltip_text=stamp.text
+		var line := HSeparator.new(); row.add_child(line)
+	call_deferred("_restore_plan_view",selected_member,"","",scroll_position)
+
 func _update_plan_feedback(member: Dictionary) -> void:
 	if _plan_detail==null or _plan_progress==null: return
 	var status := ActivityStatus.sample(member,Session.state.lots[member.lot_id])
@@ -686,7 +728,7 @@ func _task_title(task: Dictionary, member: Dictionary) -> String:
 				if other.id == task.get("target_id"): return "Chat with " + str(other.name)
 	for object: Dictionary in Session.state.lots[member.lot_id].objects:
 		if object.id == task.get("target_id"): return str(Catalog.ITEMS[object.kind].name)
-	return "Activity"
+	return str(task.get("title","Activity"))
 
 func _money(value: int) -> String:
 	var text := str(value)

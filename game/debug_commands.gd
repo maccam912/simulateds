@@ -69,12 +69,12 @@ static func execute(session: Node, line: String, member_id: String = "") -> Dict
 			var point:=Vector2i(int(parts[1]),int(parts[2]))
 			if not session.world._walkable(destination,point) or session.world._resident_at(str(member.lot_id),point): return _result(false,"Choose an unoccupied walkable tile.")
 			if session.world._path(destination,Vector2i(int(member.x),int(member.y)),[point]).is_empty(): return _result(false,"The selected tile is not reachable.")
-			session.world._clear_member(member,"Moved by developer console")
+			session.world._clear_member(member,"Moved by developer console","Moved by developer console.")
 			member.x=point.x; member.y=point.y
 			return _changed(session,"%s moved to (%d, %d)." % [member.name,point.x,point.y])
 		"cancel":
 			if parts.size()!=1: return _result(false,"Usage: cancel")
-			for member: Dictionary in family.members: session.world._clear_member(member)
+			for member: Dictionary in family.members: session.world._clear_member(member,"Taking it easy","Plan cleared by developer console.")
 			return _changed(session,"Cleared your household’s action queues.")
 		"construction":
 			if parts.size()!=2 or parts[1]!="cancel": return _result(false,"Usage: construction cancel")

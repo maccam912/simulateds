@@ -151,6 +151,11 @@ or shell expressions.
   autonomy switch. **Wishes** gives optional activities, rewards, and a saved
   personal journal. **Hobbies** tracks reading, gardening, and cooking, with five
   lasting ranks and useful activity bonuses. Wishes never expire; completed sets can renew on a later day.
+- **Plan → Recent** shows the selected resident’s last eight deliberately planned
+  activities: Done, Cancelled, or Interrupted, with a reason and game time. It
+  retains routine names and completed results across saves and reconnects.
+  Autonomous care stays out of the list. Loading a saved neighborhood explains
+  any unfinished plans it clears; use **Upcoming** to return to the live plan.
 - **Plan → Routines** keeps up to four named care/recreation sequences shared by
   your two residents. Start with Morning care or Wind down, or arrange one to six
   activities of your own. **Add to plan** finds reachable furnishings on the

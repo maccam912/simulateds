@@ -232,6 +232,16 @@ chatting rather than free. Keep all of this inside the optional Plan tray.
 
 ## Familiar routines
 
+Recent outcomes belong inside the existing Plan tray. A **Recent / Upcoming**
+switch keeps the live queue as the default and adds no persistent HUD panel.
+Show eight deliberate actions at most, newest first, with plain status words,
+a concrete reason, and neighborhood day/time. Green means done, muted means
+cancelled, and gold means interrupted; the words carry the meaning independently.
+Keep reasons wrapped, full titles in tooltips, and routine provenance beside the
+time. Switching residents starts at their newest result. Ordinary snapshot
+refreshes preserve rows, scroll, and keyboard focus. Automatic care never fills
+the history, and reading it never reissues an action or spends household money.
+
 Keep reusable care and leisure sequences inside **Plan → Routines**, in one
 floating library/editor over the live world. Warm names such as Morning care and
 Wind down describe a familiar part of the day. Show the ordered activities and

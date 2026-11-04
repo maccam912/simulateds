@@ -328,6 +328,15 @@ func _client(index: String) -> void:
 	await _command(foreign,false)
 	await _command({"type":"remove_action","member_id":member_id,"action_id":queued_id})
 	await _command({"type":"remove_action","member_id":member_id,"action_id":queued_id},false)
+	var cancelled_result := false
+	for _attempt in range(50):
+		var matches := 0
+		for entry: Dictionary in session.state.families[identity].members[0].activity_log:
+			if entry.id==queued_id:
+				matches+=1; assert(entry.outcome=="cancelled" and entry.reason=="Cancelled from Plan.")
+		if matches==1: cancelled_result=true; break
+		await create_timer(0.1).timeout
+	assert(cancelled_result,"The exact cancelled task replicates once despite a repeated rejected packet")
 	await _command({"type":"cancel","member_id":member_id})
 	var wished_id := ""
 	for wish: Dictionary in session.state.families[identity].members[0].wishes.wishes:
@@ -351,6 +360,7 @@ func _client(index: String) -> void:
 	var companion_id: String=session.state.families[identity].members[1].id
 	var garden: Dictionary=session.world._object(session.state.lots[home],garden_id).garden
 	assert(garden.crop==garden_crop and garden.revision==1 and garden.growth>0,"A second resident's completed planting and continued growth replicate while the first follows their own plan")
+	assert(session.state.families[identity].members[1].activity_log[0].reason=="Seeds planted.","Finished garden work replicates to the resident's history")
 	await _command(plant,false)
 	await _command({"type":"autonomy","member_id":companion_id,"enabled":false})
 	await _command({"type":"cancel","member_id":companion_id})
@@ -417,6 +427,7 @@ func _client(index: String) -> void:
 	var journal_before: Array=session.state.families[identity].members[0].wishes.journal.duplicate(true)
 	var funds: float = session.state.lots[home].funds
 	var garden_before: Dictionary=session.world._object(session.state.lots[home],garden_id).garden.duplicate(true)
+	var garden_history: Array=session.state.families[identity].members[1].activity_log.duplicate(true)
 	session.leave()
 	await create_timer(0.7).timeout
 	await _connect()
@@ -430,6 +441,7 @@ func _client(index: String) -> void:
 	assert(not session.state.families[identity].home_news.report.pending,"Acknowledged recap did not replicate")
 	await _command(postcard,false)
 	assert(session.home_lot() == home, "Reconnect changed lot ownership")
+	assert(session.state.families[identity].members[1].activity_log==garden_history,"Reconnect retains completed outcomes without inventing new entries")
 	garden=session.world._object(session.state.lots[home],garden_id).garden
 	assert(garden.crop==garden_before.crop and garden.revision==garden_before.revision and garden.growth>=garden_before.growth and garden.growth<=45.000001,"Reconnect retains crops; unattended growth stops safely when the planted water runs out")
 	assert(session.state.lots[home].windows.get("7,3")==window_intent.style and session.state.lots[home].walls.has([7,3]),"Reconnect retains the mounted window without opening the wall")

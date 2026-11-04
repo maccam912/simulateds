@@ -57,7 +57,10 @@ shared-clock lock when hosting or visiting a networked neighborhood.
 Kitchen garden beds now support two crop choices, visible growth, deliberate
 plant/water/harvest plans, visitor watering, gardening practice, and safe waits
 when dry or ripe. Crop state follows furnishing moves, history, saves, and
-reconnects; it does not create unattended income.
+reconnects; it does not create unattended income. Each resident’s Plan now also
+retains eight recent deliberate outcomes, including completion, cancellation,
+and interruption reasons, with game time and routine provenance. These persist
+through saves and reconnects without filling up with autonomous care.
 See [the playtest log](PLAYTEST_LOG.md) for evidence
 and current usability priorities.
 

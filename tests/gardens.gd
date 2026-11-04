@@ -67,6 +67,7 @@ func _run() -> void:
 	assert(member.hobbies.gardening.sessions==0,"Canceled work cannot award practice")
 	assert(world.apply_command("a",plant).ok); _finish()
 	assert(lot.funds==11810 and bed.garden.crop=="radish" and bed.garden.revision==1)
+	assert(member.activity_log[0].outcome=="done" and member.activity_log[0].reason=="Seeds planted.")
 	assert(member.hobbies.gardening.sessions==1)
 	_reject(plant)
 	assert(world.apply_command("a",_intent("water")).ok); _finish()
@@ -77,6 +78,7 @@ func _run() -> void:
 	var harvest := _intent("harvest")
 	assert(world.apply_command("a",harvest).ok); _finish()
 	assert(lot.funds==11855 and bed.garden.crop=="" and bed.garden.harvests==1 and member.hobbies.gardening.sessions==2)
+	assert(member.activity_log[0].reason=="Harvest sold for §45." and member.activity_log[0].title.contains("radish"))
 	_reject(harvest)
 	# A longer crop needs more water, with safe dry/ripe waits and visitor help.
 	assert(world.apply_command("a",_intent("plant","tomato")).ok); _finish()

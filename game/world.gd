@@ -18,6 +18,7 @@ const Tabletop = preload("res://game/tabletop.gd")
 const BuildAccess = preload("res://game/build_access.gd")
 const Routines = preload("res://game/routines.gd")
 const Gardens = preload("res://game/gardens.gd")
+const ActivityLog = preload("res://game/activity_log.gd")
 const HouseholdProfile = preload("res://game/household_profile.gd")
 const GRID_SIZE := 16
 const SCHEMA := 1
@@ -75,7 +76,7 @@ func ensure_family(profile_id: String, display_name: String) -> String:
 			var needs := {}
 			for need: String in NEEDS:
 				needs[need] = 70.0 + index * 8.0
-			members.append({"id":profile_id + "_" + str(index + 1), "name":clean_name if index == 0 else "Robin", "lot_id":lot_id, "x":7 + index, "y":7, "needs":needs, "action":"Taking it easy", "queue":[], "task":{}, "walk_clock":0.0, "idle_clock":float(index) * 2.0, "autonomy":true, "next_action":1})
+			members.append({"id":profile_id + "_" + str(index + 1), "name":clean_name if index == 0 else "Robin", "lot_id":lot_id, "x":7 + index, "y":7, "needs":needs, "action":"Taking it easy", "queue":[], "task":{}, "activity_log":[], "walk_clock":0.0, "idle_clock":float(index) * 2.0, "autonomy":true, "next_action":1})
 		for member: Dictionary in members:
 			member.wishes=Wishes.create(str(member.id),int(state.day))
 			member.hobbies=Hobbies.create(int(state.day))
@@ -148,9 +149,9 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 				for member: Dictionary in other.members:
 					if member.lot_id == lot_id:
 						if other.id != profile_id:
-							_send_home(other, member)
+							_send_home(other, member, "This lot entered construction; returned home.")
 						else:
-							_clear_member(member, "Waiting for construction")
+							_clear_member(member, "Waiting for construction", "Construction started.")
 			_event(str(lot.name) + " is under construction. Visitors have gone home.")
 			return _result(true, "Construction started. Your family is paused; neighbors keep living.")
 		if not lot.building:
@@ -236,13 +237,13 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 		if not action_id is String or action_id.is_empty():
 			return _result(false, "Choose an action to cancel.")
 		if member.task.get("id", "") == action_id:
-			member.task = {}
-			member.action = "Taking it easy"
+			_end_task(member,"cancelled","Cancelled from Plan.")
 			member.idle_clock = 0.0
 			_start_next(member, state.lots[member.lot_id])
 			return _result(true, "Current action canceled. The rest of the plan continues.")
 		for queued: Dictionary in member.queue:
 			if queued.get("id", "") == action_id:
+				_record_activity(member,queued,"cancelled","Cancelled from Plan.")
 				member.queue.erase(queued)
 				return _result(true, "Action removed from the plan.")
 		return _result(false, "That action has already finished.")
@@ -296,7 +297,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 			return _result(false, "This home is under construction. Visit again soon.")
 		if type == "visit" and str(destination.owner).is_empty():
 			return _result(false, "Nobody lives here yet.")
-		_clear_member(member)
+		_clear_member(member,"Taking it easy","Travelled to "+str(destination.name)+".")
 		member.lot_id = destination.id
 		var entry := _free_entry(destination)
 		member.x = entry.x
@@ -396,7 +397,7 @@ func _garden_task_option(member: Dictionary,lot: Dictionary,object: Dictionary,t
 func _tick_garden(member: Dictionary,lot: Dictionary,object: Dictionary,task: Dictionary,delta: float) -> void:
 	var option := _garden_task_option(member,lot,object,task)
 	if not option.ok:
-		member.task={}; member.action=str(option.message); return
+		_end_task(member,"failed",str(option.message),str(option.message)); return
 	member.action=str(option.label)
 	var rates := personal_activity_rates(member,"plant")
 	for need: String in rates:
@@ -404,11 +405,11 @@ func _tick_garden(member: Dictionary,lot: Dictionary,object: Dictionary,task: Di
 	task.remaining-=delta
 	if float(task.remaining)>0.000001: return
 	if not _adjust_funds(str(lot.id),-int(option.cost)):
-		member.task={}; member.action="The household budget changed"; return
+		_end_task(member,"failed","The household budget changed.","The household budget changed"); return
 	Gardens.apply(object.garden,str(task.garden_action),str(task.crop))
 	_finish_hobby(member,task,"plant"); _finish_wish(member,task,"plant")
 	_event(str(member.name)+" finished: "+str(option.label).to_lower()+(" · §%d earned." % -int(option.cost) if int(option.cost)<0 else "."))
-	member.task={}; member.action="Garden tended"
+	_end_task(member,"done","Harvest sold for §%d." % -int(option.cost) if int(option.cost)<0 else "Seeds planted." if task.garden_action=="plant" else "Garden watered.","Garden tended")
 
 func move_option(profile_id: String,member_id: String,lot_id: String,goal: Vector2i) -> Dictionary:
 	# Shared, read-only reachability for ground previews and accepted commands.
@@ -550,23 +551,22 @@ func _tick_member(member: Dictionary, lot: Dictionary, delta: float) -> void:
 			member.walk_clock=maxf(0.0,float(member.walk_clock)-0.22)
 			var next: Array = task.path.pop_front()
 			if not _walkable(lot, Vector2i(int(next[0]), int(next[1]))):
-				_clear_member(member, "Path changed")
+				_clear_member(member, "Path changed", "The walking path became blocked; plan cleared.", "failed")
 				return
 			member.x = int(next[0])
 			member.y = int(next[1])
 		return
 	if task.type == "move":
-		member.task = {}
+		_end_task(member,"done","Arrived.")
 		return
 	if task.get("target_kind", "object") == "member":
 		var neighbor := _find_member(str(task.target_id))
 		if neighbor.is_empty() or neighbor.lot_id != member.lot_id or _position(member).distance_to(_position(neighbor)) > 2.0:
-			member.task = {}
-			member.action = "They moved away"
+			_end_task(member,"failed","The other resident moved away.","They moved away")
 			return
 		if _chat_busy(neighbor,member):
 			if float(task.get("elapsed",0))>0:
-				member.task={}; member.action="They have something to do"
+				_end_task(member,"failed","The other resident started something else.","They have something to do")
 			else: member.action="Waiting for "+str(neighbor.name)+" · A chat"
 			return
 		if not task.has("social_started"): task.social_started=int(state.tick)
@@ -578,13 +578,12 @@ func _tick_member(member: Dictionary, lot: Dictionary, delta: float) -> void:
 		if task.remaining <= 0.0:
 			_finish_wish(member,task,"chat")
 			_finish_conversation(member,neighbor,task)
-			member.task = {}
-			member.action = "Taking it easy"
+			_end_task(member,"done","Conversation finished.")
 		return
 	task.elapsed = float(task.get("elapsed",0.0)) + delta
 	var object := _object(lot, str(task.get("target_id", "")))
 	if object.is_empty():
-		member.task = {}
+		_end_task(member,"failed","The furnishing is no longer here.")
 		return
 	if object.kind=="garden_bed" or task.has("garden_action"):
 		_tick_garden(member,lot,object,task,delta); return
@@ -607,8 +606,7 @@ func _tick_member(member: Dictionary, lot: Dictionary, delta: float) -> void:
 	if task.remaining <= 0.0 or (float(member.needs[need]) >= 99.0 and float(task.elapsed)>=minimum_time):
 		_finish_wish(member,task,str(object.kind))
 		_finish_hobby(member,task,str(object.kind))
-		member.task = {}
-		member.action = "Taking it easy"
+		_end_task(member,"done",str(need).capitalize()+" fulfilled." if float(task.remaining)>0.0 else "Activity finished.")
 
 func task_activity(task: Dictionary, lot_id: String) -> String:
 	if task.get("type")!="interact": return ""
@@ -839,6 +837,7 @@ func _choose_autonomy(member: Dictionary, lot: Dictionary) -> void:
 func _queue_action(member: Dictionary, action: Dictionary) -> void:
 	action.id = str(member.id) + ":" + str(int(member.get("next_action", 1)))
 	member.next_action = int(member.get("next_action", 1)) + 1
+	action.title=_activity_title(member,action)
 	member.queue.append(action)
 
 func _start_next(member: Dictionary, lot: Dictionary) -> void:
@@ -851,7 +850,7 @@ func _start_next(member: Dictionary, lot: Dictionary) -> void:
 		if furnishing.get("kind")=="garden_bed" or pending.has("garden_action"):
 			var garden := _garden_task_option(member,lot,furnishing,pending)
 			if not garden.ok:
-				member.queue.pop_front(); member.action=str(garden.message); return
+				member.queue.pop_front(); _record_activity(member,pending,"failed",str(garden.message)); member.action=str(garden.message); return
 		var user := _object_user(str(lot.id),furnishing,str(member.id))
 		if not user.is_empty():
 			member.action = "Waiting for " + str(user.name) + " · " + str(Catalog.ITEMS[furnishing.kind].name)
@@ -873,6 +872,7 @@ func _start_next(member: Dictionary, lot: Dictionary) -> void:
 	elif task.get("target_kind", "object") == "member":
 		var neighbor := _find_member(str(task.target_id))
 		if neighbor.is_empty() or neighbor.lot_id != member.lot_id:
+			_record_activity(member,task,"failed","The other resident left this lot.")
 			return
 		goals = _social_cells(lot, neighbor)
 		task.remaining = 10.0
@@ -880,6 +880,7 @@ func _start_next(member: Dictionary, lot: Dictionary) -> void:
 	else:
 		var object := _object(lot, str(task.target_id))
 		if object.is_empty():
+			_record_activity(member,task,"failed","The furnishing is no longer here.")
 			return
 		goals = game_places if object.kind=="game_table" else _interaction_cells(lot, object)
 		task.remaining = float(Catalog.ITEMS[object.kind].duration)
@@ -890,6 +891,7 @@ func _start_next(member: Dictionary, lot: Dictionary) -> void:
 	var route := _path(lot, _position(member), goals)
 	if route.is_empty() and not goals.has(_position(member)):
 		member.action = "Cannot reach destination"
+		_record_activity(member,task,"failed","There is no path to the destination.")
 		return
 	task.path = route
 	if task.type=="interact": task.elapsed=0.0
@@ -968,13 +970,13 @@ func _restore_build(lot: Dictionary) -> void:
 	_build_backups.erase(lot.id)
 	_clear_build_history(lot)
 
-func _send_home(family: Dictionary, member: Dictionary) -> void:
+func _send_home(family: Dictionary, member: Dictionary, reason: String = "Household went away; returned home.") -> void:
 	var lot: Dictionary = state.lots[family.home_lot]
+	_clear_member(member,"Taking it easy",reason)
 	member.lot_id = family.home_lot
 	var entry := _free_entry(lot)
 	member.x = entry.x
 	member.y = entry.y
-	_clear_member(member)
 
 func _free_entry(lot: Dictionary) -> Vector2i:
 	if _walkable(lot, Vector2i(8,14)):
@@ -985,10 +987,32 @@ func _free_entry(lot: Dictionary) -> Vector2i:
 				return Vector2i(x,y)
 	return Vector2i(8,14)
 
-func _clear_member(member: Dictionary, label: String = "Taking it easy") -> void:
+func _activity_title(member: Dictionary, task: Dictionary) -> String:
+	if task.has("title"): return str(task.title)
+	if task.get("type")=="move": return "Walk to %d, %d" % [int(task.x),int(task.y)]
+	if task.get("target_kind")=="member":
+		return ActivityLog.clean("Chat with "+str(_find_member(str(task.get("target_id",""))).get("name","neighbor")),100)
+	var object := _object(state.lots[member.lot_id],str(task.get("target_id","")))
+	if task.has("garden_action"):
+		return Gardens.label(str(task.garden_action),str(task.crop) if task.garden_action=="plant" else str(object.get("garden",{}).get("crop","")))
+	var title := ActivityLog.clean(str(Catalog.ITEMS.get(object.get("kind",""),{}).get("name",task.get("label","Activity"))),100)
+	return "Activity" if title.is_empty() else title
+
+func _record_activity(member: Dictionary, task: Dictionary, outcome: String, reason: String) -> void:
+	if task.is_empty() or task.get("automatic",false): return
+	ActivityLog.record(member,task,_activity_title(member,task),outcome,reason,state)
+
+func _end_task(member: Dictionary, outcome: String, reason: String, label: String = "Taking it easy") -> void:
+	_record_activity(member,member.task,outcome,reason)
+	member.task={}
+	member.action=label
+
+func _clear_member(member: Dictionary, label: String = "Taking it easy", reason: String = "Plan cleared.", outcome: String = "cancelled") -> void:
+	# Batch interruption presents the current activity first, then its next steps.
+	for index in range(member.queue.size()-1,-1,-1):
+		_record_activity(member,member.queue[index],"cancelled",reason)
 	member.queue = []
-	member.task = {}
-	member.action = label
+	_end_task(member,outcome,reason,label)
 	member.walk_clock = 0.0
 	member.idle_clock = 0.0
 
@@ -1135,7 +1159,7 @@ func restore(data: Dictionary, preserve_runtime: bool = false) -> bool:
 		HomeNews.departure(family,false)
 		family.online = false
 		for member: Dictionary in family.members:
-			_clear_member(member)
+			_clear_member(member,"Taking it easy","Neighborhood loaded; unfinished plans cleared.")
 			if not _walkable(state.lots[member.lot_id], _position(member)):
 				_send_home(family, member)
 	return true
@@ -1174,6 +1198,7 @@ func _normalize_numbers() -> void:
 			Wishes.normalize(member.wishes)
 			if not member.has("hobbies"): member.hobbies=Hobbies.create(int(state.day))
 			Hobbies.normalize(member.hobbies)
+			ActivityLog.normalize(member)
 			member.autonomy = member.get("autonomy", true)
 			member.next_action = int(member.get("next_action", 1))
 			member.x = int(member.x)
@@ -1182,6 +1207,7 @@ func _normalize_numbers() -> void:
 			if not member.task.is_empty():
 				tasks.append(member.task)
 			for task: Dictionary in tasks:
+				if not task.has("title"): task.title=ActivityLog.clean(_activity_title(member,task),100)
 				if not task.has("id"):
 					task.id = str(member.id) + ":" + str(member.next_action)
 					member.next_action += 1
@@ -1270,6 +1296,7 @@ func _valid_state(data: Dictionary) -> bool:
 				return false
 			if not member.get("autonomy", true) is bool or not _integer(member.get("next_action", 1)) or float(member.get("next_action", 1)) < 1 or float(member.get("next_action", 1)) > 9007199254740000:
 				return false
+			if member.has("activity_log") and not ActivityLog.valid(member.activity_log,int(data.day),int(data.tick)): return false
 			if member.has("favorite") and not Pastimes.valid(member.favorite): return false
 			if member.has("appearance") and not Appearance.valid(member.appearance): return false
 			if member.has("wishes") and not Wishes.valid(member.wishes,int(data.day)): return false
@@ -1321,6 +1348,7 @@ func _valid_task(value: Variant, active: bool) -> bool:
 	if value.has("elapsed") and (not _number(value.elapsed) or float(value.elapsed)<0 or float(value.elapsed)>120): return false
 	if value.has("id") and (not value.id is String or str(value.id).is_empty() or str(value.id).length() > 180):
 		return false
+	if value.has("title") and not ActivityLog.valid_text(value.title,100): return false
 	if value.has("automatic") and not value.automatic is bool:
 		return false
 	if value.has("target_kind") and not value.target_kind in ["member", "object"]:
