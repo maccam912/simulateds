@@ -23,6 +23,7 @@ const Routines = preload("res://game/routines.gd")
 const ArtAdmiration = preload("res://game/art_admiration.gd")
 const WallArt = preload("res://game/wall_art.gd")
 const Paintings = preload("res://game/paintings.gd")
+const Meals = preload("res://game/meals.gd")
 const Gardens = preload("res://game/gardens.gd")
 const ActivityLog = preload("res://game/activity_log.gd")
 const HouseholdProfile = preload("res://game/household_profile.gd")
@@ -297,6 +298,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 		if not need is String or not NEEDS.has(need): return _result(false,"Choose one of this resident’s needs.")
 		var option := care_option(member,need)
 		if not option.available: return _result(false,str(option.detail))
+		if option.has("meal_batch"): return apply_command(profile_id,{"type":"meal","member_id":member.id,"lot_id":member.lot_id,"target_id":option.target_id,"action":"eat","recipe":"","batch":option.meal_batch})
 		var result := apply_command(profile_id,{"type":"interact","member_id":member.id,"lot_id":member.lot_id,"target_id":option.target_id})
 		if result.ok: result.message="Added to plan · "+str(option.label)+(" · Wait until it is free" if option.busy else "")
 		return result
@@ -317,21 +319,31 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 		return _result(false, "Visit this lot before using it.")
 	if lot.building:
 		return _result(false, "This lot is under construction.")
-	if member.queue.size() >= MAX_QUEUE:
+	if member.queue.size() >= MAX_QUEUE and not (type=="meal" and command.get("action")=="clear"):
 		return _result(false, "The action queue is full (8 actions).")
-	if type in ["join_game","join_dance"]:
+	if type in ["join_game","join_dance","join_meal"]:
 		var companion_id: Variant=command.get("companion_id")
 		var activity_id: Variant=command.get("activity_id")
 		if not companion_id is String or not activity_id is String or activity_id.is_empty():
 			return _result(false,"Choose a resident’s current activity from People.")
-		var option := leisure_option(member,companion_id,"game_table" if type=="join_game" else "stereo")
+		var option := leisure_option(member,companion_id,"game_table" if type=="join_game" else "stereo" if type=="join_dance" else "dining_table")
 		if option.is_empty() or option.activity_id!=activity_id:
 			return _result(false,"That activity has changed. Choose a current activity from People.")
 		if not option.available: return _result(false,str(option.detail))
+		if type=="join_meal": return apply_command(profile_id,{"type":"meal","member_id":member.id,"lot_id":lot_id,"target_id":option.target_id,"action":"eat","recipe":"","batch":_object(lot,str(option.target_id)).meal.batch})
 		var result := apply_command(profile_id,{"type":"interact","member_id":member.id,"lot_id":lot_id,"target_id":option.target_id})
 		if result.ok: result.message="Dancing added to your plan." if type=="join_dance" else "Tabletop game added to your plan."
 		return result
-	if type=="admire_art":
+	if type=="meal":
+		var option := meal_option(profile_id,str(member.id),str(lot_id),command.get("target_id"),command.get("action"),command.get("recipe",""))
+		if not option.ok: return option
+		if not _integer(command.get("batch")) or int(command.batch)!=int(option.batch): return _result(false,"The meal changed. Choose from the table again.")
+		if command.action=="clear":
+			var table := _object(lot,str(command.target_id)); var batch := int(table.meal.batch)+1
+			table.meal=Meals.create(); table.meal.batch=batch
+			return _result(true,"Leftovers cleared. The table is ready for a fresh meal.")
+		_queue_action(member,{"type":"interact","target_id":option.target_id,"meal_action":command.action,"meal_table":command.target_id,"meal_recipe":option.recipe,"meal_batch":int(option.batch)})
+	elif type=="admire_art":
 		var option := admire_option(profile_id,str(member.id),str(lot_id),command.get("target_id"))
 		if not option.ok: return option
 		if not _integer(command.get("x")) or not _integer(command.get("y")) or int(command.x)!=int(option.x) or int(command.y)!=int(option.y): return _result(false,"This painting moved. Choose it again on the wall.")
@@ -368,6 +380,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 				return _result(false, "There is no path to chat with that resident.")
 			_queue_action(member, {"type":"interact", "target_id":target_id, "target_kind":"member"})
 		else:
+			if object.kind=="dining_table": return _result(false,"Open the dining table to prepare or choose a meal.")
 			if object.kind=="easel": return _result(false,"Open the easel to choose a subject or continue its painting.")
 			if object.kind=="garden_bed": return _result(false,"Open the garden bed to choose planting, watering, or harvesting.")
 			if not _can_reach_object(lot, _position(member), object):
@@ -381,6 +394,110 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 	if member.task.is_empty():
 		_start_next(member, lot)
 	return _result(true, "Action queued.")
+
+func meal_option(profile_id: String,member_id: String,lot_id: String,table_id: Variant,action: Variant,recipe: Variant="") -> Dictionary:
+	var family: Dictionary=state.families.get(profile_id,{})
+	var member := _member(family,member_id) if not family.is_empty() else {}
+	if member.is_empty(): return _result(false,"Choose one of your own residents.")
+	var lot: Dictionary=state.lots.get(lot_id,{})
+	if lot.is_empty(): return _result(false,"Choose a dining table.")
+	if lot.building or state.lots[family.home_lot].building: return _result(false,"Finish construction before preparing or sharing a meal.")
+	if member.lot_id!=lot_id: return _result(false,"Visit this home with "+str(member.name)+" to share a meal.")
+	if not table_id is String or not action is String or not action in ["prepare","eat","clear"] or not recipe is String: return _result(false,"Choose a meal activity.")
+	var table := _object(lot,table_id)
+	if table.get("kind")!="dining_table": return _result(false,"Choose a dining table.")
+	var meal: Dictionary=table.meal
+	var plans := Meals.plans(state,lot_id,table_id)
+	if action in ["prepare","clear"]:
+		if lot.owner!=profile_id: return _result(false,"Only this household can prepare or clear its meals. Visitors can eat served food.")
+		if int(meal.batch)>=Meals.MAX_BATCH: return _result(false,"This table has reached its meal limit.")
+		if not plans.is_empty(): return _result(false,"A meal is already in "+str(plans[0].member.name)+"'s plan. Let them finish first.")
+	if action=="clear":
+		if not recipe.is_empty() or meal.recipe=="": return _result(false,"There are no leftovers to clear.")
+		return {"ok":true,"message":"Remove remaining portions. No refund.","batch":int(meal.batch)}
+	if member.queue.size()>=MAX_QUEUE: return _result(false,"The action queue is full (8 actions).")
+	var spaces := Leisure.spaces(state,lot,table,member)
+	if spaces.capacity==0: return _result(false,"No path to the dining table. Leave a clear place around it.")
+	var result := {"ok":true,"batch":int(meal.batch),"target_id":table_id,"recipe":recipe,"message":""}
+	if action=="prepare":
+		if not Meals.RECIPES.has(recipe): return _result(false,"Choose a salad or sandwich platter.")
+		if int(meal.servings)>0: return _result(false,"Share the remaining portions or clear them before making a fresh meal.")
+		var definition: Dictionary=Meals.RECIPES[recipe]
+		if int(lot.funds)<int(definition.cost): return _result(false,"Need §%d more for these ingredients." % (int(definition.cost)-int(lot.funds)))
+		var best := {}; var score := INF
+		for fridge: Dictionary in lot.objects:
+			if fridge.kind!="fridge": continue
+			var cells := _interaction_cells(lot,fridge); var path := _path(lot,_position(member),cells)
+			if path.is_empty() and not cells.has(_position(member)): continue
+			var start := _position(member) if path.is_empty() else Vector2i(int(path[-1][0]),int(path[-1][1]))
+			if not _interaction_cells(lot,table).has(start) and _path(lot,start,_interaction_cells(lot,table)).is_empty(): continue
+			var distance := float(path.size())+(1000.0 if not _object_user(lot_id,fridge,member_id).is_empty() else 0.0)
+			if distance<score: score=distance; best=fridge
+		if best.is_empty(): return _result(false,"A reachable kitchen fridge and dining table are needed to prepare a meal.")
+		result.target_id=str(best.id); result.message="Four portions · §%d when served · Uses the kitchen fridge" % int(definition.cost)
+	else:
+		if not recipe.is_empty(): return _result(false,"Choose the meal currently served on this table.")
+		if meal.recipe=="" or int(meal.servings)==0: return _result(false,"Prepare a meal before choosing a portion.")
+		for plan: Dictionary in plans:
+			if plan.member.id==member_id: return _result(false,"Already in "+str(member.name)+"'s plan.")
+		if Meals.available(state,lot,table)<=0: return _result(false,"The remaining portions are reserved in other residents' plans.")
+		result.recipe=str(meal.recipe); result.message="One portion reserved · Hunger + comfort · Social when eating together"
+		if spaces.available.is_empty(): result.message=Leisure.waiting_reason(spaces)+" Your portion will wait."
+	return result
+
+func _meal_task_option(member: Dictionary,lot: Dictionary,task: Dictionary) -> Dictionary:
+	var table := _object(lot,str(task.get("meal_table","")))
+	if table.get("kind")!="dining_table" or int(table.meal.batch)!=int(task.meal_batch): return _result(false,"The meal or dining table changed.")
+	if task.meal_action=="prepare":
+		if not state.families.get(lot.owner,{}).get("members",[]).has(member): return _result(false,"Prepare meals at your own home.")
+		if _object(lot,str(task.target_id)).get("kind")!="fridge": return _result(false,"The kitchen fridge is no longer here.")
+		if int(table.meal.servings)>0 or not Meals.plans(state,str(lot.id),str(table.id),str(task.id)).is_empty(): return _result(false,"The table is already in use for a meal.")
+		if int(lot.funds)<int(Meals.RECIPES[task.meal_recipe].cost): return _result(false,"The household no longer has enough for the ingredients.")
+	else:
+		if table.meal.recipe!=task.meal_recipe: return _result(false,"The meal changed before eating.")
+		if not task.get("meal_taken",false) and Meals.available(state,lot,table,str(task.id))<=0: return _result(false,"That portion is no longer available.")
+	return {"ok":true,"table":table}
+
+func _tick_meal(member: Dictionary,lot: Dictionary,task: Dictionary,delta: float) -> void:
+	var option := _meal_task_option(member,lot,task)
+	if not option.ok: _end_task(member,"failed",str(option.message)); return
+	var table: Dictionary=option.table
+	var furnishing: Dictionary=_object(lot,str(task.target_id)) if task.meal_action=="prepare" and task.meal_phase=="prepare" else table
+	if not _interaction_cells(lot,furnishing).has(_position(member)):
+		_end_task(member,"failed","The place for this meal is no longer reachable."); return
+	if task.meal_action=="prepare":
+		var serving: bool=task.meal_phase=="serve"
+		member.action="Serving "+str(Meals.RECIPES[task.meal_recipe].name).to_lower() if serving else Meals.label("prepare",str(task.meal_recipe))
+		var elapsed := minf(delta,float(task.remaining)-(0.0 if serving else Meals.SERVE_TIME))
+		task.elapsed=float(task.elapsed)+elapsed; task.remaining-=elapsed
+		if not serving and float(task.remaining)<=Meals.SERVE_TIME+0.000001:
+			var spaces := Leisure.spaces(state,lot,table,member)
+			if spaces.available.is_empty(): member.action="Waiting for a place · "+Leisure.waiting_reason(spaces); return
+			var route := _path(lot,_position(member),spaces.available)
+			if route.is_empty() and not spaces.available.has(_position(member)): _end_task(member,"failed","No path to serve the meal."); return
+			task.path=route; task.meal_phase="serve"; task.label="Carry meal to the table"; member.walk_clock=0.0
+			return
+		if float(task.remaining)>0.000001: return
+		var recipe: String=task.meal_recipe; var cost: int=Meals.RECIPES[recipe].cost
+		if not _adjust_funds(str(lot.id),-cost): _end_task(member,"failed","The household budget changed before serving."); return
+		table.meal={"recipe":recipe,"servings":Meals.PORTIONS,"batch":int(table.meal.batch)+1,"cook":str(member.id),"cook_name":str(member.name),"day":int(state.day)}
+		_record_hobby(member,"fridge")
+		_event(str(member.name)+" served "+str(Meals.RECIPES[recipe].name).to_lower()+" · Four portions ready.")
+		_end_task(member,"done","Four portions served · Ingredients §%d." % cost)
+	else:
+		if not task.get("meal_taken",false): table.meal.servings-=1; task.meal_taken=true
+		if not task.has("social_started"): task.social_started=int(state.tick)
+		var elapsed := minf(delta,float(task.remaining)); task.elapsed=float(task.elapsed)+elapsed; task.remaining-=elapsed
+		member.action="Eating "+str(Meals.RECIPES[task.meal_recipe].name).to_lower()
+		for need: String in ["hunger","comfort"]: member.needs[need]=minf(100.0,float(member.needs[need])+float(Meals.RECIPES[task.meal_recipe][need])*elapsed)
+		if Leisure.players(state,str(lot.id),str(table.id)).size()>1:
+			member.needs.social=minf(100.0,float(member.needs.social)+4.0*elapsed); member.action="Eating together"
+		if float(task.remaining)>0.000001: return
+		_finish_wish(member,task,"fridge"); _end_task(member,"done","Meal finished · Hunger and comfort restored.")
+		var courtesy := Courtesy.destination(state,lot,member,table,_path)
+		if not courtesy.is_empty():
+			_queue_action(member,{"type":"move","x":courtesy.cell.x,"y":courtesy.cell.y,"automatic":true,"courtesy":true,"title":"Making room for "+str(courtesy.name)})
+			_start_next(member,lot); member.action=str(member.task.title)
 
 func admire_option(profile_id: String,member_id: String,lot_id: String,target_id: Variant) -> Dictionary:
 	var family: Dictionary=state.families.get(profile_id,{})
@@ -721,11 +838,15 @@ func _tick_member(member: Dictionary, lot: Dictionary, delta: float) -> void:
 		for need: String in ArtAdmiration.RATES: member.needs[need]=minf(100.0,float(member.needs[need])+float(ArtAdmiration.RATES[need])*enjoyed)
 		if float(task.remaining)<=0.000001: _end_task(member,"done","Enjoyed the painting · Fun and comfort restored.")
 		return
+	if task.has("meal_action"):
+		_tick_meal(member,lot,task,delta); return
 	task.elapsed = float(task.get("elapsed",0.0)) + delta
 	var object := _object(lot, str(task.get("target_id", "")))
 	if object.is_empty():
 		_end_task(member,"failed","The furnishing is no longer here.")
 		return
+	if object.kind=="dining_table":
+		_end_task(member,"failed","Choose a portion from the dining table."); return
 	if object.kind=="easel" or task.has("paint_action"):
 		_tick_painting(member,lot,object,task,delta); return
 	if object.kind=="garden_bed" or task.has("garden_action"):
@@ -759,6 +880,7 @@ func _tick_member(member: Dictionary, lot: Dictionary, delta: float) -> void:
 
 
 func task_activity(task: Dictionary, lot_id: String) -> String:
+	if task.has("meal_action"): return "dining_table" if task.meal_action=="eat" else ""
 	if task.get("paint_action")=="sell": return ""
 	if task.get("type")!="interact": return ""
 	if task.get("target_kind")=="member": return "chat"
@@ -820,12 +942,19 @@ func leisure_option(member: Dictionary, companion_id: String, kind: String="") -
 	if not _can_reach_object(state.lots[member.lot_id],_position(member),object):
 		option.label="No path to "+noun; option.detail="There is no path to reach this "+place+"."
 		return option
+	if object.kind=="dining_table":
+		if int(object.meal.servings)==0 or Meals.available(state,state.lots[member.lot_id],object)<=0:
+			option.label="No free portion"; option.detail="The remaining portions are already reserved or eaten."; return option
+		option.detail="Reserve a portion after your current plans. Hunger + comfort; eating together also restores social."
 	option.available=true
 	if spaces.available.is_empty():
 		option.label="Queue "+noun; option.detail=Leisure.waiting_reason(spaces)+" Wait after your current plans."
 	return option
 
 func care_option(member: Dictionary, need: String) -> Dictionary:
+	var profile_id := ""
+	for family: Dictionary in state.families.values():
+		if family.members.has(member): profile_id=str(family.id); break
 	var status := care_status(member,need)
 	if not status.is_empty(): return {"available":false,"status":status,"label":status,"detail":str(member.name)+" is already taking care of "+need+"."}
 	var lot: Dictionary=state.lots[member.lot_id]
@@ -835,6 +964,7 @@ func care_option(member: Dictionary, need: String) -> Dictionary:
 		# Secondary comfort from sleeping is recognized in the plan, but a care
 		# shortcut for comfort should choose a short break, not send someone to bed.
 		if object.kind in ["garden_bed","easel"] or Catalog.ITEMS[object.kind].need!=need: continue
+		if object.kind=="dining_table" and not meal_option(profile_id,str(member.id),str(lot.id),str(object.id),"eat").ok: continue
 		var goals := _interaction_cells(lot,object)
 		var path := _path(lot,_position(member),goals)
 		if path.is_empty() and not goals.has(_position(member)): continue
@@ -846,6 +976,7 @@ func care_option(member: Dictionary, need: String) -> Dictionary:
 		if score<best_score:
 			best_score=score
 			best={"available":true,"status":"","label":Wellbeing.ACTIONS.get(object.kind,str(Catalog.ITEMS[object.kind].name)),"detail":str(Catalog.ITEMS[object.kind].name)+(" · In use, wait your turn" if busy else " · Here on this lot"),"target_id":object.id,"busy":busy}
+			if object.kind=="dining_table": best.meal_batch=int(object.meal.batch); best.label="Eat "+str(Meals.RECIPES[object.meal.recipe].name).to_lower()
 	if need=="social":
 		for family: Dictionary in state.families.values():
 			for other: Dictionary in family.members:
@@ -986,7 +1117,7 @@ func _choose_autonomy(member: Dictionary, lot: Dictionary) -> void:
 	var candidates: Array[Dictionary]=[]
 	var urgent := false
 	for object: Dictionary in lot.objects:
-		if object.kind in ["garden_bed","easel"]: continue # Crops and artwork require deliberate plans.
+		if object.kind in ["garden_bed","easel","dining_table"]: continue # Crops, artwork, and shared meals require deliberate plans.
 		if not _object_user(str(lot.id),object,str(member.id)).is_empty(): continue
 		if Leisure.KINDS.has(object.kind):
 			var places := _shared_places(member,lot,object)
@@ -1024,6 +1155,12 @@ func _start_next(member: Dictionary, lot: Dictionary) -> void:
 	var shared_places: Array=[]
 	if pending.type == "interact" and pending.get("target_kind", "object") == "object":
 		var furnishing := _object(lot,str(pending.target_id))
+		if furnishing.get("kind")=="dining_table" and not pending.has("meal_action"):
+			member.queue.pop_front(); _record_activity(member,pending,"failed","Choose a portion from the dining table."); return
+		if pending.has("meal_action"):
+			var meal := _meal_task_option(member,lot,pending)
+			if not meal.ok:
+				member.queue.pop_front(); _record_activity(member,pending,"failed",str(meal.message)); member.action=str(meal.message); return
 		if furnishing.get("kind")=="garden_bed" or pending.has("garden_action"):
 			var garden := _garden_task_option(member,lot,furnishing,pending)
 			if not garden.ok:
@@ -1072,6 +1209,10 @@ func _start_next(member: Dictionary, lot: Dictionary) -> void:
 		goals = shared_places if Leisure.KINDS.has(object.kind) else _interaction_cells(lot, object)
 		task.remaining = float(Catalog.ITEMS[object.kind].duration)
 		task.label = str(Catalog.ITEMS[object.kind].name)
+		if task.has("meal_action"):
+			task.remaining=Meals.EAT_TIME if task.meal_action=="eat" else float(Meals.RECIPES[task.meal_recipe].prepare)+Meals.SERVE_TIME
+			task.label=Meals.label(str(task.meal_action),str(task.meal_recipe))
+			if task.meal_action=="prepare": task.meal_phase="prepare"
 		if object.kind=="easel":
 			var painting := _painting_task_option(member,lot,object,task)
 			task.remaining=float(painting.seconds); task.label=str(painting.label)
@@ -1168,6 +1309,7 @@ func _free_entry(lot: Dictionary) -> Vector2i:
 
 func _activity_title(member: Dictionary, task: Dictionary) -> String:
 	if task.has("title"): return str(task.title)
+	if task.has("meal_action"): return Meals.label(str(task.meal_action),str(task.meal_recipe))
 	if task.get("target_kind")=="art": return ArtAdmiration.title(state.lots[member.lot_id].get("artworks",{}).get(task.get("target_id",""),{}))
 	if task.get("type")=="move": return "Walk to %d, %d" % [int(task.x),int(task.y)]
 	if task.get("target_kind")=="member":
@@ -1203,6 +1345,7 @@ func _new_object(kind: String, x: int, y: int, rotation: int) -> Dictionary:
 	var object := {"id":id, "kind":kind, "x":x, "y":y, "rotation":rotation}
 	if kind=="garden_bed": object.garden=Gardens.create()
 	if kind=="easel": object.painting=Paintings.create()
+	if kind=="dining_table": object.meal=Meals.create()
 	return object
 
 func _tile_key(kind: String) -> String:
@@ -1371,6 +1514,7 @@ func _normalize_numbers() -> void:
 				object[key] = int(object[key])
 			if object.kind=="easel":
 				Paintings.normalize(object.painting)
+			if object.kind=="dining_table": Meals.normalize(object.meal)
 			if object.kind=="garden_bed":
 				for key: String in ["revision","harvests"]: object.garden[key]=int(object.garden[key])
 	for family: Dictionary in state.families.values():
@@ -1465,6 +1609,8 @@ func _valid_state(data: Dictionary) -> bool:
 			object_ids[object.id] = true
 			if object.kind=="garden_bed" and not Gardens.valid(object.get("garden")): return false
 			if object.kind!="garden_bed" and object.has("garden"): return false
+			if object.kind=="dining_table" and not Meals.valid(object.get("meal"),int(data.day)): return false
+			if object.kind!="dining_table" and object.has("meal"): return false
 			if object.kind=="easel" and not Paintings.valid(object.get("painting"),int(data.day)): return false
 			if object.kind!="easel" and object.has("painting"): return false
 			if not FurnitureColors.valid(object): return false
@@ -1507,6 +1653,7 @@ func _valid_state(data: Dictionary) -> bool:
 				if not _number(member.needs.get(need)) or float(member.needs[need]) < 0 or float(member.needs[need]) > 100:
 					return false
 	if data.has("friendships") and not Friendships.valid(data.friendships,members_seen,int(data.day),int(data.tick)): return false
+	if not Meals.valid_reservations(data): return false
 	if not Mailbox.valid(data): return false
 	for lot: Dictionary in data.lots.values():
 		if not str(lot.owner).is_empty() and not data.families.has(lot.owner):
@@ -1532,6 +1679,8 @@ func _adjust_funds(lot_id: String, amount: int) -> bool:
 func _valid_task(value: Variant, active: bool) -> bool:
 	if not value is Dictionary or not value.get("type") in ["move", "interact"]:
 		return false
+	if value.has("meal_action") or value.has("meal_table") or value.has("meal_recipe") or value.has("meal_batch") or value.has("meal_taken") or value.has("meal_phase"):
+		if not Meals.valid_task(value,active): return false
 	if value.get("target_kind")=="art":
 		if not ArtAdmiration.valid_task(value,active): return false
 	elif value.has("art_x") or value.has("art_y"): return false

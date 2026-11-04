@@ -3,6 +3,7 @@ extends RefCounted
 const Catalog = preload("res://game/catalog.gd")
 const Access = preload("res://game/build_access.gd")
 const KINDS := {
+	"dining_table":{"capacity":4,"social_rate":4.0,"noun":"meal","title":"A meal together","place":"dining table","together":"Eating together","present":"Eating here"},
 	"game_table":{"capacity":4,"social_rate":5.0,"noun":"game","title":"Tabletop game","place":"table","together":"Playing together","present":"Playing here"},
 	"stereo":{"capacity":4,"social_rate":4.0,"noun":"dance","title":"Music & dancing","place":"stereo","together":"Dancing together","present":"Dancing here"}
 }

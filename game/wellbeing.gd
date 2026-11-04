@@ -17,6 +17,7 @@ static func mood(needs: Dictionary) -> Dictionary:
 
 static func restores(kind: String, need: String) -> bool:
 	if kind=="chat": return need=="social"
+	if kind=="dining_table": return need in ["hunger","comfort"]
 	if kind=="admire_art": return need in ["fun","comfort"]
 	var item: Dictionary=preload("res://game/catalog.gd").ITEMS.get(kind,{})
 	return item.get("need","")==need or (need=="comfort" and kind in ["bed","easel"])

@@ -17,7 +17,8 @@ static func sample(member: Dictionary, lot: Dictionary) -> Dictionary:
 	var elapsed := maxf(0.0,float(task.get("elapsed",0.0)))
 	var remaining := maxf(0.0,float(task.get("remaining",0.0)))
 	var label := "Having a chat"
-	if task.get("target_kind")=="art": label="Admiring a painting · Fun + comfort"
+	if task.has("meal_action"): label="Eating together · Hunger + social" if action=="Eating together" else action
+	elif task.get("target_kind")=="art": label="Admiring a painting · Fun + comfort"
 	elif task.get("target_kind")!="member":
 		var kind := ""
 		for object: Dictionary in lot.get("objects",[]):

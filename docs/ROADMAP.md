@@ -86,6 +86,12 @@ Painting now has five lasting hobby ranks, bounded daily practice, shared
 contribution credit, and better fun/comfort recovery. Hobbies opens the relevant
 easel without choosing a subject; rank links show painting progress directly.
 
+Mounted art now supports queued admiration at home and on visits. A Gathering
+dining table supports preparation at the fridge, carrying and serving four
+portions, distinct dining places, per-resident reservations, guest participation,
+shared needs/friendship, saved leftovers, and explicit clearing. Construction and
+room copies preserve the distinction between an existing meal and a new table.
+
 ## 1. Make homebuilding dependable
 
 - Edge-based walls, room detection, door orientation, and roofs. Wall-mounted

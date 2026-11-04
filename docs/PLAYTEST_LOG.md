@@ -1644,3 +1644,52 @@ scenario has both independent clients visit and finish admiring one another's
 original before returning home to rearrange and sell it. The prior art-gift
 checkpoint passed all four platform CI jobs. Human-family play, physical-device
 checks, and an overnight persistence soak remain open.
+
+## A meal made for company
+
+The Gathering dining table now connects cooking, homebuilding, hunger, and
+visiting. A selected household resident prepares salad or sandwiches at a
+reachable fridge, carries the platter to the dining table, and serves four
+portions. Ingredient costs are charged at serving, and cooking practice is
+recorded once. Each resident chooses Eat a portion or People → Join meal.
+Accepted plans reserve food; arrival consumes it. Four diners have distinct
+places, restore hunger and comfort, and gain social and bounded friendship
+when they spend time eating together.
+
+Visitors can eat food offered on the table, including while its household is
+away. They cannot charge its budget or clear leftovers. Cancellation before
+arrival releases a reservation; cancellation after eating starts does not
+create another portion. Construction clears activities and recalls guests,
+while unclaimed portions remain. Clearing removes leftovers explicitly. Save
+validation checks recipes, meal stages, action identities, and portion counts.
+Moving and Undo retain the meal, while copied dining tables start empty.
+
+Standard and compact native flows passed buying and placing the table,
+preparation, serving, correlated replies, portion counts, joining through
+People, eating together, clearing, visiting, and construction recall. Final
+polish made previews follow the selected and actively prepared recipe and
+renamed the removal action Clear leftovers, avoiding an implication of fridge
+storage. Both final layouts passed again; recipe/payment information and both
+ready-food actions fit without scrolling. Reviewed captures are in ignored
+`build/meals-*.png`.
+
+The regression run exposed two old assumptions: the courtesy fixture started
+every shared furnishing through generic interaction, and Kitchen was expected
+to contain only a fridge. The first now prepares a real meal fixture and checks
+the reserved serving and courtesy handoff; the second checks discovery of both
+individual food and the shared dining table. Neither new furnishing was excluded
+from those checks. The run resumed from each failed suite.
+
+Fresh assessment: shared meals make visiting and ordinary needs feel connected.
+The next usability gap is a hungry autonomous resident ignoring food their own
+household has already served. Add household-only autonomous eating of available
+leftovers, preserving planned portions and urgent care priorities. Visitors
+should still choose to eat explicitly; automatic eating should not farm cooking
+practice or friendship. Preparation and ingredient spending should remain a
+choice. This is proposed next work, not behavior in this checkpoint.
+
+Checkpoint validation: all 80 local suites passed across the initial run and
+resumed checks. All three separate-process Iroh scenarios and dedicated-server
+startup passed. Final focused model/friendship checks, native layouts, and editor
+import passed. The preceding admiration checkpoint passed all four CI jobs.
+Human-family play, physical-device checks, and an overnight soak remain open.

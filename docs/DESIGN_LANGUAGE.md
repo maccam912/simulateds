@@ -645,3 +645,28 @@ Explain a blocked viewing spot, an existing plan, a required visit, and a change
 picture inline. Bind the order to the original and its mounted coordinates.
 Losing the picture ends this activity, preserving later plans and the artwork's
 actual owner. A construction notice explains why visitors returned home.
+
+
+## Food made for company
+
+The Gathering dining table uses warm wood, pale linen, individual plates, and a
+small shared platter. The same original salad or sandwich art appears in the
+inspection tray. Hover or focus a recipe to preview it; an active preparation
+shows the recipe actually being made. Prepared meals retain their cook and day.
+Show available and reserved portions separately so four diners never appear to
+have claimed the same last plate.
+
+A chosen cook works at the fridge, carries a bowl to the table, and serves it
+before payment. Existing kitchen and tea sounds provide sparse texture. Eating
+uses a bowl/utensil pose facing the table, distinct reserved places, and the
+existing shared-activity overlays. Preparation and eating keep their named plan
+and remaining time. Company is visible as Eating together and Shared a meal in
+People; the existing daily friendship limits still apply.
+
+Keep both recipe choices and the payment explanation visible at compact size.
+Once food is ready, Eat a portion and Clear leftovers stay visible alongside the
+count and benefit. Clearing means removing remaining food, never implied fridge
+storage. A queued eater reserves food; arrival consumes the serving. Cancellation
+before arrival releases the reservation. Guests choose their own residents and
+cannot prepare with another household's funds or clear their leftovers. Food
+keeps during absence, and room copying creates an empty table.

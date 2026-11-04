@@ -188,6 +188,19 @@ or shell expressions.
   with its household. Leave a clear viewing space in front of the wall. Stored
   pictures must be hung first. Gifting or moving the original interrupts the
   activity politely, and construction recalls visitors as usual.
+- **Gathering dining table** (Kitchen, §280, 2×2) makes shared meals possible.
+  Click it to prepare four portions of garden salad (§12) or sandwiches (§20)
+  using a reachable fridge. Your resident carries the food to the table before
+  ingredients are charged; cancellation before serving costs nothing. Cooking
+  earns bounded cooking practice, and ready food shows its cook and day.
+  **Eat a portion** or **People → Join meal** reserves one serving and one of up
+  to four separate places. Eating restores hunger and comfort; eating together
+  also restores social and can build friendship. Each player chooses their own
+  diners. Hunger care can choose a ready meal. Visitors can eat served food,
+  including while its household is away, but cannot spend its money or clear it.
+  Leftovers keep until eaten or explicitly removed with **Clear leftovers**.
+  A portion is consumed when eating starts; cancelling before arrival frees the
+  reservation. Moving/undoing a table preserves food; room copies start empty.
 - Residents with a pressing need show a small thought cue above the house. Click
   it to select that resident and plan useful care. Needs already being handled
   or queued stay quiet, and cues belong only to your household. The selected
@@ -446,16 +459,16 @@ activity yourself does not trigger a courtesy step.
 
 ## Friendship through shared play
 
-Games and dancing now build the same lasting relationships as chats. Both residents
+Games, dancing, and shared meals build the same lasting relationships as chats. Both residents
 must choose their participation and spend at least **12 game minutes together**
-at the same table or stereo. Time walking there, playing alone, or watching nearby
+at the same game table, stereo, or dining table. Time walking there, taking part alone, or watching nearby
 does not count. Automatic leisure still restores needs, but does not farm
 friendship. If your resident is participating automatically, **People → Join**
 lets you explicitly choose that activity.
 
-Chats, games, and dances share **two catch-ups per pair each game day**, with the
+Chats, games, dances, and meals share **two catch-ups per pair each game day**, with the
 same bounded relationship gain. Repeated snapshots, both participants observing
 the result, and continuing the same encounter past midnight do not award it again.
-People shows the last chat/game/dance and today's remaining catch-ups; milestones
+People shows the last chat/game/dance/meal and today's remaining catch-ups; milestones
 enter both residents' journals. Friendship and these memories survive saving and
 reconnecting, without decaying or growing while a household is away.

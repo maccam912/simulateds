@@ -838,3 +838,41 @@ queued admiration and duplicate rejection, host-confirmed completion, preserved
 art ownership, and return home before the existing arrangement/reconnect/sale
 checks. The preceding original-art gift checkpoint passed all four CI jobs.
 Physical-device, human-family, and overnight-soak evidence remains open.
+
+## Shared meals and reserved portions
+
+`tests/meals.gd` checks authoritative preparation, carrying, serving, single
+payment and cooking credit, cancellation before serving, runtime snapshots at
+both preparation stages, and saved leftovers. It rejects malformed recipes,
+commands, table references/batches, task durations, portion counts, and inconsistent
+claimed portions. Four diners reserve four portions before arrival; a fifth
+cannot overbook. Cancellation releases an unclaimed portion. Diners occupy
+separate places, recover hunger/comfort/social, and record shared-meal
+friendship without earning cooking practice for eating. Hunger care can choose
+ready food. Visitors cannot prepare or clear another home's meal. Leftovers
+survive absence, construction recalls visitors, stale batches reject, and table
+sale/Undo restores food. Actual room copying creates an empty table.
+
+The `meals_ui` native flow passed at 1440×900 and 1280×720. It buys and places a
+dining table, previews recipes, prepares food, shows a named plan, checks the
+served platter/count, joins a meal through People, eats together, clears
+leftovers, visits a neighbor's table, and is recalled during construction. It
+also tests unrelated and early acknowledgements. The final runs include the
+actual preparation recipe in the preview and the Clear leftovers wording.
+Bounds checks keep recipe/payment information and both ready-food controls
+visible. Captures in ignored `build/meals-*.png` were visually reviewed.
+
+The separate-process `meals_peer` scenario passed a real host and two clients:
+four residents from two owned families reserve and finish one meal at distinct
+places. Guest preparation/clearing and duplicate eating reject. Another meal
+is served; its owner disconnects, the visitor eats one portion, and the owner
+reconnects to the preserved three portions with the original cook credit.
+
+Final regression evidence covers all 80 local suites across the initial run and
+its focused continuations, plus the original Iroh scenario, painting/gifting/
+visiting scenario, new meal scenario, and dedicated-server startup. The final
+model check includes stable action identity and portion consistency, and the
+focused friendship checks pass with the new Shared a meal history. The preceding
+art-admiration checkpoint passed all four CI jobs. Native screenshots and
+injected-input tests do not replace human-family play, device certification,
+listening assessment, or an overnight persistence soak.

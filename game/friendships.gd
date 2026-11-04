@@ -3,7 +3,7 @@ extends RefCounted
 const GAIN := 12
 const DAILY_SESSIONS := 2
 const SHARED_TIME := 4.0
-const ACTIVITIES := ["chat","game_table","stereo"]
+const ACTIVITIES := ["chat","game_table","stereo","dining_table"]
 const MAX_BONDS := 28 # Eight residents, one record per unordered pair.
 
 static func key(first: String, second: String) -> String:
@@ -80,7 +80,7 @@ static func normalize(world: Dictionary) -> void:
 static func recent(entry: Dictionary, day: int) -> String:
 	var last := int(entry.get("last_social_day",entry.get("last_chat_day",0)))
 	var activity := str(entry.get("last_activity","chat" if last>0 else ""))
-	var result: String={"chat":"Last chat","game_table":"Played together","stereo":"Danced together"}.get(activity,"")
+	var result: String={"chat":"Last chat","game_table":"Played together","stereo":"Danced together","dining_table":"Shared a meal"}.get(activity,"")
 	if last>0: result+=" · Day %d" % last
 	var left := remaining(entry,day)
 	if left==0: return result+("\n" if not result.is_empty() else "")+"Caught up today · More tomorrow"

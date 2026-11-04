@@ -11,6 +11,11 @@ static func activity(world: Dictionary, member: Dictionary) -> Dictionary:
 	if lot.is_empty() or lot.get("building",false): return {}
 	var task: Dictionary=member.get("task",{})
 	if _started(task):
+		if task.has("meal_action"):
+			var target: String=task.meal_table if task.meal_action=="eat" or task.get("meal_phase")=="serve" else task.target_id
+			for object: Dictionary in lot.objects:
+				if object.id==target: return {"kind":"meal_"+str(task.meal_action),"object":object}
+
 		if task.get("target_kind")=="member":
 			var partner := _member(world,str(task.get("target_id","")))
 			if _near(member,partner) and _available(partner,member): return {"kind":"chat","partner":partner}

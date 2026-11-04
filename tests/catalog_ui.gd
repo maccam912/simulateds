@@ -77,7 +77,7 @@ func _run() -> void:
 	await _click(game.tools_box.get_child(1))
 	assert(game.catalog_buttons.size()==Browse.ORDER.size() and game.catalog_search.text.is_empty() and game.selected_tool=="bed","Show everything clears filters while retaining the chosen tool")
 	await _filter("kitchen")
-	assert(game.catalog_buttons.keys()==["fridge"])
+	assert(game.catalog_buttons.keys()==["fridge","dining_table"],"Kitchen includes individual food and the shared-meal table")
 	await _search("read")
 	assert(game.catalog_buttons.is_empty(),"Search is scoped to the chosen category")
 	await _filter("living")

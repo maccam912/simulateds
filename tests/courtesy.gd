@@ -27,15 +27,21 @@ func _fresh(kind: String="stereo") -> void:
 	var here := Vector2i(first.x,first.y)
 	for cell: Vector2i in world._interaction_cells(lot,stereo):
 		if cell!=here: lot.walls.append([cell.x,cell.y])
-	assert(world.apply_command("a",{"type":"interact","member_id":first.id,"lot_id":lot.id,"target_id":stereo.id}).ok)
+	if kind=="dining_table": stereo.meal={"recipe":"salad","servings":4,"batch":1,"cook":first.id,"cook_name":first.name,"day":1}
+	assert(world.apply_command("a",_order(first)).ok)
 	world.step(0.1)
 
+func _order(resident: Dictionary) -> Dictionary:
+	if stereo.kind=="dining_table": return {"type":"meal","member_id":resident.id,"lot_id":lot.id,"target_id":stereo.id,"action":"eat","recipe":"","batch":stereo.meal.batch}
+	return {"type":"interact","member_id":resident.id,"lot_id":lot.id,"target_id":stereo.id}
+
 func _wait() -> String:
-	assert(world.apply_command("b",{"type":"interact","member_id":second.id,"lot_id":lot.id,"target_id":stereo.id}).ok)
+	assert(world.apply_command("b",_order(second)).ok)
 	assert(second.task.is_empty() and second.queue.size()==1)
 	return second.queue[0].id
 
 func _finish() -> void:
+	if stereo.kind=="dining_table": first.task.elapsed=preload("res://game/meals.gd").EAT_TIME-0.01
 	first.task.remaining=0.01; world.step(0.1)
 
 func _run() -> void:

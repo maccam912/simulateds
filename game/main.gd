@@ -8,6 +8,8 @@ signal mail_requested
 const Style = preload("res://game/style.gd")
 const Catalog = preload("res://game/catalog.gd")
 const WallArt = preload("res://game/wall_art.gd")
+const MealPanel = preload("res://game/meal_panel.gd")
+const Meals = preload("res://game/meals.gd")
 const WallArtPanel = preload("res://game/wall_art_panel.gd")
 const Paintings = preload("res://game/paintings.gd")
 const PaintingPanel = preload("res://game/painting_panel.gd")
@@ -116,6 +118,7 @@ var _lots_signature := ""
 var _tools_signature := ""
 var _notice_time := 0.0
 var _selected_object := ""
+var meal_panel: VBoxContainer
 var wall_art_panel: VBoxContainer
 var _art_source := ""
 var _art_entry: Dictionary={}
@@ -628,6 +631,7 @@ func _refresh() -> void:
 	if _context_page=="painting" and not build_mode and is_instance_valid(painting_panel):
 		painting_panel.display_pending=not _art_entry.is_empty()
 		painting_panel.refresh(viewed_lot,_selected_object,selected_member)
+	if _context_page=="meal" and not build_mode and is_instance_valid(meal_panel): meal_panel.refresh(viewed_lot,_selected_object,selected_member)
 	if _context_page=="garden" and not build_mode and is_instance_valid(garden_panel): garden_panel.refresh(viewed_lot,_selected_object,selected_member)
 	help_label.text="Click to place · " + Preferences.action_label("rotate") + " rotates · Ctrl/Cmd+Z undoes" if building and mine else "Click a need to care for it · Click the ground to walk"
 	if building and mine and selected_tool=="room": help_label.text="Click two opposite corners · " + Preferences.action_label("rotate") + " changes door side · Escape cancels"
@@ -750,7 +754,7 @@ func _update_plan_feedback(member: Dictionary) -> void:
 	var status := ActivityStatus.sample(member,Session.state.lots[member.lot_id])
 	_plan_detail.text=str(status.detail)
 	_plan_detail.tooltip_text=str(status.detail)
-	if status.phase=="activity": _plan_detail.tooltip_text+="\nEstimated time on the neighborhood clock. "+("Admiring takes 18 game minutes, even when needs are full." if member.get("task",{}).get("target_kind")=="art" else "Painting finishes its work even when needs are full." if member.get("task",{}).has("paint_action") else "Gardening finishes its work even when needs are full." if member.get("task",{}).has("garden_action") else "A fulfilled need can shorten an activity.")
+	if status.phase=="activity": _plan_detail.tooltip_text+="\nEstimated time on the neighborhood clock. "+("Meals finish their preparation or chosen portion even when needs are full." if member.get("task",{}).has("meal_action") else "Admiring takes 18 game minutes, even when needs are full." if member.get("task",{}).get("target_kind")=="art" else "Painting finishes its work even when needs are full." if member.get("task",{}).has("paint_action") else "Gardening finishes its work even when needs are full." if member.get("task",{}).has("garden_action") else "A fulfilled need can shorten an activity.")
 	_plan_progress.visible=float(status.progress)>=0.0
 	if _plan_progress.visible: _plan_progress.value=float(status.progress)
 
@@ -767,6 +771,7 @@ func _restore_plan_view(member_id: String, action_id: String, control_key: Strin
 	plan_scroll.ensure_control_visible(target)
 
 func _task_title(task: Dictionary, member: Dictionary) -> String:
+	if task.has("meal_action"): return str(task.get("title",task.get("label","Meal")))
 	if task.has("paint_action"): return str(task.get("title",task.get("label","Painting")))
 	if task.get("courtesy",false): return str(task.get("title","Making room"))
 	if task.has("garden_action"):
@@ -838,6 +843,10 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 		painting_panel=PaintingPanel.new(); tools_box.add_child(painting_panel); painting_panel.command_requested.connect(_send); painting_panel.display_requested.connect(_open_art)
 		painting_panel.hobbies_requested.connect(func(): _open_hobbies("painting"))
 		context_box.add_child(_button("‹ Activities",func(): _context_page="activities"; _refresh()))
+	elif _context_page=="meal":
+		activity_label.text="At the dining table"
+		meal_panel=MealPanel.new(); tools_box.add_child(meal_panel); meal_panel.command_requested.connect(_send)
+		context_box.add_child(_button("‹ Activities",func(): _context_page="activities"; _refresh()))
 	elif _context_page=="garden":
 		activity_label.text="Kitchen garden"
 		garden_panel=GardenPanel.new(); tools_box.add_child(garden_panel); garden_panel.command_requested.connect(_send)
@@ -846,12 +855,13 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 		activity_label.text="Activities"
 		var shown: Dictionary={}
 		for obj in lot.get("objects",[]):
-			if shown.has(obj.kind) and not obj.kind in ["garden_bed","easel"]: continue
+			if shown.has(obj.kind) and not obj.kind in ["garden_bed","easel","dining_table"]: continue
 			shown[obj.kind]=true
 			var item: Dictionary=Catalog.ITEMS.get(obj.kind,{})
 			if str(item.get("need","")).is_empty(): continue
 			var text: String={"bed":"Get some sleep","fridge":"Have a bite to eat","shower":"Take a shower","toilet":"Use the bathroom","sofa":"Put your feet up","tv":"Watch a little TV","bookshelf":"Read a good book","plant":"Enjoy the greenery","table":"Take a seat","game_table":"Play a tabletop game","stereo":"Dance to some music"}.get(str(obj.kind),str(item.get("name",obj.kind)))
 			var b:=_button(text,func(): _interact(str(obj.id)))
+			if obj.kind=="dining_table": b.text="Meals · %d, %d" % [obj.x,obj.y]; b.tooltip_text=Meals.summary(obj.meal)
 			if obj.kind=="easel": b.text="Easel · %d, %d" % [obj.x,obj.y]; b.tooltip_text=Paintings.summary(obj.painting)
 			if obj.kind=="garden_bed": b.text="Garden bed · %d, %d" % [obj.x,obj.y]; b.tooltip_text=Gardens.summary(obj.garden)
 			b.alignment=HORIZONTAL_ALIGNMENT_LEFT; b.add_theme_font_size_override("font_size",12); tools_box.add_child(b)
@@ -1060,6 +1070,8 @@ func _tile_clicked(cell: Vector2i) -> void:
 
 func _interact(object_id: String) -> void:
 	var object: Dictionary=Session.world._object(Session.state.lots[viewed_lot],object_id)
+	if object.get("kind")=="dining_table":
+		_selected_object=object_id; _context_page="meal"; _refresh(); _show_tray(context_panel,true); call_deferred("_reset_catalog_scroll"); return
 	if object.get("kind")=="easel":
 		_selected_object=object_id; _context_page="painting"; _refresh(); _show_tray(context_panel,true); call_deferred("_reset_catalog_scroll"); return
 	if object.get("kind")=="garden_bed":
@@ -1372,7 +1384,7 @@ func _rebuild_people() -> void:
 		else: detail=Friendships.recent(bond,int(Session.state.day))
 		if not detail.is_empty():
 			var hint := _label(detail,11,Style.MUTED); hint.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; hint.custom_minimum_size.x=200; body.add_child(hint)
-	var note := _label("Chat or spend 12 game minutes in chosen shared play. Friendship grows twice per pair each day.",12,Style.MUTED)
+	var note := _label("Chat or share 12 game minutes of play, dancing, or a meal. Friendship grows twice per pair each day.",12,Style.MUTED)
 	note.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; note.custom_minimum_size.x=200; context_box.add_child(note)
 
 func _social_action(target_id: String) -> void:
@@ -1390,7 +1402,7 @@ func _join_leisure(target_id: String, activity_id: String, kind: String) -> void
 	_social_focus=target_id
 	var member := _member()
 	if member.is_empty(): return
-	_send({"type":"join_dance" if kind=="stereo" else "join_game","member_id":member.id,"lot_id":member.lot_id,"companion_id":target_id,"activity_id":activity_id})
+	_send({"type":"join_dance" if kind=="stereo" else "join_meal" if kind=="dining_table" else "join_game","member_id":member.id,"lot_id":member.lot_id,"companion_id":target_id,"activity_id":activity_id})
 
 func _restore_people_focus(previous: Dictionary) -> void:
 	await get_tree().process_frame

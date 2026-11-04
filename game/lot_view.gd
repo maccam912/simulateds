@@ -5,6 +5,8 @@ signal hovered(cell: Vector2i)
 signal entity_clicked(target: Dictionary)
 
 const Catalog = preload("res://game/catalog.gd")
+const Meals = preload("res://game/meals.gd")
+const MealArt = preload("res://game/meal_art.gd")
 const WallArt = preload("res://game/wall_art.gd")
 const Paintings = preload("res://game/paintings.gd")
 const Gardens = preload("res://game/gardens.gd")
@@ -470,6 +472,7 @@ func _draw() -> void:
 			if build_kind=="erase":
 				tint=Color(0.94,0.4,0.3,0.35)
 				hint_message="Sell " + str(item.name) + " · § %d" % int(float(item.cost)*0.6)
+				if hover_target.kind=="dining_table": hint_message+="\nIncludes remaining food · Undo restores both"
 				if hover_target.kind=="easel": hint_message+="\nIncludes its canvas · Undo restores both"
 			else:
 				var message := "Move " + str(item.name) + " · Click to select"
@@ -712,6 +715,9 @@ func _draw_hover() -> void:
 				for resident: Dictionary in family.members:
 					if resident.lot_id == lot_id and resident.task.get("target_id") == hover_target.id:
 						detail = "In use by " + str(resident.name) + " · Click to queue"
+		if hover_target.kind=="dining_table":
+			for object: Dictionary in world.lots[lot_id].objects:
+				if object.id==hover_target.id: detail=Meals.summary(object.meal)+" · Click to choose a meal\n"+Leisure.summary(_leisure_spaces(world.lots[lot_id],hover_target)); break
 		if hover_target.kind=="easel":
 			for object: Dictionary in world.lots[lot_id].objects:
 				if object.id==hover_target.id: detail=Paintings.summary(object.painting)+" · Click to inspect"; break
@@ -855,10 +861,15 @@ func _furnishing(obj: Dictionary,s: float) -> void:
 			draw_line(p,p+Vector2(0,-20*s),Color("466f4b"),3*s)
 			for i in range(4):
 				draw_circle(p+Vector2((-1 if i%2==0 else 1)*6,-8-i*3)*s,6*s,Color("71985e"))
-		"table", "game_table":
+		"table", "game_table", "dining_table":
 			_block(x+0.2,y+0.2,0.14,0.14,18*s,FurnitureColors.material(obj,"806550",-0.22))
 			_block(x+w-0.34,y+d-0.34,0.14,0.14,18*s,FurnitureColors.material(obj,"806550",-0.22))
 			_block(x+0.04,y+0.04,w-0.08,d-0.08,4*s,FurnitureColors.material(obj,"ccaa78",0.12),18*s)
+			if kind=="dining_table":
+				_diamond(x+0.2,y+0.2,1.6,1.6,Color("e8e0c7"),22.5*s)
+				for place: Vector2 in [Vector2(0.35,0.7),Vector2(1.65,1.3),Vector2(0.7,1.65),Vector2(1.3,0.35)]:
+					MealArt.draw(self,grid_point(x+place.x,y+place.y)+Vector2(0,-23*s),0.24*s,"",0)
+				if str(obj.get("meal",{}).get("recipe",""))!="": MealArt.draw(self,grid_point(x+1,y+1)+Vector2(0,-25*s),0.58*s,str(obj.meal.recipe),int(obj.meal.servings))
 			if kind=="game_table":
 				for board_y in range(4):
 					for board_x in range(4):
@@ -945,6 +956,7 @@ func _resident(member: Dictionary, family: Dictionary,s: float) -> void:
 	var lateral := ResidentFacing.project(Vector2(direction.y,-direction.x))
 	var facing := forward.normalized()
 	var kind := str(pose.get("kind",""))
+	if member.get("task",{}).get("meal_action")=="prepare" and member.task.get("meal_phase")=="serve": kind="meal_prepare"
 	if kind=="easel" and member.get("task",{}).get("paint_action")=="sell": kind="painting_sale"
 	if kind=="garden_bed": kind="garden_"+str(member.get("task",{}).get("garden_action","water"))
 	var behind: bool=facing.y< -0.2 and kind not in ["chat","tv","shower"]
@@ -1010,6 +1022,11 @@ func _activity_prop(p: Vector2,kind: String,s: float,reduced: bool,facing: Vecto
 	draw_set_transform(p,0,Vector2(-1.0 if facing.x< -0.2 else 1.0,1))
 	p=Vector2.ZERO
 	match kind:
+		"meal_prepare", "meal_eat":
+			# A small bowl and utensil; carry is visible during the serving walk too.
+			draw_arc(p+Vector2(5,-19)*s,7*s,0,PI,16,Color("eee3c7"),4*s,true)
+			var lift := 0.0 if reduced else sin(_time*3.0)*2.0
+			draw_line(p+Vector2(10,-20)*s,p+Vector2(12,-28+lift)*s,Color("b8c2bb"),1.5*s,true)
 		"painting_sale":
 			draw_rect(Rect2(p+Vector2(-9,-25)*s,Vector2(18,15)*s),Color("9b7954"))
 			draw_rect(Rect2(p+Vector2(-7,-23)*s,Vector2(14,11)*s),Color("dfccac"))
@@ -1293,11 +1310,13 @@ func _draw_room_copy(lot: Dictionary) -> void:
 			var object := item.duplicate(true)
 			if object.kind=="garden_bed": object.garden=Gardens.create()
 			if object.kind=="easel": object.painting=Paintings.create()
+			if object.kind=="dining_table": object.meal=Meals.create()
 			var hits := _hit_regions.size(); _furnishing(object,scale); _hit_regions.resize(hits)
 		_diamond(plan.low.x,plan.low.y,plan.extent.x,plan.extent.y,Color.TRANSPARENT,3,color)
 	var message := "Copying room…" if copy_pending else str(plan.message)
 	if valid:
 		message+="\nStructure §%d · Furniture §%d · Finishes §%d · Windows §%d" % [plan.structure_cost,plan.furniture_cost,plan.finish_cost,plan.window_cost]
+		if plan.get("food",false): message+="\nDining tables start empty. Meals are not copied."
 		if plan.get("art",false): message+="\nCopied easels start blank; earned art stays here."
 		if plan.garden: message+="\nGarden beds start empty. Crops are not copied."
 	_draw_preview_label(message,valid)

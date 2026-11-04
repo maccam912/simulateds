@@ -19,6 +19,9 @@ household or an absent player.
 | `game/art_gifts.gd` | Validated original-art transfers through mail, collection capacity, and unique custody across canvases, collections, and unclaimed gifts |
 | `game/mailbox.gd` | Bounded postcard delivery, money/art gift escrow, collection, receipts, and save validation |
 | `game/mail_panel.gd` | Local postcard drafts, gift previews, fixed action footer, and exact command acknowledgements |
+| `game/meals.gd` | Recipes, portions, accepted-plan reservations, meal/task validation, and cross-resident serving consistency |
+| `game/meal_panel.gd` | Recipe previews, preparation, free/reserved portions, eating, clearing leftovers, and exact command acknowledgements |
+| `game/meal_art.gd` | Shared original salad/sandwich platter art for tables and previews; meal poses/audio remain presentation only |
 | `game/world.gd` | Serializable neighborhood state; ownership, construction, pathfinding, actions, autonomy, and needs |
 | `game/main.gd` | Main scene UI, selection, tool catalog, connection panel, and command submission |
 | `game/lot_view.gd` | Isometric rendering, tile picking, placement preview, pan, and zoom |
