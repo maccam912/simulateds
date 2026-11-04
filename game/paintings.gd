@@ -38,20 +38,38 @@ static func inspect(picture: Dictionary,action: Variant,subject: Variant,owner: 
 		if action=="sell" and not finished(picture): return _no("Finish the painting before selling it.")
 	return {"ok":true,"message":"","label":label(action,subject if action=="start" else str(picture.subject)),"seconds":SELL_TIME if action=="sell" else DURATION-float(picture.progress),"revision":int(picture.revision)}
 
-static func contribute(picture: Dictionary,member: Dictionary) -> void:
+static func contribute(picture: Dictionary,member: Dictionary,work: float) -> void:
+	# Integer milliseconds survive JSON exactly. Difference of rounded canvas
+	# progress avoids accumulating rounding error across small simulation steps.
+	var milliseconds := roundi((float(picture.progress)+work)*1000.0)-roundi(float(picture.progress)*1000.0)
 	for artist: Dictionary in picture.artists:
-		if artist.id==member.id: return
-	if picture.artists.size()<2: picture.artists.append({"id":str(member.id),"name":Text.clean(str(member.name),32)})
+		if artist.id==member.id:
+			artist.work_ms=mini(int(DURATION*1000),int(artist.get("work_ms",0))+milliseconds); return
+	if picture.artists.size()<2: picture.artists.append({"id":str(member.id),"name":Text.clean(str(member.name),32),"work_ms":milliseconds})
+
+static func work_by(picture: Dictionary,member_id: String) -> float:
+	for artist: Dictionary in picture.artists:
+		if artist.id==member_id: return float(artist.get("work_ms",0))/1000.0
+	return 0.0
+
+static func normalize(picture: Dictionary) -> void:
+	for key: String in ["day","revision"]: picture[key]=int(picture[key])
+	for artist: Dictionary in picture.artists:
+		if artist.has("work_ms"): artist.work_ms=int(artist.work_ms)
 
 static func valid(value: Variant,day: int) -> bool:
 	if not value is Dictionary or value.size()!=5 or not value.get("subject") is String: return false
 	if not _integer(value.get("revision"),0,MAX_REVISION) or not _integer(value.get("day"),0,day): return false
 	if not _number(value.get("progress")) or float(value.progress)<0 or float(value.progress)>DURATION: return false
 	if not value.get("artists") is Array or value.artists.size()>2: return false
-	var seen := {}
+	var seen := {}; var work := 0
 	for artist: Variant in value.artists:
-		if not artist is Dictionary or artist.size()!=2 or not Text.valid_text(artist.get("id"),160) or not Text.valid_text(artist.get("name"),32) or seen.has(artist.id): return false
+		if not artist is Dictionary or artist.size()!=(3 if artist.has("work_ms") else 2) or not Text.valid_text(artist.get("id"),160) or not Text.valid_text(artist.get("name"),32) or seen.has(artist.id): return false
+		if artist.has("work_ms"):
+			if not _integer(artist.work_ms,0,int(DURATION*1000)): return false
+			work+=int(artist.work_ms)
 		seen[artist.id]=true
+	if work>roundi(float(value.progress)*1000.0): return false
 	if value.subject=="": return float(value.progress)==0 and value.artists.is_empty() and int(value.day)==0
 	return SUBJECTS.has(value.subject) and float(value.progress)>0 and not value.artists.is_empty() and int(value.revision)>0 and (int(value.day)>0 if finished(value) else int(value.day)==0)
 

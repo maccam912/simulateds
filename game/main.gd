@@ -64,6 +64,7 @@ var needs_title: Label
 var wishes_button: Button
 var hobbies_button: Button
 var hobby_buttons: Dictionary = {}
+var hobby_cards: Dictionary = {}
 var _hobby_options: Dictionary = {}
 var _hobby_seen: Dictionary = {}
 var people_button: Button
@@ -835,6 +836,7 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 	elif _context_page=="painting":
 		activity_label.text="At the easel"
 		painting_panel=PaintingPanel.new(); tools_box.add_child(painting_panel); painting_panel.command_requested.connect(_send); painting_panel.display_requested.connect(_open_art)
+		painting_panel.hobbies_requested.connect(func(): _open_hobbies("painting"))
 		context_box.add_child(_button("‹ Activities",func(): _context_page="activities"; _refresh()))
 	elif _context_page=="garden":
 		activity_label.text="Kitchen garden"
@@ -1541,11 +1543,26 @@ func _open_routines() -> void:
 	_show_tray(routine_panel,true)
 	routine_editor.focus_entry()
 
-func _open_hobbies() -> void:
+func _open_hobbies(hobby: String="") -> void:
 	_context_page="hobbies"; _refresh(); _show_tray(context_panel,true)
+	if not hobby.is_empty(): call_deferred("_focus_hobby",hobby)
+	else: call_deferred("_reset_catalog_scroll")
+
+func _focus_hobby(hobby: String) -> void:
+	await get_tree().process_frame; await get_tree().process_frame
+	if _context_page=="hobbies" and is_instance_valid(hobby_cards.get(hobby)): tools_box.get_parent().ensure_control_visible(hobby_cards[hobby])
+
+func _choose_hobby(hobby: String) -> void:
+	var member := _member()
+	if member.is_empty(): return
+	var option: Dictionary=Session.world.hobby_option(member,hobby)
+	if not option.available: _notice(str(option.detail)); return
+	if option.get("inspect",false):
+		_select_lot(str(option.lot_id)); _interact(str(option.target_id))
+	else: _send({"type":"practice_hobby","member_id":selected_member,"hobby":hobby})
 
 func _rebuild_hobbies() -> void:
-	hobby_buttons.clear()
+	hobby_buttons.clear(); hobby_cards.clear()
 	var member := _member()
 	if member.is_empty(): return
 	activity_label.text=str(member.name)+"’s hobbies"
@@ -1554,6 +1571,7 @@ func _rebuild_hobbies() -> void:
 		var entry: Dictionary=member.hobbies[hobby]
 		var level := Hobbies.rank(entry)
 		var card := PanelContainer.new(); tools_box.add_child(card)
+		hobby_cards[hobby]=card
 		var card_style := Style.box(Style.PANEL,5,Style.EDGE)
 		card_style.content_margin_left=8; card_style.content_margin_right=8; card_style.content_margin_top=8; card_style.content_margin_bottom=8
 		card.add_theme_stylebox_override("panel",card_style)
@@ -1572,9 +1590,12 @@ func _rebuild_hobbies() -> void:
 		var benefit := _label(Hobbies.benefit(hobby,entry),11,Style.MUTED)
 		benefit.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; benefit.custom_minimum_size.x=200; body.add_child(benefit)
 		var option: Dictionary=_hobby_options.get(hobby,{"available":false,"status":"Unavailable here","detail":""})
-		var button := _button(str(definition.action) if option.available else str(option.status),func(): _send({"type":"practice_hobby","member_id":selected_member,"hobby":hobby}))
+		if hobby=="painting":
+			var rule := _label("Finish a canvas after contributing 12 game minutes. Both housemates can earn practice.",11,Style.MUTED)
+			rule.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; rule.custom_minimum_size.x=200; body.add_child(rule)
+		var button := _button(str(option.get("label",definition.action)) if option.available else str(option.status),func(): _choose_hobby(hobby))
 		button.disabled=not option.available; button.tooltip_text=str(option.detail); button.add_theme_font_size_override("font_size",12); body.add_child(button); hobby_buttons[hobby]=button
-		if not option.available and option.status=="Unavailable here":
+		if not option.available and (option.status=="Unavailable here" or hobby=="painting"):
 			var reason := _label(str(option.detail),11,Style.GOLD); reason.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; reason.custom_minimum_size.x=200; body.add_child(reason)
 	var note := _label("Finish activities you choose. Two practices per hobby each day; progress stays while away.",12,Style.MUTED)
 	note.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; note.custom_minimum_size.x=200; context_box.add_child(note)

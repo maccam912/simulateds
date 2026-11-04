@@ -169,7 +169,12 @@ or shell expressions.
   leaving a fresh canvas. Visitors can inspect art; only its household can paint
   or sell it. Artwork survives saves, reconnects, moves, colors, and Undo. Copied
   easels start blank. Painting is deliberate: autonomy and routines do not create
-  or sell artwork. A painting hobby remains a future addition.
+  or sell artwork. Finished canvases build a lasting painting hobby: each housemate
+  who contributes at least 12 game minutes earns one practice when it finishes.
+  Interrupted contributions keep; two practices per day count toward five ranks.
+  Higher ranks restore more fun and comfort, with the same painting time and sale
+  value. The rank link at an easel opens progress; Hobbies opens the easel for your
+  chosen resident without selecting a subject for you.
 - **Hang on wall** takes a finished painting into build mode. Choose a solid wall
   without a window or another picture; the transfer is free and leaves a blank
   easel. **Wall art** in the catalog lets you move pictures, store them in the
@@ -183,7 +188,7 @@ or shell expressions.
   resident's name remains readable over furniture, including while asleep.
 - **Plan** shows the selected resident's actions, individual cancel buttons, and
   autonomy switch. **Wishes** gives optional activities, rewards, and a saved
-  personal journal. **Hobbies** tracks reading, gardening, and cooking, with five
+  personal journal. **Hobbies** tracks reading, gardening, cooking, and painting, with five
   lasting ranks and useful activity bonuses. Wishes never expire; completed sets can renew on a later day.
 - **Plan → Recent** shows the selected resident’s last eight deliberately planned
   activities: Done, Cancelled, or Interrupted, with a reason and game time. It

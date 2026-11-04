@@ -286,7 +286,8 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 		return _result(true,str(option.name)+" added to "+str(member.name)+"'s plan.")
 	if type=="practice_hobby":
 		var hobby: Variant=command.get("hobby")
-		if not hobby is String or not Hobbies.CATALOG.has(hobby): return _result(false,"Choose reading, gardening, or cooking.")
+		if not hobby is String or not Hobbies.CATALOG.has(hobby): return _result(false,"Choose a hobby from this resident's Hobbies panel.")
+		if hobby=="painting": return _result(false,"Choose a subject or continue a canvas at the easel.")
 		var option := hobby_option(member,hobby)
 		if not option.available: return _result(false,str(option.detail))
 		return apply_command(profile_id,{"type":"interact","member_id":member.id,"lot_id":member.lot_id,"target_id":option.target_id})
@@ -423,7 +424,7 @@ func _tick_painting(member: Dictionary,lot: Dictionary,object: Dictionary,task: 
 	if task.paint_action=="start":
 		picture.subject=str(task.subject); picture.revision=int(picture.revision)+1
 		task.paint_action="resume"; task.subject=""; task.paint_revision=int(picture.revision)
-	Paintings.contribute(picture,member)
+	Paintings.contribute(picture,member,minf(delta,Paintings.DURATION-float(picture.progress)))
 	picture.progress=minf(Paintings.DURATION,float(picture.progress)+delta)
 	task.remaining=Paintings.DURATION-float(picture.progress)
 	var rates := personal_activity_rates(member,"easel")
@@ -434,6 +435,10 @@ func _tick_painting(member: Dictionary,lot: Dictionary,object: Dictionary,task: 
 	var title: String=Paintings.SUBJECTS[picture.subject]
 	member.wishes.journal.push_front({"day":int(state.day),"text":"Finished “"+title+"”. "+Paintings.credit(picture)+"."})
 	if member.wishes.journal.size()>Wishes.MAX_JOURNAL: member.wishes.journal.resize(Wishes.MAX_JOURNAL)
+	var household: Dictionary=state.families.get(lot.owner,{})
+	if household.get("online",false):
+		for artist: Dictionary in household.members:
+			if Paintings.work_by(picture,str(artist.id))+0.000001>=MIN_ACTIVITY_TIME: _record_hobby(artist,"easel")
 	_event(str(member.name)+" finished “"+title+"”. Keep it, hang it, or sell it.")
 	_end_task(member,"done","Finished painting. Keep it on the easel, hang it, or choose to sell it.","Admiring the finished painting")
 
@@ -866,6 +871,7 @@ func routine_option(profile_id: String,member_id: String,routine_id: String) -> 
 	return result
 
 func hobby_option(member: Dictionary, hobby: String) -> Dictionary:
+	if hobby=="painting": return _painting_hobby_option(member)
 	var activity: String=Hobbies.CATALOG[hobby].activity
 	var status := wish_status(member,activity)
 	if not status.is_empty(): return {"available":false,"status":status,"detail":status}
@@ -885,8 +891,26 @@ func hobby_option(member: Dictionary, hobby: String) -> Dictionary:
 	if best.is_empty(): return {"available":false,"status":"Unavailable here","detail":"No reachable "+str(Catalog.ITEMS[activity].name)+" here. Build one or visit a neighbor."}
 	return best
 
+func _painting_hobby_option(member: Dictionary) -> Dictionary:
+	var lot: Dictionary=state.lots[member.lot_id]
+	var household: Dictionary=state.families.get(lot.owner,{})
+	if not household.get("members",[]).has(member): return {"available":false,"status":"At your own home","detail":"Paint at your household's easel. Visitors can inspect their neighbors' art."}
+	if lot.building: return {"available":false,"status":"Under construction","detail":"Finish building before painting."}
+	var best := {}; var distance := INF
+	for object: Dictionary in lot.objects:
+		if object.kind!="easel": continue
+		var score := _position(member).distance_squared_to(Vector2i(int(object.x),int(object.y)))
+		if score<distance:
+			distance=score
+			best={"available":true,"inspect":true,"lot_id":str(lot.id),"target_id":str(object.id),"status":"","label":"Choose a painting" if object.painting.subject=="" else "Continue this canvas" if not Paintings.finished(object.painting) else "See your finished painting","detail":"Opens the easel. Choose a subject, continue a canvas, or arrange a finished picture."}
+	if best.is_empty(): return {"available":false,"status":"Easel needed","detail":"Find the Daydream easel in Build & buy → Living. Painting supplies are free."}
+	return best
+
 func _finish_hobby(member: Dictionary, task: Dictionary, activity: String) -> void:
 	if bool(task.get("automatic",false)) or float(task.get("elapsed",0.0))<4.0: return
+	_record_hobby(member,activity)
+
+func _record_hobby(member: Dictionary,activity: String) -> void:
 	for family: Dictionary in state.families.values():
 		if not family.online or not family.members.has(member): continue
 		var result := Hobbies.record(member.hobbies,activity,int(state.day))
@@ -1290,7 +1314,7 @@ func _normalize_numbers() -> void:
 		if not lot.has("artworks"): lot.artworks={}
 		for entry: Dictionary in lot.artworks.values():
 			entry.x=int(entry.x); entry.y=int(entry.y)
-			for key: String in ["day","revision"]: entry.picture[key]=int(entry.picture[key])
+			Paintings.normalize(entry.picture)
 		lot.build_redo = int(lot.get("build_redo",0))
 		lot.funds = int(lot.funds)
 		lot.revision = int(lot.revision)
@@ -1302,7 +1326,7 @@ func _normalize_numbers() -> void:
 			for key: String in ["x", "y", "rotation"]:
 				object[key] = int(object[key])
 			if object.kind=="easel":
-				for key: String in ["day","revision"]: object.painting[key]=int(object.painting[key])
+				Paintings.normalize(object.painting)
 			if object.kind=="garden_bed":
 				for key: String in ["revision","harvests"]: object.garden[key]=int(object.garden[key])
 	for family: Dictionary in state.families.values():
@@ -1317,7 +1341,7 @@ func _normalize_numbers() -> void:
 			if not member.has("wishes"): member.wishes=Wishes.create(str(member.id),int(state.day))
 			Wishes.normalize(member.wishes)
 			if not member.has("hobbies"): member.hobbies=Hobbies.create(int(state.day))
-			Hobbies.normalize(member.hobbies)
+			Hobbies.normalize(member.hobbies,int(state.day))
 			ActivityLog.normalize(member)
 			member.autonomy = member.get("autonomy", true)
 			member.next_action = int(member.get("next_action", 1))

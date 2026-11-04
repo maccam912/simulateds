@@ -739,3 +739,35 @@ picture and blank easel. Returning and selling then pays once. The full regressi
 run also passed the original Iroh scenario, this expanded painting scenario,
 and dedicated-server startup. The preceding painting checkpoint passed all four platform CI jobs. Human-family,
 physical-device, and overnight-hosting checks remain open.
+
+
+## Painting as a lasting hobby
+
+All 74 local suites passed. The painting-hobby model suite checks shared
+completion credit, cumulative work
+across cancel/resume, a short contribution that earns no practice, daily caps,
+new-day renewal, rank journals, and actual novice/expert need recovery. Artwork
+duration and the §60 sale remain unchanged. Hanging, returning, and selling do
+not award practice again. Old three-hobby boards retain every existing value
+and acquire a zero-progress painting entry; old artist credit remains valid
+without inventing measured contribution time. Malformed contribution amounts,
+unknown or incomplete hobby boards, and oversized totals are rejected atomically.
+Absence neither advances nor removes hobby progress.
+
+Native injected-input flows pass at 1440×900 and 1280×720 / 125% UI scale. They
+open the relevant easel from Hobbies without mutating the world, interrupt a
+canvas, switch housemates, finish shared work, inspect both progress entries,
+reach rank two, and open painting progress directly from the easel. A camera
+viewing another lot still opens the selected resident's actual easel. Visitors
+receive an ownership explanation. The first compact attempt exposed subject
+buttons pushed below the fold by the new rank link; moving it below creative
+actions preserves all three subjects together. Final captures also show the
+unfinished-canvas contribution hint and focused painting card. Reviewed images
+are in ignored `build/painting-hobby-*.png`.
+
+The expanded real Iroh test passes two independent households, each with two
+qualifying contributors. Contribution time survives the partial-work reconnect;
+both practice entries survive finished-work reconnects, wall transfers, and sale.
+The complete regression also passed the original Iroh scenario, this expanded
+painting scenario, and dedicated-server startup. The preceding wall-art checkpoint passed all four platform CI jobs. Physical
+devices, human-family playtesting, and overnight hosting remain unverified.

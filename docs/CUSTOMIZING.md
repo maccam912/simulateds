@@ -10,7 +10,7 @@ household or an absent player.
 | `game/room_copy.gd` | Pure enclosed-room capture, rotation, price/access inspection, and surface application; authority allocates fresh furnishing IDs |
 | `game/furniture_colors.gd` | Named material palette, optional validated object color, and pure recoloring preview; missing metadata preserves legacy art |
 | `game/build_impact.gd` | Pure before/after access forecasts for validated placement, movement, and room drafts; reports new problems and repairs without changing authority rules |
-| `game/paintings.gd` | Bounded canvas state, subjects, credit, activity validation, and sale value; the world's `painting` command owns progress and payment |
+| `game/paintings.gd` | Bounded canvas state, subjects, exact contribution time, credit, activity validation, and sale value; the world's `painting` command owns progress and payment |
 | `game/painting_art.gd` | Original vector miniatures rendered in stages on the easel and in its inspection tray |
 | `game/painting_panel.gd` | Subject previews, progress/credit, resumable activity controls, and correlated host feedback |
 | `game/wall_art.gd` | Bounded household collection, pure transfer previews, save validation, and safe storage when a wall changes |

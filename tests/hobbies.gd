@@ -28,7 +28,7 @@ func _run() -> void:
 	for resident: Dictionary in world.state.families.hobby.members: resident.autonomy=false
 	for need: String in member.needs: member.needs[need]=100.0
 	assert(not _practice("unknown").ok and not _practice([]).ok)
-	for hobby: String in Hobbies.ORDER:
+	for hobby: String in ["reading","gardening","cooking"]:
 		assert(_practice(hobby).ok)
 		assert(not _practice(hobby).ok,"Practice shortcut does not duplicate a planned activity")
 		world.step(0.1)
@@ -52,7 +52,7 @@ func _run() -> void:
 	world.apply_command("hobby",{"type":"cancel","member_id":member.id})
 	assert(member.hobbies.reading.sessions==3,"Canceled practice earns nothing")
 	# Activity perks alter real need recovery, with both novice and expert controls.
-	for hobby: String in Hobbies.ORDER:
+	for hobby: String in ["reading","gardening","cooking"]:
 		var definition: Dictionary=Hobbies.CATALOG[hobby]
 		var object := _object(str(definition.activity))
 		var yields: Array=[]

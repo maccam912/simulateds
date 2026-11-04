@@ -1,16 +1,20 @@
 extends VBoxContainer
 signal command_requested(command: Dictionary)
 signal display_requested(source: String)
+signal hobbies_requested
 const Paintings = preload("res://game/paintings.gd")
+const Hobbies = preload("res://game/hobbies.gd")
 const Style = preload("res://game/style.gd")
 var summary: Label
 var artist: Label
 var preview: Control
 var progress: ProgressBar
+var practice: Label
 var note: Label
 var feedback: Label
 var buttons: Dictionary={}
 var hang_button: Button
+var hobby_button: Button
 var display_pending := false
 var pending: Dictionary={}
 var _acknowledged := false
@@ -29,6 +33,7 @@ func _ready() -> void:
 	preview=preload("res://game/painting_preview.gd").new(); preview.custom_minimum_size=Vector2(200,120); preview.mouse_filter=Control.MOUSE_FILTER_IGNORE; add_child(preview)
 	progress=ProgressBar.new(); progress.custom_minimum_size.y=10; progress.show_percentage=false
 	progress.add_theme_stylebox_override("background",Style.box(Style.INK,3)); progress.add_theme_stylebox_override("fill",Style.box(Style.GREEN,3)); add_child(progress)
+	practice=_label("",11,Style.GREEN)
 	for key: String in ["meadow","harbor","flowers","resume","sell"]:
 		var button := Button.new(); button.custom_minimum_size.y=36; button.add_theme_font_size_override("font_size",12)
 		button.pressed.connect(func(): _request(key))
@@ -40,6 +45,7 @@ func _ready() -> void:
 		add_child(button); buttons[key]=button
 	hang_button=Button.new(); hang_button.text="Hang on wall · Build mode"; hang_button.add_theme_font_size_override("font_size",12); hang_button.custom_minimum_size.y=32; add_child(hang_button)
 	hang_button.pressed.connect(func(): display_requested.emit("easel:"+_object))
+	hobby_button=Button.new(); hobby_button.custom_minimum_size.y=28; hobby_button.add_theme_font_size_override("font_size",11); hobby_button.pressed.connect(func(): hobbies_requested.emit()); add_child(hobby_button)
 	note=_label("",12,Style.MUTED); feedback=_label("",12,Style.GOLD)
 	Session.command_completed.connect(_completed); Soundscape.attach_controls(self)
 
@@ -57,7 +63,7 @@ func refresh(lot_id: String,object_id: String,member_id: String) -> void:
 	var member: Dictionary=Session.world._member(family,member_id) if not family.is_empty() else {}
 	if _acknowledged and not pending.is_empty() and int(member.get("next_action",0))>_next_action: pending={}; _acknowledged=false
 	var exists: bool=object.get("kind")=="easel"
-	for control: Control in [artist,preview,progress,note,feedback,hang_button]: control.visible=exists
+	for control: Control in [artist,preview,progress,note,feedback,hang_button,hobby_button,practice]: control.visible=exists
 	for button: Button in buttons.values(): button.visible=exists
 	if not exists: summary.text="This easel is no longer here."; return
 	var compact := get_viewport_rect().size.y<800
@@ -66,6 +72,10 @@ func refresh(lot_id: String,object_id: String,member_id: String) -> void:
 	var picture: Dictionary=object.painting
 	var blank: bool=str(picture.subject).is_empty()
 	var finished := Paintings.finished(picture)
+	var entry: Dictionary=member.get("hobbies",{}).get("painting",{})
+	hobby_button.visible=lot.owner==Session.profile_id and not member.is_empty()
+	hobby_button.text="Painting · Rank %d · %s" % [Hobbies.rank(entry),Hobbies.title("painting",entry)]
+	hobby_button.tooltip_text="Open painting progress. "+Hobbies.benefit("painting",entry)+" Finish a canvas after contributing 12 game minutes; up to two practices daily."
 	summary.text=Paintings.summary(picture)
 	artist.text=Paintings.credit(picture); artist.visible=not artist.text.is_empty()
 	preview.picture=picture
@@ -73,6 +83,11 @@ func refresh(lot_id: String,object_id: String,member_id: String) -> void:
 		preview.picture={"subject":_preview_subject,"progress":Paintings.DURATION}; summary.text="Preview · "+str(Paintings.SUBJECTS[_preview_subject])
 	preview.queue_redraw()
 	progress.visible=not blank and not finished; progress.value=float(picture.progress)/Paintings.DURATION*100.0
+	practice.visible=not blank and not finished and lot.owner==Session.profile_id and not member.is_empty()
+	var contributed := Paintings.work_by(picture,member_id)
+	practice.text="Your contribution · %d / 12 game minutes" % floori(contributed*3.0)
+	if contributed>=4.0: practice.text="Your part is ready · Finish this canvas to earn practice."
+	if Hobbies.remaining(entry,int(Session.state.day))==0: practice.text="Painting for enjoyment · More practice tomorrow" if Hobbies.rank(entry)<5 else "Mastered · Yours to enjoy"
 	note.text="Free supplies · 72 game minutes\nRestores fun and comfort." if blank else "Unfinished work keeps. Either resident in this household can continue it." if not finished else "Finished on day %d. Keep it here, hang it on a wall, or sell it for a fresh canvas." % int(picture.day)
 	if lot.owner!=Session.profile_id: note.text="You can enjoy your neighbor's artwork. Only their household can paint or sell it."
 	_options.clear()

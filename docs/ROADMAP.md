@@ -82,8 +82,9 @@ journals, and explicit single-payment sales. Finished art can stay on the easel,
 hang on a wall, or wait in the household collection. Free, undoable transfers
 release the canvas for another picture; demolition safely stores mounted art.
 Room duplication leaves earned artwork in place and creates blank easels.
-A painting hobby is the next opportunity to connect creative work to residents’
-lasting interests.
+Painting now has five lasting hobby ranks, bounded daily practice, shared
+contribution credit, and better fun/comfort recovery. Hobbies opens the relevant
+easel without choosing a subject; rank links show painting progress directly.
 
 ## 1. Make homebuilding dependable
 

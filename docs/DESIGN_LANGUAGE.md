@@ -592,4 +592,14 @@ new window moves its picture into storage, with a plain explanation in the
 preview and result. Pending controls wait for the actual accepted placement.
 Visitors can inspect a picture and its credit without seeing ownership controls.
 Use the existing quiet construction cue; do not interrupt arranging with a
-celebration. A painting hobby remains a separate future addition.
+celebration.
+
+The easel’s small rank link sits below creative actions, keeping subject choices
+visible together in compact layouts. It opens the Painting hobby card directly;
+that card returns to the selected resident’s easel without starting work. Show
+rank, title, progress, remaining daily practice, and the benefit in plain words.
+Both housemates can earn practice on a shared canvas: require 12 game minutes
+of contribution and a finished picture. Interruptions preserve measured work,
+while sales and arranging earn no practice. Improve fun and comfort as skill
+grows; keep painting duration and sale value stable. Use the existing quiet
+rank notice and journal entry instead of a modal reward screen.

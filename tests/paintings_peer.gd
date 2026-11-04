@@ -80,6 +80,7 @@ func _client(index: String) -> void:
 	await _connect()
 	var identity: String=session.profile_id; var home: String=session.home_lot()
 	var member: String=session.state.families[identity].members[0].id
+	var housemate: String=session.state.families[identity].members[1].id
 	for resident: Dictionary in session.state.families[identity].members:
 		await _command({"type":"autonomy","member_id":resident.id,"enabled":false})
 		await _command({"type":"cancel","member_id":resident.id})
@@ -97,9 +98,9 @@ func _client(index: String) -> void:
 	var start := {"type":"painting","lot_id":home,"target_id":id,"member_id":member,"action":"start","subject":subject,"revision":0}
 	await _command(start); await _command(start,false)
 	for attempt in range(100):
-		if float(_easel(home,id).painting.progress)>=1.2: break
+		if float(_easel(home,id).painting.progress)>=4.2: break
 		await create_timer(0.1).timeout
-	assert(float(_easel(home,id).painting.progress)>=1.2)
+	assert(float(_easel(home,id).painting.progress)>=4.2)
 	await _command({"type":"cancel","member_id":member})
 	for attempt in range(40):
 		if session.state.families[identity].members[0].task.is_empty(): break
@@ -108,17 +109,20 @@ func _client(index: String) -> void:
 	assert(partial.subject==subject and float(partial.progress)<24)
 	session.leave(); await create_timer(1.0).timeout; await _connect()
 	assert(_easel(home,id).painting==partial,"Unfinished artwork survives disconnect without advancing while absent")
+	assert(session.state.families[identity].members[0].hobbies.painting.sessions==0 and preload("res://game/paintings.gd").work_by(partial,member)>=4.0)
 	await _command({"type":"painting","lot_id":home,"target_id":id,"member_id":member,"action":"resume","revision":0},false)
-	await _command({"type":"painting","lot_id":home,"target_id":id,"member_id":member,"action":"resume","revision":partial.revision})
+	await _command({"type":"painting","lot_id":home,"target_id":id,"member_id":housemate,"action":"resume","revision":partial.revision})
 	for attempt in range(360):
 		if preload("res://game/paintings.gd").finished(_easel(home,id).painting): break
 		await create_timer(0.1).timeout
 	var completed: Dictionary=_easel(home,id).painting.duplicate(true)
 	assert(preload("res://game/paintings.gd").finished(completed) and completed.artists[0].id==member)
-	assert(session.state.families[identity].members[0].wishes.journal.any(func(entry): return entry.text.contains(preload("res://game/paintings.gd").SUBJECTS[subject])))
+	assert(session.state.families[identity].members[1].wishes.journal.any(func(entry): return entry.text.contains(preload("res://game/paintings.gd").SUBJECTS[subject])))
+	for resident: Dictionary in session.state.families[identity].members: assert(resident.hobbies.painting.sessions==1,"Both qualifying painters receive host-authoritative practice")
 	# Persist a finished work through a second reconnect before selling it once.
 	session.leave(); await create_timer(1.0).timeout; await _connect()
 	assert(_easel(home,id).painting==completed)
+	for resident: Dictionary in session.state.families[identity].members: assert(resident.hobbies.painting.sessions==1)
 	await _construction(home,true)
 	var art_id := "art_"+id+"_"+str(int(completed.revision))
 	await _art_edit(home,{"type":"art_hang","source":"easel:"+id,"x":8,"y":3})
@@ -144,6 +148,7 @@ func _client(index: String) -> void:
 		if _easel(home,id).painting.subject=="": break
 		await create_timer(0.1).timeout
 	assert(_easel(home,id).painting.subject=="" and session.state.lots[home].funds==funds+60)
+	for resident: Dictionary in session.state.families[identity].members: assert(resident.hobbies.painting.sessions==1,"Arranging and selling cannot earn practice again")
 	await _command(sale,false)
 	var done := FileAccess.open(ticket_path+".done"+index,FileAccess.WRITE); done.store_string("done"); done.close()
 	print("CLIENT_PASS"); session.leave(); await root.get_node("Soundscape").shutdown_and_wait(); quit()

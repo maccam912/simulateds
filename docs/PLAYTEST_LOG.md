@@ -1522,3 +1522,44 @@ connect deliberate creative effort to a resident's lasting interests and visible
 progress, while keeping subject choice and sales deliberate. That should reuse
 the existing bounded hobby system and preserve older saves. It is proposed next
 work, not implemented behavior in this checkpoint.
+
+
+## A resident grows into painting
+
+Painting now joins reading, gardening, and cooking as a lasting hobby. Its five
+ranks progress from Curious painter to Neighborhood artist, with better fun and
+comfort recovery. Hobbies opens the chosen resident's easel without choosing a
+subject. A rank link returns directly to the painting card. In-progress work
+shows whether the selected resident has contributed enough for practice, or
+whether they are simply painting for enjoyment after today's allowance.
+
+The shared-work rule is deliberate: finishing a canvas awards practice to each
+housemate who contributed at least 12 game minutes. Contribution survives
+interruptions, saves, and reconnects. Two practices per day count, while further
+painting still works. Selling, moving, hanging, and returning art cannot repeat
+that award. Ranks do not change creative duration, sale value, or autonomy.
+
+Early save comparisons exposed floating-point contribution metadata changing
+by a tiny amount on JSON round trips. Contribution now uses integer milliseconds,
+allocated from the difference in rounded canvas progress so small steps do not
+accumulate rounding error. Existing floating canvas progress is compared with
+appropriate tolerance in tests; finished art and contribution records retain
+exact identity. Older hobby boards migrate without losing their learned ranks,
+and older art keeps its credit without fabricated historical practice.
+
+The native standard and compact flows completed shared work, earned the first
+rank milestone, checked the journal, opened the right easel while the camera
+viewed another house, and explained the visitor restriction. Compact screenshot
+review caught the new rank link crowding the subject list; it now follows the
+painting actions. Both layouts then passed, including the final contribution
+hint. The actual Iroh scenario also passed shared credit through partial and
+finished reconnects, wall display, and sale. All 74 local suites, both Iroh
+scenarios, and dedicated-server startup passed. The wall-art checkpoint passed all
+four CI platform jobs. This remains automated evidence, not human-family play.
+
+Fresh assessment: creative recreation now produces a home decoration and a
+lasting resident interest. The next impactful extension is social and asynchronous:
+let a household send a finished painting with a postcard, then let the recipient
+collect and hang it later with its original credit intact. That should transfer
+one original, handle full mailboxes/collections without losing art, and respect
+construction drafts. It is proposed next work, not implemented behavior here.
