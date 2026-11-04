@@ -2358,3 +2358,71 @@ on Apple Silicon. It remains locally ad-hoc signed. Hosted workflow `41892208025
 for the preceding feedback checkpoint failed all four platforms before any steps
 ran; the previously diagnosed GitHub billing/spending-limit block was unchanged.
 Physical Intel/Android, cross-device, human-family play, and notarization remain open.
+
+
+## Finding a ready commission during ordinary play
+
+A newly ready accepted request now produces one quiet notice with a Review
+originals action. The existing Activities button gains a small gold mark, and its
+commission entry says Ready while any original can actually be delivered. These
+indicators use the same availability checks as the authority. No new saved state,
+reward, or command is introduced. Additional canvases and construction/sale
+eligibility toggles do not repeatedly announce the same acceptance.
+
+The presenter waits 400 ms, respects the full lifetime of an existing notice, and
+expires pending discovery after 20 seconds. Starting/loading/reconnecting sets a
+quiet baseline. Menus and an already-visible commission tray consume readiness
+quietly; the durable mark remains. A changed request or lost eligibility removes
+an old displayed action. The existing confirmation sample plays 6 dB quieter;
+Effects mute leaves the text and original-list link intact.
+
+Initial native input passes at 1440×900 and 1280×720 / 125% cover a painting
+finishing while the other resident and Plan are selected, protection of another
+notice, one quiet cue despite a stale command-error flag, no duplicate sound,
+unchanged-state original-list navigation, readiness in Activities, real save-menu
+loading without replay, progress behind Pause, mute, and invalidated notice actions.
+The compact friendship-feedback and full commission-delivery native scenarios
+also pass with the additional notice action.
+
+Visual inspection caught the first original's Review button partly below the
+compact tray. The accepted request now keeps only its subject, recipient, and a
+short instruction above the originals; full request wording stays in the heading
+tooltip. Both native sizes verify that the first Review button is fully visible
+without scrolling. Review still shows the exact original and permanent-transfer
+consequences before delivery. Captures include
+`build/commission-feedback-ready-with-plan-compact.png`,
+`build/commission-feedback-originals-compact.png`, and
+`build/commission-feedback-activities-ready-compact.png`.
+
+Fresh assessment: a separate compact native garden playthrough passes planting,
+watered growth, dry/ripe waits, harvests, both crops, moves/rotation, and visitor
+restrictions. Harvest presently becomes funds, while the Garden salad and Sandwich
+platter recipes independently charge currency. The next gameplay increment should
+let a household deliberately keep produce in a bounded pantry and use it for a
+shared homegrown meal. Ordinary cash harvests and purchased recipes should remain
+available. Construction history, queued preparation, cancellation, and reconnects
+must never duplicate ingredients or charge them twice. This is proposed next work;
+no pantry or homegrown recipe is implemented by this readiness checkpoint.
+
+A final native pass at both sizes places the selected resident on Violet's lot
+while their housemate finishes painting at home. The readiness notice opens the
+home originals list while preserving the visiting resident, current viewed lot,
+and exact world state. The first Review button remains visible beside Plan.
+
+Full regression passes all 106 local suites, the main, painting, meal, recreation,
+and commission Iroh scenarios, and dedicated-server startup (112 pass markers).
+The commission scenario observes actual client snapshots: each household receives
+one notice for its own newly ready request, then reconnects to the original without
+replaying it. Delivered receipts remain quiet on a later reconnect. The final
+visiting-resident native scenario passes at both sizes after the full local UI run.
+
+Final review corrected the delivered recipient's hover text after the next offer
+rotates internally. A focused compact headless commission UI pass verifies the
+delivered heading retains its own request wording, alongside the full delivery flow.
+
+The final universal macOS export passes plist validation, strict signature checks
+across ARM64 and Intel slices, and `EXPORTED_NATIVE_RUNTIME_PASS` on Apple Silicon.
+It remains locally ad-hoc signed. The preceding commission workflow `41896642921`
+failed all four hosted platforms before executing any steps under the existing
+account-level CI block. Physical Intel/Android, cross-device and human-family play,
+and notarization remain unverified.

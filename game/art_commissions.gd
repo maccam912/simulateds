@@ -85,6 +85,19 @@ static func candidates(world: Dictionary,owner: String) -> Array[Dictionary]:
 		result.append({"intent":intent,"picture":chosen.picture.duplicate(true),"location":str(chosen.location),"available":bool(option.ok),"message":str(option.get("message",""))})
 	return result
 
+## Derived presentation state; availability always uses the authority's transfer checks.
+static func availability(world: Dictionary,owner: String) -> Dictionary:
+	var family: Dictionary=world.get("families",{}).get(owner,{})
+	var board: Dictionary=family.get("commissions",{})
+	if board.get("active",{}).is_empty(): return {}
+	var terms: Dictionary=OFFERS[board.active.offer]
+	var ready: Array[String]=[]
+	var choices:=candidates(world,owner)
+	for choice: Dictionary in choices:
+		if choice.available: ready.append(str(choice.intent.art_id))
+	ready.sort()
+	return {"offer":str(board.active.offer),"revision":int(board.revision),"client":str(terms.client),"subject":str(Paintings.SUBJECTS[terms.subject]),"reward":int(terms.reward),"matching":choices.size(),"ready":ready}
+
 static func valid(value: Variant,owner: String,day: int) -> bool:
 	if not value is Dictionary or value.size()!=5 or not _integer(value.get("revision"),0,MAX_REVISION) or not _integer(value.get("completed"),0,mini(day,MAX_REVISION/2)) or not _integer(value.get("completed_day"),0,day): return false
 	if not value.get("active") is Dictionary or not value.get("history") is Array or value.history.size()!=mini(int(value.completed),HISTORY_LIMIT): return false

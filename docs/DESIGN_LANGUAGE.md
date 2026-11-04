@@ -810,3 +810,27 @@ inside the tray; the ordinary game notice already acknowledges the action.
 There is no countdown, penalty, new currency, or demand to log back in. Reuse the
 ordinary UI cues and existing painting activity sound; this small goal does not
 need another persistent HUD badge or music layer.
+
+
+## Discovering a ready commission
+
+Use a small gold mark on the existing Activities button and a Ready suffix on
+its art-commission entry. Both describe current delivery eligibility, including
+planned-sale, construction, and budget checks. They remain discoverable after
+loading without another permanent HUD panel. The tooltip names the subject,
+payment, and number of eligible originals.
+
+The first ready original for an accepted request creates one quiet notice and
+**Review originals ›** action. It opens the list, preserving the selected resident,
+viewed lot, and both plans. It never selects an original, enters construction, or
+issues a delivery. Keep the first original's Review button visible at compact
+sizes by shortening the already-accepted request introduction. Full request
+wording remains on the recipient heading's tooltip.
+
+Wait 400 ms for readiness to settle, then let any previous seven-second notice
+finish. Expire a pending discovery after 20 seconds. Do not repeat for another
+canvas or for construction/sale toggles on the same acceptance. Initial state,
+loading, reconnecting, menus, and an already-open commission tray are quiet;
+the ready mark still reflects current originals. Invalidate the displayed action
+when the request changes or no original is eligible. Use the existing confirmation
+sample 6 dB quieter on Effects; mute preserves all text and navigation.

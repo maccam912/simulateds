@@ -74,14 +74,18 @@ func refresh() -> void:
 	var finished_today: bool=not active and int(_board.completed_day)==int(Session.state.day)
 	home_label.text="For "+str(home.name)
 	heading.text=str(_terms.client)
+	heading.tooltip_text=str(_terms.request)
 	subject.text=str(Paintings.SUBJECTS[_terms.subject])+" · §%d" % int(_terms.reward)
 	preview.visible=reviewing or (not active and not finished_today); preview.custom_minimum_size.y=66 if get_viewport_rect().size.y<800 else 100
 	preview.picture=review.picture if reviewing else {"subject":_terms.subject,"progress":Paintings.DURATION}; preview.queue_redraw()
 	detail.text=Paintings.credit(review.picture)+"\n"+str(review.location) if reviewing else str(_terms.request)
+	detail.visible=reviewing or not active or rows.is_empty()
 	note.text="This original leaves your home.\nDelivery cannot be undone." if reviewing else "No deadline · No fee.\nExisting originals welcome."
+	if active and not reviewing and not rows.is_empty(): note.text="Choose an original · No deadline."
 	if finished_today:
 		var delivered: Dictionary=Jobs.OFFERS[_board.history[0].offer]
 		heading.text=str(delivered.client); subject.text="Delivered · §%d earned" % int(delivered.reward)
+		heading.tooltip_text=str(delivered.request)
 		detail.text="Your original has a new home."
 		note.text="Today's commission is complete.\nA new request is available tomorrow."
 	var option:=Jobs.delivery_option(Session.state,Session.profile_id,review.intent) if reviewing else {}

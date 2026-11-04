@@ -1318,3 +1318,45 @@ on Apple Silicon. It remains locally ad-hoc signed. Hosted workflow `41892208025
 for the preceding feedback checkpoint failed all four platforms before any steps
 ran; the previously diagnosed GitHub billing/spending-limit block was unchanged.
 Physical Intel/Android, cross-device, human-family play, and notarization remain open.
+
+
+## Commission readiness and original-list navigation
+
+`commission_feedback` tests pure authoritative availability, first readiness,
+400 ms settling, one notice per acceptance, multiple originals, existing-art
+acceptance, open-tray/menu suppression, load/reconnect/owner/rewind baselines,
+protected feedback and 20-second expiry, wrong/foreign subjects, planned-sale,
+construction, and budget eligibility, plus pending cancellation/delivery/reset.
+The derived state never mutates funds, artwork, or resident plans.
+
+`commission_feedback_ui` passes native injected input at standard and compact
+sizes. It verifies the quiet cue and stale-error independence, preservation of an
+existing notice, selected-resident/Plan continuity, exact unchanged-state list
+navigation, a fully visible first Review button, persistent Activities discovery,
+real save-menu loading without replay, menu-time readiness, mute, and displayed
+action invalidation. Compact `friendship_feedback_ui` and `art_commissions_ui`
+also pass, retaining both relationship and permanent-transfer review behavior.
+The next-gameplay garden assessment passes in an isolated native compact run.
+
+A final native pass at both sizes places the selected resident on Violet's lot
+while their housemate finishes painting at home. The readiness notice opens the
+home originals list while preserving the visiting resident, current viewed lot,
+and exact world state. The first Review button remains visible beside Plan.
+
+Full regression passes all 106 local suites, the main, painting, meal, recreation,
+and commission Iroh scenarios, and dedicated-server startup (112 pass markers).
+The commission scenario observes actual client snapshots: each household receives
+one notice for its own newly ready request, then reconnects to the original without
+replaying it. Delivered receipts remain quiet on a later reconnect. The final
+visiting-resident native scenario passes at both sizes after the full local UI run.
+
+Final review corrected the delivered recipient's hover text after the next offer
+rotates internally. A focused compact headless commission UI pass verifies the
+delivered heading retains its own request wording, alongside the full delivery flow.
+
+The final universal macOS export passes plist validation, strict signature checks
+across ARM64 and Intel slices, and `EXPORTED_NATIVE_RUNTIME_PASS` on Apple Silicon.
+It remains locally ad-hoc signed. The preceding commission workflow `41896642921`
+failed all four hosted platforms before executing any steps under the existing
+account-level CI block. Physical Intel/Android, cross-device and human-family play,
+and notarization remain unverified.

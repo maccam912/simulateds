@@ -130,6 +130,7 @@ func _run() -> void:
 	await _button(panel.confirm); await _capture("delivered")
 	assert(home.funds==funds+180 and easel.painting.subject=="" and panel.pending.is_empty() and panel.review.is_empty())
 	assert(family.commissions.completed==1 and family.commissions.history[0].credit.contains(member.name))
+	assert(panel.heading.tooltip_text==terms.request,"The delivered recipient keeps its own request wording, not tomorrow's offer")
 	assert(panel.confirm.disabled and panel.note.text.contains("tomorrow") and panel.history.get_child_count()==2)
 	assert(not session.world.apply_command(session.profile_id,intent).ok and home.funds==funds+180)
 	var saved: Dictionary=session.world.snapshot_for_save()

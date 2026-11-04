@@ -22,6 +22,7 @@ household or an absent player.
 | `game/wall_art.gd` | Bounded household collection, pure transfer previews, save validation, and safe storage when a wall changes |
 | `game/wall_art_panel.gd` | Collection selection, wall display, storage, empty-easel return, and correlated admire controls for residents and visitors |
 | `game/art_commissions.gd` | Immutable offer IDs/terms, household acceptance and daily delivery bounds, exact-original custody, receipts, and additive save validation |
+| `game/commission_feedback.gd` | Local readiness baseline, once-per-request discovery, menu/session suppression, protected notice timing, and bounded expiry; never commands or saved progress |
 | `game/commission_panel.gd` | Pure offer/candidate views, explicit original review, fixed delivery/back controls, and correlated reply/snapshot waiting |
 | `game/art_admiration.gd` | Wall-facing viewing positions, original/mount identity, bounded activity duration and needs, and task validation |
 | `game/art_gifts.gd` | Validated original-art transfers through mail, collection capacity, and unique custody across canvases, collections, and unclaimed gifts |

@@ -89,6 +89,9 @@ var leisure_buttons: Dictionary = {}
 var _leisure_options: Dictionary = {}
 var _social_focus := ""
 var _friend_feedback = preload("res://game/friendship_feedback.gd").new()
+var _commission_feedback = preload("res://game/commission_feedback.gd").new()
+var _commission_status := {}
+var commission_entry: Button
 var _context_page := "activities"
 var _wish_seen: Dictionary = {}
 var queue_label: Button
@@ -122,6 +125,8 @@ var connection_label: Label
 var notice_label: Label
 var notice_people_button: Button
 var _notice_people := {}
+var notice_commission_button: Button
+var _notice_commission := {}
 var help_label: Label
 var connection_dialog: Window
 var code_input: LineEdit
@@ -441,6 +446,8 @@ func _build_ui() -> void:
 	notice_row.add_child(notice_label)
 	notice_people_button=_button("People ›",_open_notice_people); notice_people_button.add_theme_font_size_override("font_size",13); notice_people_button.size_flags_vertical=Control.SIZE_SHRINK_CENTER
 	notice_row.add_child(notice_people_button); notice_people_button.hide()
+	notice_commission_button=_button("Review originals ›",_open_notice_commission); notice_commission_button.add_theme_font_size_override("font_size",13); notice_commission_button.size_flags_vertical=Control.SIZE_SHRINK_CENTER
+	notice_row.add_child(notice_commission_button); notice_commission_button.hide()
 	routine_panel=_hud_panel(Rect2(-290,-230,580,440),Vector2(0.5,0.5)); routine_panel.hide()
 	routine_editor=RoutinePanel.new(); routine_panel.add_child(routine_editor)
 	routine_editor.command_requested.connect(_send)
@@ -473,13 +480,14 @@ func _refresh() -> void:
 	var state: Dictionary = Session.state
 	neighborhood_title.text=str(state.get("neighborhood_name","Linden Grove"))
 	var family := _family()
+	_commission_status=preload("res://game/art_commissions.gd").availability(state,Session.profile_id)
 	var view_context := str(Session.role) + ":" + str(family.get("home_lot",""))
 	if view_context != _view_context and Session.role != "joining" and not family.is_empty():
 		_view_context = view_context
 		viewed_lot = str(family.home_lot)
 		_selected_object = ""; _space_request={}; _space_ack=false
 		_art_source=""; _art_entry.clear(); _art_request.clear()
-		_moving_object = ""; _move_request.clear(); _wish_seen.clear(); _friend_feedback.reset(); _hobby_seen.clear(); _room_anchor=Vector2i(-1,-1); _room_request.clear()
+		_moving_object = ""; _move_request.clear(); _wish_seen.clear(); _friend_feedback.reset(); _commission_feedback.reset(); _hobby_seen.clear(); _room_anchor=Vector2i(-1,-1); _room_request.clear()
 		_paint_anchor=Vector2i(-1,-1); _paint_request.clear(); _window_request.clear(); _color_request.clear(); _copy_source=Vector2i(-1,-1); _copy_request.clear(); _blueprint_id=""
 	if viewed_lot.is_empty() or not state.get("lots",{}).has(viewed_lot):
 		viewed_lot = str(family.get("home_lot","lot_1"))
@@ -617,6 +625,7 @@ func _refresh() -> void:
 		_announce_wishes(family)
 		_announce_friendships()
 		_announce_hobbies(family)
+		_announce_commissions()
 		var mood := Wellbeing.mood(member.needs)
 		mood_button.text=str(mood.label)+" · Care"
 		mood_button.add_theme_color_override("font_color",_mood_color(str(mood.tone)))
@@ -643,7 +652,10 @@ func _refresh() -> void:
 		_show_tray(context_panel,build_mode)
 		if build_mode: plan_panel.hide()
 		if hud.visible: Soundscape.set_context("build" if build_mode else "live")
-	palette_button.text = "Catalog" if build_mode else "Activities"
+	var art_ready: bool=not _commission_status.get("ready",[]).is_empty() and Session.role!="joining"
+	palette_button.text = "Catalog" if build_mode else "Activities •" if art_ready else "Activities"
+	palette_button.add_theme_color_override("font_color",Style.GOLD if art_ready and not build_mode else Style.TEXT)
+	palette_button.tooltip_text="Art commission · %d %s ready to review\nOpen Activities → Art commissions." % [_commission_status.ready.size(),"original" if _commission_status.ready.size()==1 else "originals"] if art_ready and not build_mode else "Building tools and furnishings" if build_mode else "Things to do and optional art commissions"
 	var tools_signature := _art_source+str(_art_request.is_empty())+str(building and mine)+selected_tool+_moving_object+str(_move_request.is_empty())+_selected_object+str(build_rotation)+viewed_lot+str(lot.get("revision",0))+_context_page+selected_member+str(_room_anchor)+str(_room_request.is_empty())
 	if build_mode: tools_signature+=_catalog_category+":"+_catalog_query+":"+str(lot.get("funds",0))+str(_access_visible)+str(_access_report.get("issues",[]))
 	tools_signature+=window_style+str(_window_request.is_empty())+furniture_color+str(_color_request.is_empty())
@@ -675,6 +687,10 @@ func _refresh() -> void:
 	if tools_signature!=_tools_signature:
 		_tools_signature=tools_signature
 		_rebuild_context(building and mine,lot)
+	if _context_page=="activities" and not build_mode and is_instance_valid(commission_entry):
+		commission_entry.text="Art commissions · Ready" if art_ready else "Art commissions"
+		commission_entry.add_theme_color_override("font_color",Style.GOLD if art_ready else Style.TEXT)
+		commission_entry.tooltip_text="%d matching %s · %s · §%d\nChoose an original to review before delivering." % [_commission_status.ready.size(),"original" if _commission_status.ready.size()==1 else "originals",str(_commission_status.subject),int(_commission_status.reward)] if art_ready else "Accepted · "+str(_commission_status.subject)+" · No deadline." if not _commission_status.is_empty() else "Optional community requests for finished paintings."
 	if ((build_mode and selected_tool=="wall_art" and _context_page!="access") or (_context_page=="wall_art_inspect" and not build_mode)) and is_instance_valid(wall_art_panel): wall_art_panel.refresh(lot,_art_source,not _art_request.is_empty() or not _art_entry.is_empty(),build_mode,selected_member)
 	if _context_page=="painting" and not build_mode and is_instance_valid(painting_panel):
 		painting_panel.display_pending=not _art_entry.is_empty()
@@ -940,7 +956,7 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 		context_box.add_child(_button("‹ Activities",func(): _context_page="activities"; _refresh()))
 	else:
 		activity_label.text="Activities"
-		var commissions:=_button("Art commissions",_open_commissions); commissions.add_theme_font_size_override("font_size",12); tools_box.add_child(commissions)
+		commission_entry=_button("Art commissions",_open_commissions); commission_entry.add_theme_font_size_override("font_size",12); tools_box.add_child(commission_entry)
 		var shown: Dictionary={}
 		for obj in lot.get("objects",[]):
 			if shown.has(obj.kind) and not obj.kind in ["garden_bed","easel","dining_table","game_table","stereo"]: continue
@@ -1347,6 +1363,7 @@ func _show_notice(message: String) -> void:
 		notice_label.text=message
 		notice_label.tooltip_text=""
 		notice_people_button.hide(); _notice_people.clear()
+		notice_commission_button.hide(); _notice_commission.clear()
 		_notice_time=7.0
 		notice_panel.show()
 
@@ -1595,6 +1612,26 @@ func _open_notice_people() -> void:
 	if not _family().get("members",[]).any(func(member): return member.id==request.get("resident")): return
 	if selected_member!=request.resident: _select_resident(str(request.resident))
 	_social_focus=str(request.person); _open_people(); call_deferred("_follow_social",_social_focus)
+
+func _announce_commissions() -> void:
+	var context:=str(Session.profile_id)+":"+str(Session.world_generation)
+	if not _notice_commission.is_empty() and (_notice_commission.context!=context or _notice_commission.revision!=int(_commission_status.get("revision",-1)) or _commission_status.get("ready",[]).is_empty()):
+		_notice_commission.clear(); notice_commission_button.hide(); _notice_time=0; notice_panel.hide()
+	var active: bool=hud.is_visible_in_tree() and not Session.menu_paused and Session.role!="joining" and not routine_panel.visible and not (_context_page=="commissions" and context_panel.visible)
+	var feedback: Dictionary=_commission_feedback.sample(_commission_status,context,int(Session.state.get("tick",0)),Time.get_ticks_msec(),active,_notice_time<=0.0)
+	if feedback.is_empty(): return
+	_show_notice(str(feedback.message))
+	_notice_commission={"context":context,"offer":feedback.offer,"revision":feedback.revision}
+	notice_commission_button.tooltip_text=str(feedback.detail); notice_commission_button.show()
+	Soundscape.play_ui("ready")
+
+func _open_notice_commission() -> void:
+	var request:=_notice_commission.duplicate()
+	_notice_time=0; notice_panel.hide(); notice_commission_button.hide(); _notice_commission.clear()
+	if request.get("context")!=str(Session.profile_id)+":"+str(Session.world_generation): return
+	var current:=preload("res://game/art_commissions.gd").availability(Session.state,Session.profile_id)
+	if current.get("revision",-1)!=request.get("revision") or current.get("ready",[]).is_empty(): return
+	_open_commissions()
 
 func _follow_social(target_id: String) -> void:
 	await get_tree().process_frame

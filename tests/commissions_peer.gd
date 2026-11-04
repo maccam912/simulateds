@@ -5,12 +5,15 @@ var ticket_path := ""
 var use_codes := false
 var rooms: Node
 var command_results: Array=[]
+var readiness=preload("res://game/commission_feedback.gd").new()
+var notices: Array[Dictionary]=[]
 
 func _initialize() -> void:
 	call_deferred("_run")
 
 func _run() -> void:
 	session = root.get_node("Session")
+	session.world_changed.connect(_observe)
 	session.command_completed.connect(func(intent: Dictionary,ok: bool,_message: String): command_results.append({"intent":intent,"ok":ok}))
 	rooms = root.get_node("Rooms")
 	var args := OS.get_cmdline_user_args()
@@ -32,8 +35,14 @@ func _connect() -> void:
 		if session.snapshots_received > 0 and session.state.families.has(session.profile_id):
 			assert(session.debug_speed==1 and not session.can_control_time())
 			assert(not session.toggle_play_pause().ok and not session.set_play_speed(4).ok and session._requests.is_empty(),"Joining resets private pace; local controls cannot send shared clock requests")
+			_observe()
 			return
 	assert(false, "Host snapshot did not arrive")
+
+func _observe() -> void:
+	var availability: Dictionary=preload("res://game/art_commissions.gd").availability(session.state,session.profile_id)
+	var notice: Dictionary=readiness.sample(availability,str(session.profile_id)+":"+str(session.world_generation),int(session.state.get("tick",0)),Time.get_ticks_msec(),session.role=="client")
+	if not notice.is_empty(): notices.append(notice)
 
 func _command(intent: Dictionary, accepted := true) -> void:
 	var count: int = session.actions_received
@@ -117,6 +126,12 @@ func _client(index: String) -> void:
 		if preload("res://game/paintings.gd").finished(_easel(home,id).painting): break
 		await create_timer(0.1).timeout
 	assert(preload("res://game/paintings.gd").finished(_easel(home,id).painting))
+	for attempt in range(60):
+		if not notices.is_empty(): break
+		await create_timer(0.1).timeout
+	assert(notices.size()==1 and notices[0].offer==terms.id and notices[0].revision==_board().revision and notices[0].message.contains(terms.client.to_lower()),"Actual client snapshots announce only their own newly ready request once")
+	session.leave(); await create_timer(0.4).timeout; await _connect(); await create_timer(0.8).timeout
+	assert(notices.size()==1 and preload("res://game/art_commissions.gd").availability(session.state,identity).ready.size()==1,"Reconnecting to a ready original keeps it discoverable without replaying the notice")
 	_flag(".painted"+index); await _wait_flag(".painted"+("2" if index=="1" else "1"))
 	var choices: Array=preload("res://game/art_commissions.gd").candidates(session.state,identity)
 	assert(choices.size()==1 and choices[0].available)
@@ -133,7 +148,9 @@ func _client(index: String) -> void:
 	assert(_board().completed==1 and _board().active.is_empty() and _easel(home,id).painting.subject=="" and session.state.lots[home].funds==funds+180)
 	assert(_board().history[0].credit==preload("res://game/paintings.gd").credit(picture))
 	var receipt: Dictionary=_board().duplicate(true)
+	var noticed: int=notices.size()
 	session.leave(); await create_timer(0.4).timeout; await _connect()
 	assert(_board()==receipt and session.state.lots[home].funds==funds+180 and _easel(home,id).painting.subject=="")
+	assert(notices.size()==noticed and preload("res://game/art_commissions.gd").availability(session.state,identity).is_empty())
 	await _command(delivery,false); await _command(_intent("commission_accept"),false)
 	_flag(".done"+index); print("CLIENT_PASS"); session.leave(); await root.get_node("Soundscape").shutdown_and_wait(); quit()

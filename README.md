@@ -215,6 +215,10 @@ or shell expressions.
   One delivery is available per household per game day; the next request waits
   until tomorrow. **Put commission aside** is free and keeps the same offer.
   The last four deliveries remain in the commission book through saves/reconnects.
+  A newly ready request gives one quiet **Review originals** notice. It opens the
+  list without choosing a painting or moving either resident, even while visiting
+  a neighbor. A gold dot on **Activities** and a **Ready** menu entry keep eligible
+  originals discoverable after the notice fades. Loading/reconnecting stays quiet.
 - **Hang on wall** takes a finished painting into build mode. Choose a solid wall
   without a window or another picture; the transfer is free and leaves a blank
   easel. **Wall art** in the catalog lets you move pictures, store them in the

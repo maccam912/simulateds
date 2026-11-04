@@ -78,3 +78,7 @@ activity seconds. Packing a sold painting uses one `fabric` onset. Both follow
 the existing position, visibility, pause, Effects volume, and onset-deduplication
 rules. The native painting flows check that both cues reach the live mixer;
 this is event-level coverage, not a new recording or listening assessment.
+
+Commission readiness reuses `confirm.wav` under the `ready` UI event, 6 dB quieter
+than the normal confirmation cue. It plays once per newly ready accepted request;
+loaded state and menu-time changes remain quiet. Effects volume/mute applies.
