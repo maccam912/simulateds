@@ -217,9 +217,17 @@ func _client(index: String) -> void:
 		await create_timer(0.1).timeout
 	assert(not [0,0] in session.state.lots[home].floors,"Client undo did not restore layout")
 	await _command({"type":"build_redo","lot_id":home,"revision":session.state.lots[home].revision})
+	for _attempt in range(50):
+		if [0,0] in session.state.lots[home].floors: break
+		await create_timer(0.1).timeout
+	assert([0,0] in session.state.lots[home].floors,"Wait for the accepted revision before recoloring")
 	var moved_id := ""
 	for object: Dictionary in session.state.lots[home].objects:
 		if object.kind=="fridge": moved_id=str(object.id)
+	await _command({"type":"recolor","lot_id":home,"object_id":moved_id,"style":"ink","revision":session.state.lots[home].revision})
+	for _attempt in range(50):
+		if session.world._object(session.state.lots[home],moved_id).get("color_style")=="ink": break
+		await create_timer(0.1).timeout
 	await _command({"type":"move_object","lot_id":home,"object_id":moved_id,"x":9,"y":4,"rotation":0})
 	for _attempt in range(50):
 		if int(session.world._object(session.state.lots[home],moved_id).x)==9: break
@@ -252,6 +260,24 @@ func _client(index: String) -> void:
 		if not session.world._object_at(session.state.lots[home],Vector2i(14,1)).is_empty(): break
 		await create_timer(0.1).timeout
 	var source_plant: String=session.world._object_at(session.state.lots[home],Vector2i(14,1)).id
+	var pot_style := "rose" if index=="1" else "sage"
+	var color_intent := {"type":"recolor","lot_id":home,"object_id":source_plant,"style":pot_style,"revision":session.state.lots[home].revision}
+	var color_funds: int=session.state.lots[home].funds
+	await _command(color_intent); await _command(color_intent,false)
+	for _attempt in range(50):
+		if session.world._object(session.state.lots[home],source_plant).get("color_style")==pot_style: break
+		await create_timer(0.1).timeout
+	assert(session.world._object(session.state.lots[home],source_plant).get("color_style")==pot_style and session.state.lots[home].funds==color_funds)
+	await _command({"type":"build_undo","lot_id":home,"revision":session.state.lots[home].revision})
+	for _attempt in range(50):
+		if not session.world._object(session.state.lots[home],source_plant).has("color_style"): break
+		await create_timer(0.1).timeout
+	assert(not session.world._object(session.state.lots[home],source_plant).has("color_style"))
+	await _command({"type":"build_redo","lot_id":home,"revision":session.state.lots[home].revision})
+	for _attempt in range(50):
+		if session.world._object(session.state.lots[home],source_plant).get("color_style")==pot_style: break
+		await create_timer(0.1).timeout
+	assert(session.world._object(session.state.lots[home],source_plant).get("color_style")==pot_style and session.state.lots[home].funds==color_funds)
 	await _command({"type":"set_window","lot_id":home,"style":"cottage","x":13,"y":1,"revision":session.state.lots[home].revision})
 	for _attempt in range(50):
 		if session.state.lots[home].windows.get("13,1")=="cottage": break
@@ -267,6 +293,7 @@ func _client(index: String) -> void:
 	assert(preload("res://game/room_copy.gd").is_applied(session.state.lots[home],copy_plan) and session.state.lots[home].funds==before_copy-482)
 	var copied_plant: String=session.world._object_at(session.state.lots[home],Vector2i(5,1)).id
 	assert(copied_plant!=source_plant,"The host allocates a new object instead of copying the source identity")
+	assert(session.world._object(session.state.lots[home],copied_plant).get("color_style")==pot_style,"Room duplication preserves the chosen pot color")
 	await _command({"type":"build_undo","lot_id":home,"revision":session.state.lots[home].revision})
 	for _attempt in range(50):
 		if not [5,1] in session.state.lots[home].floors: break
@@ -585,6 +612,7 @@ func _client(index: String) -> void:
 	assert(session.state.lots[home].finishes.floor.get("14,1")=="sage_tile","Reconnect lost the floor finish")
 	assert(session.state.lots[home].finishes.floor.get("7,7")=="walnut" and not session.state.lots[home].finishes.floor.has("8,11"),"Reconnect retains the room fill and its doorway boundary")
 	assert(int(session.world._object(session.state.lots[home],moved_id).x)==9, "Reconnect lost furnishing move")
+	assert(session.world._object(session.state.lots[home],moved_id).get("color_style")=="ink" and session.world._object(session.state.lots[home],source_plant).get("color_style")==pot_style,"Recoloring survives moves, room copies, and reconnect")
 	assert(session.state.families[identity].members[0].hobbies==hobbies_before,"Reconnect lost personal hobbies")
 	assert(session.state.families[identity].members[0].wishes.journal==journal_before,"Reconnect lost the activity journal")
 	assert(not session.state.families[identity].members[0].autonomy, "Reconnect lost autonomy preference")

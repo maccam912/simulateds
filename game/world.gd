@@ -5,6 +5,7 @@ const Catalog = preload("res://game/catalog.gd")
 const BuildRules = preload("res://game/build_rules.gd")
 const RoomPlan = preload("res://game/room_plan.gd")
 const RoomCopy = preload("res://game/room_copy.gd")
+const FurnitureColors = preload("res://game/furniture_colors.gd")
 const Wishes = preload("res://game/wishes.gd")
 const Hobbies = preload("res://game/hobbies.gd")
 const Friendships = preload("res://game/friendships.gd")
@@ -136,7 +137,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 	if not lot_id is String or not state.lots.has(lot_id):
 		return _result(false, "That lot does not exist.")
 	var lot: Dictionary = state.lots[lot_id]
-	if type in ["build_begin", "build_end", "build_cancel", "build_undo", "build_redo", "place", "erase", "move_object", "build_room", "copy_room", "paint", "set_window"]:
+	if type in ["build_begin", "build_end", "build_cancel", "build_undo", "build_redo", "place", "erase", "move_object", "build_room", "copy_room", "paint", "set_window", "recolor"]:
 		if lot.owner != profile_id:
 			return _result(false, "Only the owner can build on this lot.")
 		if type == "build_begin":
@@ -158,7 +159,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 			return _result(true, "Construction started. Your family is paused; neighbors keep living.")
 		if not lot.building:
 			return _result(false, "Enter construction mode first.")
-		if type in ["build_undo", "build_redo", "build_room", "copy_room", "paint", "set_window"]:
+		if type in ["build_undo", "build_redo", "build_room", "copy_room", "paint", "set_window", "recolor"]:
 			if not _integer(command.get("revision")) or int(command.revision) != int(lot.revision):
 				return _result(false, "The building draft changed. Review the preview and try again.")
 			if type in ["build_undo","build_redo"]: return _history_step(lot,type == "build_redo")
@@ -433,6 +434,12 @@ func move_option(profile_id: String,member_id: String,lot_id: String,goal: Vecto
 	return {"ok":true,"message":"Walk here" if ahead==0 else "Queue walk · %d %s first" % [ahead,"activity" if ahead==1 else "activities"],"path":route,"ahead":ahead,"cell":goal,"here":_position(member)==goal}
 
 func _build(lot: Dictionary, command: Dictionary) -> Dictionary:
+	if command.type=="recolor":
+		var plan := FurnitureColors.inspect(lot,command)
+		if not plan.ok: return plan
+		FurnitureColors.set_style(_object(lot,str(command.object_id)),str(command.style))
+		lot.revision+=1
+		return _result(true,str(Catalog.ITEMS[plan.kind].name)+" recolored "+str(FurnitureColors.PALETTE[plan.style].name)+". No charge. Undo restores the previous color.")
 	if not _valid_coord(command.get("x")) or not _valid_coord(command.get("y")):
 		return _result(false, "Choose a tile inside the lot.")
 	var cell := Vector2i(int(command.x), int(command.y))
@@ -476,7 +483,9 @@ func _build(lot: Dictionary, command: Dictionary) -> Dictionary:
 		if not plan.ok: return plan
 		if int(state.next_object)+plan.objects.size()>9007199254740991: return _result(false,"The furnishing identifier limit has been reached.")
 		RoomCopy.apply_surfaces(lot,plan)
-		for object: Dictionary in plan.objects: lot.objects.append(_new_object(str(object.kind),int(object.x),int(object.y),int(object.rotation)))
+		for object: Dictionary in plan.objects:
+			var copied := _new_object(str(object.kind),int(object.x),int(object.y),int(object.rotation))
+			FurnitureColors.set_style(copied,FurnitureColors.at(object)); lot.objects.append(copied)
 		lot.funds-=int(plan.cost); lot.revision+=1
 		return _result(true,"Room copied for §%d. One Undo restores the whole placement." % int(plan.cost))
 	if command.type=="build_room":
@@ -1292,6 +1301,7 @@ func _valid_state(data: Dictionary) -> bool:
 			object_ids[object.id] = true
 			if object.kind=="garden_bed" and not Gardens.valid(object.get("garden")): return false
 			if object.kind!="garden_bed" and object.has("garden"): return false
+			if not FurnitureColors.valid(object): return false
 			for cell: Vector2i in _object_cells(object):
 				if not _inside(cell) or occupied.has(cell) or (object.kind!="garden_bed" and not floor_cells.has(cell)):
 					return false

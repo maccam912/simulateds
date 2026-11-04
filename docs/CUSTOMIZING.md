@@ -8,6 +8,7 @@ household or an absent player.
 | --- | --- |
 | `game/catalog.gd` | Furniture prices, footprints, need effects, duration, labels, and color hints |
 | `game/room_copy.gd` | Pure enclosed-room capture, rotation, price/access inspection, and surface application; authority allocates fresh furnishing IDs |
+| `game/furniture_colors.gd` | Named material palette, optional validated object color, and pure recoloring preview; missing metadata preserves legacy art |
 | `game/world.gd` | Serializable neighborhood state; ownership, construction, pathfinding, actions, autonomy, and needs |
 | `game/main.gd` | Main scene UI, selection, tool catalog, connection panel, and command submission |
 | `game/lot_view.gd` | Isometric rendering, tile picking, placement preview, pan, and zoom |
@@ -25,6 +26,9 @@ household or an absent player.
    cost, footprint, visual color, need, rate, duration, and description.
 2. Add its drawing to `lot_view.gd` (the fallback block is useful while prototyping)
    and expose it in the appropriate palette group in `main.gd`.
+   Name its recolorable material in `FurnitureColors.MATERIALS` and use
+   `FurnitureColors.material` for that material in its renderer. Keep the original
+   color as the fallback and leave distinct details such as foliage unchanged.
 3. Add a readable activity label in the model when it needs one. Ordinary
    single-need furniture uses the existing interaction machinery.
 4. Check rotation, collision, placement cost/refund, reachable interaction cells,

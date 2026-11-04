@@ -1372,3 +1372,37 @@ step is a small, coherent furnishing palette with in-world previews and undo,
 so households can give their rooms distinct looks without buying replacement
 furniture. Preserve those choices through moves, room copies, saves, and remote
 play. This is proposed next work, not implemented behavior in this checkpoint.
+
+## Give furnishings their own colors
+
+Furniture colors adds Original, Sage, Sky, Rose, Honey, and Ink as free material
+choices. The same six labeled swatches fit in the compact tray. Hover previews
+the actual furnishing, and one click applies the choice with normal build sound
+and Undo. Bedding, upholstery, enamel, woodwork, pots, and garden frames change;
+foliage, glass, books, electronics, game pieces, and crops retain their details.
+Original restores the precise old art. No-op clicks create no history, and
+colors neither replace objects nor change budget or resale value.
+
+Standard and compact native input flows colored every furnishing, restored
+Original, undid/redid, opened catalog search and access inspection, and checked
+pending host feedback. The two beds read as distinct Sky and Rose bedding, the
+palette remained legible, and the sleeping pose retained its bed's material.
+Model checks cover all materials, malformed requests, fresh room-copy identities,
+legacy saves, committed-save boundaries, and preservation of living crops.
+
+All 66 local suites passed after updating the bed-search expectation to include
+bedding colors; the compact native catalog check passed too. The actual Iroh
+host/two-client scenario retained colored furniture through undo/redo, movement,
+room duplication, and reconnect, with no change in funds. Dedicated startup
+passed. The preceding room-copy checkpoint passed all four CI platform jobs.
+These remain automated rendering/input and separate-process checks, not human
+family or physical-device playtests.
+
+Fresh assessment: the palette makes repeated furniture feel personal, and
+decorating is quick enough to experiment with. The setup exposed a more pressing
+building usability gap: a valid game-table placement could seal access to the
+fridge, only becoming obvious at Finish building or in Access. Next, warn about
+that consequence in the placement preview, naming the affected furnishing and
+showing the route problem before purchase. Keep draft editing flexible while
+making the consequence visible. This is proposed next work, not implemented
+behavior in this checkpoint.

@@ -513,3 +513,22 @@ pending preview; unrelated acknowledgements cannot dismiss it. New furnishings
 receive new identities, and garden beds begin empty, with that limitation named
 in the preview when applicable. Saved designs and cross-lot copying remain future
 work.
+
+### Furnishing materials
+
+Use one restrained palette across the home's furnishings: Original, Sage
+(`#8fa985`), Sky (`#88a9bc`), Rose (`#c58f8d`), Honey (`#c9a363`), and Ink
+(`#596d78`). Apply it to a named material, such as bedding or upholstery, with
+small tonal differences between cushions and frames. Keep glass, foliage,
+electronics, book spines, game pieces, and crop state distinct. Sleeping bedding
+uses the same choice as the unoccupied bed. Original preserves the precise
+existing rendering rather than approximating it with a shared neutral tint.
+
+The catalog's Furniture colors tray shows all six labeled swatches together.
+Hover an object to preview the actual material in the world, with a small outline
+and a readable Free / Click to apply label. Apply with one click and use the
+normal build sound and Undo. An unchanged choice creates no edit. This is a
+personalization choice, with no purchase, resale premium, or care effect.
+Previews must not mutate accepted state, and the pending appearance waits for
+the matching host snapshot. Store only a bounded optional style name on the
+furnishing, preserving it through moves, room copies, and persistence.

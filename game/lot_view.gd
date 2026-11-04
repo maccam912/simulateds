@@ -9,6 +9,7 @@ const Gardens = preload("res://game/gardens.gd")
 const BuildRules = preload("res://game/build_rules.gd")
 const RoomPlan = preload("res://game/room_plan.gd")
 const RoomCopy = preload("res://game/room_copy.gd")
+const FurnitureColors = preload("res://game/furniture_colors.gd")
 const Finishes = preload("res://game/finishes.gd")
 const Windows = preload("res://game/windows.gd")
 const WalkFeedback = preload("res://game/walk_feedback.gd")
@@ -48,6 +49,9 @@ var copy_pending := false
 var copy_plan: Dictionary={}
 var _copy_preview_key := ""
 var copy_preview: Dictionary={}
+var furniture_color := "original"
+var color_request: Dictionary={}
+var color_preview: Dictionary={}
 var paint_anchor := Vector2i(-1,-1)
 var paint_pending := false
 var paint_plan: Dictionary = {}
@@ -238,6 +242,7 @@ func _gui_input(event: InputEvent) -> void:
 				if building and build_kind in ["finish_wall","door","erase","window"] and target.get("type")=="wall": cell=Vector2i(int(target.x),int(target.y))
 				if building and build_kind=="move" and build_object_id.is_empty() and target.get("type")=="object":
 					entity_clicked.emit(target)
+				elif building and build_kind=="furniture_color" and target.get("type")=="object": entity_clicked.emit(target)
 				elif not building and not target.is_empty():
 					if target.get("type")=="care": _last_care_click=Time.get_ticks_msec()
 					entity_clicked.emit(target)
@@ -310,6 +315,9 @@ func _draw() -> void:
 		draw_string(_font, Vector2(40,80), "Preparing your neighborhood…", HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color("34514c"))
 		return
 	var lot: Dictionary = world.lots[lot_id]
+	color_preview={}
+	if building and build_kind=="furniture_color" and not access_inspecting:
+		color_preview=FurnitureColors.inspect(lot,color_request if not color_request.is_empty() else {"object_id":str(hover_target.get("id","")),"style":furniture_color})
 	var scale_factor := _cell.x / 48.0
 	var floors: Dictionary = {}
 	var walls: Dictionary = {}
@@ -385,7 +393,10 @@ func _draw() -> void:
 	entities.sort_custom(func(a,b): return a.depth < b.depth)
 	for entity in entities:
 		if entity.has("object"):
-			_furnishing(entity.object,scale_factor)
+			var drawn: Dictionary=entity.object
+			if color_preview.get("ok",false) and color_preview.object_id==drawn.id:
+				drawn=drawn.duplicate(true); FurnitureColors.set_style(drawn,str(color_preview.style))
+			_furnishing(drawn,scale_factor)
 		else:
 			_resident(entity.member, entity.family,scale_factor)
 	_draw_street_lights(scale_factor)
@@ -394,6 +405,7 @@ func _draw() -> void:
 	hover_target = hit_target(_pointer)
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if (not building and not hover_target.is_empty()) or (building and access_inspecting and hover_target.get("type")=="access") else Control.CURSOR_ARROW
 	if building and access_inspecting: pass
+	elif building and build_kind=="furniture_color": _draw_furniture_color()
 	elif building and build_kind=="copy_room": _draw_room_copy(lot)
 	elif building and build_kind=="room":
 		_draw_room_preview(lot)
@@ -723,39 +735,39 @@ func _furnishing(obj: Dictionary,s: float) -> void:
 		"bed":
 			_block(x+0.05,y+0.05,w-0.1,d-0.1,10*s,Color("785648"))
 			_block(x+0.08,y+0.08,w-0.16,d-0.16,6*s,Color("e9e4cd"),10*s)
-			_block(x+0.09,y+d*0.36,w-0.18,d*0.60,3*s,Color("92aaa6"),16*s)
+			_block(x+0.09,y+d*0.36,w-0.18,d*0.60,3*s,FurnitureColors.material(obj,"92aaa6",0),16*s)
 			_block(x+0.16,y+0.13,w-0.32,d*0.18,3*s,Color("faf2d9"),16*s)
 			_block(x+0.02,y+0.02,w-0.04,0.12,24*s,Color("967259"))
 		"sofa":
-			_block(x+0.06,y+0.08,w-0.12,d-0.16,12*s,Color("be7c57"))
-			_block(x+0.08,y+0.06,w-0.16,0.2,25*s,Color("d5996e"))
-			_block(x+0.08,y+0.29,w-0.16,d-0.4,4*s,Color("e0a576"),12*s)
-			_block(x+0.03,y+0.2,0.16,d-0.25,21*s,Color("cb9066"))
-			_block(x+w-0.19,y+0.2,0.16,d-0.25,21*s,Color("cb9066"))
+			_block(x+0.06,y+0.08,w-0.12,d-0.16,12*s,FurnitureColors.material(obj,"be7c57",-0.12))
+			_block(x+0.08,y+0.06,w-0.16,0.2,25*s,FurnitureColors.material(obj,"d5996e",0.05))
+			_block(x+0.08,y+0.29,w-0.16,d-0.4,4*s,FurnitureColors.material(obj,"e0a576",0.12),12*s)
+			_block(x+0.03,y+0.2,0.16,d-0.25,21*s,FurnitureColors.material(obj,"cb9066",0))
+			_block(x+w-0.19,y+0.2,0.16,d-0.25,21*s,FurnitureColors.material(obj,"cb9066",0))
 		"fridge":
-			_block(x+0.1,y+0.1,w-0.2,d-0.2,39*s,Color("cee0d5"))
+			_block(x+0.1,y+0.1,w-0.2,d-0.2,39*s,FurnitureColors.material(obj,"cee0d5",0.16))
 			var p := grid_point(x+w-0.08,y+d*0.7)
 			draw_line(p+Vector2(0,-14*s),p+Vector2(0,-29*s),Color("718c86"),2*s)
 		"shower":
 			_block(x+0.06,y+0.06,w-0.12,d-0.12,5*s,Color("e4e7da"))
-			_block(x+0.06,y+0.06,w-0.12,0.12,42*s,Color("a4c7c3"))
+			_block(x+0.06,y+0.06,w-0.12,0.12,42*s,FurnitureColors.material(obj,"a4c7c3",0.12))
 			var p := grid_point(x+0.5,y+0.2)
 			draw_line(p+Vector2(0,-33*s),p+Vector2(6,-36)*s,Color("edf0df"),3*s)
 		"toilet":
-			_block(x+0.22,y+0.1,w-0.44,0.25,22*s,Color("e6e4d3"))
-			_block(x+0.22,y+0.35,w-0.44,d-0.45,10*s,Color("eaeada"))
+			_block(x+0.22,y+0.1,w-0.44,0.25,22*s,FurnitureColors.material(obj,"e6e4d3",0.18))
+			_block(x+0.22,y+0.35,w-0.44,d-0.45,10*s,FurnitureColors.material(obj,"eaeada",0.24))
 			var p := grid_point(x+0.5,y+0.63)+Vector2(0,-11*s)
 			draw_set_transform(p,0,Vector2(1,0.6))
-			draw_circle(Vector2.ZERO,8*s,Color("f5f3e4"))
+			draw_circle(Vector2.ZERO,8*s,FurnitureColors.material(obj,"f5f3e4",0.32))
 			draw_circle(Vector2.ZERO,4*s,Color("8ca9a4"))
 			draw_set_transform(Vector2.ZERO)
 		"tv":
-			_block(x+0.08,y+0.1,w-0.16,d-0.2,9*s,Color("87674e"))
+			_block(x+0.08,y+0.1,w-0.16,d-0.2,9*s,FurnitureColors.material(obj,"87674e",-0.12))
 			_block(x+0.14,y+0.18,w-0.28,d-0.36,23*s,Color("34494d"),9*s)
 			var p := grid_point(x+0.55,y+d-0.17)+Vector2(0,-20*s)
 			draw_circle(p,6*s,Color("9bc9b0"))
 		"stereo":
-			_block(x+0.08,y+0.16,w-0.16,d-0.32,9*s,Color("967450"))
+			_block(x+0.08,y+0.16,w-0.16,d-0.32,9*s,FurnitureColors.material(obj,"967450",-0.08))
 			_block(x+0.12,y+0.20,w-0.24,d-0.40,13*s,Color("35484a"),9*s)
 			for offset: float in [0.27,0.73]:
 				var speaker := grid_point(x+offset,y+d-0.18)+Vector2(0,-16*s)
@@ -766,22 +778,22 @@ func _furnishing(obj: Dictionary,s: float) -> void:
 				var pulse := 0.0 if Preferences.values.reduced_motion else sin(_time*TAU/0.6)*1.5
 				draw_string(_font,display+Vector2(12,-12+pulse)*s,"♪",HORIZONTAL_ALIGNMENT_LEFT,-1,maxi(12,roundi(17*s)),Color("edc98b"))
 		"bookshelf":
-			_block(x+0.08,y+0.1,w-0.16,d-0.2,35*s,Color("987256"))
+			_block(x+0.08,y+0.1,w-0.16,d-0.2,35*s,FurnitureColors.material(obj,"987256",-0.08))
 			for i in range(5):
 				var p := grid_point(x+0.2+float(i)*0.12,y+d-0.08)
 				draw_line(p+Vector2(0,-12*s),p+Vector2(0,-29*s),[Color("b3c3a2"),Color("d8a06e"),Color("edd8a1")][i%3],4*s)
 		"plant":
 			var foliage := grid_point(x+0.5,y+0.5)
 			_hit_regions.append({"polygon":PackedVector2Array([foliage+Vector2(-13,-34)*s,foliage+Vector2(13,-34)*s,foliage+Vector2(13,-8)*s,foliage+Vector2(-13,-8)*s]),"target":_drawing_target})
-			_block(x+0.3,y+0.3,0.4,0.4,10*s,Color("bf8665"))
+			_block(x+0.3,y+0.3,0.4,0.4,10*s,FurnitureColors.material(obj,"bf8665",0))
 			var p := grid_point(x+0.5,y+0.5)+Vector2(0,-11*s)
 			draw_line(p,p+Vector2(0,-20*s),Color("466f4b"),3*s)
 			for i in range(4):
 				draw_circle(p+Vector2((-1 if i%2==0 else 1)*6,-8-i*3)*s,6*s,Color("71985e"))
 		"table", "game_table":
-			_block(x+0.2,y+0.2,0.14,0.14,18*s,Color("806550"))
-			_block(x+w-0.34,y+d-0.34,0.14,0.14,18*s,Color("806550"))
-			_block(x+0.04,y+0.04,w-0.08,d-0.08,4*s,Color("ccaa78"),18*s)
+			_block(x+0.2,y+0.2,0.14,0.14,18*s,FurnitureColors.material(obj,"806550",-0.22))
+			_block(x+w-0.34,y+d-0.34,0.14,0.14,18*s,FurnitureColors.material(obj,"806550",-0.22))
+			_block(x+0.04,y+0.04,w-0.08,d-0.08,4*s,FurnitureColors.material(obj,"ccaa78",0.12),18*s)
 			if kind=="game_table":
 				for board_y in range(4):
 					for board_x in range(4):
@@ -800,7 +812,7 @@ func _furnishing(obj: Dictionary,s: float) -> void:
 func _garden_furnishing(object: Dictionary,s: float) -> void:
 	var x: float=object.x; var y: float=object.y
 	var bed: Dictionary=object.get("garden",Gardens.create())
-	_block(x+0.04,y+0.04,1.92,0.92,7*s,Color("906e50"))
+	_block(x+0.04,y+0.04,1.92,0.92,7*s,FurnitureColors.material(object,"906e50",-0.12))
 	_diamond(x+0.15,y+0.15,1.7,0.7,Color("68533c") if float(bed.water)>0 else Color("9a805b"),7.5*s)
 	for row in range(2):
 		for column in range(3):
@@ -898,7 +910,7 @@ func _sleeping_resident(member: Dictionary,family: Dictionary,object: Dictionary
 	var head := grid_point(head_cell.x,head_cell.y)+Vector2(0,-22)*s
 	var feet := grid_point(feet_cell.x,feet_cell.y)+Vector2(0,-20)*s
 	var torso := head.lerp(feet,0.28)
-	draw_line(torso,feet,Color("97b8b1"),14*s,true)
+	draw_line(torso,feet,FurnitureColors.material(object,"97b8b1",0.08),14*s,true)
 	Appearance.draw_head(self,head,s,Appearance.of(member))
 	var target := {"type":"member","id":member.id,"name":member.name,"owner":family.id}
 	var box := Rect2(head,Vector2.ZERO).expand(feet).grow(9*s)
@@ -1275,3 +1287,11 @@ func _draw_window(lot: Dictionary,x: int,y: int,height: float,style: String,s: f
 				for z in [15,20,25,30]: draw_line(_window_face(x,y,along,limits[0]+0.02,z*s),_window_face(x,y,along,limits[1]-0.02,z*s),Color("97b098"),maxf(0.7,s),true)
 	# The sill stays readable when near walls are cut down during normal play.
 	draw_line(_window_face(x,y,along,left-0.06,bottom-2*s),_window_face(x,y,along,right+0.06,bottom-2*s),frame.lightened(0.12),2*s,true)
+
+func _draw_furniture_color() -> void:
+	if color_preview.is_empty(): return
+	if color_preview.has("object_id"):
+		var size := Catalog.footprint(str(color_preview.kind),int(color_preview.rotation))
+		_diamond(int(color_preview.x),int(color_preview.y),size.x,size.y,Color.TRANSPARENT,2,Color("b9de99"))
+	if not _in_bounds(hover_cell) and color_request.is_empty(): return
+	_draw_preview_label("Applying color…" if not color_request.is_empty() else str(color_preview.message),bool(color_preview.ok) or color_preview.get("reason")=="unchanged")

@@ -12,6 +12,7 @@ const GardenPanel = preload("res://game/garden_panel.gd")
 const BuildCatalog = preload("res://game/build_catalog.gd")
 const RoomPlan = preload("res://game/room_plan.gd")
 const RoomCopy = preload("res://game/room_copy.gd")
+const FurnitureColors = preload("res://game/furniture_colors.gd")
 const Wishes = preload("res://game/wishes.gd")
 const Hobbies = preload("res://game/hobbies.gd")
 const Friendships = preload("res://game/friendships.gd")
@@ -132,6 +133,9 @@ var _room_request: Dictionary = {}
 var _copy_source := Vector2i(-1,-1)
 var _copy_revision := -1
 var _copy_request: Dictionary={}
+var furniture_color := "original"
+var color_buttons: Dictionary={}
+var _color_request: Dictionary={}
 var _paint_anchor := Vector2i(-1,-1)
 var _floor_selection := "area"
 var finish_mode_buttons: Dictionary={}
@@ -157,6 +161,7 @@ func _ready() -> void:
 	Session.action_result.connect(_notice)
 	Session.command_completed.connect(_window_completed)
 	Session.command_completed.connect(_copy_completed)
+	Session.command_completed.connect(_color_completed)
 	Rooms.changed.connect(_refresh)
 	_refresh()
 
@@ -422,7 +427,7 @@ func _refresh() -> void:
 		viewed_lot = str(family.home_lot)
 		_selected_object = ""
 		_moving_object = ""; _move_request.clear(); _wish_seen.clear(); _friend_seen.clear(); _hobby_seen.clear(); _room_anchor=Vector2i(-1,-1); _room_request.clear()
-		_paint_anchor=Vector2i(-1,-1); _paint_request.clear(); _window_request.clear(); _copy_source=Vector2i(-1,-1); _copy_request.clear()
+		_paint_anchor=Vector2i(-1,-1); _paint_request.clear(); _window_request.clear(); _color_request.clear(); _copy_source=Vector2i(-1,-1); _copy_request.clear()
 	if viewed_lot.is_empty() or not state.get("lots",{}).has(viewed_lot):
 		viewed_lot = str(family.get("home_lot","lot_1"))
 	if selected_member.is_empty() and not family.get("members",[]).is_empty():
@@ -471,6 +476,9 @@ func _refresh() -> void:
 		if int(lot.revision)>int(_copy_request.intent.revision) and RoomCopy.is_applied(lot,_copy_request.plan):
 			_copy_source=Vector2i(-1,-1); _copy_request.clear()
 	elif _copy_source.x>=0 and int(lot.revision)!=_copy_revision: _copy_source=Vector2i(-1,-1)
+	if not building or not mine or selected_tool!="furniture_color": _color_request.clear()
+	elif not _color_request.is_empty() and int(lot.revision)>int(_color_request.revision) and FurnitureColors.is_applied(lot,_color_request): _color_request.clear()
+	lot_view.furniture_color=furniture_color; lot_view.color_request=_color_request
 	lot_view.copy_source=_copy_source; lot_view.copy_pending=not _copy_request.is_empty(); lot_view.copy_plan=_copy_request.get("plan",{})
 	if not building or not mine or _paint_surface().is_empty():
 		_paint_anchor=Vector2i(-1,-1); _paint_request.clear()
@@ -558,7 +566,7 @@ func _refresh() -> void:
 			need_buttons[need].disabled=bool(state.lots[family.home_lot].building)
 			if care_values.has(need) and is_instance_valid(care_values[need]): care_values[need].text=str(need).capitalize()+" · %d" % int(value)
 	var build_mode := building and mine
-	catalog_filters.visible=build_mode and selected_tool!="window" and _paint_surface().is_empty() and _context_page!="access"
+	catalog_filters.visible=build_mode and selected_tool not in ["window","furniture_color"] and _paint_surface().is_empty() and _context_page!="access"
 	wishes_button.disabled=build_mode or member.is_empty()
 	hobbies_button.disabled=bool(state.lots.get(family.get("home_lot",""),{}).get("building",false)) or member.is_empty()
 	people_button.disabled=build_mode or member.is_empty()
@@ -571,7 +579,7 @@ func _refresh() -> void:
 	palette_button.text = "Catalog" if build_mode else "Activities"
 	var tools_signature := str(building and mine)+selected_tool+_moving_object+str(_move_request.is_empty())+_selected_object+str(build_rotation)+viewed_lot+str(lot.get("revision",0))+_context_page+selected_member+str(_room_anchor)+str(_room_request.is_empty())
 	if build_mode: tools_signature+=_catalog_category+":"+_catalog_query+":"+str(lot.get("funds",0))+str(_access_visible)+str(_access_report.get("issues",[]))
-	tools_signature+=window_style+str(_window_request.is_empty())
+	tools_signature+=window_style+str(_window_request.is_empty())+furniture_color+str(_color_request.is_empty())
 	tools_signature+=str(_copy_source)+str(_copy_request.is_empty())
 	tools_signature+=str(_paint_anchor)+str(_paint_request.is_empty())+str(finish_choice)+_floor_selection
 	if _context_page=="wishes" and not build_mode:
@@ -599,6 +607,7 @@ func _refresh() -> void:
 	if building and mine and selected_tool=="room": help_label.text="Click two opposite corners · " + Preferences.action_label("rotate") + " changes door side · Escape cancels"
 	if building and mine and not _paint_surface().is_empty(): help_label.text="Click to finish a room · Walls and doorways mark its edges" if _paint_selection()=="room" else "Click two corners to decorate · Same tile twice for one · Escape cancels"
 	if building and mine and selected_tool=="copy_room": help_label.text="Choose a room to copy" if _copy_source.x<0 else "Choose clear space · "+Preferences.action_label("rotate")+" rotates the copy · Escape cancels"
+	if building and mine and selected_tool=="furniture_color": help_label.text="Choose a color · Hover furniture to preview · Click to apply · Free"
 	if building and mine and selected_tool=="window": help_label.text="Choose a style, then click a wall · Windows follow its direction"
 	if building and mine and _context_page=="access": help_label.text="Find an item · Choose Door, Move, or Sell to repair"
 	help_label.tooltip_text=help_label.text
@@ -782,6 +791,7 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 		activity_label.text="Build & buy"
 		if _context_page=="access": _build_access_list()
 		elif selected_tool=="window": _build_window_palette()
+		elif selected_tool=="furniture_color": _build_color_palette()
 		elif _paint_surface().is_empty(): _build_catalog()
 		else: _build_finish_palette(_paint_surface())
 		_build_edit_controls(lot)
@@ -851,7 +861,7 @@ func _announce_wishes(family: Dictionary) -> void:
 		_wish_seen[resident.id]=count
 
 func _select_lot(id: String) -> void:
-	_paint_anchor=Vector2i(-1,-1); _paint_request.clear(); _window_request.clear(); _copy_source=Vector2i(-1,-1); _copy_request.clear()
+	_paint_anchor=Vector2i(-1,-1); _paint_request.clear(); _window_request.clear(); _color_request.clear(); _copy_source=Vector2i(-1,-1); _copy_request.clear()
 	viewed_lot=id; _selected_object=""; _room_anchor=Vector2i(-1,-1); _room_request.clear(); neighborhood_panel.hide(); _refresh()
 
 func _select_resident(id: String) -> void:
@@ -891,6 +901,8 @@ func _entity_clicked(target: Dictionary) -> void:
 			if resident.id==target.get("id") and resident.lot_id==viewed_lot:
 				selected_member=str(resident.id); _care_need(str(target.need)); return
 		return
+	if lot_view.building and selected_tool=="furniture_color" and target.get("type")=="object":
+		_recolor(str(target.id)); return
 	if lot_view.building and selected_tool=="move" and target.get("type")=="object":
 		_select_moving_object(str(target.id)); return
 	if target.get("type") == "object":
@@ -903,8 +915,8 @@ func _entity_clicked(target: Dictionary) -> void:
 
 func _select_build_tool(kind: String) -> void:
 	if _context_page=="access": _context_page="activities"
-	var reset_scroll := kind.begins_with("finish_") or not _paint_surface().is_empty() or kind=="window" or selected_tool=="window"
-	selected_tool=kind; _moving_object=""; _move_request.clear()
+	var reset_scroll := kind.begins_with("finish_") or not _paint_surface().is_empty() or kind in ["window","furniture_color"] or selected_tool in ["window","furniture_color"]
+	selected_tool=kind; _moving_object=""; _move_request.clear(); _color_request.clear()
 	_paint_anchor=Vector2i(-1,-1); _paint_request.clear()
 	_room_anchor=Vector2i(-1,-1); _room_request.clear(); _copy_source=Vector2i(-1,-1); _copy_request.clear(); _refresh()
 	if reset_scroll: call_deferred("_reset_catalog_scroll")
@@ -924,6 +936,8 @@ func _tile_clicked(cell: Vector2i) -> void:
 	if lot.is_empty(): return
 	if bool(lot.building) and str(lot.owner)==str(Session.profile_id):
 		if _context_page=="access": return
+		if selected_tool=="furniture_color":
+			_recolor(str(Session.world._object_at(lot,cell).get("id",""))); return
 		if selected_tool=="copy_room":
 			if not _copy_request.is_empty(): return
 			if _copy_source.x<0:
@@ -1053,7 +1067,7 @@ func _build_history(redo: bool) -> void:
 
 func _rotate() -> void:
 	if not _copy_request.is_empty(): return
-	if not _paint_surface().is_empty() or selected_tool=="window": return
+	if not _paint_surface().is_empty() or selected_tool in ["window","furniture_color"]: return
 	build_rotation=(build_rotation+1)%4; _refresh()
 
 func _toggle_fullscreen() -> void:
@@ -1083,7 +1097,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if focused is LineEdit or focused is TextEdit: return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if lot_view.building and (event.ctrl_pressed or event.meta_pressed) and event.keycode==KEY_F:
-			if not _paint_surface().is_empty() or selected_tool=="window": _select_build_tool("floor")
+			if not _paint_surface().is_empty() or selected_tool in ["window","furniture_color"]: _select_build_tool("floor")
 			_context_page="activities"; _refresh()
 			_show_tray(context_panel,true); catalog_search.grab_focus(); catalog_search.select_all()
 		elif lot_view.building and (event.ctrl_pressed or event.meta_pressed) and event.keycode in [KEY_Z,KEY_Y]:
@@ -1406,7 +1420,7 @@ func _edit_button(text: String, action: Callable, parent: Node, tooltip: String=
 	return button
 
 func _build_edit_controls(lot: Dictionary) -> void:
-	var painting := (not _paint_surface().is_empty() or selected_tool=="window") and _context_page!="access"
+	var painting := (not _paint_surface().is_empty() or selected_tool in ["window","furniture_color"]) and _context_page!="access"
 	if _context_page=="access":
 		var repairs := HBoxContainer.new(); repairs.add_theme_constant_override("separation",5); context_box.add_child(repairs)
 		_edit_button("Door",func(): _select_build_tool("door"),repairs,"Choose a door to reconnect a room.")
@@ -1441,7 +1455,7 @@ func _build_edit_controls(lot: Dictionary) -> void:
 	redo_button=_edit_button("Redo",func(): _build_history(true),history,"Redo a building edit · Ctrl/Cmd+Shift+Z or Ctrl+Y")
 	undo_button.disabled=int(lot.get("build_undo",0))==0; redo_button.disabled=int(lot.get("build_redo",0))==0
 	if not painting: _edit_button("Discard draft",func(): _send({"type":"build_cancel","lot_id":viewed_lot}),history,"Restore the whole house and budget from before construction.")
-	elif selected_tool=="window":
+	elif selected_tool in ["window","furniture_color"]:
 		_edit_button("Discard draft",func(): _send({"type":"build_cancel","lot_id":viewed_lot}),history,"Restore the house and budget from before construction.")
 	else:
 		var finish := HBoxContainer.new(); finish.add_theme_constant_override("separation",5); context_box.add_child(finish)
@@ -1594,3 +1608,46 @@ func _refresh_time_controls() -> void:
 		button.add_theme_color_override("font_color",Style.INK if active else Style.TEXT)
 		button.add_theme_color_override("font_focus_color",Style.INK if active else Style.TEXT)
 		button.add_theme_color_override("font_hover_color",Style.INK if active else Style.TEXT)
+
+func _recolor(object_id: String) -> void:
+	if not _color_request.is_empty(): return
+	var lot: Dictionary=Session.state.lots[viewed_lot]
+	var intent := {"type":"recolor","lot_id":viewed_lot,"object_id":object_id,"style":furniture_color,"revision":lot.revision}
+	var preview := FurnitureColors.inspect(lot,intent)
+	if not preview.ok:
+		_notice(str(preview.message)); return
+	_color_request=intent.duplicate(); _send(intent)
+
+func _color_completed(intent: Dictionary,ok: bool,_message: String) -> void:
+	if intent.get("type")!="recolor": return
+	if ok and hud.is_visible_in_tree(): Soundscape.play_ui("build")
+	if not _color_request.is_empty() and intent==_color_request:
+		if not ok: _color_request.clear()
+		_refresh()
+
+func _select_color(style: String) -> void:
+	if not _color_request.is_empty(): return
+	furniture_color=style; _refresh(); call_deferred("_focus_color",style)
+
+func _focus_color(style: String) -> void:
+	await get_tree().process_frame
+	if selected_tool!="furniture_color" or _context_page=="access" or not context_panel.visible: return
+	var button: Button=color_buttons.get(style)
+	if is_instance_valid(button) and not button.disabled:
+		button.grab_focus(); tools_box.get_parent().ensure_control_visible(button)
+
+func _build_color_palette() -> void:
+	activity_label.text="Furniture colors"; color_buttons.clear()
+	var back := _button("‹ Catalog",func(): _select_build_tool("bed")); back.add_theme_font_size_override("font_size",12); _compact_control(back); tools_box.add_child(back)
+	var note := _label("Free · Hover furniture to preview.\nClick to apply; Undo restores its color.",12,Style.MUTED)
+	note.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; note.custom_minimum_size.x=200; tools_box.add_child(note)
+	var swatches := GridContainer.new(); swatches.columns=2; swatches.add_theme_constant_override("h_separation",6); swatches.add_theme_constant_override("v_separation",6); tools_box.add_child(swatches)
+	for style: String in FurnitureColors.PALETTE:
+		var definition: Dictionary=FurnitureColors.PALETTE[style]
+		var active := furniture_color==style
+		var button := _button(str(definition.name),func(): _select_color(style),active)
+		button.add_theme_font_size_override("font_size",12); button.alignment=HORIZONTAL_ALIGNMENT_LEFT; button.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+		button.custom_minimum_size.y=42; _compact_control(button,active); button.disabled=not _color_request.is_empty()
+		button.tooltip_text="Restore the furnishing's original materials." if style=="original" else "Change bedding, upholstery, enamel, woodwork, or the pot. Details keep their own colors."
+		var swatch := Image.create(14,22,false,Image.FORMAT_RGBA8); swatch.fill(Color(definition.color)); button.icon=ImageTexture.create_from_image(swatch)
+		swatches.add_child(button); color_buttons[style]=button

@@ -6,6 +6,7 @@ const Catalog = preload("res://game/catalog.gd")
 const Finishes = preload("res://game/finishes.gd")
 const Windows = preload("res://game/windows.gd")
 const Access = preload("res://game/build_access.gd")
+const FurnitureColors = preload("res://game/furniture_colors.gd")
 
 static func capture(lot: Dictionary, seed: Vector2i) -> Dictionary:
 	var interior := Finishes.room_cells(lot,seed)
@@ -45,7 +46,8 @@ static func capture(lot: Dictionary, seed: Vector2i) -> Dictionary:
 				if inside.has(Vector2i(x,y)): count+=1
 		if count==0: continue
 		if count!=size.x*size.y: return _no("A furnishing crosses the room boundary. Move it fully inside first.")
-		result.objects.append({"kind":str(object.kind),"x":int(object.x)-low.x,"y":int(object.y)-low.y,"rotation":int(object.rotation)})
+		var furnishing := {"kind":str(object.kind),"x":int(object.x)-low.x,"y":int(object.y)-low.y,"rotation":int(object.rotation)}
+		FurnitureColors.set_style(furnishing,FurnitureColors.at(object)); result.objects.append(furnishing)
 		result.garden=result.garden or object.kind=="garden_bed"
 	result.message="%d × %d room · %d furnishings · Click to select" % [result.extent.x,result.extent.y,result.objects.size()]
 	return result
@@ -138,7 +140,7 @@ static func is_applied(lot: Dictionary, plan: Dictionary) -> bool:
 	for key: String in plan.windows:
 		if lot.get("windows",{}).get(key)!=plan.windows[key]: return false
 	for object: Dictionary in plan.objects:
-		if not lot.objects.any(func(item): return item.kind==object.kind and int(item.x)==int(object.x) and int(item.y)==int(object.y) and int(item.rotation)==int(object.rotation)): return false
+		if not lot.objects.any(func(item): return item.kind==object.kind and int(item.x)==int(object.x) and int(item.y)==int(object.y) and int(item.rotation)==int(object.rotation) and FurnitureColors.at(item)==FurnitureColors.at(object)): return false
 	return true
 
 static func _reject(plan: Dictionary, message: String) -> Dictionary:

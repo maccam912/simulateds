@@ -149,6 +149,12 @@ or shell expressions.
   price, then click once to finish it. Walls, doorways, and gaps mark the edges;
   furniture stays in place and floor beneath it is included. **Area** keeps the
   two-corner workflow. A room already using the finish costs nothing.
+- **Furniture colors** offers Original, Sage, Sky, Rose, Honey, and Ink for free.
+  Choose a swatch and hover furniture to preview its bedding, upholstery, enamel,
+  woodwork, pot, or frame. Click to apply; **Undo** restores the previous color.
+  **Original** restores the furnishing's original materials. Details such as
+  foliage and glass keep their own colors. Choices survive moves, room copies,
+  saves, and reconnect, without changing the object, its crops, or its resale value.
 - Residents with a pressing need show a small thought cue above the house. Click
   it to select that resident and plan useful care. Needs already being handled
   or queued stay quiet, and cues belong only to your household. The selected

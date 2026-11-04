@@ -83,7 +83,7 @@ service mode was not repeated for this update.
 ## Still open
 
 The subsequent feature checks are recorded in [PLAYTEST_LOG.md](PLAYTEST_LOG.md).
-The current local suite contains 64 model/application suites, plus real Iroh
+The current local suite contains 66 model/application suites, plus real Iroh
 host/two-client reconnect and dedicated-server startup. The room-construction
 checkpoint passed Linux, Windows, macOS, and Android CI builds/exports. The later
 household checkpoint passed the three desktop jobs; Android built, tested,
@@ -614,3 +614,35 @@ or pointed a doorway into an inaccessible strip; the final fixture uses a clear
 location and accessible rotation. These fixture corrections did not relax the
 game's access checks. The preceding shared-friendship checkpoint passed all four
 platform CI jobs. Human family play and physical-device checks remain open.
+
+## Furnishing material colors
+
+All 66 local suites passed. The initial run stopped at a catalog assertion that
+expected only two bed search results; Furniture colors now legitimately matches
+bedding. After updating that expectation, the catalog and all remaining suites
+passed. The compact native catalog flow passed again, retaining the bed as the
+first result and the usual Enter-to-select behavior.
+
+New model coverage checks every furnishing and all six material choices,
+unchanged/no-op behavior, free application with zero funds, exact undo/redo,
+identity and planted-garden preservation, malformed/stale/foreign commands,
+legacy and invalid save metadata, draft versus committed persistence, moves,
+discard, and all four rotations of a colored room copy. Missing color metadata
+retains the exact original rendering. Room copies carry the chosen design onto
+fresh objects without copying crop state.
+
+Native injected-input checks passed at 1440×900 and 1280×720 / 125% UI scale.
+They exercise palette visibility, keyboard focus, preview purity, click-to-apply,
+Original, undo/redo, all furnishing materials, catalog search, empty-ground
+rejection, access inspection, pending-command correlation, and colored bedding
+while sleeping. Inspected captures are in ignored
+`build/furniture-colors-*.png`. Early test setups placed the extra game table on
+a resident or blocked the fridge; the final setup explicitly checks access before
+the color workflow. A mistaken test call to `tick` was corrected to `step`.
+
+The actual Iroh host/two-client scenario passed recoloring, unchanged budget,
+stale-request rejection, undo/redo, movement of a colored fridge, independent pot
+colors, colored room duplication, and reconnect retention. It waits for the
+accepted construction snapshot before submitting the next revision-bound color
+command. Dedicated startup passed. The room-copy checkpoint passed all four
+platform CI jobs; physical-device and human-family evidence remains open.

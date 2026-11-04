@@ -87,6 +87,8 @@ and current usability priorities.
 - Room duplication now copies an enclosed design with rotated furnishings,
   finishes, windows, full cost/access preview, and one undoable placement. Add
   saved blueprint libraries and cross-lot reusable layouts later.
+- Furniture material colors now offer six named choices, in-world preview, free
+  recoloring, undo/redo, and preservation through moves, copies, and saves.
 - Shared entrance routing checks and an access overlay now locate blocked
   furnishings and residents, with camera focus and direct repair tools. Extend
   routing as architectural options become richer.
