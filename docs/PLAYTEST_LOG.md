@@ -33,3 +33,21 @@ Fresh assessment: clicking tall furniture currently uses its floor tile, which
 makes upper surfaces unreliable targets. Next: use the drawn furniture shapes
 for picking, show a name and affordance on hover, and select residents by their
 visible bodies. This improves ordinary play before adding more objects.
+
+## 2026-11-03 · Click what you see
+
+Furniture picking now follows its rendered polygons in reverse paint order;
+resident bodies can be clicked for selection or conversation. A small hover
+label names the furnishing, the need it serves, and whether it is occupied.
+Demolition also targets the visible furnishing instead of a tile behind it.
+
+Validation: nine suites passed; added mouse-input assertions for the upper fridge
+face, resident bodies, and demolition followed by rollback. A graphical compact
+capture confirms the hover label, footprint highlight, and correct target.
+
+Fresh assessment: everyday control now reads more clearly. Building still makes
+small mistakes expensive: only discarding the entire draft restores the original
+purchase price. Next: bounded undo/redo inside construction, preserving the safe
+commit/discard boundary and ownership rules. The Linux and macOS CI jobs for the
+planning checkpoint passed; its Windows tests passed before that run was
+superseded during export. Android export remains unverified.

@@ -2,6 +2,7 @@ extends Control
 ## Isometric presentation. All mutations are sent as commands by the HUD.
 signal tile_clicked(cell: Vector2i)
 signal hovered(cell: Vector2i)
+signal entity_clicked(target: Dictionary)
 
 const Catalog = preload("res://game/catalog.gd")
 var world: Dictionary = {}
@@ -18,12 +19,16 @@ var _cell := Vector2(48, 24)
 var _origin := Vector2.ZERO
 var _font: Font
 var _time := 0.0
+var _hit_regions: Array = []
+var _drawing_target: Dictionary = {}
+var hover_target: Dictionary = {}
+var _pointer := Vector2(-10000,-10000)
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	clip_contents = true
 	_font = ThemeDB.fallback_font
-	mouse_exited.connect(func(): hover_cell = Vector2i(-1, -1); queue_redraw())
+	mouse_exited.connect(func(): hover_cell = Vector2i(-1, -1); hover_target = {}; _pointer = Vector2(-10000,-10000); queue_redraw())
 
 func _process(delta: float) -> void:
 	_time += delta
@@ -60,21 +65,37 @@ func _gui_input(event: InputEvent) -> void:
 			elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 				zoom = maxf(0.65, zoom - 0.1)
 			elif event.button_index == MOUSE_BUTTON_LEFT:
+				var target := hit_target(event.position)
 				var cell := cell_at(event.position)
-				if _in_bounds(cell):
+				if not building and not target.is_empty():
+					entity_clicked.emit(target)
+				elif building and build_kind == "erase" and target.get("type") == "object":
+					tile_clicked.emit(Vector2i(int(target.x),int(target.y)))
+				elif _in_bounds(cell):
 					tile_clicked.emit(cell)
 			accept_event()
 	elif event is InputEventMouseMotion:
 		if _dragging:
 			pan += event.relative
+		_pointer = event.position
 		hover_cell = cell_at(event.position)
+		hover_target = hit_target(event.position)
 		hovered.emit(hover_cell)
+
+func hit_target(point: Vector2) -> Dictionary:
+	# Reverse paint order matches what is visibly on top, including elevated
+	# surfaces that project onto a completely different floor tile.
+	for index in range(_hit_regions.size()-1,-1,-1):
+		var region: Dictionary = _hit_regions[index]
+		if Geometry2D.is_point_in_polygon(point,region.polygon): return region.target
+	return {}
 
 func _in_bounds(cell: Vector2i) -> bool:
 	return cell.x >= 0 and cell.x < 16 and cell.y >= 0 and cell.y < 16
 
 func _poly(points: Array, color: Color, outline: Color = Color.TRANSPARENT) -> void:
 	var polygon := PackedVector2Array(points)
+	if not _drawing_target.is_empty(): _hit_regions.append({"polygon":polygon,"target":_drawing_target})
 	draw_colored_polygon(polygon, color)
 	if outline.a > 0:
 		polygon.append(polygon[0])
@@ -96,6 +117,8 @@ func _block(x: float, y: float, w: float, d: float, height: float, color: Color,
 	_poly([a+top,b+top,c+top,e+top], color.lightened(0.12), color.darkened(0.12))
 
 func _draw() -> void:
+	_hit_regions.clear()
+	_drawing_target = {}
 	_layout()
 	_draw_neighborhood_ground()
 	if not world.has("lots") or not world.lots.has(lot_id):
@@ -164,7 +187,9 @@ func _draw() -> void:
 			_furnishing(entity.object,scale_factor)
 		else:
 			_resident(entity.member, entity.family,scale_factor)
-	if _in_bounds(hover_cell):
+	hover_target = hit_target(_pointer)
+	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if not building and not hover_target.is_empty() else Control.CURSOR_ARROW
+	if _in_bounds(hover_cell) and (building or hover_target.is_empty()):
 		var tint := Color(0.96,0.99,0.81,0.32)
 		var w := 1.0
 		var d := 1.0
@@ -176,11 +201,33 @@ func _draw() -> void:
 				var old := w; w=d; d=old
 		if building and build_kind=="erase": tint=Color(0.94,0.4,0.3,0.35)
 		_diamond(hover_cell.x,hover_cell.y,w,d,tint,4,Color("f8f3c7"))
+	if not building and not hover_target.is_empty(): _draw_hover()
 	if lot.building:
 		var badge := Rect2(Vector2(size.x*0.5-150,22),Vector2(300,34))
 		draw_style_box(preload("res://game/style.gd").box(Color("eac88c"),17),badge)
 		draw_string(_font,badge.position+Vector2(25,23),"UNDER CONSTRUCTION  ·  Lot paused",HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("5d4a2d"))
 
+
+func _draw_hover() -> void:
+	var title := str(hover_target.get("name",""))
+	var detail := "Click to select" if hover_target.get("owner") == Session.profile_id else "Click to chat"
+	if hover_target.type == "object":
+		var item: Dictionary = Catalog.ITEMS[hover_target.kind]
+		title = str(item.name)
+		detail = str(item.need).capitalize() + " · Click to use"
+		if bool(item.get("exclusive",false)):
+			for family: Dictionary in world.families.values():
+				for resident: Dictionary in family.members:
+					if resident.lot_id == lot_id and resident.task.get("target_id") == hover_target.id:
+						detail = "In use by " + str(resident.name) + " · Click to queue"
+		var dimensions := Catalog.footprint(str(hover_target.kind),int(hover_target.rotation))
+		_diamond(float(hover_target.x),float(hover_target.y),dimensions.x,dimensions.y,Color(0.95,0.95,0.75,0.14),2,Color("fff2bd"))
+	var width := maxf(_font.get_string_size(title,HORIZONTAL_ALIGNMENT_LEFT,-1,14).x,_font.get_string_size(detail,HORIZONTAL_ALIGNMENT_LEFT,-1,12).x) + 24
+	var position := Vector2(clampf(_pointer.x+18,8,size.x-width-8),clampf(_pointer.y-62,8,size.y-220))
+	var badge := Rect2(position,Vector2(width,52))
+	draw_style_box(preload("res://game/style.gd").box(Color("1c2a2f"),6,Color("71877b")),badge)
+	draw_string(_font,position+Vector2(12,20),title,HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("f4eedf"))
+	draw_string(_font,position+Vector2(12,39),detail,HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("bdd89e"))
 
 func _draw_neighborhood_ground() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color("8ba36d"))
@@ -243,6 +290,7 @@ func _furnishing(obj: Dictionary,s: float) -> void:
 	var x := float(obj.x); var y := float(obj.y)
 	var color := Color(str(item.get("color","bd9878")))
 	_diamond(x+0.12,y+0.2,w,d,Color(0.18,0.17,0.13,0.13))
+	_drawing_target = {"type":"object","id":obj.id,"kind":kind,"x":obj.x,"y":obj.y,"rotation":obj.get("rotation",0)}
 	match kind:
 		"bed":
 			_block(x+0.05,y+0.05,w-0.1,d-0.1,10*s,Color("785648"))
@@ -284,6 +332,8 @@ func _furnishing(obj: Dictionary,s: float) -> void:
 				var p := grid_point(x+0.2+float(i)*0.12,y+d-0.08)
 				draw_line(p+Vector2(0,-12*s),p+Vector2(0,-29*s),[Color("b3c3a2"),Color("d8a06e"),Color("edd8a1")][i%3],4*s)
 		"plant":
+			var foliage := grid_point(x+0.5,y+0.5)
+			_hit_regions.append({"polygon":PackedVector2Array([foliage+Vector2(-13,-34)*s,foliage+Vector2(13,-34)*s,foliage+Vector2(13,-8)*s,foliage+Vector2(-13,-8)*s]),"target":_drawing_target})
 			_block(x+0.3,y+0.3,0.4,0.4,10*s,Color("bf8665"))
 			var p := grid_point(x+0.5,y+0.5)+Vector2(0,-11*s)
 			draw_line(p,p+Vector2(0,-20*s),Color("466f4b"),3*s)
@@ -296,8 +346,12 @@ func _furnishing(obj: Dictionary,s: float) -> void:
 		_:
 			_block(x+0.1,y+0.1,w-0.2,d-0.2,16*s,color)
 
+	_drawing_target = {}
+
 func _resident(member: Dictionary, family: Dictionary,s: float) -> void:
 	var p := grid_point(float(member.x)+0.5,float(member.y)+0.5)
+	var body := PackedVector2Array([p+Vector2(-11,-38)*s,p+Vector2(11,-38)*s,p+Vector2(11,1)*s,p+Vector2(-11,1)*s])
+	_hit_regions.append({"polygon":body,"target":{"type":"member","id":member.id,"name":member.name,"owner":family.id}})
 	var selected := str(member.id)==selected_member
 	var bob := 0.0 if bool(Preferences.values.get("reduced_motion",false)) else sin(_time*4.0+float(str(member.id).hash()%10))*0.5*s
 	draw_set_transform(p,0,Vector2(1,0.45))

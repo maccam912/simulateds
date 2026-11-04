@@ -85,6 +85,28 @@ func _run() -> void:
 	session.set_display_name("Alexandra")
 	game._refresh()
 	_check(game._member().name=="Alexandra","Name field can rename existing household")
+	# Hit the elevated fridge face, not the ground cell behind it.
+	session.menu_paused=true
+	for resident: Dictionary in game._family().members:
+		session.command({"type":"cancel","member_id":resident.id})
+	var fridge: Dictionary={}
+	for object: Dictionary in session.state.lots.lot_1.objects:
+		if object.kind=="fridge": fridge=object
+	await process_frame
+	await process_frame
+	var face: Vector2=game.lot_view.grid_point(float(fridge.x)+0.5,float(fridge.y)+0.5)+Vector2(0,-28)*game.lot_view._cell.x/48.0
+	_check(game.lot_view.hit_target(face).get("id")==fridge.id,"Elevated furniture face resolves to visible object")
+	await _click(face)
+	_check(game._member().task.get("target_id")==fridge.id,"Click on tall furniture queues the visible object")
+	var companion: Dictionary=game._family().members[1]
+	var body: Vector2=game.lot_view.grid_point(float(companion.x)+0.5,float(companion.y)+0.5)+Vector2(0,-24)*game.lot_view._cell.x/48.0
+	await _click(body)
+	_check(game.selected_member==companion.id,"Resident body click selects that household member")
+	game._toggle_build(); game.selected_tool="erase"; game._refresh()
+	await process_frame
+	await _click(face)
+	_check(session.world._object(session.state.lots.lot_1,str(fridge.id)).is_empty(),"Demolish picks tall furnishing instead of tile behind it")
+	game._send({"type":"build_cancel","lot_id":"lot_1"})
 	game._open_connection()
 	_check(game.connection_dialog.visible,"Multiplayer dialog opens")
 	game.connection_dialog.hide()

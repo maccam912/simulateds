@@ -135,6 +135,7 @@ func _build_ui() -> void:
 	add_child(lot_view)
 	lot_view.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	lot_view.tile_clicked.connect(_tile_clicked)
+	lot_view.entity_clicked.connect(_entity_clicked)
 	hud = Control.new()
 	hud.name = "HUD"
 	add_child(hud)
@@ -444,6 +445,15 @@ func _send(command: Dictionary) -> void:
 	Session.command(command)
 	if Session.is_authority() and Session.last_action_ok and command.get("type")=="place": Soundscape.play_ui("build")
 	_refresh()
+
+func _entity_clicked(target: Dictionary) -> void:
+	if target.get("type") == "object":
+		_selected_object=str(target.id)
+		_interact(str(target.id))
+	elif target.get("owner") == Session.profile_id:
+		selected_member=str(target.id); _refresh()
+	else:
+		_send({"type":"interact","member_id":selected_member,"lot_id":viewed_lot,"target_id":str(target.id)})
 
 func _tile_clicked(cell: Vector2i) -> void:
 	var lot: Dictionary=Session.state.get("lots",{}).get(viewed_lot,{})

@@ -41,6 +41,17 @@ func _run() -> void:
 	await create_timer(0.3).timeout
 	await RenderingServer.frame_post_draw
 	assert(root.get_texture().get_image().save_png("res://build/waiting" + suffix + ".png") == OK)
+	game.plan_panel.hide()
+	var fridge: Dictionary={}
+	for object: Dictionary in session.state.lots[game.viewed_lot].objects:
+		if object.kind=="fridge": fridge=object
+	var motion := InputEventMouseMotion.new()
+	motion.position=game.lot_view.grid_point(float(fridge.x)+0.5,float(fridge.y)+0.5)+Vector2(0,-28)*game.lot_view._cell.x/48.0
+	root.push_input(motion,true)
+	await create_timer(0.3).timeout
+	await RenderingServer.frame_post_draw
+	assert(game.lot_view.hover_target.get("id")==fridge.id)
+	assert(root.get_texture().get_image().save_png("res://build/hover" + suffix + ".png") == OK)
 	print("GAME_RENDER_PASS")
 	await root.get_node("Soundscape").shutdown_and_wait()
 	quit()
