@@ -169,7 +169,14 @@ or shell expressions.
   leaving a fresh canvas. Visitors can inspect art; only its household can paint
   or sell it. Artwork survives saves, reconnects, moves, colors, and Undo. Copied
   easels start blank. Painting is deliberate: autonomy and routines do not create
-  or sell artwork. Wall display and a painting hobby are future additions.
+  or sell artwork. A painting hobby remains a future addition.
+- **Hang on wall** takes a finished painting into build mode. Choose a solid wall
+  without a window or another picture; the transfer is free and leaves a blank
+  easel. **Wall art** in the catalog lets you move pictures, store them in the
+  collection, or return one to an empty easel for later sale. Undo restores the
+  entire transfer. Removing a wall or fitting a window stores its painting safely.
+  Up to 64 pictures retain their subject, completion day, and artists through
+  saves and reconnects. Room copies leave earned art with the original household.
 - Residents with a pressing need show a small thought cue above the house. Click
   it to select that resident and plan useful care. Needs already being handled
   or queued stay quiet, and cues belong only to your household. The selected

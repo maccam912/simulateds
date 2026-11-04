@@ -577,5 +577,19 @@ Packing a sold picture uses a wrapped-frame pose and fabric cue instead. Reduced
 motion keeps the pose legible without moving strokes. A sale requires a deliberate
 plan and completes before paying; its UI says that it frees the canvas. Selling
 the whole easel in construction explicitly includes its canvas, and Undo restores
-both. Copied easels are clearly described as blank. Wall hanging and a painting
-hobby are separate next steps rather than implied by the first easel feature.
+both. Copied easels are clearly described as blank.
+
+Finished work can become part of the house: Hang on wall enters construction,
+raises the walls, and previews the exact picture in its warm wooden frame. Use
+the same miniature in the easel, frame, and inspection tray. Keep artist credit
+and completion day visible; no invented rarity or appraisal score. When walls
+cut away, the small framed picture remains visible and inspectable.
+
+Wall art uses a household collection rather than a purchasable art catalog.
+Hanging frees the easel, moving preserves the picture, and returning requires
+an empty canvas. These transfers are free and undoable. A demolished wall or
+new window moves its picture into storage, with a plain explanation in the
+preview and result. Pending controls wait for the actual accepted placement.
+Visitors can inspect a picture and its credit without seeing ownership controls.
+Use the existing quiet construction cue; do not interrupt arranging with a
+celebration. A painting hobby remains a separate future addition.

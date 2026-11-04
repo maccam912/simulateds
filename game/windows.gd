@@ -27,6 +27,7 @@ static func inspect(lot: Dictionary,command: Dictionary) -> Dictionary:
 	var refund := resale(lot,x,y)
 	var cost := price-refund
 	var message := "Remove window · Refund §%d · Wall stays" % refund if style.is_empty() else str(STYLES[style].name)+" · §%d" % cost
+	if not style.is_empty() and not preload("res://game/wall_art.gd").at(lot,x,y).is_empty(): message+=" · Painting moves into collection"
 	if refund>0 and not style.is_empty(): message+=" after §%d trade-in" % refund
 	var plan := {"ok":true,"style":style,"previous":previous,"x":x,"y":y,"price":price,"refund":refund,"cost":cost,"message":message}
 	if cost>int(lot.funds): plan.ok=false; plan.reason="funds"; plan.message="Window costs §%d · Need §%d more." % [cost,cost-int(lot.funds)]

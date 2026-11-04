@@ -78,9 +78,12 @@ and current usability priorities.
 
 Daydream easels now support three deliberately painted subjects, persistent
 partial work, shared household credit, staged original artwork, completion
-journals, and explicit single-payment sales. Finished art stays on the easel.
-Add wall display and a painting hobby next; room duplication already creates
-blank canvases so it cannot duplicate earned artwork.
+journals, and explicit single-payment sales. Finished art can stay on the easel,
+hang on a wall, or wait in the household collection. Free, undoable transfers
+release the canvas for another picture; demolition safely stores mounted art.
+Room duplication leaves earned artwork in place and creates blank easels.
+A painting hobby is the next opportunity to connect creative work to residents’
+lasting interests.
 
 ## 1. Make homebuilding dependable
 

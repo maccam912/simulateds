@@ -13,6 +13,8 @@ household or an absent player.
 | `game/paintings.gd` | Bounded canvas state, subjects, credit, activity validation, and sale value; the world's `painting` command owns progress and payment |
 | `game/painting_art.gd` | Original vector miniatures rendered in stages on the easel and in its inspection tray |
 | `game/painting_panel.gd` | Subject previews, progress/credit, resumable activity controls, and correlated host feedback |
+| `game/wall_art.gd` | Bounded household collection, pure transfer previews, save validation, and safe storage when a wall changes |
+| `game/wall_art_panel.gd` | Collection selection, wall display, storage, empty-easel return, and visitor inspection |
 | `game/world.gd` | Serializable neighborhood state; ownership, construction, pathfinding, actions, autonomy, and needs |
 | `game/main.gd` | Main scene UI, selection, tool catalog, connection panel, and command submission |
 | `game/lot_view.gd` | Isometric rendering, tile picking, placement preview, pan, and zoom |

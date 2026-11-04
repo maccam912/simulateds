@@ -20,6 +20,7 @@ const Leisure = preload("res://game/shared_leisure.gd")
 const Courtesy = preload("res://game/courtesy.gd")
 const BuildAccess = preload("res://game/build_access.gd")
 const Routines = preload("res://game/routines.gd")
+const WallArt = preload("res://game/wall_art.gd")
 const Paintings = preload("res://game/paintings.gd")
 const Gardens = preload("res://game/gardens.gd")
 const ActivityLog = preload("res://game/activity_log.gd")
@@ -31,7 +32,7 @@ const MAX_QUEUE := 8
 const MAX_BUILD_HISTORY := 32
 const MINUTES_PER_SECOND := 3.0
 const MIN_ACTIVITY_TIME := 4.0
-const BUILD_FIELDS := ["floors", "walls", "doors", "objects", "funds", "finishes", "windows"]
+const BUILD_FIELDS := ["floors", "walls", "doors", "objects", "funds", "finishes", "windows", "artworks"]
 const NEEDS := ["hunger", "energy", "hygiene", "bladder", "fun", "social", "comfort"]
 const DECAY := {"hunger":0.13, "energy":0.08, "hygiene":0.10, "bladder":0.15, "fun":0.12, "social":0.09, "comfort":0.07}
 const ACTION_NAMES := {"bed":"Sleeping", "fridge":"Making a meal", "shower":"Showering", "toilet":"Using the bathroom", "sofa":"Relaxing", "tv":"Watching television", "bookshelf":"Reading", "plant":"Tending plants", "table":"Having tea", "game_table":"Playing a tabletop puzzle", "stereo":"Dancing", "easel":"Painting"}
@@ -47,7 +48,7 @@ func initialize() -> void:
 	var names := ["Clover Cottage", "Willow House", "Juniper Place", "Maple Corner"]
 	for index in range(MAX_FAMILIES):
 		var id := "lot_%d" % (index + 1)
-		var lot := {"id":id, "name":names[index], "owner":"", "funds":12000, "building":false, "revision":0, "build_undo":0, "build_redo":0, "floors":[], "walls":[], "doors":[], "objects":[]}
+		var lot := {"id":id, "name":names[index], "owner":"", "funds":12000, "building":false, "revision":0, "build_undo":0, "build_redo":0, "floors":[], "walls":[], "doors":[], "objects":[],"artworks":{}}
 		for y in range(3, 12):
 			for x in range(3, 13):
 				lot.floors.append([x,y])
@@ -138,7 +139,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 	if not lot_id is String or not state.lots.has(lot_id):
 		return _result(false, "That lot does not exist.")
 	var lot: Dictionary = state.lots[lot_id]
-	if type in ["build_begin", "build_end", "build_cancel", "build_undo", "build_redo", "place", "erase", "move_object", "build_room", "copy_room", "paint", "set_window", "recolor"]:
+	if type in ["build_begin", "build_end", "build_cancel", "build_undo", "build_redo", "place", "erase", "move_object", "build_room", "copy_room", "paint", "set_window", "recolor", "art_hang", "art_store", "art_return"]:
 		if lot.owner != profile_id:
 			return _result(false, "Only the owner can build on this lot.")
 		if type == "build_begin":
@@ -160,7 +161,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 			return _result(true, "Construction started. Your family is paused; neighbors keep living.")
 		if not lot.building:
 			return _result(false, "Enter construction mode first.")
-		if type in ["build_undo", "build_redo", "build_room", "copy_room", "paint", "set_window", "recolor"]:
+		if type in ["build_undo", "build_redo", "build_room", "copy_room", "paint", "set_window", "recolor", "art_hang", "art_store", "art_return"]:
 			if not _integer(command.get("revision")) or int(command.revision) != int(lot.revision):
 				return _result(false, "The building draft changed. Review the preview and try again.")
 			if type in ["build_undo","build_redo"]: return _history_step(lot,type == "build_redo")
@@ -183,6 +184,8 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 		var previous := _capture_build(lot)
 		var result := _build(lot, command)
 		if result.ok:
+			var stored := WallArt.reconcile(lot)
+			if stored>0: result.message+=" A painting moved safely into the collection." if stored==1 else " %d paintings moved safely into the collection." % stored
 			var history: Dictionary = _build_history.get(lot_id,{"undo":[],"redo":[]})
 			history.undo.append(previous)
 			if history.undo.size() > MAX_BUILD_HISTORY: history.undo.pop_front()
@@ -431,8 +434,8 @@ func _tick_painting(member: Dictionary,lot: Dictionary,object: Dictionary,task: 
 	var title: String=Paintings.SUBJECTS[picture.subject]
 	member.wishes.journal.push_front({"day":int(state.day),"text":"Finished “"+title+"”. "+Paintings.credit(picture)+"."})
 	if member.wishes.journal.size()>Wishes.MAX_JOURNAL: member.wishes.journal.resize(Wishes.MAX_JOURNAL)
-	_event(str(member.name)+" finished “"+title+"”. Keep it on the easel or sell it.")
-	_end_task(member,"done","Finished painting. It stays on display until you choose to sell it.","Admiring the finished painting")
+	_event(str(member.name)+" finished “"+title+"”. Keep it, hang it, or sell it.")
+	_end_task(member,"done","Finished painting. Keep it on the easel, hang it, or choose to sell it.","Admiring the finished painting")
 
 func garden_option(profile_id: String,member_id: String,lot_id: String,target_id: Variant,action: Variant,crop: Variant="") -> Dictionary:
 	var family: Dictionary=state.families.get(profile_id,{})
@@ -503,6 +506,11 @@ func move_option(profile_id: String,member_id: String,lot_id: String,goal: Vecto
 	return {"ok":true,"message":"Walk here" if ahead==0 else "Queue walk · %d %s first" % [ahead,"activity" if ahead==1 else "activities"],"path":route,"ahead":ahead,"cell":goal,"here":_position(member)==goal}
 
 func _build(lot: Dictionary, command: Dictionary) -> Dictionary:
+	if command.type in ["art_hang","art_store","art_return"]:
+		var plan := WallArt.inspect(lot,command)
+		if not plan.ok: return plan
+		WallArt.apply(lot,plan)
+		return _result(true,str(plan.message)+". Undo restores the whole transfer.")
 	if command.type=="recolor":
 		var plan := FurnitureColors.inspect(lot,command)
 		if not plan.ok: return plan
@@ -1279,6 +1287,10 @@ func _normalize_numbers() -> void:
 		lot.build_undo = int(lot.get("build_undo",0))
 		if not lot.has("finishes"): lot.finishes=Finishes.create()
 		if not lot.has("windows"): lot.windows={}
+		if not lot.has("artworks"): lot.artworks={}
+		for entry: Dictionary in lot.artworks.values():
+			entry.x=int(entry.x); entry.y=int(entry.y)
+			for key: String in ["day","revision"]: entry.picture[key]=int(entry.picture[key])
 		lot.build_redo = int(lot.get("build_redo",0))
 		lot.funds = int(lot.funds)
 		lot.revision = int(lot.revision)
@@ -1391,7 +1403,7 @@ func _valid_state(data: Dictionary) -> bool:
 				if not _inside(cell) or occupied.has(cell) or (object.kind!="garden_bed" and not floor_cells.has(cell)):
 					return false
 				occupied[cell] = true
-		if not Finishes.valid(lot) or not Windows.valid(lot): return false
+		if not Finishes.valid(lot) or not Windows.valid(lot) or not WallArt.valid(lot,int(data.day)): return false
 	var members_seen := {}
 	for profile_id: Variant in data.families:
 		if not profile_id is String or profile_id.is_empty() or profile_id.length() > 128 or not data.families[profile_id] is Dictionary:

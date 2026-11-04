@@ -708,3 +708,34 @@ The complete regression run passed both the original multiplayer scenario and
 this painting scenario, followed by dedicated-server startup. The preceding construction-access checkpoint passed
 all four platform CI jobs. Physical-device, human-family, and overnight-hosting
 checks remain open.
+
+
+## Household wall art and safe transfers
+
+All 72 local suites passed. The new model suite checks owner/build/revision
+permissions, solid-wall placement, occupied walls and windows, exact picture
+retention, free transfers, history, discard, committed versus draft saves,
+legacy collection defaults, and JSON restoration. Demolition, doorway placement,
+and fitting a window move mounted art into storage. Return requires an empty
+easel and advances its canvas revision. Full collections allow existing pictures
+to move; new entries stop at 64. Malformed, duplicate-position, unfinished, and
+oversized saved collections are rejected atomically. Actual room copies in all
+four rotations leave earned art in place and make blank easels.
+
+Native injected-input flows passed at 1440×900 and 1280×720 / 125% UI scale.
+They paint, enter construction from the easel, preview valid and window-blocked
+walls, hang, move, store, undo/redo, replace a picture's wall with a window,
+return art to an empty easel, and begin another canvas. Pictures remain pickable
+on cutaway front walls. Visitors see art and creator credit without ownership
+controls. Exact command correlation keeps unrelated failures and early success
+replies from clearing pending edits; unrelated revision changes do not fabricate
+a successful transfer. Reviewed captures are in ignored `build/wall-art-*.png`.
+The compact layout initially hid collection actions below the fold; the final
+native passes verify both Store and Return to easel remain visible together.
+
+The expanded real Iroh painting scenario passed with two independent clients.
+Each hangs, undoes/redoes, stores, rehangs, and reconnects with the exact mounted
+picture and blank easel. Returning and selling then pays once. The full regression
+run also passed the original Iroh scenario, this expanded painting scenario,
+and dedicated-server startup. The preceding painting checkpoint passed all four platform CI jobs. Human-family,
+physical-device, and overnight-hosting checks remain open.

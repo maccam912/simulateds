@@ -1,5 +1,5 @@
 extends SceneTree
-## Real Iroh processes: independent canvases, interrupted work, reconnect, and sales.
+## Real Iroh processes: independent canvases, display, reconnect, and sales.
 var session: Node
 var ticket_path := ""
 var use_codes := false
@@ -60,6 +60,22 @@ func _host() -> void:
 
 func _easel(home: String,id: String) -> Dictionary: return session.world._object(session.state.lots[home],id)
 
+func _art_edit(home: String,command: Dictionary) -> void:
+	# Replies may precede snapshots; subsequent commands need the actual draft.
+	command.lot_id=home; command.revision=int(session.state.lots[home].revision)
+	await _command(command)
+	for attempt in range(60):
+		if int(session.state.lots[home].revision)>int(command.revision): return
+		await create_timer(0.1).timeout
+	assert(false,"The accepted art edit must reach the client")
+
+func _construction(home: String,building: bool) -> void:
+	await _command({"type":"build_begin" if building else "build_end","lot_id":home})
+	for attempt in range(60):
+		if bool(session.state.lots[home].building)==building: return
+		await create_timer(0.1).timeout
+	assert(false,"The accepted construction mode must reach the client")
+
 func _client(index: String) -> void:
 	await _connect()
 	var identity: String=session.profile_id; var home: String=session.home_lot()
@@ -103,6 +119,24 @@ func _client(index: String) -> void:
 	# Persist a finished work through a second reconnect before selling it once.
 	session.leave(); await create_timer(1.0).timeout; await _connect()
 	assert(_easel(home,id).painting==completed)
+	await _construction(home,true)
+	var art_id := "art_"+id+"_"+str(int(completed.revision))
+	await _art_edit(home,{"type":"art_hang","source":"easel:"+id,"x":8,"y":3})
+	assert(session.state.lots[home].artworks[art_id].picture==completed and _easel(home,id).painting.subject=="")
+	await _art_edit(home,{"type":"build_undo"})
+	assert(session.state.lots[home].artworks.is_empty() and _easel(home,id).painting==completed)
+	await _art_edit(home,{"type":"build_redo"})
+	await _art_edit(home,{"type":"art_store","source":"art:"+art_id})
+	assert(session.state.lots[home].artworks[art_id].x==-1)
+	await _art_edit(home,{"type":"art_hang","source":"art:"+art_id,"x":3,"y":8})
+	await _construction(home,false)
+	session.leave(); await create_timer(1.0).timeout; await _connect()
+	assert(session.state.lots[home].artworks[art_id]=={"picture":completed,"x":3,"y":8} and _easel(home,id).painting.subject=="","Mounted artwork and its empty easel survive reconnect together")
+	await _construction(home,true)
+	await _art_edit(home,{"type":"art_return","source":"art:"+art_id,"target_id":id})
+	assert(session.state.lots[home].artworks.is_empty() and _easel(home,id).painting.artists==completed.artists)
+	completed=_easel(home,id).painting.duplicate(true)
+	await _construction(home,false)
 	var funds: int=session.state.lots[home].funds
 	var sale := {"type":"painting","lot_id":home,"target_id":id,"member_id":member,"action":"sell","revision":completed.revision}
 	await _command(sale); await _command(sale,false)

@@ -5,6 +5,7 @@ signal hovered(cell: Vector2i)
 signal entity_clicked(target: Dictionary)
 
 const Catalog = preload("res://game/catalog.gd")
+const WallArt = preload("res://game/wall_art.gd")
 const Paintings = preload("res://game/paintings.gd")
 const Gardens = preload("res://game/gardens.gd")
 const BuildRules = preload("res://game/build_rules.gd")
@@ -51,6 +52,10 @@ var copy_pending := false
 var copy_plan: Dictionary={}
 var _copy_preview_key := ""
 var copy_preview: Dictionary={}
+var art_source := ""
+var art_pending := false
+var art_preview: Dictionary={}
+var art_regions: Dictionary={}
 var furniture_color := "original"
 var color_request: Dictionary={}
 var color_preview: Dictionary={}
@@ -244,8 +249,10 @@ func _gui_input(event: InputEvent) -> void:
 				if building and access_inspecting:
 					if target.get("type")=="access": entity_clicked.emit(target)
 					accept_event(); return
-				if building and build_kind in ["finish_wall","door","erase","window"] and target.get("type")=="wall": cell=Vector2i(int(target.x),int(target.y))
-				if building and build_kind=="move" and build_object_id.is_empty() and target.get("type")=="object":
+				if building and build_kind in ["finish_wall","door","erase","window","wall_art"] and target.get("type") in ["wall","wall_art"]: cell=Vector2i(int(target.x),int(target.y))
+				if building and build_kind=="wall_art" and art_source.is_empty() and target.get("type")=="wall_art":
+					entity_clicked.emit(target)
+				elif building and build_kind=="move" and build_object_id.is_empty() and target.get("type")=="object":
 					entity_clicked.emit(target)
 				elif building and build_kind=="furniture_color" and target.get("type")=="object": entity_clicked.emit(target)
 				elif not building and not target.is_empty():
@@ -263,7 +270,7 @@ func _gui_input(event: InputEvent) -> void:
 		_pointer = event.position
 		hover_cell = cell_at(event.position)
 		hover_target = hit_target(event.position)
-		if building and build_kind in ["finish_wall","door","erase","window"] and hover_target.get("type")=="wall": hover_cell=Vector2i(int(hover_target.x),int(hover_target.y))
+		if building and build_kind in ["finish_wall","door","erase","window","wall_art"] and hover_target.get("type") in ["wall","wall_art"]: hover_cell=Vector2i(int(hover_target.x),int(hover_target.y))
 		hovered.emit(hover_cell)
 
 func hit_target(point: Vector2) -> Dictionary:
@@ -338,7 +345,9 @@ func _draw() -> void:
 		elif Catalog.ITEMS.has(build_kind) or (build_kind=="move" and not build_object_id.is_empty()):
 			_update_preview(lot); placement_impact=preview_result.get("impact",{})
 	_update_window_preview(lot)
-	window_regions.clear()
+	window_regions.clear(); art_regions.clear(); art_preview={}
+	if building and build_kind=="wall_art" and not access_inspecting and not art_pending and _in_bounds(hover_cell):
+		art_preview=WallArt.inspect(lot,{"type":"art_hang","source":art_source,"x":hover_cell.x,"y":hover_cell.y})
 	# Planting sits along the property edges without boxing the entire view in.
 	for y in [1,3,5,7,9,11]:
 		_bush(0.35,float(y),scale_factor)
@@ -376,9 +385,9 @@ func _draw() -> void:
 			var cell := Vector2i(x,y)
 			if walls.has(cell):
 				var rear := (floors.has(cell+Vector2i.RIGHT) and not floors.has(cell+Vector2i.LEFT)) or (floors.has(cell+Vector2i.DOWN) and not floors.has(cell+Vector2i.UP))
-				var h := (39.0 if rear or (building and build_kind=="window" and not access_inspecting) else 8.0)*scale_factor
+				var h := (39.0 if rear or (building and build_kind in ["window","wall_art"] and not access_inspecting) else 8.0)*scale_factor
 				var color := Color(Finishes.PALETTES.wall[_surface_finish(lot,"wall",x,y)].color).lerp(Color("f3dfb6"),float(light.night)*0.22)
-				if building and build_kind in ["finish_wall","door","erase","window"]: _drawing_target={"type":"wall","x":x,"y":y}
+				if building and build_kind in ["finish_wall","door","erase","window","wall_art"]: _drawing_target={"type":"wall","x":x,"y":y}
 				_block(x,y,1,1,h,color)
 				if h > 20*scale_factor:
 					_diamond(x+0.04,y+0.04,0.92,0.92,color.lightened(0.12),h)
@@ -388,6 +397,9 @@ func _draw() -> void:
 				if not window.is_empty(): _draw_window(lot,x,y,h,window,scale_factor,previewing)
 				if previewing and window.is_empty(): _diamond(x,y,1,1,Color(0.94,0.4,0.3,0.18),h,Color("ffab8f"))
 				_drawing_target={}
+				var art_id := WallArt.at(lot,x,y)
+				if not art_id.is_empty(): _draw_wall_art(lot,x,y,lot.artworks[art_id].picture,scale_factor,art_id)
+				if art_preview.get("ok",false) and int(art_preview.x)==x and int(art_preview.y)==y: _draw_wall_art(lot,x,y,art_preview.picture,scale_factor,"",true)
 			if doors.has(cell):
 				_diamond(x,y,1,1,Color("8f6c50"),2*scale_factor)
 				_block(x,y,0.12,0.12,33*scale_factor,Color("c7a376"))
@@ -423,6 +435,7 @@ func _draw() -> void:
 		_draw_room_preview(lot)
 	elif building and build_kind in ["finish_floor","finish_wall"]: _draw_finish_preview()
 	elif building and build_kind=="window": _draw_window_preview()
+	elif building and build_kind=="wall_art": _draw_art_preview()
 	elif building and _in_bounds(hover_cell):
 		var tint := Color(0.96,0.99,0.81,0.32)
 		var outline := Color("f8f3c7")
@@ -443,6 +456,7 @@ func _draw() -> void:
 			if placement_impact.get("warning",false):
 				outline=Color("efc77d"); tint=Color(outline,0.30)
 			var message := str(preview_result.get("message",""))
+			if build_kind=="door" and not WallArt.at(lot,hover_cell.x,hover_cell.y).is_empty(): message+="\nPainting moves safely into the collection"
 			if not placement_impact.get("message","").is_empty(): message+="\n"+str(placement_impact.message)
 			if not _preview_spaces.is_empty():
 				_draw_leisure_places(_preview_spaces)
@@ -465,6 +479,7 @@ func _draw() -> void:
 				hint_message=message; hint_valid=true
 		elif building and build_kind=="erase":
 			tint=Color(0.94,0.4,0.3,0.35)
+			if not WallArt.at(lot,hover_cell.x,hover_cell.y).is_empty(): hint_message="Remove wall · Painting moves into the collection"
 			if not Windows.at(lot,hover_cell.x,hover_cell.y).is_empty(): hint_message="Remove window · Refund §%d · Wall stays" % Windows.resale(lot,hover_cell.x,hover_cell.y)
 		_diamond(preview_cell.x,preview_cell.y,footprint.x,footprint.y,tint,4,outline)
 		_draw_impact_badges()
@@ -678,6 +693,10 @@ func _draw_hover() -> void:
 	var title := str(hover_target.get("name",""))
 	var detail := "Click to select" if hover_target.get("owner") == Session.profile_id else "Click to chat"
 	if hover_target.type=="care": detail="Click to plan care · Your existing orders keep priority"
+	if hover_target.type=="wall_art":
+		var chosen := WallArt.source(world.lots[lot_id],"art:"+str(hover_target.id))
+		if chosen.is_empty(): return
+		title=str(Paintings.SUBJECTS[chosen.picture.subject]); detail=Paintings.credit(chosen.picture)+" · Click to inspect"
 	if hover_target.type == "object":
 		var item: Dictionary = Catalog.ITEMS[hover_target.kind]
 		title = str(item.name)
@@ -1275,7 +1294,7 @@ func _draw_room_copy(lot: Dictionary) -> void:
 	var message := "Copying room…" if copy_pending else str(plan.message)
 	if valid:
 		message+="\nStructure §%d · Furniture §%d · Finishes §%d · Windows §%d" % [plan.structure_cost,plan.furniture_cost,plan.finish_cost,plan.window_cost]
-		if plan.get("art",false): message+="\nCopied easels start with blank canvases."
+		if plan.get("art",false): message+="\nCopied easels start blank; earned art stays here."
 		if plan.garden: message+="\nGarden beds start empty. Crops are not copied."
 	_draw_preview_label(message,valid)
 
@@ -1388,3 +1407,30 @@ func _draw_impact_badges() -> void:
 		draw_line(grid_point(issue.center.x,issue.center.y)+Vector2(0,-12*s),rect.get_center(),Color("efc77d"),1.5,true)
 		draw_style_box(preload("res://game/style.gd").box(Color("efc77d"),4,Color("ffe9b5")),rect)
 		draw_string(_font,rect.get_center()+Vector2(-2,5),"!",HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("503a27"))
+
+
+func _draw_art_preview() -> void:
+	if art_pending: _draw_preview_label("Arranging artwork…",true); return
+	if not _in_bounds(hover_cell): return
+	var message := str(art_preview.get("message","Choose a finished painting."))
+	if art_preview.get("ok",false):
+		message+="\n"+Paintings.credit(art_preview.picture)
+		if art_source.begins_with("easel:"): message+="\nThe easel gets a fresh canvas · Undo restores both"
+	else: _diamond(hover_cell.x,hover_cell.y,1,1,Color(0.94,0.4,0.3,0.18),3,Color("ffab8f"))
+	_draw_preview_label(message,bool(art_preview.get("ok",false)))
+
+func _draw_wall_art(lot: Dictionary,x: int,y: int,picture: Dictionary,s: float,id: String,previewing: bool=false) -> void:
+	var along := Windows.along_x(lot,x,y)
+	var left := _window_face(x,y,along,0.14,33*s)
+	var right := _window_face(x,y,along,0.86,33*s)
+	var down := Vector2(0,21*s)
+	var frame := _window_quad(x,y,along,0.09,0.91,10*s,35*s)
+	_poly(frame,Color("967450"),Color("d8f1b2") if previewing else Color("6f5947"))
+	draw_set_transform_matrix(Transform2D(right-left,down,left))
+	preload("res://game/painting_art.gd").draw(self,picture)
+	draw_set_transform_matrix(Transform2D.IDENTITY)
+	if previewing: return
+	art_regions[id]={"polygon":PackedVector2Array(frame),"x":x,"y":y,"along_x":along}
+	var target := {"type":"wall_art","id":id,"x":x,"y":y}
+	if building and build_kind!="wall_art": target={"type":"wall","x":x,"y":y}
+	_hit_regions.append({"polygon":PackedVector2Array(frame),"target":target})

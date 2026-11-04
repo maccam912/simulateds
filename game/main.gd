@@ -7,6 +7,8 @@ signal mail_requested
 
 const Style = preload("res://game/style.gd")
 const Catalog = preload("res://game/catalog.gd")
+const WallArt = preload("res://game/wall_art.gd")
+const WallArtPanel = preload("res://game/wall_art_panel.gd")
 const Paintings = preload("res://game/paintings.gd")
 const PaintingPanel = preload("res://game/painting_panel.gd")
 const Gardens = preload("res://game/gardens.gd")
@@ -113,6 +115,10 @@ var _lots_signature := ""
 var _tools_signature := ""
 var _notice_time := 0.0
 var _selected_object := ""
+var wall_art_panel: VBoxContainer
+var _art_source := ""
+var _art_entry: Dictionary={}
+var _art_request: Dictionary={}
 var painting_panel: VBoxContainer
 var garden_panel: VBoxContainer
 var _view_context := ""
@@ -163,6 +169,7 @@ func _ready() -> void:
 	Session.status_changed.connect(func(_message): _refresh())
 	Session.action_result.connect(_notice)
 	Session.command_completed.connect(_window_completed)
+	Session.command_completed.connect(_art_completed)
 	Session.command_completed.connect(_copy_completed)
 	Session.command_completed.connect(_color_completed)
 	Rooms.changed.connect(_refresh)
@@ -429,6 +436,7 @@ func _refresh() -> void:
 		_view_context = view_context
 		viewed_lot = str(family.home_lot)
 		_selected_object = ""
+		_art_source=""; _art_entry.clear(); _art_request.clear()
 		_moving_object = ""; _move_request.clear(); _wish_seen.clear(); _friend_seen.clear(); _hobby_seen.clear(); _room_anchor=Vector2i(-1,-1); _room_request.clear()
 		_paint_anchor=Vector2i(-1,-1); _paint_request.clear(); _window_request.clear(); _color_request.clear(); _copy_source=Vector2i(-1,-1); _copy_request.clear()
 	if viewed_lot.is_empty() or not state.get("lots",{}).has(viewed_lot):
@@ -494,6 +502,16 @@ func _refresh() -> void:
 	if not building or not mine or selected_tool!="window": _window_request.clear()
 	elif not _window_request.is_empty() and int(lot.revision)>int(_window_request.intent.revision) and Windows.is_applied(lot,_window_request.plan): _window_request.clear()
 	lot_view.window_style=window_style; lot_view.window_pending=not _window_request.is_empty()
+	if not _art_entry.is_empty() and building and mine and _art_entry.lot_id==viewed_lot:
+		selected_tool="wall_art"; _context_page="activities"; _art_source=str(_art_entry.source); _art_entry.clear(); _show_tray(context_panel,true); call_deferred("_reset_catalog_scroll")
+	if (not building and _context_page!="wall_art_inspect" and _art_entry.is_empty()) or not mine and building or (building and selected_tool!="wall_art"):
+		_art_source=""; _art_request.clear()
+	elif not _art_request.is_empty() and int(lot.revision)>int(_art_request.intent.revision) and WallArt.is_applied(lot,_art_request.plan):
+		_art_source="" if _art_request.plan.type=="art_return" else "art:"+str(_art_request.plan.art_id)
+		_art_request.clear()
+	if not _art_source.is_empty() and WallArt.source(lot,_art_source).is_empty() and _art_entry.is_empty(): _art_source=""
+	lot_view.art_source=_art_source; lot_view.art_pending=not _art_request.is_empty()
+
 
 	lot_view.world=state; lot_view.lot_id=viewed_lot; lot_view.selected_member=selected_member
 	lot_view.build_object_id=_moving_object
@@ -569,7 +587,7 @@ func _refresh() -> void:
 			need_buttons[need].disabled=bool(state.lots[family.home_lot].building)
 			if care_values.has(need) and is_instance_valid(care_values[need]): care_values[need].text=str(need).capitalize()+" · %d" % int(value)
 	var build_mode := building and mine
-	catalog_filters.visible=build_mode and selected_tool not in ["window","furniture_color"] and _paint_surface().is_empty() and _context_page!="access"
+	catalog_filters.visible=build_mode and selected_tool not in ["window","furniture_color","wall_art"] and _paint_surface().is_empty() and _context_page!="access"
 	wishes_button.disabled=build_mode or member.is_empty()
 	hobbies_button.disabled=bool(state.lots.get(family.get("home_lot",""),{}).get("building",false)) or member.is_empty()
 	people_button.disabled=build_mode or member.is_empty()
@@ -580,7 +598,7 @@ func _refresh() -> void:
 		if build_mode: plan_panel.hide()
 		if hud.visible: Soundscape.set_context("build" if build_mode else "live")
 	palette_button.text = "Catalog" if build_mode else "Activities"
-	var tools_signature := str(building and mine)+selected_tool+_moving_object+str(_move_request.is_empty())+_selected_object+str(build_rotation)+viewed_lot+str(lot.get("revision",0))+_context_page+selected_member+str(_room_anchor)+str(_room_request.is_empty())
+	var tools_signature := _art_source+str(_art_request.is_empty())+str(building and mine)+selected_tool+_moving_object+str(_move_request.is_empty())+_selected_object+str(build_rotation)+viewed_lot+str(lot.get("revision",0))+_context_page+selected_member+str(_room_anchor)+str(_room_request.is_empty())
 	if build_mode: tools_signature+=_catalog_category+":"+_catalog_query+":"+str(lot.get("funds",0))+str(_access_visible)+str(_access_report.get("issues",[]))
 	tools_signature+=window_style+str(_window_request.is_empty())+furniture_color+str(_color_request.is_empty())
 	tools_signature+=str(_copy_source)+str(_copy_request.is_empty())
@@ -605,12 +623,16 @@ func _refresh() -> void:
 	if tools_signature!=_tools_signature:
 		_tools_signature=tools_signature
 		_rebuild_context(building and mine,lot)
-	if _context_page=="painting" and not build_mode and is_instance_valid(painting_panel): painting_panel.refresh(viewed_lot,_selected_object,selected_member)
+	if ((build_mode and selected_tool=="wall_art" and _context_page!="access") or (_context_page=="wall_art_inspect" and not build_mode)) and is_instance_valid(wall_art_panel): wall_art_panel.refresh(lot,_art_source,not _art_request.is_empty() or not _art_entry.is_empty(),build_mode)
+	if _context_page=="painting" and not build_mode and is_instance_valid(painting_panel):
+		painting_panel.display_pending=not _art_entry.is_empty()
+		painting_panel.refresh(viewed_lot,_selected_object,selected_member)
 	if _context_page=="garden" and not build_mode and is_instance_valid(garden_panel): garden_panel.refresh(viewed_lot,_selected_object,selected_member)
 	help_label.text="Click to place · " + Preferences.action_label("rotate") + " rotates · Ctrl/Cmd+Z undoes" if building and mine else "Click a need to care for it · Click the ground to walk"
 	if building and mine and selected_tool=="room": help_label.text="Click two opposite corners · " + Preferences.action_label("rotate") + " changes door side · Escape cancels"
 	if building and mine and not _paint_surface().is_empty(): help_label.text="Click to finish a room · Walls and doorways mark its edges" if _paint_selection()=="room" else "Click two corners to decorate · Same tile twice for one · Escape cancels"
 	if building and mine and selected_tool=="copy_room": help_label.text="Choose a room to copy" if _copy_source.x<0 else "Choose clear space · "+Preferences.action_label("rotate")+" rotates the copy · Escape cancels"
+	if building and mine and selected_tool=="wall_art": help_label.text="Choose a painting · Click a solid wall · Escape cancels selection · Undo restores the transfer"
 	if building and mine and selected_tool=="furniture_color": help_label.text="Choose a color · Hover furniture to preview · Click to apply · Free"
 	if building and mine and selected_tool=="window": help_label.text="Choose a style, then click a wall · Windows follow its direction"
 	if building and mine and _context_page=="access": help_label.text="Find an item · Choose Door, Move, or Sell to repair"
@@ -795,6 +817,7 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 	if building:
 		activity_label.text="Build & buy"
 		if _context_page=="access": _build_access_list()
+		elif selected_tool=="wall_art": _build_art_panel()
 		elif selected_tool=="window": _build_window_palette()
 		elif selected_tool=="furniture_color": _build_color_palette()
 		elif _paint_surface().is_empty(): _build_catalog()
@@ -808,9 +831,10 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 		if not people_focus.is_empty(): call_deferred("_restore_people_focus",people_focus)
 	elif _context_page=="care": _rebuild_care()
 	elif _context_page=="hobbies": _rebuild_hobbies()
+	elif _context_page=="wall_art_inspect": _build_art_panel()
 	elif _context_page=="painting":
 		activity_label.text="At the easel"
-		painting_panel=PaintingPanel.new(); tools_box.add_child(painting_panel); painting_panel.command_requested.connect(_send)
+		painting_panel=PaintingPanel.new(); tools_box.add_child(painting_panel); painting_panel.command_requested.connect(_send); painting_panel.display_requested.connect(_open_art)
 		context_box.add_child(_button("‹ Activities",func(): _context_page="activities"; _refresh()))
 	elif _context_page=="garden":
 		activity_label.text="Kitchen garden"
@@ -871,6 +895,7 @@ func _announce_wishes(family: Dictionary) -> void:
 		_wish_seen[resident.id]=count
 
 func _select_lot(id: String) -> void:
+	_art_source=""; _art_request.clear(); _art_entry.clear()
 	_paint_anchor=Vector2i(-1,-1); _paint_request.clear(); _window_request.clear(); _color_request.clear(); _copy_source=Vector2i(-1,-1); _copy_request.clear()
 	viewed_lot=id; _selected_object=""; _room_anchor=Vector2i(-1,-1); _room_request.clear(); neighborhood_panel.hide(); _refresh()
 
@@ -902,6 +927,10 @@ func _send(command: Dictionary) -> void:
 
 func _entity_clicked(target: Dictionary) -> void:
 	if routine_panel.visible: return
+	if target.get("type")=="wall_art":
+		_art_source="art:"+str(target.id)
+		if not lot_view.building: _context_page="wall_art_inspect"
+		_refresh(); _show_tray(context_panel,true); call_deferred("_reset_catalog_scroll"); return
 	if target.get("type")=="access":
 		if lot_view.building and lot_view.access_inspecting: _focus_access_issue(str(target.get("id","")))
 		return
@@ -925,7 +954,8 @@ func _entity_clicked(target: Dictionary) -> void:
 
 func _select_build_tool(kind: String) -> void:
 	if _context_page=="access": _context_page="activities"
-	var reset_scroll := kind.begins_with("finish_") or not _paint_surface().is_empty() or kind in ["window","furniture_color"] or selected_tool in ["window","furniture_color"]
+	var reset_scroll := kind.begins_with("finish_") or not _paint_surface().is_empty() or kind in ["window","furniture_color","wall_art"] or selected_tool in ["window","furniture_color","wall_art"]
+	if kind!="wall_art": _art_source=""; _art_request.clear(); _art_entry.clear()
 	selected_tool=kind; _moving_object=""; _move_request.clear(); _color_request.clear()
 	_paint_anchor=Vector2i(-1,-1); _paint_request.clear()
 	_room_anchor=Vector2i(-1,-1); _room_request.clear(); _copy_source=Vector2i(-1,-1); _copy_request.clear(); _refresh()
@@ -942,6 +972,8 @@ func _select_moving_object(id: String) -> void:
 
 func _tile_clicked(cell: Vector2i) -> void:
 	if routine_panel.visible: return
+	if lot_view.building and selected_tool=="wall_art" and not lot_view.access_inspecting:
+		_art_command({"type":"art_hang","lot_id":viewed_lot,"source":_art_source,"x":cell.x,"y":cell.y,"revision":Session.state.lots[viewed_lot].revision}); return
 	var lot: Dictionary=Session.state.get("lots",{}).get(viewed_lot,{})
 	if lot.is_empty(): return
 	if bool(lot.building) and str(lot.owner)==str(Session.profile_id):
@@ -1079,7 +1111,7 @@ func _build_history(redo: bool) -> void:
 
 func _rotate() -> void:
 	if not _copy_request.is_empty(): return
-	if not _paint_surface().is_empty() or selected_tool in ["window","furniture_color"]: return
+	if not _paint_surface().is_empty() or selected_tool in ["window","furniture_color","wall_art"]: return
 	build_rotation=(build_rotation+1)%4; _refresh()
 
 func _toggle_fullscreen() -> void:
@@ -1109,7 +1141,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if focused is LineEdit or focused is TextEdit: return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if lot_view.building and (event.ctrl_pressed or event.meta_pressed) and event.keycode==KEY_F:
-			if not _paint_surface().is_empty() or selected_tool in ["window","furniture_color"]: _select_build_tool("floor")
+			if not _paint_surface().is_empty() or selected_tool in ["window","furniture_color","wall_art"]: _select_build_tool("floor")
 			_context_page="activities"; _refresh()
 			_show_tray(context_panel,true); catalog_search.grab_focus(); catalog_search.select_all()
 		elif lot_view.building and (event.ctrl_pressed or event.meta_pressed) and event.keycode in [KEY_Z,KEY_Y]:
@@ -1117,6 +1149,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		elif event.is_action_pressed("pause") or event.keycode==KEY_ESCAPE:
 			if _context_page=="access" and context_panel.visible:
 				_close_context()
+			elif selected_tool=="wall_art" and not _art_source.is_empty() and _art_request.is_empty():
+				_art_source=""; _refresh()
 			elif _copy_source.x>=0 and _copy_request.is_empty():
 				_copy_source=Vector2i(-1,-1); _refresh()
 			elif _paint_anchor.x>=0 and _paint_request.is_empty():
@@ -1432,7 +1466,7 @@ func _edit_button(text: String, action: Callable, parent: Node, tooltip: String=
 	return button
 
 func _build_edit_controls(lot: Dictionary) -> void:
-	var painting := (not _paint_surface().is_empty() or selected_tool in ["window","furniture_color"]) and _context_page!="access"
+	var painting := (not _paint_surface().is_empty() or selected_tool in ["window","furniture_color","wall_art"]) and _context_page!="access"
 	if _context_page=="access":
 		var repairs := HBoxContainer.new(); repairs.add_theme_constant_override("separation",5); context_box.add_child(repairs)
 		_edit_button("Door",func(): _select_build_tool("door"),repairs,"Choose a door to reconnect a room.")
@@ -1467,7 +1501,7 @@ func _build_edit_controls(lot: Dictionary) -> void:
 	redo_button=_edit_button("Redo",func(): _build_history(true),history,"Redo a building edit · Ctrl/Cmd+Shift+Z or Ctrl+Y")
 	undo_button.disabled=int(lot.get("build_undo",0))==0; redo_button.disabled=int(lot.get("build_redo",0))==0
 	if not painting: _edit_button("Discard draft",func(): _send({"type":"build_cancel","lot_id":viewed_lot}),history,"Restore the whole house and budget from before construction.")
-	elif selected_tool in ["window","furniture_color"]:
+	elif selected_tool in ["window","furniture_color","wall_art"]:
 		_edit_button("Discard draft",func(): _send({"type":"build_cancel","lot_id":viewed_lot}),history,"Restore the house and budget from before construction.")
 	else:
 		var finish := HBoxContainer.new(); finish.add_theme_constant_override("separation",5); context_box.add_child(finish)
@@ -1663,3 +1697,40 @@ func _build_color_palette() -> void:
 		button.tooltip_text="Restore the furnishing's original materials." if style=="original" else "Change bedding, upholstery, enamel, woodwork, or the pot. Details keep their own colors."
 		var swatch := Image.create(14,22,false,Image.FORMAT_RGBA8); swatch.fill(Color(definition.color)); button.icon=ImageTexture.create_from_image(swatch)
 		swatches.add_child(button); color_buttons[style]=button
+
+
+func _open_art(source: String) -> void:
+	if not _art_entry.is_empty(): return
+	var lot: Dictionary=Session.state.lots[viewed_lot]
+	if lot.owner!=Session.profile_id or WallArt.source(lot,source).is_empty() or Session.role=="joining": return
+	if lot.building:
+		_art_source=source; _select_build_tool("wall_art"); _show_tray(context_panel,true); return
+	_art_entry={"lot_id":viewed_lot,"source":source}
+	_send({"type":"build_begin","lot_id":viewed_lot})
+
+func _build_art_panel() -> void:
+	activity_label.text="Wall art"
+	wall_art_panel=WallArtPanel.new(); tools_box.add_child(wall_art_panel)
+	wall_art_panel.source_selected.connect(func(source): _art_source=source; _refresh())
+	wall_art_panel.command_requested.connect(_art_command); wall_art_panel.arrange_requested.connect(_open_art)
+	if lot_view.building:
+		context_box.add_child(_button("‹ Catalog",func(): _select_build_tool("floor")))
+	else: context_box.add_child(_button("‹ Activities",func(): _context_page="activities"; _refresh()))
+
+func _art_command(intent: Dictionary) -> void:
+	if not _art_request.is_empty(): return
+	var lot: Dictionary=Session.state.lots[viewed_lot]
+	var plan := WallArt.inspect(lot,intent)
+	if not plan.ok: _notice(str(plan.message)); return
+	_art_request={"intent":intent.duplicate(true),"plan":plan}
+	_send(intent)
+
+func _art_completed(intent: Dictionary,ok: bool,_message: String) -> void:
+	if not _art_entry.is_empty() and intent=={"type":"build_begin","lot_id":_art_entry.lot_id}:
+		if not ok: _art_entry.clear()
+		_refresh()
+	if not intent.get("type") in ["art_hang","art_store","art_return"]: return
+	if ok and hud.is_visible_in_tree(): Soundscape.play_ui("build")
+	if not _art_request.is_empty() and intent==_art_request.intent:
+		if not ok: _art_request.clear()
+		_refresh()

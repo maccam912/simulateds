@@ -1481,3 +1481,44 @@ while freeing the easel for another canvas. Preserve its artist credit and avoid
 copying earned art with room duplication. A painting hobby can follow once
 keeping and arranging finished work feels natural. This is proposed next work,
 not implemented behavior in this checkpoint.
+
+
+## Pictures become part of the home
+
+Finished paintings can now move from the easel onto a solid wall, freeing the
+canvas for another subject. Wall art in the catalog selects finished canvases
+and the household collection. Move, Store, and Return to easel preserve the
+picture, completion day, and artist credit. Transfers are free and undoable.
+Removing the wall, making a doorway, or fitting a window safely stores its art.
+Room duplication cannot multiply earned pictures. Front-wall pictures remain
+visible and inspectable when the architecture cuts away during live play.
+
+The first native flow reached its final new-canvas assertion; its expected
+picture needed to account for the deliberate revision change when returning
+art to an easel. The model also needed integer-coordinate comparison for raw
+JSON validation. These fixes kept content retention and canvas identity separate.
+The finished easel's Hang action no longer depends on the selected resident's
+walking route, queue capacity, or current lot; an already planned painting sale
+still keeps it unavailable.
+
+Both native layouts passed the complete keep-and-paint-again flow, ownership
+inspection, exact pending acknowledgements, history, window replacement, and
+front-wall picking. Fresh screenshot review caught a compact-layout problem
+that successful clicks alone had missed: collection actions required scrolling.
+A smaller preview, concise location text, and a shared action row now keep Store
+and Return to easel visible together. Multiple empty easels still provide a
+specific destination picker. The existing quiet building cue confirms edits.
+
+All 72 local suites and the expanded separate-process Iroh painting scenario
+passed, including two households, mounted-art reconnect retention, empty-canvas
+retention, and a single eventual sale payment. The complete regression also
+passed the original Iroh scenario and dedicated-server startup. The previous easel checkpoint
+passed all four CI platform jobs. These are automated native and network checks,
+not human playtesting or physical-device certification.
+
+Fresh assessment: keeping a picture now feels like decorating a lived-in home,
+and the easel remains usable afterward. The next useful work is a painting hobby:
+connect deliberate creative effort to a resident's lasting interests and visible
+progress, while keeping subject choice and sales deliberate. That should reuse
+the existing bounded hobby system and preserve older saves. It is proposed next
+work, not implemented behavior in this checkpoint.
