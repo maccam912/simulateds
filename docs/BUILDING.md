@@ -2,6 +2,10 @@
 
 ## Local development
 
+Install Git LFS and hydrate assets with `git lfs install` and `git lfs pull`
+before setup/import. After the 3D history migration, use a fresh clone; see
+[LFS.md](LFS.md). Validate model sources with `python3 tools/check_models.py`.
+
 `python3 tools/setup.py` installs the pinned engine and builds for the current CPU.
 Use `python3 tools/godot.py --editor` so you get that engine rather than a different
 Godot already on PATH. `python3 tools/godot.py` runs the game.

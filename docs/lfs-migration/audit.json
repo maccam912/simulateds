@@ -1,0 +1,8 @@
+{
+  "commits_verified": 71,
+  "unique_binary_conversions_verified": 33,
+  "lfs_objects_verified": 75,
+  "no_raw_binary_blobs": true,
+  "non_attribute_file_contents_preserved": true,
+  "commit_metadata_preserved": true
+}

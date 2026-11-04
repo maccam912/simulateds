@@ -4,6 +4,45 @@ Checked locally on November 3–4, 2026. This record describes **Simulateds**, n
 upstream template demo. Template validation does not establish that this game's
 changed simulation, protocol, saves, interface, or exported builds work.
 
+## November 4, 2026 — true 3D renderer
+
+The default live neighborhood now uses real GLB meshes and Camera3D. Local
+validation on Apple M5 Pro/Godot 4.7.2 OpenGL Compatibility:
+
+- `MODEL_LIBRARY_PASS`: 30 self-contained GLBs cover all 14 furnishings;
+  provenance/source hashes, geometry, bounds, pivots, materials and budgets verify.
+- All 111 local suites pass, including `RENDERER_3D_PASS`, the existing gameplay
+  and UI behavior, save isolation, mesh selection and camera/grid agreement.
+- All six real Iroh scenarios (general, painting, meals, recreation, commissions,
+  pantry) and dedicated-server startup pass: 118 suite markers total, no engine
+  errors. This run used automatic routing; forced-relay/code-service behavior
+  was not rechecked for this renderer. Evidence: `build/3d-final-regression.log`.
+- Native `renderer_3d`, `render_app` and `render_activities` pass. Day/night,
+  construction, placement, compact 1280×720, normal 1440×900 and rotated resting
+  poses were rendered and visually inspected. Construction/route ground marks
+  use depth-tested geometry below the furniture. Actual model triangles are
+  selectable; opaque furniture correctly occludes objects behind it.
+- macOS export passes universal ARM64/Intel plist/signature checks and native
+  hosting smoke. All 30 model import mappings resolve in the packaged PCK;
+  gallery art is excluded. The exported GUI ran 120 frames on Apple Silicon
+  without engine/script errors. ZIP SHA-256:
+  `b5a5a812506ef5018df8bc3a5936d7834e8af120f65e793d84956a8a8a61a4b7`.
+- The LFS audit verifies 71 rewritten commits, 33 converted historical binary
+  versions, 75 historical LFS objects, original bytes and commit metadata.
+  Current checkout: 64 hydrated LFS assets; `git lfs fsck` passes.
+
+The macOS package is ad-hoc signed, not notarized. Physical Android, Intel
+runtime, Windows/Linux rendering and human play remain unverified for this
+renderer. Historical platform/relay results below do not establish those
+boundaries for the new 3D presentation. Richer authored skeletal animation and
+handheld activity props remain follow-up work.
+
+Reproduce with `python3 tools/check.py`; native captures use
+`python3 tools/godot.py --script res://tests/renderer_3d.gd` with isolated
+`--save-path`/`--profile-path` arguments after `--`. Source and regeneration
+instructions are in [ASSET_GUIDE.md](ASSET_GUIDE.md). See `HANDOFF.md` for the
+current checkpoint and [LFS.md](LFS.md) before updating an old clone.
+
 ## Observed local results
 
 | Check | Result and boundary |

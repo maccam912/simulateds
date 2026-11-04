@@ -40,6 +40,21 @@ Keep the old clone until local work and downloaded assets have been checked.
 An ordinary pull does not replace the obsolete history. GitHub's source ZIP is
 not a substitute for a verified LFS clone.
 
+## November 4, 2026 migration
+
+The conversion rewrote 71 commits, including the first 3D conversion commit.
+The [audit](lfs-migration/audit.json) verified all 33 historical raw binary
+versions against their LFS objects, verified 75 total historical LFS objects,
+and checked that file bytes, modes, commit metadata and parent correspondence
+were preserved. Only `.gitattributes` changed beyond replacing binaries with
+pointers. The [commit map](lfs-migration/commit-map.csv) records old/new IDs.
+
+The original remote main was `a1e8fba57e5a68d6f7ba8772ee10410acf82d0b8`.
+The 3D source commit maps from `1f8a6bb6a733d2a8cd669e22fc1dece70c331d28`
+to `81a5465` (see the map for the full hash). Later documentation commits do not
+require another rewrite. Recovery bundles and LFS bytes were retained outside
+the checkout; see the local backup location in `HANDOFF.md`.
+
 ## Migration maintenance
 
 A history rewrite is a coordinated repository-maintenance operation. Preserve a
