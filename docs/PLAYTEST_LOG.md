@@ -1305,3 +1305,37 @@ currently build friendship. Next, make deliberate shared recreation contribute t
 bounded relationship progress, with honest People feedback, minimum time actually
 together, and protection against double-counting or autonomous/absent farming.
 This is proposed next work, not a feature of this checkpoint.
+
+
+## Friendship through chosen games and dancing
+
+Shared recreation now builds the same symmetric relationship as chats after two
+online residents spend 12 game minutes actually participating through deliberate
+orders. The pair shares the existing two-catch-up daily budget across chatting,
+games, and dancing. Solo time, walking, bystanders, autonomous participation,
+absent households, repeated snapshots, and continuing the same encounter over
+midnight add no extra progress. Pair sampling happens before either resident's
+activity ticks, so both finishing on the qualifying step still count equally.
+
+People now names the last encounter and its day, shows catch-ups left today, and
+explains the threshold. A control issue surfaced during implementation: an
+already-automatic participant had a disabled Join button. Explicit Join now
+replaces that automatic activity with a fresh deliberate plan. Other queued
+orders and ownership rules remain unchanged.
+
+The native flow began with Robin dancing automatically, verified no bond gain,
+then used People to choose participation. The first catch-up showed Danced together
+and one left today; a second chosen encounter reached Friends, appeared in both
+journals, and showed the daily limit. Standard and compact native runs passed;
+the screenshots showed readable cards and the existing milestone notification.
+All 62 local suites and actual host/two-client/reconnect plus dedicated startup
+passed. A final real-peer rerun also retained the exact relationship records
+across reconnect. The previous courtesy checkpoint passed all four platform CI jobs.
+
+Fresh assessment: visits now have an enduring social result, and the activity
+loop has enough variety to support purposeful play. Homebuilding is the next
+high-impact area: repeating a furnished room still means reconstructing its
+walls, finishes, windows, and furniture item by item. Next, add room duplication
+with a complete cost/access preview and a single undoable placement, so extending
+a family home is quicker without making construction unpredictable. This is
+proposed next work, not implemented behavior in this checkpoint.

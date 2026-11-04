@@ -1,5 +1,6 @@
 extends SceneTree
 ## Real Iroh processes: two independent builders, visitor recall and reconnect.
+const Bonds = preload("res://game/friendships.gd")
 const Leisure = preload("res://game/shared_leisure.gd")
 const WalkFeedback = preload("res://game/walk_feedback.gd")
 var session: Node
@@ -446,7 +447,7 @@ func _client(index: String) -> void:
 	for _attempt in range(150):
 		var guest: Dictionary=session.state.families[identity].members[0]
 		var players: Array=preload("res://game/tabletop.gd").players(session.state,host_home,game_table_id)
-		if players.size()==2 and guest.action=="Playing together" and guest.needs.social>22.0:
+		if players.size()==2 and guest.action=="Playing together" and guest.needs.social>22.0 and int(Bonds.bond(session.state,str(players[0].id),str(players[1].id)).get("score",0))==12:
 			assert(preload("res://game/tabletop.gd").place(players[0])!=preload("res://game/tabletop.gd").place(players[1]))
 			shared=true; break
 		await create_timer(0.1).timeout
@@ -482,7 +483,7 @@ func _client(index: String) -> void:
 	for _attempt in range(100):
 		var guest: Dictionary=session.state.families[identity].members[0]
 		var dancers: Array=preload("res://game/shared_leisure.gd").players(session.state,host_home,stereo_id)
-		if dancers.size()==2 and guest.action=="Dancing together" and guest.needs.social>dance_social+1.0:
+		if dancers.size()==2 and guest.action=="Dancing together" and guest.needs.social>dance_social+1.0 and int(Bonds.bond(session.state,str(dancers[0].id),str(dancers[1].id)).get("score",0))==24:
 			assert(preload("res://game/shared_leisure.gd").place(dancers[0])!=preload("res://game/shared_leisure.gd").place(dancers[1]))
 			var stereo: Dictionary={}
 			for object: Dictionary in session.state.lots[host_home].objects:
@@ -490,6 +491,8 @@ func _client(index: String) -> void:
 			var places := Leisure.spaces(session.state,session.state.lots[host_home],stereo,guest)
 			assert(places.capacity==3 and places.reserved==2,"Real clients derive the three-place room, not the catalog maximum")
 			assert(places.cells.filter(func(cell): return cell.status=="reserved").size()==2)
+			var bond := Bonds.bond(session.state,str(dancers[0].id),str(dancers[1].id))
+			assert(bond.today==2 and bond.last_activity=="stereo","Real clients share the chat/game/dance friendship budget")
 			danced=true; break
 		await create_timer(0.1).timeout
 	assert(danced,"Both clients observe separate dance spots and shared social restoration")
@@ -519,6 +522,11 @@ func _client(index: String) -> void:
 	var funds: float = session.state.lots[home].funds
 	var garden_before: Dictionary=session.world._object(session.state.lots[home],garden_id).garden.duplicate(true)
 	var garden_history: Array=session.state.families[identity].members[1].activity_log.duplicate(true)
+	var bonds_before := {}
+	for id: String in session.state.friendships:
+		var bond: Dictionary=session.state.friendships[id]
+		if member_id in [bond.a,bond.b]: bonds_before[id]=bond.duplicate(true)
+	assert(bonds_before.values().any(func(bond): return bond.score==24 and bond.today==2 and bond.last_activity=="stereo"))
 	session.leave()
 	await create_timer(0.7).timeout
 	await _connect()
@@ -532,6 +540,7 @@ func _client(index: String) -> void:
 	assert(not session.state.families[identity].home_news.report.pending,"Acknowledged recap did not replicate")
 	await _command(postcard,false)
 	assert(session.home_lot() == home, "Reconnect changed lot ownership")
+	for id: String in bonds_before: assert(session.state.friendships.get(id)==bonds_before[id],"Reconnect retains friendship gains, daily limits, and the last shared encounter")
 	assert(session.state.families[identity].members[1].activity_log==garden_history,"Reconnect retains completed outcomes without inventing new entries")
 	garden=session.world._object(session.state.lots[home],garden_id).garden
 	assert(garden.crop==garden_before.crop and garden.revision==garden_before.revision and garden.growth>=garden_before.growth and garden.growth<=45.000001,"Reconnect retains crops; unattended growth stops safely when the planted water runs out")

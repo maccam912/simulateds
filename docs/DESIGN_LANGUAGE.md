@@ -478,3 +478,20 @@ a separate movement system, repeated retries, or a persistent request queue.
 Explicit plans win, participating residents remain where they are, and a blocked
 exit means no movement. Keep the completed activity in Recent exactly once;
 the courtesy itself is neither a deliberate outcome nor a reusable routine step.
+
+
+### Shared play builds a bond
+
+Let voluntary play have a lasting social result. A chosen shared game or dance
+qualifies after 12 game minutes actually spent together; both residents need
+active deliberate participation. Use the same two-catch-up daily budget as chats,
+one symmetric relationship, and the established milestone sound and journal
+entry. Autonomous leisure, bystanders, travel time, and absent households earn
+nothing. Choosing Join while already playing automatically turns it into a
+new deliberate activity rather than trapping the player behind a disabled button.
+
+People names the latest encounter (Last chat / Played together / Danced together),
+its game day, and the remaining daily catch-ups. Keep those details on the person
+card and explain the threshold in the existing footer; no separate friendship
+currency or HUD gauge is needed. A shared activity can continue after it qualifies.
+Repeated snapshots and the two participants' views must never duplicate its gain.

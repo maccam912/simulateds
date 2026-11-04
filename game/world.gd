@@ -516,6 +516,7 @@ func step(delta: float) -> void:
 		if lot.building: continue
 		for object: Dictionary in lot.objects:
 			if object.kind=="garden_bed": Gardens.grow(object.garden,delta)
+	_tick_shared_friendships(delta)
 	for family: Dictionary in state.families.values():
 		if HomeNews.away(family): family.home_news.minutes+=delta*MINUTES_PER_SECOND
 		if state.lots[family.home_lot].building:
@@ -590,6 +591,7 @@ func _tick_member(member: Dictionary, lot: Dictionary, delta: float) -> void:
 		return
 	if object.kind=="garden_bed" or task.has("garden_action"):
 		_tick_garden(member,lot,object,task,delta); return
+	if Leisure.KINDS.has(object.kind) and not task.has("social_started"): task.social_started=int(state.tick)
 	var definition: Dictionary = Catalog.ITEMS[object.kind]
 	member.action = ACTION_NAMES.get(object.kind, "Enjoying home")
 	var need: String = definition.need
@@ -654,7 +656,7 @@ func leisure_option(member: Dictionary, companion_id: String, kind: String="") -
 	var definition: Dictionary=Leisure.KINDS[object.kind]
 	var noun: String=definition.noun; var place: String=definition.place
 	var spaces := Leisure.spaces(state,state.lots[companion.lot_id],object,member)
-	var option := {"available":false,"kind":str(object.kind),"label":"Join "+noun,"detail":"Adds a "+noun+" after your planned activities. Companions may finish before you arrive.","summary":str(definition.title)+" · "+Leisure.summary(spaces),"target_id":str(object.id),"activity_id":str(companion.task.id),"lot_id":str(companion.lot_id)}
+	var option := {"available":false,"kind":str(object.kind),"label":"Join "+noun,"detail":"Adds a "+noun+" after your planned activities. Companions may finish before you arrive. Friendship needs 12 game minutes of chosen play by both residents.","summary":str(definition.title)+" · "+Leisure.summary(spaces),"target_id":str(object.id),"activity_id":str(companion.task.id),"lot_id":str(companion.lot_id)}
 	if member.lot_id!=companion.lot_id:
 		option.label="Visit to join"; option.detail="Visit this home, then choose Join "+noun+"."
 		return option
@@ -665,6 +667,7 @@ func leisure_option(member: Dictionary, companion_id: String, kind: String="") -
 	var tasks: Array=member.queue.duplicate()
 	if not member.task.is_empty(): tasks.push_front(member.task)
 	for task: Dictionary in tasks:
+		if task==member.task and task.get("automatic",false): continue
 		if task.get("type")=="interact" and task.get("target_kind","object")=="object" and task.get("target_id")==object.id:
 			option.label="In your plan"; option.detail="This "+noun+" is already in your plan."
 			if task==member.task and task.get("path",[]).is_empty() and float(task.get("elapsed",0.0))>0.0:
@@ -1413,9 +1416,35 @@ func _online_member(member: Dictionary) -> bool:
 		if family.members.has(member): return bool(family.online)
 	return false
 
+func _tick_shared_friendships(delta: float) -> void:
+	# Sample both participants before ticking either one. A final shared step
+	# counts even if both activities finish in this frame, independent of order.
+	var participants: Array=[]
+	for family: Dictionary in state.families.values():
+		if not family.online or state.lots[family.home_lot].building: continue
+		for member: Dictionary in family.members:
+			var task: Dictionary=member.task
+			if task.get("automatic",false) or not task.get("path",[]).is_empty() or float(task.get("elapsed",0.0))<=0.0 or not task.has("social_started"): continue
+			var object := Leisure.activity(state,member)
+			if not object.is_empty(): participants.append({"member":member,"object":object})
+	for index in range(participants.size()):
+		var first: Dictionary=participants[index]
+		for next in range(index+1,participants.size()):
+			var second: Dictionary=participants[next]
+			if first.member.lot_id!=second.member.lot_id or first.object.id!=second.object.id: continue
+			var a: Dictionary=first.member.task; var b: Dictionary=second.member.task
+			var together := minf(float(a.elapsed),float(b.elapsed))+minf(delta,minf(float(a.remaining),float(b.remaining)))
+			if together+0.0000001<Friendships.SHARED_TIME: continue
+			var started := maxi(int(a.social_started),int(b.social_started))
+			var result := Friendships.record(state,str(first.member.id),str(second.member.id),started,str(first.object.kind))
+			_announce_friendship(first.member,second.member,result)
+
 func _finish_conversation(member: Dictionary, neighbor: Dictionary, task: Dictionary) -> void:
 	if task.get("automatic",false) or not _online_member(member) or not _online_member(neighbor): return
 	var result := Friendships.record(state,str(member.id),str(neighbor.id),int(task.get("social_started",state.tick)))
+	_announce_friendship(member,neighbor,result)
+
+func _announce_friendship(member: Dictionary, neighbor: Dictionary, result: Dictionary) -> void:
 	var milestone: String=result.get("milestone","")
 	if milestone.is_empty(): return
 	var detail := " got to know " if milestone=="met" else " became "+milestone+" with "

@@ -1276,11 +1276,10 @@ func _rebuild_people() -> void:
 		var detail := ""
 		if not family.online: detail="Household away · Progress waits"
 		elif int(bond.get("score",0))>=100: detail="A lasting friendship"
-		elif Friendships.remaining(bond,int(Session.state.day))==0: detail="Caught up today · More tomorrow"
-		elif int(bond.get("last_chat_day",0))>0: detail="Last catch-up: day %d" % int(bond.last_chat_day)
+		else: detail=Friendships.recent(bond,int(Session.state.day))
 		if not detail.is_empty():
 			var hint := _label(detail,11,Style.MUTED); hint.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; hint.custom_minimum_size.x=200; body.add_child(hint)
-	var note := _label("Chat builds friendship. Join a game or dance for fun and company; your current plans come first.",12,Style.MUTED)
+	var note := _label("Chat or spend 12 game minutes in chosen shared play. Friendship grows twice per pair each day.",12,Style.MUTED)
 	note.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; note.custom_minimum_size.x=200; context_box.add_child(note)
 
 func _social_action(target_id: String) -> void:

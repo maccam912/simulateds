@@ -177,8 +177,9 @@ or shell expressions.
   care and your orders come first. Plan shows the selected resident’s preference.
   Existing saves start neutral, and automatic leisure earns no wish or hobby progress.
 - **People** shows the selected resident’s relationships and offers Visit or Chat.
-  Two completed catch-ups per pair per day build a shared friendship when both
-  households are online. Milestones appear in both journals. Busy residents finish
+  Up to two catch-ups per pair per day build friendship when both households
+  are online: finish a chosen chat, or spend 12 game minutes in deliberately
+  chosen shared games or dancing. Milestones appear in both journals. Busy residents finish
   their own plans first, and friendships never decay while someone is away.
   Ongoing tabletop games show their occupied places. Visit the home, then use
   **Join game** to add it after your resident's planned activities, or **Queue
@@ -391,3 +392,20 @@ It avoids occupied tiles, walking routes, doorways, the waiting resident's appro
 and places around other shared furniture. If there is no safe nearby step, the
 resident stays put and the waiting explanation remains available. Canceling an
 activity yourself does not trigger a courtesy step.
+
+
+## Friendship through shared play
+
+Games and dancing now build the same lasting relationships as chats. Both residents
+must choose their participation and spend at least **12 game minutes together**
+at the same table or stereo. Time walking there, playing alone, or watching nearby
+does not count. Automatic leisure still restores needs, but does not farm
+friendship. If your resident is participating automatically, **People → Join**
+lets you explicitly choose that activity.
+
+Chats, games, and dances share **two catch-ups per pair each game day**, with the
+same bounded relationship gain. Repeated snapshots, both participants observing
+the result, and continuing the same encounter past midnight do not award it again.
+People shows the last chat/game/dance and today's remaining catch-ups; milestones
+enter both residents' journals. Friendship and these memories survive saving and
+reconnecting, without decaying or growing while a household is away.

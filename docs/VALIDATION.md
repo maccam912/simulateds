@@ -559,3 +559,31 @@ The complete real-peer scenario was rerun successfully after the correction.
 The previous shared-place checkpoint passed macOS, Android, Linux, and Windows
 CI. These automated native/real-process checks do not establish human family
 play, physical Android or cross-OS play, or overnight host reliability.
+
+
+## Shared recreation and friendship
+
+All 62 local suites passed. `shared_friendships.gd` checks both furnishings at the
+12-minute boundary, simultaneous completion in either family order, late arrivals,
+short interrupted sessions, repeated encounters, midnight, mixed chat/play daily
+limits, three-person pair accounting, autonomous/absent/separate-object exclusions,
+explicit replacement of automatic participation, runtime snapshot replay, disk
+reload, legacy chat history, and malformed encounter metadata. The same bounded
+relationship recorder supplies chat and play gains and journal milestones.
+
+Native injected-input tests passed at 1440×900 and 1280×720 / 125% UI scale.
+`shared_friendships_ui.gd` turns Robin's accepted automatic dance into chosen
+participation through People, verifies the first catch-up, starts a second chosen
+encounter, and reaches Friends. Cards show Danced together, game day, one catch-up
+left, then Caught up today. Both journals, the existing milestone notice, and
+saved encounter metadata are checked. Inspected captures are ignored under
+`build/shared-friendships-*.png`.
+
+The actual Iroh scenario now requires both clients to observe a 12-point shared
+game and then a 24-point total after dancing, with two catch-ups and stereo as the
+last encounter. A final real-peer rerun additionally compares each resident’s
+relationship records before and after reconnect, retaining exact gains, daily
+limits, and last-encounter metadata. The courtesy handoff, construction recall, reconnect, and dedicated
+startup also pass. The preceding courtesy checkpoint passed all four platform CI
+jobs. Automated native/real-process evidence does not establish human family play,
+physical Android or cross-OS play, or overnight host reliability.

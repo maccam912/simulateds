@@ -69,6 +69,10 @@ and one original positional music source with background-score ducking. Shared
 furnishings now show actual layout capacity, open/reserved/occupied places, and
 specific waiting explanations. Completed shared recreation can include one safe,
 interruptible courtesy step to let an already-waiting plan take its place.
+Deliberate shared games and dancing now build symmetric friendship after 12 game
+minutes together, sharing the two-catch-up daily budget with chats. People shows
+the last encounter and remaining opportunities; explicit Join can replace an
+automatic activity, and old saves retain their real chat history.
 See [the playtest log](PLAYTEST_LOG.md) for evidence
 and current usability priorities.
 
