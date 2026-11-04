@@ -1959,3 +1959,51 @@ current layout. The next useful building improvement is a bounded library of
 saved room designs, so a player can keep a favorite arrangement while remodeling
 and place it again with the existing cost, access, rotation, and undo previews.
 This is proposed next work, not behavior in this checkpoint.
+
+## Keeping room designs through a remodel
+
+Saved rooms now holds up to four named household designs. Copy room selects the
+source; Save room… captures its accepted architecture, furnishings, colors,
+finishes, and windows. The library provides floor-plan swatches, placement,
+rename, and reviewed removal. Designs live outside construction history, so
+saving or discarding a draft cannot erase them. Placement uses the ordinary room
+preview, full price, access checks, fresh object IDs, and one-step undo/redo.
+Food, crops, people, mounted originals, and canvas progress never enter a recipe.
+
+The first native review found default-styled buttons and too much space occupied
+by an already-completed save form. Buttons now inherit the game theme, accepted
+forms collapse, and the intro is shorter. Removal names the specific design;
+editing a name preserves the draft if another accepted edit changes the library,
+then requires a fresh review. A full library keeps its controls reachable by
+scrolling, with fixed rotation/history/Catalog controls above the household HUD.
+
+Native injected-input playthroughs passed at 1440×900 and 1280×720 / 125% UI scale.
+They saved, renamed, cancelled removal, discarded the source, rotated and placed
+the saved design, undid/redid its whole cost, and removed its recipe while keeping
+the built room. Four long names remain usable. Final compact checks exercise the
+named removal prompt, stale-name review, and exact acknowledgement correlation.
+The existing room-copy native scenario also passed at the compact size. Reviewed
+captures include `build/room-library-saved-compact.png`,
+`build/room-library-preview.png`, and `build/room-library-full-compact.png`.
+
+Model checks cover four rotations, old saves, canonical JSON numbers, invalid
+recipes, ownership, stale revisions, budgets, residents blocking placement,
+saving during a construction draft, and no duplication of meals, crops, finished
+canvases, or mounted originals. A four-household fixture with large libraries
+serialized to 92,372 bytes / 5,531 bytes compressed; JSON restore measured about
+15–16 ms locally. This is a measured fixture, not a worst-case whole-world or
+slow-device performance claim. Existing snapshot limits are unchanged.
+
+Final regression passed all 92 local suites, all three real host/two-client Iroh
+scenarios, and dedicated-server startup. The main Iroh scenario now has both
+clients capture their independent room designs, reject duplicate/foreign saves,
+place from the library at the previewed cost, undo/redo, and reconnect with the
+same recipes, colors, names and newly allocated furnishing identities. Final
+focused checks passed after the review-copy and save-during-draft additions.
+
+Fresh assessment: saved layouts make experimentation easier, but replacing a
+starter house still requires many individual Sell clicks before a larger design
+can fit. The next useful building increment is a reviewed clear-lot action with
+an exact refund, protected original artwork, and whole-edit Undo/Discard. It
+should make rebuilding from a saved design practical without hiding what the
+player is about to remove. This is proposed next work, not implemented here.

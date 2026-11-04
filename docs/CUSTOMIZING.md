@@ -7,6 +7,9 @@ household or an absent player.
 | File | Responsibility |
 | --- | --- |
 | `game/catalog.gd` | Furniture prices, footprints, need effects, duration, labels, and color hints |
+| `game/room_library.gd` | Canonical host-captured room recipes, four-entry/32 KiB household bounds, revision-checked edits, and legacy defaults |
+| `game/room_library_panel.gd` | Saved-room previews, names, correlated save/rename/remove commands, and placement selection |
+| `game/room_thumbnail.gd` | Read-only floor-plan swatches drawn from room geometry, finishes, and furniture colors |
 | `game/room_copy.gd` | Pure enclosed-room capture, rotation, price/access inspection, and surface application; authority allocates fresh furnishing IDs |
 | `game/furniture_colors.gd` | Named material palette, optional validated object color, and pure recoloring preview; missing metadata preserves legacy art |
 | `game/build_impact.gd` | Pure before/after access forecasts for validated placement, movement, and room drafts; reports new problems and repairs without changing authority rules |
@@ -138,3 +141,22 @@ presence: an active household may be visiting elsewhere, and an absent owner's
 home can contain another player's visitors. Cards retain their Button identities
 while labels update, so multiplayer changes do not steal keyboard focus. Card
 activation only selects the view; travel remains an explicit command.
+
+## Saved room recipes
+
+A library belongs to `family.room_library`, outside construction backups/history.
+Saving a design changes only that library; discarding a lot draft must preserve it.
+The host derives the recipe from an enclosed room at the submitted lot revision.
+Never accept live objects or recipe geometry supplied by a client command.
+Placement references a saved ID and library revision, then shares RoomCopy’s
+rotation, access, collision, and exact-price inspection. Authority creates fresh
+object IDs and empty activity state. One building Undo restores the whole edit.
+
+Recipes include architecture, sparse windows, canonical surface finishes, and
+furnishing kind/position/rotation/color. They exclude residents, original artwork,
+canvas progress, meals, crops, rewards, and object IDs. When adding new content,
+choose deliberately whether its *design* belongs in recipes; initialize its
+live state through `_new_object`. Extend malformed-save and original-preservation
+checks. Keep the four-entry and 32,768-byte household bounds unless measured
+replication and persistence evidence justifies a change; current packet and
+snapshot caps remain unchanged.

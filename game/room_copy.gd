@@ -67,6 +67,13 @@ static func inspect(lot: Dictionary, command: Dictionary, residents: Array) -> D
 	if not Rules._integer(command.get("rotation",0)) or int(command.get("rotation",0))<0 or int(command.get("rotation",0))>3: return _no("Choose a valid rotation.")
 	var source := capture(lot,Vector2i(int(command.source_x),int(command.source_y)))
 	if not source.ok: return source
+	return inspect_source(lot,command,residents,source)
+
+static func inspect_source(lot: Dictionary,command: Dictionary,residents: Array,source: Dictionary) -> Dictionary:
+	for key: String in ["x","y"]:
+		if not Rules._coordinate(command.get(key)): return _no("Keep the saved room inside this lot.")
+	if not Rules._integer(command.get("rotation",0)) or int(command.get("rotation",0))<0 or int(command.get("rotation",0))>3: return _no("Choose a valid rotation.")
+	if not source.get("ok",false): return _no("Choose a valid room design.")
 	var rotation := int(command.get("rotation",0)); var at := Vector2i(int(command.x),int(command.y))
 	var extent: Vector2i=Vector2i(source.extent.y,source.extent.x) if rotation%2 else source.extent
 	var plan := {"ok":true,"source":source,"low":at,"extent":extent,"interior":[],"floors":[],"walls":[],"doors":[],"objects":[],"finishes":{"floor":{},"wall":{}},"windows":{},"structure_cost":0,"furniture_cost":0,"finish_cost":0,"window_cost":0,"cost":0,"garden":source.garden,"art":source.art,"food":source.food}

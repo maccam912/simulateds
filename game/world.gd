@@ -5,6 +5,7 @@ const Catalog = preload("res://game/catalog.gd")
 const BuildRules = preload("res://game/build_rules.gd")
 const RoomPlan = preload("res://game/room_plan.gd")
 const RoomCopy = preload("res://game/room_copy.gd")
+const RoomLibrary = preload("res://game/room_library.gd")
 const FurnitureColors = preload("res://game/furniture_colors.gd")
 const Wishes = preload("res://game/wishes.gd")
 const Hobbies = preload("res://game/hobbies.gd")
@@ -95,6 +96,7 @@ func ensure_family(profile_id: String, display_name: String) -> String:
 		state.families[profile_id].mailbox=Mailbox.create(int(state.day))
 		state.families[profile_id].home_news=HomeNews.create()
 		state.families[profile_id].routines=Routines.create()
+		state.families[profile_id].room_library=RoomLibrary.create()
 		_event(clean_name + " moved into " + str(lot.name) + ".")
 		return lot_id
 	return ""
@@ -142,7 +144,17 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 	if not lot_id is String or not state.lots.has(lot_id):
 		return _result(false, "That lot does not exist.")
 	var lot: Dictionary = state.lots[lot_id]
-	if type in ["build_begin", "build_end", "build_cancel", "build_undo", "build_redo", "place", "erase", "move_object", "build_room", "copy_room", "paint", "set_window", "recolor", "art_hang", "art_store", "art_return"]:
+	if type in ["blueprint_save","blueprint_rename","blueprint_delete"]:
+		if lot.owner!=profile_id: return _result(false,"Only your own household can edit its saved rooms.")
+		var captured := {}
+		if type=="blueprint_save":
+			if not lot.building: return _result(false,"Enter construction mode to select a room to save.")
+			if not _integer(command.get("revision")) or int(command.revision)!=int(lot.revision): return _result(false,"The room changed. Select it again before saving.")
+			if not BuildRules._coordinate(command.get("source_x")) or not BuildRules._coordinate(command.get("source_y")): return _result(false,"Choose floor inside a room to save.")
+			captured=RoomCopy.capture(lot,Vector2i(int(command.source_x),int(command.source_y)))
+			if not captured.ok: return captured
+		return RoomLibrary.edit(family,command,captured)
+	if type in ["build_begin", "build_end", "build_cancel", "build_undo", "build_redo", "place", "erase", "move_object", "build_room", "copy_room", "place_blueprint", "paint", "set_window", "recolor", "art_hang", "art_store", "art_return"]:
 		if lot.owner != profile_id:
 			return _result(false, "Only the owner can build on this lot.")
 		if type == "build_begin":
@@ -164,7 +176,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 			return _result(true, "Construction started. Your family is paused; neighbors keep living.")
 		if not lot.building:
 			return _result(false, "Enter construction mode first.")
-		if type in ["build_undo", "build_redo", "build_room", "copy_room", "paint", "set_window", "recolor", "art_hang", "art_store", "art_return"]:
+		if type in ["build_undo", "build_redo", "build_room", "copy_room", "place_blueprint", "paint", "set_window", "recolor", "art_hang", "art_store", "art_return"]:
 			if not _integer(command.get("revision")) or int(command.revision) != int(lot.revision):
 				return _result(false, "The building draft changed. Review the preview and try again.")
 			if type in ["build_undo","build_redo"]: return _history_step(lot,type == "build_redo")
@@ -831,8 +843,16 @@ func _build(lot: Dictionary, command: Dictionary) -> Dictionary:
 	for family: Dictionary in state.families.values():
 		for member: Dictionary in family.members:
 			if member.lot_id==lot.id: residents.append(_position(member))
-	if command.type=="copy_room":
-		var plan := RoomCopy.inspect(lot,command,residents)
+	if command.type in ["copy_room","place_blueprint"]:
+		var plan: Dictionary
+		if command.type=="place_blueprint":
+			var board: Dictionary=state.families[lot.owner].room_library
+			if not RoomLibrary.revision_matches(board,command.get("library_revision")): return _result(false,"Saved rooms changed. Choose from the current library.")
+			if not command.get("blueprint_id") is String: return _result(false,"Choose a saved room.")
+			var entry:=RoomLibrary.find(board,command.blueprint_id)
+			if entry.is_empty(): return _result(false,"This room design is no longer saved.")
+			plan=RoomCopy.inspect_source(lot,command,residents,RoomLibrary.source(entry.layout))
+		else: plan=RoomCopy.inspect(lot,command,residents)
 		if not plan.ok: return plan
 		if int(state.next_object)+plan.objects.size()>9007199254740991: return _result(false,"The furnishing identifier limit has been reached.")
 		RoomCopy.apply_surfaces(lot,plan)
@@ -1702,6 +1722,8 @@ func _normalize_numbers() -> void:
 		HomeNews.normalize(family)
 		if not family.has("routines"): family.routines=Routines.create()
 		Routines.normalize(family.routines)
+		if not family.has("room_library"): family.room_library=RoomLibrary.create()
+		RoomLibrary.normalize(family.room_library)
 		family.identity_revision=int(family.get("identity_revision",0))
 		for member: Dictionary in family.members:
 			if not member.has("favorite"): member.favorite="variety"
@@ -1809,6 +1831,7 @@ func _valid_state(data: Dictionary) -> bool:
 			return false
 		if family.has("home_news") and not HomeNews.valid(family.home_news): return false
 		if family.has("routines") and not Routines.valid(family.routines): return false
+		if family.has("room_library") and not RoomLibrary.valid(family.room_library): return false
 		if not _integer(family.get("identity_revision",0)) or float(family.get("identity_revision",0))<0 or float(family.get("identity_revision",0))>9007199254740000: return false
 		for member: Variant in family.members:
 			if not member is Dictionary or not member.get("id") is String or str(member.id).length() > 160 or members_seen.has(member.id) or not member.get("name") is String or str(member.name).length() > 32 or not data.lots.has(member.get("lot_id")) or not _valid_coord(member.get("x")) or not _valid_coord(member.get("y")) or not member.get("needs") is Dictionary:

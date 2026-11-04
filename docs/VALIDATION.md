@@ -1047,3 +1047,39 @@ dining, during the owner's absence with visitors still present, and after
 reconnect. Native injected-input evidence does not establish human-family play,
 physical Android behavior, or overnight persistence. Hosted Intel macOS CI is
 still queued at this checkpoint; no export result is inferred from local tests.
+
+## Household room design library
+
+`room_library` validates host-derived recipes, four rotations, single-edit
+pricing/history, stale and foreign commands, malformed snapshot rejection,
+legacy defaults, JSON/save round trips, and saving a design while construction
+is still uncommitted. Saving does not charge funds or allocate live object IDs.
+Discard leaves designs intact. Empty tables, unplanted beds and blank easels are
+created on placement, with original canvases and wall artwork left in place.
+A four-household large-library fixture remains within the unchanged snapshot
+limits: 92,372 raw bytes and 5,531 compressed bytes; restore took about 15–16 ms
+on the local machine. This is not a worst-case populated-world benchmark.
+
+`room_library_ui` passes with native injected input at 1440×900 and 1280×720 /
+125% UI scale. It checks saving, preserving input focus/text, renaming, named
+removal/cancel, placing after the original draft is discarded, rotation/Escape,
+whole-placement undo/redo, and deleting a recipe without deleting the placed
+room. Full four-entry lists with long names remain scrollable and editable.
+Final focused model, headless input, and compact native checks pass after the
+review-copy changes and include stale-name editing and unrelated ACK rejection.
+The original `room_copy_ui` compact native pass verifies shared-preview behavior.
+
+The preceding presence checkpoint's hosted Linux, Windows and Android jobs
+completed successfully. Its Intel macOS job was cancelled before acquiring a
+runner (empty runner name and no executed steps). This remains an export
+validation gap; local Apple Silicon rendering does not establish hosted Intel
+export success or physical Android/cross-device play.
+
+Final full regression completed all 92 local suites, `IROH_SMOKE_PASS`,
+`PAINTINGS_IROH_PASS`, `MEALS_IROH_PASS`, and `SERVER_SMOKE_PASS`. The main Iroh
+scenario exercises both clients’ independent saved-room libraries, rejects
+repeated and foreign capture commands, places from host-held recipes at the
+preview price, undoes/redoes the placement, and verifies persistence through
+reconnect. Final focused model and headless/compact native checks followed the
+last UI-copy and save-during-draft test changes. No human-family playtest is
+claimed by these injected-input scenarios.

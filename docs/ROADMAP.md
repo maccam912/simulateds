@@ -126,8 +126,9 @@ focus, and browsing never moves residents.
   two-corner rooms, rectangle decoration, room-aware floor fill, undo/redo, and
   exact undo refunds are implemented. Add broader architectural options.
 - Room duplication now copies an enclosed design with rotated furnishings,
-  finishes, windows, full cost/access preview, and one undoable placement. Add
-  saved blueprint libraries and cross-lot reusable layouts later.
+  finishes, windows, full cost/access preview, and one undoable placement. A bounded
+  household library now saves named designs through remodeling, saves and
+  reconnects. Add reviewed cross-household design sharing later.
 - Furniture material colors now offer six named choices, in-world preview, free
   recoloring, undo/redo, and preservation through moves, copies, and saves.
 - Shared entrance routing checks and an access overlay now locate blocked

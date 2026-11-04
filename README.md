@@ -142,6 +142,14 @@ or shell expressions.
   click to place everything as one undoable edit. Existing empty floor is reused.
   Existing walls and furniture stay in place. Garden beds start empty, and
   residents and crops stay in the original room. **Escape** cancels selection.
+- **Saved rooms** keeps up to four named designs for your household. Select an
+  enclosed room with **Copy room**, then **Save room…**. The library shows small
+  floor plans and offers Place, Rename, and Remove. Saving is free and survives
+  discarding a building draft; placing charges the previewed cost as one undoable
+  edit. Designs retain furniture colors, finishes, and windows. Food, crops,
+  residents, and original artwork are left behind; new furnishings start fresh.
+  Removing a design leaves built rooms untouched. Libraries travel with the
+  neighborhood save and your household when reconnecting.
 - The build **Catalog** groups items by room/use. Search within a category by
   name or activity (for example, "sleep", "meal", or "book"). **Ctrl/Cmd+F** focuses
   search, **Enter** selects the first result, and **Escape** clears a search before

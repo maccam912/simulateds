@@ -717,3 +717,14 @@ usable to inspect an ongoing meal. At the table, show the unfinished meal wish's
 rule beside its controls: serving for the cooking wish, and chosen company for
 the shared wish. Completed cards, the HUD count, and the existing Little Moments
 journal provide the reward feedback.
+
+## Room design library
+
+Saved rooms use small top-down floor-plan swatches beside their names. Floor
+finishes, windows and material colors make the layouts recognizable without a
+second live viewport. The catalog and library share the same floating tray;
+placement stays directly on the full-size lot with its existing price and access
+preview. Save forms collapse after acceptance. Rename and remove are local
+review forms; remove explicitly says that built rooms remain. Undo, redo, rotation
+and return to Catalog stay in a fixed footer above the household HUD. Long lists
+scroll inside the tray, including at 720p with enlarged interface text.

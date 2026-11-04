@@ -21,6 +21,8 @@ const GardenPanel = preload("res://game/garden_panel.gd")
 const BuildCatalog = preload("res://game/build_catalog.gd")
 const RoomPlan = preload("res://game/room_plan.gd")
 const RoomCopy = preload("res://game/room_copy.gd")
+const RoomLibrary = preload("res://game/room_library.gd")
+const RoomLibraryPanel = preload("res://game/room_library_panel.gd")
 const FurnitureColors = preload("res://game/furniture_colors.gd")
 const Wishes = preload("res://game/wishes.gd")
 const Hobbies = preload("res://game/hobbies.gd")
@@ -155,6 +157,10 @@ var _room_request: Dictionary = {}
 var _copy_source := Vector2i(-1,-1)
 var _copy_revision := -1
 var _copy_request: Dictionary={}
+var _blueprint_id := ""
+var _blueprint_revision := -1
+var library_panel: VBoxContainer
+var save_room_button: Button
 var furniture_color := "original"
 var color_buttons: Dictionary={}
 var _color_request: Dictionary={}
@@ -457,7 +463,7 @@ func _refresh() -> void:
 		_selected_object = ""
 		_art_source=""; _art_entry.clear(); _art_request.clear()
 		_moving_object = ""; _move_request.clear(); _wish_seen.clear(); _friend_seen.clear(); _hobby_seen.clear(); _room_anchor=Vector2i(-1,-1); _room_request.clear()
-		_paint_anchor=Vector2i(-1,-1); _paint_request.clear(); _window_request.clear(); _color_request.clear(); _copy_source=Vector2i(-1,-1); _copy_request.clear()
+		_paint_anchor=Vector2i(-1,-1); _paint_request.clear(); _window_request.clear(); _color_request.clear(); _copy_source=Vector2i(-1,-1); _copy_request.clear(); _blueprint_id=""
 	if viewed_lot.is_empty() or not state.get("lots",{}).has(viewed_lot):
 		viewed_lot = str(family.get("home_lot","lot_1"))
 	if selected_member.is_empty() and not family.get("members",[]).is_empty():
@@ -501,11 +507,15 @@ func _refresh() -> void:
 	lot_view.room_anchor=_room_anchor
 	lot_view.room_pending=not _room_request.is_empty()
 	if not building or not mine or selected_tool!="copy_room":
-		_copy_source=Vector2i(-1,-1); _copy_request.clear()
+		_copy_source=Vector2i(-1,-1); _copy_request.clear(); _blueprint_id=""
 	elif not _copy_request.is_empty():
 		if int(lot.revision)>int(_copy_request.intent.revision) and RoomCopy.is_applied(lot,_copy_request.plan):
-			_copy_source=Vector2i(-1,-1); _copy_request.clear()
+			_copy_source=Vector2i(-1,-1); _copy_request.clear(); _blueprint_id=""
 	elif _copy_source.x>=0 and int(lot.revision)!=_copy_revision: _copy_source=Vector2i(-1,-1)
+	var library: Dictionary=family.get("room_library",RoomLibrary.create())
+	if _copy_request.is_empty() and not _blueprint_id.is_empty() and (int(library.revision)!=_blueprint_revision or RoomLibrary.find(library,_blueprint_id).is_empty()): _blueprint_id=""
+	var saved_entry:=RoomLibrary.find(library,_blueprint_id)
+	lot_view.copy_design={} if saved_entry.is_empty() else RoomLibrary.source(saved_entry.layout)
 	if not building or not mine or selected_tool!="furniture_color": _color_request.clear()
 	elif not _color_request.is_empty() and int(lot.revision)>int(_color_request.revision) and FurnitureColors.is_applied(lot,_color_request): _color_request.clear()
 	lot_view.furniture_color=furniture_color; lot_view.color_request=_color_request
@@ -600,7 +610,7 @@ func _refresh() -> void:
 			need_buttons[need].disabled=bool(state.lots[family.home_lot].building)
 			if care_values.has(need) and is_instance_valid(care_values[need]): care_values[need].text=str(need).capitalize()+" · %d" % int(value)
 	var build_mode := building and mine
-	catalog_filters.visible=build_mode and selected_tool not in ["window","furniture_color","wall_art"] and _paint_surface().is_empty() and _context_page!="access"
+	catalog_filters.visible=build_mode and selected_tool not in ["window","furniture_color","wall_art"] and _paint_surface().is_empty() and _context_page not in ["access","blueprints"]
 	wishes_button.disabled=build_mode or member.is_empty()
 	hobbies_button.disabled=bool(state.lots.get(family.get("home_lot",""),{}).get("building",false)) or member.is_empty()
 	people_button.disabled=build_mode or member.is_empty()
@@ -637,6 +647,7 @@ func _refresh() -> void:
 			for hobby: String in Hobbies.ORDER: _hobby_options[hobby]=Session.world.hobby_option(member,hobby)
 		tools_signature+=str(member.get("hobbies",{}))+str(day)+str(_hobby_options)
 	if _context_page=="care" and not build_mode: tools_signature+=str(_care_options)+str(Wellbeing.mood(member.get("needs",{})))
+	if build_mode and _context_page=="blueprints": tools_signature="blueprints:"+viewed_lot+str(Session.role)
 	if tools_signature!=_tools_signature:
 		_tools_signature=tools_signature
 		_rebuild_context(building and mine,lot)
@@ -645,12 +656,15 @@ func _refresh() -> void:
 		painting_panel.display_pending=not _art_entry.is_empty()
 		painting_panel.refresh(viewed_lot,_selected_object,selected_member)
 	if _context_page=="meal" and not build_mode and is_instance_valid(meal_panel): meal_panel.refresh(viewed_lot,_selected_object,selected_member)
+	if build_mode and _context_page=="blueprints" and is_instance_valid(library_panel):
+		library_panel.refresh(viewed_lot,_copy_source,_blueprint_id)
+		undo_button.disabled=int(lot.get("build_undo",0))==0; redo_button.disabled=int(lot.get("build_redo",0))==0
 	if _context_page=="travel" and not build_mode and is_instance_valid(travel_panel): travel_panel.refresh(viewed_lot,selected_member)
 	if _context_page=="garden" and not build_mode and is_instance_valid(garden_panel): garden_panel.refresh(viewed_lot,_selected_object,selected_member)
 	help_label.text="Click to place · " + Preferences.action_label("rotate") + " rotates · Ctrl/Cmd+Z undoes" if building and mine else "Click a need to care for it · Click the ground to walk"
 	if building and mine and selected_tool=="room": help_label.text="Click two opposite corners · " + Preferences.action_label("rotate") + " changes door side · Escape cancels"
 	if building and mine and not _paint_surface().is_empty(): help_label.text="Click to finish a room · Walls and doorways mark its edges" if _paint_selection()=="room" else "Click two corners to decorate · Same tile twice for one · Escape cancels"
-	if building and mine and selected_tool=="copy_room": help_label.text="Choose a room to copy" if _copy_source.x<0 else "Choose clear space · "+Preferences.action_label("rotate")+" rotates the copy · Escape cancels"
+	if building and mine and selected_tool=="copy_room": help_label.text="Choose a room to copy" if _copy_source.x<0 and _blueprint_id.is_empty() else "Choose clear space · "+Preferences.action_label("rotate")+" rotates the copy · Escape cancels"
 	if building and mine and selected_tool=="wall_art": help_label.text="Choose a painting · Click a solid wall · Escape cancels selection · Undo restores the transfer"
 	if building and mine and selected_tool=="furniture_color": help_label.text="Choose a color · Hover furniture to preview · Click to apply · Free"
 	if building and mine and selected_tool=="window": help_label.text="Choose a style, then click a wall · Windows follow its direction"
@@ -837,6 +851,10 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 	if building:
 		activity_label.text="Build & buy"
 		if _context_page=="access": _build_access_list()
+		elif _context_page=="blueprints":
+			activity_label.text="Saved rooms"
+			library_panel=RoomLibraryPanel.new(); tools_box.add_child(library_panel)
+			library_panel.command_requested.connect(_send); library_panel.place_requested.connect(_place_blueprint)
 		elif selected_tool=="wall_art": _build_art_panel()
 		elif selected_tool=="window": _build_window_palette()
 		elif selected_tool=="furniture_color": _build_color_palette()
@@ -948,7 +966,7 @@ func _announce_wishes(family: Dictionary) -> void:
 
 func _select_lot(id: String) -> void:
 	_art_source=""; _art_request.clear(); _art_entry.clear()
-	_paint_anchor=Vector2i(-1,-1); _paint_request.clear(); _window_request.clear(); _color_request.clear(); _copy_source=Vector2i(-1,-1); _copy_request.clear()
+	_paint_anchor=Vector2i(-1,-1); _paint_request.clear(); _window_request.clear(); _color_request.clear(); _copy_source=Vector2i(-1,-1); _copy_request.clear(); _blueprint_id=""
 	viewed_lot=id; _selected_object=""; _room_anchor=Vector2i(-1,-1); _room_request.clear(); neighborhood_panel.hide(); _refresh()
 
 func _select_resident(id: String) -> void:
@@ -1005,12 +1023,13 @@ func _entity_clicked(target: Dictionary) -> void:
 		_send({"type":"interact","member_id":selected_member,"lot_id":viewed_lot,"target_id":str(target.id)})
 
 func _select_build_tool(kind: String) -> void:
-	if _context_page=="access": _context_page="activities"
+	if kind=="saved_rooms": _open_room_library(); return
+	if _context_page in ["access","blueprints"]: _context_page="activities"
 	var reset_scroll := kind.begins_with("finish_") or not _paint_surface().is_empty() or kind in ["window","furniture_color","wall_art"] or selected_tool in ["window","furniture_color","wall_art"]
 	if kind!="wall_art": _art_source=""; _art_request.clear(); _art_entry.clear()
 	selected_tool=kind; _moving_object=""; _move_request.clear(); _color_request.clear()
 	_paint_anchor=Vector2i(-1,-1); _paint_request.clear()
-	_room_anchor=Vector2i(-1,-1); _room_request.clear(); _copy_source=Vector2i(-1,-1); _copy_request.clear(); _refresh()
+	_room_anchor=Vector2i(-1,-1); _room_request.clear(); _copy_source=Vector2i(-1,-1); _copy_request.clear(); _blueprint_id=""; _refresh()
 	if reset_scroll: call_deferred("_reset_catalog_scroll")
 
 func _reset_catalog_scroll() -> void:
@@ -1034,7 +1053,7 @@ func _tile_clicked(cell: Vector2i) -> void:
 			_recolor(str(Session.world._object_at(lot,cell).get("id",""))); return
 		if selected_tool=="copy_room":
 			if not _copy_request.is_empty(): return
-			if _copy_source.x<0:
+			if _copy_source.x<0 and _blueprint_id.is_empty():
 				var captured := RoomCopy.capture(lot,cell)
 				if not captured.ok: _notice(str(captured.message)); Soundscape.play_ui("error"); return
 				_copy_source=cell; _copy_revision=int(lot.revision); build_rotation=0; _refresh(); return
@@ -1043,7 +1062,13 @@ func _tile_clicked(cell: Vector2i) -> void:
 			for family: Dictionary in Session.state.families.values():
 				for member: Dictionary in family.members:
 					if member.lot_id==viewed_lot: residents.append(Vector2i(int(member.x),int(member.y)))
-			var plan := RoomCopy.inspect(lot,command,residents)
+			var plan: Dictionary
+			if not _blueprint_id.is_empty():
+				command={"type":"place_blueprint","lot_id":viewed_lot,"blueprint_id":_blueprint_id,"library_revision":_blueprint_revision,"x":cell.x,"y":cell.y,"rotation":build_rotation,"revision":lot.revision}
+				var entry:=RoomLibrary.find(_family().room_library,_blueprint_id)
+				if entry.is_empty(): return
+				plan=RoomCopy.inspect_source(lot,command,residents,RoomLibrary.source(entry.layout))
+			else: plan=RoomCopy.inspect(lot,command,residents)
 			if not plan.ok: _notice(str(plan.message)); Soundscape.play_ui("error"); return
 			_copy_request={"intent":command.duplicate(true),"plan":plan}; _send(command); return
 		if selected_tool=="window":
@@ -1205,8 +1230,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 				_close_context()
 			elif selected_tool=="wall_art" and not _art_source.is_empty() and _art_request.is_empty():
 				_art_source=""; _refresh()
-			elif _copy_source.x>=0 and _copy_request.is_empty():
-				_copy_source=Vector2i(-1,-1); _refresh()
+			elif (_copy_source.x>=0 or not _blueprint_id.is_empty()) and _copy_request.is_empty():
+				_copy_source=Vector2i(-1,-1); _blueprint_id=""; _refresh()
 			elif _paint_anchor.x>=0 and _paint_request.is_empty():
 				_paint_anchor=Vector2i(-1,-1); _refresh()
 			elif _room_anchor.x>=0 and _room_request.is_empty():
@@ -1521,9 +1546,24 @@ func _edit_button(text: String, action: Callable, parent: Node, tooltip: String=
 	button.add_theme_font_size_override("font_size",11); button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; button.tooltip_text=tooltip; _compact_control(button); parent.add_child(button)
 	return button
 
+func _open_room_library() -> void:
+	if not _copy_request.is_empty(): return
+	if selected_tool!="copy_room": _select_build_tool("copy_room")
+	selected_tool="copy_room"; _context_page="blueprints"
+	_show_tray(context_panel,true); _refresh(); call_deferred("_reset_catalog_scroll")
+
+func _place_blueprint(id: String,revision: int) -> void:
+	if not _copy_request.is_empty(): return
+	_blueprint_id=id; _blueprint_revision=revision; _copy_source=Vector2i(-1,-1); build_rotation=0
+	get_viewport().gui_release_focus(); _refresh()
+
 func _build_edit_controls(lot: Dictionary) -> void:
 	var painting := (not _paint_surface().is_empty() or selected_tool in ["window","furniture_color","wall_art"]) and _context_page!="access"
-	if _context_page=="access":
+	if _context_page=="blueprints":
+		var library_actions:=HBoxContainer.new(); context_box.add_child(library_actions)
+		_edit_button("‹ Catalog",func(): _select_build_tool("copy_room"),library_actions)
+		_edit_button("Rotate ↻",_rotate,library_actions,"Rotate selected room · "+Preferences.action_label("rotate"))
+	elif _context_page=="access":
 		var repairs := HBoxContainer.new(); repairs.add_theme_constant_override("separation",5); context_box.add_child(repairs)
 		_edit_button("Door",func(): _select_build_tool("door"),repairs,"Choose a door to reconnect a room.")
 		_edit_button("Move",func(): _select_build_tool("move"),repairs,"Move furniture to clear a route.")
@@ -1548,8 +1588,9 @@ func _build_edit_controls(lot: Dictionary) -> void:
 		catalog_detail=_label(title,12,Style.GOLD); catalog_detail.clip_text=true; catalog_detail.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; catalog_detail.tooltip_text=title+"\n"+hint; context_box.add_child(catalog_detail)
 		var subtitle := _label(detail,11,Style.MUTED); subtitle.clip_text=true; subtitle.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; subtitle.tooltip_text=detail+"\n"+hint; context_box.add_child(subtitle)
 		var editing := HBoxContainer.new(); editing.add_theme_constant_override("separation",5); context_box.add_child(editing)
-		var move := _edit_button("Cancel move" if not _moving_object.is_empty() else "Move",func(): _select_build_tool("move"),editing,"Choose furniture to rearrange at no cost.")
-		move.disabled=not _move_request.is_empty()
+		var move := _edit_button("Save room…" if selected_tool=="copy_room" else "Cancel move" if not _moving_object.is_empty() else "Move",func(): _open_room_library() if selected_tool=="copy_room" else _select_build_tool("move"),editing,"Save the selected room to your library." if selected_tool=="copy_room" else "Choose furniture to rearrange at no cost.")
+		move.disabled=not _move_request.is_empty() or (selected_tool=="copy_room" and (_copy_source.x<0 or not _copy_request.is_empty()))
+		if selected_tool=="copy_room": save_room_button=move
 		_edit_button("Sell",func(): _select_build_tool("erase"),editing,"Demolish tiles or sell furniture for 60% of its price.")
 		_edit_button("Door %d" % (build_rotation+1) if selected_tool=="room" else "%d° ↻" % (build_rotation*90),_rotate,editing,("Change doorway side" if selected_tool=="room" else "Rotate furnishing")+" · "+Preferences.action_label("rotate"))
 	var history := HBoxContainer.new(); history.add_theme_constant_override("separation",5); context_box.add_child(history)
@@ -1564,6 +1605,7 @@ func _build_edit_controls(lot: Dictionary) -> void:
 		var cancel := _edit_button("Cancel area",func(): _paint_anchor=Vector2i(-1,-1); _refresh(),finish,"Cancel the first painting corner · Escape")
 		cancel.disabled=_paint_anchor.x<0 or not _paint_request.is_empty()
 		_edit_button("Discard draft",func(): _send({"type":"build_cancel","lot_id":viewed_lot}),finish,"Restore the whole house and budget from before construction.")
+	if _context_page=="blueprints": return
 	access_button=_edit_button("Hide access" if _context_page=="access" else "Access · Clear" if _access_report.get("ok",true) else "Access · %d issues" % _access_report.issues.size(),_toggle_access,context_box,"Show routes from the entrance and locate blocked residents or furnishings.")
 	if not _access_report.get("ok",true): access_button.add_theme_color_override("font_color",Style.GOLD)
 
@@ -1667,7 +1709,7 @@ func _announce_hobbies(family: Dictionary) -> void:
 
 
 func _copy_completed(intent: Dictionary, ok: bool, _message: String) -> void:
-	if intent.get("type")!="copy_room": return
+	if intent.get("type") not in ["copy_room","place_blueprint"]: return
 	if ok and hud.is_visible_in_tree(): Soundscape.play_ui("build")
 	if not _copy_request.is_empty() and intent==_copy_request.intent:
 		if not ok: _copy_request.clear()

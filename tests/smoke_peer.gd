@@ -282,8 +282,19 @@ func _client(index: String) -> void:
 	for _attempt in range(50):
 		if session.state.lots[home].windows.get("13,1")=="cottage": break
 		await create_timer(0.1).timeout
-	var copy_intent := {"type":"copy_room","lot_id":home,"source_x":14,"source_y":1,"x":4,"y":0,"rotation":1,"revision":session.state.lots[home].revision}
-	var copy_plan: Dictionary=preload("res://game/room_copy.gd").inspect(session.state.lots[home],copy_intent,[])
+	# Capture the host’s room recipe, then place from the saved library over Iroh.
+	var save_room := {"type":"blueprint_save","lot_id":home,"source_x":14,"source_y":1,"name":"Garden nook "+index,"revision":session.state.lots[home].revision,"library_revision":session.state.families[identity].room_library.revision}
+	var save_funds: int=session.state.lots[home].funds
+	await _command(save_room); await _command(save_room,false)
+	for _attempt in range(50):
+		if session.state.families[identity].room_library.entries.size()==1: break
+		await create_timer(0.1).timeout
+	var saved_room: Dictionary=session.state.families[identity].room_library.entries[0].duplicate(true)
+	assert(saved_room.name=="Garden nook "+index and saved_room.layout.objects[0].color_style==pot_style and session.state.lots[home].funds==save_funds)
+	var foreign_save:=save_room.duplicate(true); foreign_save.lot_id=host_home
+	await _command(foreign_save,false)
+	var copy_intent := {"type":"place_blueprint","lot_id":home,"blueprint_id":saved_room.id,"library_revision":session.state.families[identity].room_library.revision,"x":4,"y":0,"rotation":1,"revision":session.state.lots[home].revision}
+	var copy_plan: Dictionary=preload("res://game/room_copy.gd").inspect_source(session.state.lots[home],copy_intent,[],preload("res://game/room_library.gd").source(saved_room.layout))
 	assert(copy_plan.ok and copy_plan.cost==482,str(copy_plan))
 	var before_copy: int=session.state.lots[home].funds
 	await _command(copy_intent); await _command(copy_intent,false)
@@ -627,6 +638,7 @@ func _client(index: String) -> void:
 	assert(session.state.lots[home].finishes.floor.get("7,7")=="walnut" and not session.state.lots[home].finishes.floor.has("8,11"),"Reconnect retains the room fill and its doorway boundary")
 	assert(int(session.world._object(session.state.lots[home],moved_id).x)==9, "Reconnect lost furnishing move")
 	assert(session.world._object(session.state.lots[home],moved_id).get("color_style")=="ink" and session.world._object(session.state.lots[home],source_plant).get("color_style")==pot_style,"Recoloring survives moves, room copies, and reconnect")
+	assert(session.state.families[identity].room_library.entries==[saved_room],"Saved room recipe, name and colors survive reconnect")
 	assert(session.state.families[identity].members[0].hobbies==hobbies_before,"Reconnect lost personal hobbies")
 	assert(session.state.families[identity].members[0].wishes.journal==journal_before,"Reconnect lost the activity journal")
 	assert(not session.state.families[identity].members[0].autonomy, "Reconnect lost autonomy preference")

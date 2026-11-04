@@ -49,6 +49,7 @@ var build_rotation := 0
 var build_object_id := ""
 var room_anchor := Vector2i(-1,-1)
 var room_pending := false
+var copy_design: Dictionary={}
 var copy_source := Vector2i(-1,-1)
 var copy_pending := false
 var copy_plan: Dictionary={}
@@ -1279,15 +1280,15 @@ func _draw_room_copy(lot: Dictionary) -> void:
 	for family: Dictionary in world.families.values():
 		for member: Dictionary in family.members:
 			if member.lot_id==lot_id: residents.append(Vector2i(int(member.x),int(member.y)))
-	var key := str([lot_id,lot.revision,lot.funds,copy_source,hover_cell,build_rotation,residents])
+	var key := str([lot_id,lot.revision,lot.funds,copy_source,copy_design,hover_cell,build_rotation,residents])
 	if key!=_copy_preview_key:
 		_copy_preview_key=key
-		copy_preview=RoomCopy.capture(lot,hover_cell) if copy_source.x<0 else RoomCopy.inspect(lot,{"source_x":copy_source.x,"source_y":copy_source.y,"x":hover_cell.x,"y":hover_cell.y,"rotation":build_rotation},residents)
+		copy_preview=RoomCopy.inspect_source(lot,{"x":hover_cell.x,"y":hover_cell.y,"rotation":build_rotation},residents,copy_design) if not copy_design.is_empty() else RoomCopy.capture(lot,hover_cell) if copy_source.x<0 else RoomCopy.inspect(lot,{"source_x":copy_source.x,"source_y":copy_source.y,"x":hover_cell.x,"y":hover_cell.y,"rotation":build_rotation},residents)
 	var plan: Dictionary=copy_plan if copy_pending else copy_preview
 	var source: Dictionary=plan if copy_source.x<0 else plan.get("source",{})
-	if source.get("ok",false):
+	if source.get("ok",false) and copy_design.is_empty():
 		for cell: Array in source.interior: _diamond(int(cell[0])+source.low.x,int(cell[1])+source.low.y,1,1,Color(0.55,0.78,0.88,0.22),2,Color("a9d6dd"))
-	if copy_source.x<0:
+	if copy_source.x<0 and copy_design.is_empty():
 		_draw_preview_label(str(plan.message),bool(plan.ok)); return
 	var valid: bool=plan.get("ok",false)
 	var color := Color("b9de99") if valid else Color("eda58e")
