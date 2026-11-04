@@ -41,6 +41,13 @@ Startup opens the main menu over the neighborhood. **Continue** enters play;
 **Escape** opens the game menu (or closes an open tray first). Menus and the
 console pause solo simulation; a hosted neighborhood keeps running for everyone.
 
+The clock also offers **Pause, 1×, 2×, and 4×** for solo play. **P** pauses or
+resumes your previous pace; **1 / 2 / 3** select normal, double, or quadruple speed.
+You can plan activities and build while paused. Closing a menu preserves your
+chosen pace. These shortcuts are rebindable. Hosting, joining, leaving a session,
+loading, or starting a neighborhood resets to 1×; ordinary clock controls are
+unavailable in shared play so one household cannot pause everyone else.
+
 **Settings** persists separate Master/Music/Effects/Ambience volumes, fullscreen,
 VSync, frame cap, scenery detail, UI scale, reduced motion, and key bindings.
 Conflicting bindings are rejected. Escape and F1 remain recovery shortcuts.

@@ -28,6 +28,8 @@ var selected_tool := "floor"
 var build_rotation := 0
 var lot_view: Control
 var clock_label: Label
+var clock_panel: PanelContainer
+var time_buttons: Dictionary={}
 var funds_label: Label
 var neighborhood_title: Label
 var lot_title: Label
@@ -238,12 +240,18 @@ func _build_ui() -> void:
 	neighborhood_head.add_child(_button("×",func(): neighborhood_panel.hide()))
 	lots_box = _vbox(neighborhood,6)
 
-	var clock_panel := _hud_panel(Rect2(-296,16,280,114),Vector2(1,0))
+	clock_panel = _hud_panel(Rect2(-448,16,432,114),Vector2(1,0))
 	var clock_box := _vbox(clock_panel,4)
 	var clock_row := HBoxContainer.new(); clock_box.add_child(clock_row)
 	clock_label = _label("DAY 01 · 08:00",14); clock_label.size_flags_horizontal=Control.SIZE_EXPAND_FILL; clock_row.add_child(clock_label)
 	funds_label = _label("§ 12,000",20,Style.GOLD); clock_row.add_child(funds_label)
-	var session_row := HBoxContainer.new(); clock_box.add_child(session_row)
+	var session_row := HBoxContainer.new(); session_row.add_theme_constant_override("separation",5); clock_box.add_child(session_row)
+	var time_row := HBoxContainer.new(); time_row.add_theme_constant_override("separation",3); session_row.add_child(time_row)
+	for rate: int in [0,1,2,4]:
+		var button := _button("Ⅱ" if rate==0 else str(rate)+"×",func(): _set_play_speed(rate))
+		button.add_theme_font_size_override("font_size",12); button.custom_minimum_size=Vector2(29,30); _compact_control(button)
+		time_row.add_child(button); time_buttons[rate]=button
+
 	var together := _button("Play together",_open_connection); together.size_flags_horizontal=Control.SIZE_EXPAND_FILL; session_row.add_child(together)
 	var save_button := _button("Save",_request_save_menu); session_row.add_child(save_button)
 	var fullscreen_button := _button("☰",_request_pause); fullscreen_button.tooltip_text="Game menu · " + Preferences.action_label("pause"); session_row.add_child(fullscreen_button)
@@ -469,8 +477,15 @@ func _refresh() -> void:
 	var minutes := int(float(state.get("day_minutes",480)))
 	var day := int(state.get("day",1))
 	clock_label.text="DAY %02d  ·  %02d:%02d" % [day,int(minutes%1440/60),minutes%60]
+	if Session.can_control_time() and Session.debug_speed==0.0: clock_label.text+=" · Paused"
+	_refresh_time_controls()
 	clock_label.tooltip_text=preload("res://game/daylight.gd").sample(minutes).phase+" · The neighborhood shares one clock."
-	connection_label.text="%s · %s" % [str(Session.role).capitalize(),Rooms.code] if not Rooms.code.is_empty() else ("Local neighborhood" if Session.role=="offline" else str(Session.status).left(32))
+	if Session.role=="offline":
+		connection_label.text="Solo · Paused · "+Preferences.action_label("play_pause")+" resumes" if Session.debug_speed==0.0 else "Solo · Playing "+Session.speed_label()
+	else:
+		connection_label.text="Shared clock · "+("Hosting" if Session.role=="host" else "Joining…" if Session.role=="joining" else "Connected")
+		if not Rooms.code.is_empty(): connection_label.text+=" · "+Rooms.code
+	connection_label.tooltip_text=str(Session.status)
 	var lot_signature := viewed_lot+str(state.get("lots",{}).size())
 	for row in state.get("lots",{}).values():
 		lot_signature+=str(row.get("owner",""))+str(row.get("building",false))
@@ -996,6 +1011,12 @@ func _unhandled_key_input(event: InputEvent) -> void:
 			elif neighborhood_panel.visible or context_panel.visible or plan_panel.visible:
 				neighborhood_panel.hide(); context_panel.hide(); plan_panel.hide()
 			else: _request_pause()
+		elif event.is_action_pressed("play_pause") and not event.ctrl_pressed and not event.meta_pressed and not event.alt_pressed:
+			var result := Session.toggle_play_pause()
+			if not result.ok: _notice(str(result.message))
+			_refresh()
+		elif not event.ctrl_pressed and not event.meta_pressed and not event.alt_pressed and (event.is_action_pressed("speed_normal") or event.is_action_pressed("speed_fast") or event.is_action_pressed("speed_faster")):
+			_set_play_speed(1 if event.is_action_pressed("speed_normal") else 2 if event.is_action_pressed("speed_fast") else 4)
 		elif event.is_action_pressed("rotate"): _rotate()
 		elif event.is_action_pressed("neighborhood"): _show_tray(neighborhood_panel,not neighborhood_panel.visible)
 		elif event.is_action_pressed("build"): _toggle_build()
@@ -1453,3 +1474,26 @@ func _build_window_palette() -> void:
 	remove.disabled=not _window_request.is_empty(); tools_box.add_child(remove); window_buttons[""]=remove
 	var note := _label("Walls stay solid. Old windows return 60% when removed or replaced.",12,Style.MUTED)
 	note.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; note.custom_minimum_size.x=200; tools_box.add_child(note)
+
+
+func _set_play_speed(rate: int) -> void:
+	var result: Dictionary=Session.toggle_play_pause() if rate==0 else Session.set_play_speed(rate)
+	if not result.ok: _notice(str(result.message))
+	_refresh()
+
+func _refresh_time_controls() -> void:
+	var actions := {0:"play_pause",1:"speed_normal",2:"speed_fast",4:"speed_faster"}
+	for rate: int in time_buttons:
+		var button: Button=time_buttons[rate]
+		var active := is_equal_approx(Session.debug_speed,float(rate)) and Session.is_authority()
+		button.disabled=not Session.can_control_time()
+		button.tooltip_text=("Resume time" if rate==0 and active else "Pause time to plan" if rate==0 else "Play at %d×" % rate)+" · "+Preferences.action_label(actions[rate]) if not button.disabled else "Shared neighborhoods follow the host's clock. Solo controls return when you leave the session."
+		var color := Style.GOLD if rate==0 else Style.GREEN
+		var normal := Style.box(color if active else Style.PANEL,4,Style.EDGE)
+		normal.content_margin_left=8; normal.content_margin_right=8; normal.content_margin_top=5; normal.content_margin_bottom=5
+		button.add_theme_stylebox_override("normal",normal)
+		var hover: StyleBoxFlat=normal.duplicate(); hover.bg_color=color.lightened(0.08) if active else Style.EDGE
+		button.add_theme_stylebox_override("hover",hover)
+		button.add_theme_color_override("font_color",Style.INK if active else Style.TEXT)
+		button.add_theme_color_override("font_focus_color",Style.INK if active else Style.TEXT)
+		button.add_theme_color_override("font_hover_color",Style.INK if active else Style.TEXT)

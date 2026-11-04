@@ -51,7 +51,9 @@ preserving their existing planned activities. Reusable household routines now
 save one to six care/recreation activities, resolve current reachable furnishings,
 and append to either resident’s existing plan. Three window styles now mount to
 solid walls, with exact trade-in prices, construction history, and cutaway
-presentation.
+presentation. Solo pause and 1×/2×/4× controls now advance needs, movement, and
+activities through consistent fixed steps, with rebindable shortcuts and a
+shared-clock lock when hosting or visiting a networked neighborhood.
 See [the playtest log](PLAYTEST_LOG.md) for evidence
 and current usability priorities.
 

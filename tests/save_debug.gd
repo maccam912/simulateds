@@ -87,8 +87,10 @@ func _run() -> void:
 	assert(recovered.ok and recovered.get("recovered",false))
 	assert(recovered.world.lots[home].funds==42000)
 	assert(session.execute_debug("money 1234").ok)
+	assert(session.set_play_speed(0).ok)
 	assert(session.load_slot(id).ok)
 	assert(session.state.lots[home].funds==42000)
+	assert(session.debug_speed==1 and session._resume_speed==1 and session._simulation_clock==0,"Loading starts with a normal private clock")
 	var copies: Array=session.list_saves()
 	assert(copies.size()>=3,"Loading did not retain current world recovery copy and autosave")
 	var safety_found:=false
@@ -116,6 +118,7 @@ func _run() -> void:
 	assert(foreign_slot.ok)
 	assert(not session.load_slot(foreign_slot.id).ok)
 	assert(JSON.stringify(session.state)==before)
+	assert(session.set_play_speed(4).ok)
 	assert(session.new_world("New Linden Grove").ok)
 	assert(session.state.lots[session.home_lot()].funds==12000)
 	assert(session.state.neighborhood_name=="New Linden Grove")

@@ -42,7 +42,7 @@ func _run() -> void:
 	root.size=Vector2i(1280,720) if compact else Vector2i(1440,900)
 	prefs=root.get_node("Preferences"); prefs.reset_defaults()
 	if compact: suffix="-compact"; prefs.set_value("ui_scale",1.25)
-	session=root.get_node("Session"); session.saving_enabled=false; session.menu_paused=true
+	session=root.get_node("Session"); session.saving_enabled=false; session.set_physics_process(false); session.menu_paused=false
 	session.world.initialize()
 	for id: String in [session.profile_id,"guest_1","guest_2","guest_3"]: session.world.ensure_family(id,"Alex" if id==session.profile_id else "Guest")
 	session.world.set_online(session.profile_id,true)
@@ -72,7 +72,7 @@ func _run() -> void:
 	await _capture("eight-directions")
 	view.zoom=1.8; view._layout(); view.pan+=view.camera_focus_point()-view.grid_point(7.5,7)
 	await _capture("eight-directions-close")
-	# Restore the real house, use normal commands, and keep the simulation paused
+	# Restore the real house, use normal commands, and keep automatic ticks disabled
 	# between explicit steps so captures inspect exact accepted activity states.
 	for index in range(residents.size()):
 		session.world._clear_member(residents[index])

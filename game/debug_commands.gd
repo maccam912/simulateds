@@ -58,8 +58,7 @@ static func execute(session: Node, line: String, member_id: String = "") -> Dict
 			return _changed(session,"Time set to %02d:%02d; day and allowance are unchanged." % [int(clock[0]),int(clock[1])])
 		"speed":
 			if parts.size()!=2 or not _number(parts[1],0,8): return _result(false,"Usage: speed <0..8>; 0 pauses simulation, 1 is normal.")
-			session.debug_speed=float(parts[1])
-			session._simulation_clock=0.0
+			session.set_clock_rate(float(parts[1]))
 			return _result(true,"Simulation speed: %.1f×. Networking remains active." % session.debug_speed)
 		"teleport":
 			if parts.size()!=3 or not _integer(parts[1],0,15) or not _integer(parts[2],0,15): return _result(false,"Usage: teleport <x> <y>, coordinates 0 to 15.")

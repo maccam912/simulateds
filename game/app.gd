@@ -295,9 +295,9 @@ func open_settings(selected_tab: String = "") -> void:
 	binding_hint=_label("Choose a binding, then press a key. Escape cancels.",13,Style.MUTED); controls.add_child(binding_hint)
 	var grid:=GridContainer.new(); grid.columns=2; grid.add_theme_constant_override("h_separation",18); controls.add_child(grid)
 	for action in Preferences.values.get("bindings",{}):
-		grid.add_child(_label(str(action).replace("_"," ").capitalize(),14))
+		grid.add_child(_label(str(Preferences.ACTION_NAMES[action]),14))
 		var button:=_button(Preferences.action_label(action),func():
-			binding_action=str(action); binding_hint.text="Press a key for "+str(action).replace("_"," ")+". Escape cancels.")
+			binding_action=str(action); binding_hint.text="Press a key for "+str(Preferences.ACTION_NAMES[action])+". Escape cancels.")
 		button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; grid.add_child(button); binding_buttons[action]=button
 	for index in range(tabs.get_tab_count()):
 		if tabs.get_tab_title(index)==selected_tab: tabs.current_tab=index

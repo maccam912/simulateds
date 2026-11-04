@@ -45,6 +45,18 @@ func _run() -> void:
 	assert(prefs.values.bindings.focus_resident==KEY_G and prefs.action_label("focus_resident")=="G")
 	assert(prefs.save()); prefs.load_and_apply()
 	assert(prefs.values.bindings.focus_resident==KEY_G and prefs.values.bindings.rotate==KEY_F)
+	# Old maps may already use every proposed clock key. Preserve those choices
+	# and assign distinct fallback keys to the newly introduced actions.
+	var old_clock: Dictionary=legacy.duplicate(true)
+	for action: String in ["play_pause","speed_normal","speed_fast","speed_faster"]: old_clock.bindings.erase(action)
+	old_clock.bindings.rotate=KEY_P; old_clock.bindings.build=KEY_1
+	old_clock.bindings.home=KEY_2; old_clock.bindings.neighborhood=KEY_3
+	assert(prefs.Persistence.write_json(prefs.settings_path,old_clock)); prefs.load_and_apply()
+	for action: String in old_clock.bindings: assert(int(prefs.values.bindings[action])==int(old_clock.bindings[action]))
+	assert(prefs.values.bindings.play_pause==KEY_0 and prefs.values.bindings.speed_normal==KEY_F6)
+	assert(prefs.values.bindings.speed_fast==KEY_F7 and prefs.values.bindings.speed_faster==KEY_F8)
+	var upgraded: Dictionary=prefs.values.bindings.duplicate()
+	assert(prefs.save()); prefs.load_and_apply(); assert(prefs.values.bindings==upgraded)
 	legacy.bindings.rotate=KEY_C
 	assert(prefs.Persistence.write_json(prefs.settings_path,legacy)); prefs.load_and_apply()
 	assert(prefs.values.bindings==prefs.DEFAULTS.bindings,"An invalid duplicate map still falls back as a whole")

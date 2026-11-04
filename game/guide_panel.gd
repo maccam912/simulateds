@@ -15,6 +15,7 @@ func _ready() -> void:
 	_card(first,"02 · A little care","Click a need bar or a resident’s thought cue to plan a useful activity. Plan's arrows reorder upcoming activities; the current activity continues. Your orders take priority over autonomy. Plan → Routines saves care and leisure sequences for either resident.",[["care","Open care suggestions"]])
 	_card(first,"03 · Something to enjoy","Wishes offer small goals and a journal. Reading, gardening, and cooking develop lasting hobbies. Nothing expires while you are away.",[["wishes","See wishes"],["hobbies","Find a hobby"]])
 	_card(first,"04 · Make it home","Move furniture for free, decorate a room, or build an addition. Your household waits safely while you build.",[["build","Open build mode"]])
+	_card(first,"Set your pace","The clock controls pause solo life or play at 1×, 2×, and 4×. While paused, you can still queue activities and build. Pause again resumes your chosen pace. Shared neighborhoods keep one running clock; hosting or joining returns it to normal speed.",[])
 	var building := _page("Building")
 	_card(building,"Start with a room","Choose Room and click two opposite corners. The preview includes floors, walls, a doorway, and the price. Rotate changes the door side.",[["build","Open build mode"]])
 	_card(building,"Find a place for everything","Search by a name or use: sleep, meal, book. Green previews are valid. Keep a route to the front gate and enough space to use each furnishing.",[["catalog","Browse the catalog"],["move","Rearrange furniture"]])

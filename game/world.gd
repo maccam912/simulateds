@@ -486,8 +486,8 @@ func _tick_member(member: Dictionary, lot: Dictionary, delta: float) -> void:
 	if not task.path.is_empty():
 		member.action = "Walking" + (" · " + str(task.get("label", "")) if task.type == "interact" else "")
 		member.walk_clock += delta
-		if member.walk_clock >= 0.22:
-			member.walk_clock = 0.0
+		while member.walk_clock+0.00000001>=0.22 and not task.path.is_empty():
+			member.walk_clock=maxf(0.0,float(member.walk_clock)-0.22)
 			var next: Array = task.path.pop_front()
 			if not _walkable(lot, Vector2i(int(next[0]), int(next[1]))):
 				_clear_member(member, "Path changed")

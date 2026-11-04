@@ -1046,3 +1046,41 @@ for pausing to plan or moving through an uneventful solo stretch; speed is expos
 only through the developer console. Next: clear solo pause/speed controls, with
 movement, activities, and needs advancing consistently, while shared neighborhoods
 retain their common running clock.
+
+## 2026-11-04 · Time to plan, time to play
+
+The ordinary clock now offers Pause, 1×, 2×, and 4×. P toggles pause and resumes
+the previous pace; 1/2/3 choose the running rates. All are rebindable, and older
+key maps keep their choices even when they already use P or the number keys.
+Pause is brass and explicitly labeled; the current running pace is leaf green.
+The active highlight survives hovering. Settings uses descriptive action names,
+and the guide explains the new controls. The wider clock panel still overlays
+the full-viewport world and fits the compact layout.
+
+Paused play accepts plans and construction without advancing needs or residents.
+Opening and closing a menu preserves deliberate pause or a chosen fast pace.
+Movement, turning, activity animation, and household sound stop with solo time;
+camera/interface response and music retain their ordinary pace. Hosting, joining,
+leaving, loading, and new worlds reset to 1×. Shared play labels its common clock
+and disables ordinary time controls. The host's explicit debug override remains.
+
+The old debug multiplier enlarged simulation steps, which made walking accelerate
+differently from needs. Time now accumulates into fixed 0.1-second steps, with
+bounded stall work and no discarded sub-tick time. Walking retains the fractional
+part of its tile interval too. Complete snapshots agree at equivalent simulated
+time across three speeds and three input cadences.
+
+Validation: all 48 local suites, real Iroh host/two-client/reconnect, and dedicated
+startup passed. Native standard and compact checks cover actual controls,
+real physics pace, paused planning, menu behavior, mid-step visual freeze, audio
+silence, settings/rebinding, and shared locks. The guide and facing presentation
+checks also pass. One older guide fixture attempted to reuse a newly occupied
+key; it now frees that key before testing the existing rebind flow. No conflict
+validation was weakened. The previous windows checkpoint passed all four platform
+builds. Automated native checks do not replace human family/device playtesting.
+
+Fresh assessment: solo play now has useful control over quiet stretches, but
+recreation mostly changes meters and journals. Watering the existing houseplant
+never visibly changes it. Next: a small gardening loop with planting, visible
+growth, tending, and harvesting, giving residents a lasting project and a reason
+to return while keeping absent households forgiving and host-owned.

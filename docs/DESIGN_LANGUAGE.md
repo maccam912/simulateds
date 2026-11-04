@@ -14,6 +14,14 @@ activity, needs, time, money, and a few actions. Open neighborhood navigation an
 the catalog only when requested. Menu copy names an action or explains a state;
 avoid promotional taglines inside the game.
 
+Solo time controls sit beside the clock: pause and three explicit rates. Brass
+marks a deliberate pause; leaf marks the selected running pace. The clock also
+says “Paused,” and the status line names the key that resumes it. Menus preserve
+the chosen pace. Residents' movement and activity animations follow simulation
+time, while camera, interface transitions, and music remain responsive at their
+usual rate. Shared play disables these controls with an explanation and labels
+the common clock. No extra frame or permanent modal layer is needed to pause.
+
 This is original game content. The period reference is an approach to readability,
 pace, and domestic life, not permission to copy another game's art, audio, or UI.
 

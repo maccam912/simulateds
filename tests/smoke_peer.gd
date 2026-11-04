@@ -23,6 +23,7 @@ func _run() -> void:
 		await _client(args[2])
 
 func _connect() -> void:
+	assert(session.set_play_speed(0).ok)
 	if use_codes:
 		assert(await rooms.join(FileAccess.get_file_as_string(ticket_path)), "Join-code request failed")
 	else:
@@ -30,6 +31,8 @@ func _connect() -> void:
 	for _index in range(300):
 		await create_timer(0.1).timeout
 		if session.snapshots_received > 0 and session.state.families.has(session.profile_id):
+			assert(session.debug_speed==1 and not session.can_control_time())
+			assert(not session.toggle_play_pause().ok and not session.set_play_speed(4).ok and session._requests.is_empty(),"Joining resets private pace; local controls cannot send shared clock requests")
 			return
 	assert(false, "Host snapshot did not arrive")
 
@@ -46,10 +49,18 @@ func _command(intent: Dictionary, accepted := true) -> void:
 	assert(false, "Command was not acknowledged")
 
 func _host() -> void:
+	assert(session.set_play_speed(4).ok)
 	if use_codes:
 		assert(await rooms.host(), "Could not create code")
 	else:
 		assert(session.host(), "Could not host")
+	assert(session.debug_speed==1 and not session.can_control_time())
+	assert(not session.set_play_speed(4).ok and not session.toggle_play_pause().ok)
+	session.menu_paused=true
+	var menu_tick: int=session.state.tick
+	await create_timer(0.3).timeout
+	assert(session.state.tick>menu_tick,"Hosting keeps the shared clock running through menus")
+	session.menu_paused=false
 	for resident: Dictionary in session.state.families[session.profile_id].members:
 		await _command({"type":"autonomy","member_id":resident.id,"enabled":false})
 	await _command({"type":"build_begin","lot_id":session.home_lot()})

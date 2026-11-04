@@ -36,7 +36,7 @@ func _run() -> void:
 	root.size=Vector2i(1280,720) if compact else Vector2i(1440,900)
 	var prefs: Node=root.get_node("Preferences"); prefs.reset_defaults()
 	if compact: suffix="-compact"; prefs.set_value("ui_scale",1.25)
-	session=root.get_node("Session"); session.saving_enabled=false; session.menu_paused=true
+	session=root.get_node("Session"); session.saving_enabled=false; session.set_physics_process(false); session.menu_paused=false
 	session.world.initialize(); session.world.ensure_family(session.profile_id,"Alex"); session.world.ensure_family("neighbor","Violet")
 	session.world.set_online(session.profile_id,true)
 	for family: Dictionary in session.state.families.values():

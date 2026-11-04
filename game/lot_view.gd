@@ -82,8 +82,9 @@ func _ready() -> void:
 	mouse_exited.connect(func(): hover_cell = Vector2i(-1, -1); hover_target = {}; _pointer = Vector2(-10000,-10000); queue_redraw())
 
 func _process(delta: float) -> void:
-	if not Session.menu_paused: _time += delta
-	motion.update(world,lot_id,delta,bool(Preferences.values.get("reduced_motion",false)),0.42 if Session.role=="client" else 0.22)
+	var simulation_delta := delta*Session.effective_speed()
+	_time+=simulation_delta
+	motion.update(world,lot_id,simulation_delta,bool(Preferences.values.get("reduced_motion",false)),0.42 if Session.role=="client" else 0.22)
 	_update_activity_audio(delta)
 	_layout()
 	var ground_hover := Rect2(Vector2.ZERO,size).has_point(_pointer) and hit_target(_pointer).is_empty() and not _dragging

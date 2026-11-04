@@ -22,6 +22,8 @@ const MAX_SNAPSHOT_BYTES := 524288
 const MAX_COMPRESSED_BYTES := 76800
 const MAX_CHUNKS := 128
 const SNAPSHOT_INTERVAL := 0.5
+const SIMULATION_STEP := 0.1
+const PLAY_SPEEDS := [0.0,1.0,2.0,4.0]
 
 var world = WorldModel.new()
 var state: Dictionary:
@@ -45,6 +47,7 @@ var saving_enabled := true
 var slots_path := ""
 var menu_paused := false
 var debug_speed := 1.0
+var _resume_speed := 1.0
 var _credential := ""
 var _offline_state: Dictionary = {}
 var _previous_saved: Dictionary = {}
@@ -214,7 +217,7 @@ func leave() -> void:
 		world.restore(_offline_state, true)
 	_offline_state.clear()
 	role = "offline"
-	debug_speed = 1.0
+	debug_speed = 1.0; _resume_speed=1.0; _simulation_clock=0.0
 	local_id = 1
 	players = {1: profile_id}
 	pending.clear()
@@ -332,9 +335,49 @@ func _activate_world(candidate) -> Dictionary:
 	players={1:profile_id}
 	_simulation_clock=0.0
 	_save_clock=0.0
-	debug_speed=1.0
+	debug_speed=1.0; _resume_speed=1.0
 	world_changed.emit()
 	return {"ok":true, "message":"Neighborhood loaded."}
+
+func can_control_time() -> bool:
+	return role=="offline" and not _dedicated
+
+func set_play_speed(value: Variant) -> Dictionary:
+	if not can_control_time(): return {"ok":false,"message":"Shared neighborhoods follow the host's clock. Solo time controls are unavailable here."}
+	if not (value is int or value is float) or not is_finite(float(value)) or not float(value) in PLAY_SPEEDS:
+		return {"ok":false,"message":"Choose Pause, 1×, 2×, or 4×."}
+	set_clock_rate(float(value))
+	return {"ok":true,"message":"Time paused. You can still plan your residents' activities." if debug_speed==0.0 else "Playing at "+speed_label()+"."}
+
+func toggle_play_pause() -> Dictionary:
+	return set_play_speed(_resume_speed if debug_speed==0.0 and _resume_speed in PLAY_SPEEDS else 1.0 if debug_speed==0.0 else 0.0)
+
+func set_clock_rate(value: float) -> void:
+	# Called by validated solo controls or the authority-only developer console.
+	debug_speed=value
+	if value>0.0: _resume_speed=value
+	_simulation_clock=0.0
+	world_changed.emit()
+
+func effective_speed() -> float:
+	if not is_authority(): return 1.0 # Client presentation follows received state.
+	if role=="offline" and menu_paused: return 0.0
+	return debug_speed
+
+func speed_label() -> String:
+	return ("%.2f" % debug_speed).trim_suffix("0").trim_suffix("0").trim_suffix(".")+"×"
+
+func _advance_simulation(delta: float) -> void:
+	if not is_authority() or not is_finite(delta) or delta<=0.0: return
+	var rate := effective_speed()
+	if rate<=0.0: _simulation_clock=0.0; return
+	# Retain sub-tick time at every frame rate. A stall contributes at most a
+	# quarter second, and even debug 8× has at most twenty small steps per frame.
+	_simulation_clock+=minf(delta,0.25)*rate
+	var steps := 0
+	while _simulation_clock+0.00000001>=SIMULATION_STEP and steps<20:
+		world.step(SIMULATION_STEP)
+		_simulation_clock=maxf(0.0,_simulation_clock-SIMULATION_STEP); steps+=1
 
 func execute_debug(line: String, member_id: String = "") -> Dictionary:
 	return DebugCommands.execute(self,line,member_id)
@@ -389,14 +432,7 @@ func _physics_process(delta: float) -> void:
 			if peer == null:
 				return
 	if is_authority():
-		# Menus pause local play only. Hosts keep time and packet polling alive.
-		if not (role == "offline" and menu_paused) and debug_speed > 0.0:
-			_simulation_clock += delta
-			if _simulation_clock >= 0.1:
-				world.step(minf(minf(_simulation_clock, 0.25) * debug_speed, 1.0))
-				_simulation_clock = 0.0
-		else:
-			_simulation_clock = 0.0
+		_advance_simulation(delta)
 		_save_clock += delta
 		if _save_clock >= 10.0:
 			_save_clock = 0.0

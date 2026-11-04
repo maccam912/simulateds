@@ -352,3 +352,33 @@ label placement was polished, and the updated guide passed its native check.
 Captures are ignored `build/windows-*.png`. Empty-lot test fixtures now clear their
 mounted windows with their walls. These are automated/native checks; human family,
 physical-device, and impaired-network visual playtests remain open.
+
+## Solo clock controls
+
+`PLAY_CLOCK_PASS` compares complete world snapshots after the same simulated time
+at 1×, 2×, and 4× with 30/60/120 Hz input. Needs, movement, activities, rewards,
+queues, and counters agree. Fixed 0.1-second steps preserve fractional time;
+walking likewise preserves its 0.22-second tile interval. Checks cover paused
+planning, resuming the previous pace, menu pause preservation, malformed rates,
+bounded stalls, debug fractional/8× rates, shared/dedicated rejection, and pace
+resets after leaving or a failed join. Save tests verify normal pace after loading
+or creating a world. Preference migration reserves all existing keys before
+assigning collision-free defaults for newly introduced actions.
+
+All 48 local suites passed. The guide fixture now moves solo pause off P before
+testing its existing custom menu binding, leaving T free for its rotation test;
+conflicting bindings remain rejected. Real Iroh host/two-client/reconnect and
+dedicated-server checks passed: hosting/joining resets a private fast/paused
+clock, shared controls cannot mutate state or send a request, and a host menu
+keeps simulation running. The windows checkpoint passed all four platform CI jobs.
+
+`PLAY_CLOCK_UI_PASS` exercises actual mouse/key input, the real physics scheduler,
+paused ground-click planning, all rates, menu return, mid-step animation freeze,
+household-audio silence, Space activation, typing protection, live rebinding,
+and shared-clock locks. Native 1440×900 and 1280×720/125% flows passed. Compact
+guide and directional-resident captures passed with the revised bindings/time
+semantics. Manual-step presentation fixtures disable automatic physics while
+leaving presentation time active; deliberate player pause freezes both. Final
+clock hover styling keeps the selected pace readable under the pointer. Captures
+are ignored `build/clock-*.png`; these remain automated native checks, not human
+family, physical Android, or cross-platform visual playtests.

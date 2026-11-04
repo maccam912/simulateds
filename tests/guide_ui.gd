@@ -70,6 +70,7 @@ func _run() -> void:
 	assert(session.world.state==before,"Reading help never alters the neighborhood")
 	assert(app.guide_panel.binding_values.rotate.text=="R")
 	assert("backtick" in app.guide_panel.binding_values.console.text and "F1" in app.guide_panel.binding_values.console.text)
+	assert(prefs.bind_action("play_pause",KEY_O).ok)
 	assert(prefs.bind_action("console",KEY_F2).ok and prefs.bind_action("pause",KEY_P).ok)
 	assert(app.guide_panel.binding_values.console.text=="F2 / F1" and app.guide_panel.binding_values.pause.text=="P / Escape","Live binding refresh includes the always-available rescue keys")
 	await _click(app.guide_panel.action_buttons.bindings[0])
