@@ -11,6 +11,7 @@ static func sample(member: Dictionary, lot: Dictionary) -> Dictionary:
 	if task.is_empty():
 		if action.begins_with("Chatting"): return _plain("company",action+". Your own plans still come first.")
 		return _plain("idle","A little free time. Choose an activity or click something in the house.")
+	if task.get("courtesy",false): return _plain("travel","A short step aside. Your next order takes priority.")
 	if not task.get("path",[]).is_empty(): return _plain("travel","On the way")
 	if task.get("type")=="move": return _plain("travel","Arriving")
 	var elapsed := maxf(0.0,float(task.get("elapsed",0.0)))

@@ -28,7 +28,8 @@ static func capture_plan(member: Dictionary, lot: Dictionary) -> Dictionary:
 		var task: Dictionary=tasks[index]
 		var reason := ""
 		var kind: String=furnishings.get(str(task.get("target_id","")),"")
-		if task.get("automatic",false): reason="Chosen autonomously, not part of your deliberate plan."
+		if task.get("courtesy",false): reason="A short step aside after recreation, not a routine activity."
+		elif task.get("automatic",false): reason="Chosen autonomously, not part of your deliberate plan."
 		elif task.get("type")=="move": reason="Walking destinations are specific to this lot."
 		elif task.get("target_kind")=="member": reason="Conversations need a particular resident."
 		elif task.has("garden_action") or kind=="garden_bed": reason="Garden work depends on the crop and its current condition."

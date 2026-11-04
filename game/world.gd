@@ -15,6 +15,7 @@ const Windows = preload("res://game/windows.gd")
 const Pastimes = preload("res://game/pastimes.gd")
 const Appearance = preload("res://game/appearance.gd")
 const Leisure = preload("res://game/shared_leisure.gd")
+const Courtesy = preload("res://game/courtesy.gd")
 const BuildAccess = preload("res://game/build_access.gd")
 const Routines = preload("res://game/routines.gd")
 const Gardens = preload("res://game/gardens.gd")
@@ -545,11 +546,13 @@ func _tick_member(member: Dictionary, lot: Dictionary, delta: float) -> void:
 		return
 	var task: Dictionary = member.task
 	if not task.path.is_empty():
-		member.action = "Walking" + (" · " + str(task.get("label", "")) if task.type == "interact" else "")
+		member.action = str(task.title) if task.get("courtesy",false) else "Walking" + (" · " + str(task.get("label", "")) if task.type == "interact" else "")
 		member.walk_clock += delta
 		while member.walk_clock+0.00000001>=0.22 and not task.path.is_empty():
 			member.walk_clock=maxf(0.0,float(member.walk_clock)-0.22)
 			var next: Array = task.path.pop_front()
+			if task.get("courtesy",false) and Courtesy.traffic(state,lot,str(member.id)).has(Vector2i(int(next[0]),int(next[1]))):
+				_end_task(member,"cancelled","Someone needs the space."); member.walk_clock=0.0; return
 			if not _walkable(lot, Vector2i(int(next[0]), int(next[1]))):
 				_clear_member(member, "Path changed", "The walking path became blocked; plan cleared.", "failed")
 				return
@@ -607,6 +610,12 @@ func _tick_member(member: Dictionary, lot: Dictionary, delta: float) -> void:
 		_finish_wish(member,task,str(object.kind))
 		_finish_hobby(member,task,str(object.kind))
 		_end_task(member,"done",str(need).capitalize()+" fulfilled." if float(task.remaining)>0.0 else "Activity finished.")
+		var courtesy := Courtesy.destination(state,lot,member,object,_path)
+		if not courtesy.is_empty():
+			_queue_action(member,{"type":"move","x":courtesy.cell.x,"y":courtesy.cell.y,"automatic":true,"courtesy":true,"title":"Making room for "+str(courtesy.name)})
+			_start_next(member,lot)
+			member.action=str(member.task.title)
+
 
 func task_activity(task: Dictionary, lot_id: String) -> String:
 	if task.get("type")!="interact": return ""
@@ -1346,6 +1355,7 @@ func _valid_task(value: Variant, active: bool) -> bool:
 	if value.has("title") and not ActivityLog.valid_text(value.title,100): return false
 	if value.has("automatic") and not value.automatic is bool:
 		return false
+	if value.has("courtesy") and (not value.courtesy is bool or not value.courtesy or value.type!="move" or not value.get("automatic",false) or not active): return false
 	if value.has("target_kind") and not value.target_kind in ["member", "object"]:
 		return false
 	if value.type == "move":
@@ -1359,7 +1369,7 @@ func _valid_task(value: Variant, active: bool) -> bool:
 	if active:
 		if value.type == "interact" and (float(value.remaining) <= 0 or float(value.remaining) > 120):
 			return false
-		if not value.get("path") is Array or value.path.size() > GRID_SIZE * GRID_SIZE:
+		if not value.get("path") is Array or value.path.size() > GRID_SIZE * GRID_SIZE or (value.get("courtesy",false) and value.path.size()>1):
 			return false
 		for tile: Variant in value.path:
 			if not tile is Array or tile.size() != 2 or not _valid_coord(tile[0]) or not _valid_coord(tile[1]):

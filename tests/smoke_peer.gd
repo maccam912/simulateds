@@ -75,6 +75,8 @@ func _host() -> void:
 	var home: String = session.home_lot()
 	var recalled := false
 	var game_ready := false
+	var courtesy: Dictionary={}
+	var courtesy_written := false
 	var delivered: Dictionary={}
 	for _index in range(850):
 		await create_timer(0.1).timeout
@@ -94,9 +96,33 @@ func _host() -> void:
 				if family_id!=session.profile_id:
 					var guest: Dictionary=session.state.families[family_id].members[0]
 					guest.needs.fun=20.0; guest.needs.social=20.0
-		if visitors == 2 and not recalled and FileAccess.file_exists(ticket_path+".1.played") and FileAccess.file_exists(ticket_path+".2.played"):
-			await _command({"type": "build_begin", "lot_id": home})
-			recalled = true
+		if visitors==2 and not recalled and FileAccess.file_exists(ticket_path+".1.played") and FileAccess.file_exists(ticket_path+".2.played"):
+			if courtesy.is_empty():
+				var host_family: Dictionary=session.state.families[session.profile_id]
+				var finisher: Dictionary=host_family.members[0]; var waiter: Dictionary=host_family.members[1]
+				var speaker := ""
+				for object: Dictionary in session.state.lots[home].objects:
+					if object.kind=="stereo": speaker=str(object.id)
+				for family: Dictionary in session.state.families.values():
+					if family.id!=session.profile_id: family.members[0].needs.fun=0.0
+				finisher.needs.fun=98.0
+				await _command({"type":"interact","member_id":finisher.id,"lot_id":home,"target_id":speaker})
+				await _command({"type":"interact","member_id":waiter.id,"lot_id":home,"target_id":speaker})
+				assert(waiter.task.is_empty() and waiter.queue.size()==1,"A fourth dancer waits for this room's three places")
+				var place := Leisure.place(finisher)
+				courtesy={"finisher":finisher.id,"waiter":waiter.id,"action":waiter.queue[0].id,"speaker":speaker,"from":[place.x,place.y]}
+			if not courtesy_written:
+				var host_family: Dictionary=session.state.families[session.profile_id]
+				var finisher: Dictionary=host_family.members[0]; var waiter: Dictionary=host_family.members[1]
+				if waiter.task.get("id")==courtesy.action and waiter.task.path.is_empty() and waiter.task.get("elapsed",0.0)>0.0:
+					assert(Vector2(finisher.x,finisher.y).distance_to(Vector2(courtesy.from[0],courtesy.from[1]))==1.0)
+					assert(finisher.task.is_empty() and finisher.activity_log[0].outcome=="done")
+					courtesy.to=[finisher.x,finisher.y]
+					var handoff := FileAccess.open(ticket_path+".courtesy",FileAccess.WRITE); handoff.store_string(JSON.stringify(courtesy)); handoff.close()
+					courtesy_written=true
+			if courtesy_written and FileAccess.file_exists(ticket_path+".1.handoff") and FileAccess.file_exists(ticket_path+".2.handoff"):
+				await _command({"type": "build_begin", "lot_id": home})
+				recalled=true
 		for postcard: Dictionary in session.state.families[session.profile_id].mailbox.items:
 			if not postcard.claimed:
 				await _command({"type":"mail_read","id":postcard.id})
@@ -468,6 +494,18 @@ func _client(index: String) -> void:
 		await create_timer(0.1).timeout
 	assert(danced,"Both clients observe separate dance spots and shared social restoration")
 	var played := FileAccess.open(ticket_path+"."+index+".played",FileAccess.WRITE); played.store_string("shared"); played.close()
+	var handoff_seen := false
+	for _attempt in range(150):
+		if FileAccess.file_exists(ticket_path+".courtesy"):
+			var expected: Dictionary=JSON.parse_string(FileAccess.get_file_as_string(ticket_path+".courtesy"))
+			var finisher: Dictionary=session.world._find_member(str(expected.finisher))
+			var waiter: Dictionary=session.world._find_member(str(expected.waiter))
+			if Vector2i(finisher.x,finisher.y)==Vector2i(int(expected.to[0]),int(expected.to[1])) and waiter.task.get("id")==expected.action and waiter.task.path.is_empty():
+				assert(finisher.activity_log[0].outcome=="done" and waiter.task.target_id==expected.speaker)
+				handoff_seen=true; break
+		await create_timer(0.1).timeout
+	assert(handoff_seen,"Both actual clients observe a one-step departure and the same waiting plan taking its place")
+	var handoff := FileAccess.open(ticket_path+"."+index+".handoff",FileAccess.WRITE); handoff.store_string("observed"); handoff.close()
 	var recalled := false
 	for _attempt in range(300):
 		await create_timer(0.1).timeout

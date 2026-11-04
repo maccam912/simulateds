@@ -380,3 +380,14 @@ more reachable floor around it to enjoy company. These hints do not spend money
 or change the house. Construction ignores the temporarily sheltered residents
 when counting usable space. The existing Access check still decides whether the
 whole house is ready to reopen.
+
+
+When someone finishes a game or dance and another resident is waiting for that
+place, they can take one clear step aside. **Plan** shows **Making room for …**
+and lets you cancel it; a new direct order interrupts it immediately. Your queued
+activities always come first. This small finishing movement works with autonomy
+off, does not earn rewards, and is excluded from saved routines and Recent.
+It avoids occupied tiles, walking routes, doorways, the waiting resident's approach,
+and places around other shared furniture. If there is no safe nearby step, the
+resident stays put and the waiting explanation remains available. Canceling an
+activity yourself does not trigger a courtesy step.

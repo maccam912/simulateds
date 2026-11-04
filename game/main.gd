@@ -637,7 +637,7 @@ func _refresh_plan(member: Dictionary) -> void:
 		var title := _task_title(task,member)
 		var waiting: bool = member.task.is_empty() and task == member.queue[0] and str(member.action).begins_with("Waiting")
 		var favorite: bool=bool(task.get("automatic",false)) and Pastimes.matches(member,Session.world.task_activity(task,str(member.lot_id)))
-		var suffix := " · auto · favorite" if favorite else " · auto" if task.get("automatic",false) else ""
+		var suffix := " · courtesy" if task.get("courtesy",false) else " · auto · favorite" if favorite else " · auto" if task.get("automatic",false) else ""
 		var label := _label(("NOW " if current else "WAIT " if waiting else "NEXT ") + str(tasks.find(task)+1) + " · " + title + suffix,13,Style.GREEN if current else Style.TEXT)
 		var content := _vbox(row,4); content.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 		label.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; label.tooltip_text=title+(" · A favorite pastime, chosen autonomously." if favorite else ""); content.add_child(label)
@@ -717,6 +717,7 @@ func _restore_plan_view(member_id: String, action_id: String, control_key: Strin
 	plan_scroll.ensure_control_visible(target)
 
 func _task_title(task: Dictionary, member: Dictionary) -> String:
+	if task.get("courtesy",false): return str(task.get("title","Making room"))
 	if task.has("garden_action"):
 		if task.has("label"): return str(task.label)
 		var object: Dictionary=Session.world._object(Session.state.lots[member.lot_id],str(task.get("target_id","")))

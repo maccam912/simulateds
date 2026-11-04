@@ -63,9 +63,12 @@ and interruption reasons, with game time and routine provenance. These persist
 through saves and reconnects without filling up with autonomous care. Routines can
 now start from the selected resident’s current plan, with an editable copy,
 explicit omissions, and a review step for plans longer than six activities.
-A little hi-fi now offers solo/shared dancing, four independently reserved spots,
+A little hi-fi now offers solo/shared dancing, up to four independently reserved spots,
 People discovery/joining, a dancing preference, routine support, expressive poses,
-and one original positional music source with background-score ducking.
+and one original positional music source with background-score ducking. Shared
+furnishings now show actual layout capacity, open/reserved/occupied places, and
+specific waiting explanations. Completed shared recreation can include one safe,
+interruptible courtesy step to let an already-waiting plan take its place.
 See [the playtest log](PLAYTEST_LOG.md) for evidence
 and current usability priorities.
 

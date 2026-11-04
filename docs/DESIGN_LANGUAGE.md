@@ -465,3 +465,16 @@ places shared by adjacent furnishings. People, waiting feedback, and the world
 markers use the same calculation as activity assignment. Paused command changes
 must update markers without waiting for a simulation tick. Keep explanations
 clear of the HUD and, where space permits, the activity and its floor markers.
+
+
+### A small courtesy after play
+
+Finishing shared recreation may include one visible step to make room for someone
+already waiting. Treat it as a short, interruptible conclusion to the activity,
+including when autonomous choices are off. Use the accepted ordinary walking
+pose and footsteps; show Making room for [name] in the resident's status and Plan,
+with a quiet courtesy label and the usual cancel control. Do not add a dialog,
+a separate movement system, repeated retries, or a persistent request queue.
+Explicit plans win, participating residents remain where they are, and a blocked
+exit means no movement. Keep the completed activity in Recent exactly once;
+the courtesy itself is neither a deliberate outcome nor a reusable routine step.

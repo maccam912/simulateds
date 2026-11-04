@@ -1269,3 +1269,39 @@ step aside when an activity ends and another plan is waiting. Preserve deliberat
 orders and independent family control, keep anyone still participating in place,
 and avoid creating new collisions or hidden activity queues. This is proposed
 next work, not implemented behavior in this checkpoint.
+
+
+## A small step aside after play
+
+Completed shared games and dances now make room for an already-waiting plan when
+one safe adjacent step is available. The finisher's own queued orders take
+priority; canceling an activity explicitly does not move them. The step avoids
+residents, accepted walking routes, waiting approaches, doors, the entrance, and
+other shared furniture's places. A fresh traffic check before moving handles a
+new direct order using that space. No safe destination means staying put.
+
+The native flow let Alex dance until fun was fulfilled, with Robin already
+waiting for the only place. Plan showed Making room for Robin, a courtesy label,
+a short explanation, and the normal cancel control. Alex visibly stepped aside
+and Robin's original action ID took the freed place. Standard and compact native
+runs passed, including reduced-motion positioning. Courtesy is interruptible even
+with autonomy off, gives no reward, and is excluded from Recent and captured
+routines; the completed dance remains in Recent exactly once.
+
+Model checks cover both shared furnishings, queued/direct orders, cancellation,
+blocked exits, doorways, a newly accepted conflicting route, simultaneous finishes,
+snapshot replacement, disk reload, and construction recall. All 60 local suites
+passed, followed by an expanded courtesy-model pass. The previous shared-space
+checkpoint passed all four platform CI jobs. The actual host/two-client handoff,
+construction recall, reconnect, and dedicated startup passed. The first network
+assertion compared integer positions with JSON float arrays and failed despite
+replicated movement; normalizing the expected coordinates fixed the test, and the
+entire real-peer scenario passed on rerun.
+
+Fresh assessment: the room now explains its usable space and can hand it over
+without extra micromanagement. The next gap is the meaning of spending time
+together: dancing and tabletop games restore social, but only conversations
+currently build friendship. Next, make deliberate shared recreation contribute to
+bounded relationship progress, with honest People feedback, minimum time actually
+together, and protection against double-counting or autonomous/absent farming.
+This is proposed next work, not a feature of this checkpoint.

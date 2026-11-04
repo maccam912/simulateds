@@ -530,3 +530,32 @@ tick stays fixed. Screenshots were inspected for the count, markers, and tooltip
 placement clear of the activity. Captures: `build/shared-spaces-*.png` (ignored).
 The preceding dancing checkpoint passed all four platform CI jobs. Human family
 play, physical device checks, and overnight hosting remain open.
+
+
+## Courtesy after shared recreation
+
+All 60 local suites passed, followed by the expanded courtesy-model suite.
+`courtesy.gd` covers one-place stereo/table handoff, exact pending action IDs,
+no movement without a current waiter, deliberate queue priority, direct-order and
+cancel interruption, blocked exits, doorways, conflicting accepted routes,
+simultaneous finishes with separate destinations, runtime replacement, disk reload,
+invalid courtesy fields, and construction recall. The completed activity is
+recorded once; the finishing step produces no reward or false manual result.
+
+Native injected-input runs at 1440×900 and 1280×720 / 125% UI scale let the dance
+finish naturally, inspect the visible Making room for Robin plan row and its
+cancel control, follow the accepted one-tile walk, and verify Robin takes the
+same waiting plan into the freed spot. Reduced motion reflects the accepted
+position. Screenshots were inspected; ignored captures are `build/courtesy-*.png`.
+
+The real Iroh host fills the three-place music corner, queues its fourth dancer,
+and finishes one participant. Both independent clients observe the one-step
+position change and the same waiting action arriving. Construction recall,
+reconnect, and dedicated startup then pass. The initial observer assertion used
+integer-array equality against JSON floats; an isolated engine check confirmed
+that comparison is false, and explicit coordinate normalization fixed the test.
+The complete real-peer scenario was rerun successfully after the correction.
+
+The previous shared-place checkpoint passed macOS, Android, Linux, and Windows
+CI. These automated native/real-process checks do not establish human family
+play, physical Android or cross-OS play, or overnight host reliability.
