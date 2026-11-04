@@ -14,4 +14,8 @@ static func draw(canvas: CanvasItem,center: Vector2,scale_value: float,recipe: S
 		else:
 			for leaf: Vector2 in [Vector2(-3,-1),Vector2(2,-2),Vector2(0,3)]: canvas.draw_circle(p+leaf,4,Color("87a761") if leaf.x<0 else Color("adc279"))
 			canvas.draw_circle(p+Vector2(2,1),2,Color("d48761"))
+			if recipe=="homegrown":
+				canvas.draw_circle(p+Vector2(-3,1),2.5,Color("d78c91"))
+				canvas.draw_circle(p+Vector2(-3,1),1.3,Color("fae4ce"))
+				canvas.draw_circle(p+Vector2(3,-2),2.2,Color("d67954"))
 	canvas.draw_set_transform(Vector2.ZERO)

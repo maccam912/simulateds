@@ -478,6 +478,21 @@ harvesting are deliberate resident activities; one resident reserves a bed while
 it is in their plan. Full needs do not skip the work. Seeds are paid for and
 harvest income is awarded only when the work finishes.
 
+At a ripe bed, choose **Harvest & sell** for the listed funds or **Keep harvest**
+for four vegetables. Each household’s pantry holds twelve radishes and twelve
+tomatoes, with no spoilage while away. Planned kept harvests reserve room; a full
+pantry leaves the crop available to sell or keep later. **Homegrown meals ›**
+opens your dining table without choosing a recipe or moving anyone. If you have
+no table, the button explicitly offers to enter construction with one selected.
+
+A **Homegrown bowl** uses two radishes and two tomatoes for four portions, with
+no additional currency cost. It restores hunger and comfort and supports the
+same shared dining and cooking practice as purchased recipes. The pantry count
+shows stock free after existing meal plans reserve their ingredients. Produce
+is consumed only when food reaches the table; cancellation or construction
+releases reservations. Stored produce belongs to the household, so construction
+Undo/Discard cannot create or refund it. Older saves start with an empty pantry.
+
 Dry crops stop growing without dying; ripe crops wait indefinitely. Growth
 continues while you are away if the host is running and the bed has water.
 Construction freezes the crop, and moving, undoing, discarding, saving, and

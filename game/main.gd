@@ -953,6 +953,7 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 	elif _context_page=="garden":
 		activity_label.text="Kitchen garden"
 		garden_panel=GardenPanel.new(); tools_box.add_child(garden_panel); garden_panel.command_requested.connect(_send)
+		garden_panel.add_footer(context_box); garden_panel.meals_requested.connect(_open_homegrown_meals)
 		context_box.add_child(_button("‹ Activities",func(): _context_page="activities"; _refresh()))
 	else:
 		activity_label.text="Activities"
@@ -980,6 +981,20 @@ func _open_wishes() -> void:
 
 func _open_commissions() -> void:
 	_context_page="commissions"; _refresh(); _show_tray(context_panel,true); call_deferred("_reset_catalog_scroll")
+
+func _open_homegrown_meals() -> void:
+	var family:=_family()
+	if family.is_empty(): return
+	var home: Dictionary=Session.state.lots[family.home_lot]
+	if home.building: _notice("Finish construction before preparing a meal."); return
+	_select_lot(str(home.id))
+	for furnishing: Dictionary in home.objects:
+		if furnishing.kind=="dining_table":
+			_interact(str(furnishing.id)); meal_panel._preview_recipe="homegrown"; meal_panel.refresh(viewed_lot,str(furnishing.id),selected_member)
+			lot_view.focus_cell(Vector2(float(furnishing.x)+1.0,float(furnishing.y)+1.0)); return
+	_context_page="activities"; _catalog_category="kitchen"; _catalog_query="dining"
+	catalog_category.select(BuildCatalog.CATEGORIES.keys().find("kitchen")); catalog_search.text="dining"
+	_select_build_tool("dining_table"); _send({"type":"build_begin","lot_id":str(home.id)}); _show_tray(context_panel,true); call_deferred("_reset_catalog_scroll")
 
 func _commission_easel() -> void:
 	var family:=_family()

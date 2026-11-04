@@ -2,7 +2,8 @@ extends RefCounted
 ## Portions are household property; reservations are ordinary accepted tasks.
 const RECIPES := {
 	"salad":{"name":"Garden salad","cost":12,"prepare":8.0,"hunger":7.0,"comfort":1.0,"color":"8eae65"},
-	"sandwiches":{"name":"Sandwich platter","cost":20,"prepare":10.0,"hunger":8.0,"comfort":2.0,"color":"e2bc7c"}
+	"sandwiches":{"name":"Sandwich platter","cost":20,"prepare":10.0,"hunger":8.0,"comfort":2.0,"color":"e2bc7c"},
+	"homegrown":{"name":"Homegrown garden bowl","cost":0,"prepare":10.0,"hunger":8.0,"comfort":3.0,"color":"abbd70","produce":{"radish":2,"tomato":2}}
 }
 const PORTIONS := 4
 const EAT_TIME := 10.0

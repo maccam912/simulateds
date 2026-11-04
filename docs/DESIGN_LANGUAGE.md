@@ -834,3 +834,21 @@ loading, reconnecting, menus, and an already-open commission tray are quiet;
 the ready mark still reflects current originals. Invalidate the displayed action
 when the request changes or no original is eligible. Use the existing confirmation
 sample 6 dB quieter on Effects; mute preserves all text and navigation.
+
+
+## A harvest for the table
+
+Ripe garden beds offer two equally visible choices: sell for the exact currency
+amount, or keep four vegetables for the pantry. Growing plants show watering;
+empty beds show seeds. Keep both harvest choices visible at compact sizes. The
+small pantry line reports free ingredients, with stored/reserved/incoming counts
+and capacity in its tooltip. Homegrown meals opens the home dining table without
+choosing a recipe or moving a resident. When no table exists, label the action
+explicitly as construction and show its price.
+
+The homegrown bowl reuses the shared meal presentation, adding radish rings and
+tomatoes to its platter. Recipe text says two of each; the nearby pantry names
+both crops. When stock is missing, show the garden hint beside the recipes; keep
+exact shortfalls and reservation details in the tooltip rather than a clipped
+paragraph below the tray. Reuse the harvest basket pose and quiet garden sound.
+No additional HUD panel, spoilage timer, or reminder sound is needed.

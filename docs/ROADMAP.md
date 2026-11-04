@@ -15,6 +15,8 @@ from clients, presentation derived from accepted state.
 - Persistent host world and reconnectable local player credentials.
 - Iroh hosting/joining, room codes/tickets, and bounded state replication.
 - Gentle absent-family behavior while the host keeps running.
+- Kept garden harvests, bounded household pantries, and shared homegrown meals,
+  with reservations for ingredients and incoming produce.
 
 Exit: a host and two clients can keep separate families, edit only their own lots,
 visit an open neighbor, survive that neighbor entering construction, disconnect,

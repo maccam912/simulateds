@@ -185,3 +185,29 @@ not on cancel or reconnect. There is no expiry and at most one delivery per game
 day. Recent receipt IDs cannot also exist as held art or unclaimed mail escrow;
 claimed postcard receipts are historical and may retain the artist's picture.
 No schema or transport version change is required for this additive state.
+
+
+## Kept harvests and homegrown cooking
+
+The existing `garden` command accepts `action: keep` with the exact garden
+revision. Completing it adds four of that crop to the authenticated household’s
+pantry and resets the bed, with no currency payment. Cash harvests keep their
+existing action. The existing `meal` command accepts `recipe: homegrown`; serving
+consumes two radishes and two tomatoes and creates four portions in one simulation
+step. Validation repeats immediately before either resource change.
+
+`family.pantry` contains bounded integer radish/tomato counts (0–12 each). Older
+saves acquire zero stock. Accepted current and queued preparation tasks reserve
+ingredients; accepted kept harvests reserve pantry capacity. Reservations derive
+from stable action IDs and current garden/table revisions, so cancellation,
+construction, and stale plans release them. Incoming crops cannot fund a recipe
+before they are harvested, and ingredients reserved for cooking still occupy
+storage until served. Invalid totals or malformed reservation IDs reject a save
+atomically. Runtime snapshots retain reservations; ordinary loading clears plans
+without consuming their ingredients.
+
+Pantry stock belongs to the family, outside reversible construction fields.
+Existing room-copy rules create empty beds and tables. Host autosaves and normal
+snapshots retain the authoritative stock; clients never submit a stock amount.
+Caretakers and autonomy do not harvest or prepare food, and neither stored
+produce nor leftovers spoil while the household is absent.

@@ -2426,3 +2426,62 @@ It remains locally ad-hoc signed. The preceding commission workflow `41896642921
 failed all four hosted platforms before executing any steps under the existing
 account-level CI block. Physical Intel/Android, cross-device and human-family play,
 and notarization remain unverified.
+
+
+## 2026-11-04 · From garden harvest to shared supper
+
+Ripe beds now offer a choice between selling the crop and keeping four vegetables.
+Each household has a pantry capped at twelve radishes and twelve tomatoes.
+Homegrown bowls use two of each for four portions without an additional currency
+charge. Current and queued cooking plans reserve ingredients; kept harvest plans
+reserve storage room. Produce changes only when harvesting or serving completes.
+Cancellation, construction, loading, and reconnecting cannot charge it twice.
+Produce never spoils while away. Existing cash harvests and purchased meals remain.
+
+The garden links to the home dining table without selecting a recipe or moving a
+resident. A household without a table instead sees an explicit priced construction
+action. Both trays show free pantry stock, with stored/reserved/incoming counts in
+the tooltip. The new platter uses radish rings and tomatoes, the ordinary cooking
+and harvest poses, and existing quiet garden sounds. Help and catalog search now
+connect homegrown food to its garden and table.
+
+Native injected-input playtests at 1440×900 and 1280×720 / 125% interface scale
+place both furnishings, plant and water both crops to maturity, keep each harvest,
+open the recipe list, cancel and rechoose cooking, carry and serve food, call both
+residents, finish a shared meal, and restore pantry stock with leftovers. Both
+harvest choices and every recipe fit. A separate existing-meal playthrough exposed
+a clipped missing-produce paragraph; the useful hint now stays beside the recipes,
+with exact shortages in the tooltip. Final native runs verify the correction.
+
+Model coverage includes space and ingredient overbooking, cancelled and stale
+plans, live snapshot continuation versus ordinary save loading, construction
+Undo/Discard, full pantry and full currency budgets, foreign ownership, legacy
+empty stock, and malformed values/reservation identities. The new real Iroh test
+uses mature-bed fixtures to keep transport checks short; clients themselves keep
+crops, reject repeats, cancel cooking, enter construction, cook independently,
+visit, and reconnect. The authoritative saved copy retains each pantry and meal.
+Actual growth from seeds is covered by the model and native flows, not by the
+transport fixture. No human or cross-device playtest is claimed.
+
+Fresh assessment: the garden-to-meal link gives growing a useful household payoff,
+but a player discovering the recipe at an empty table still has to locate a bed
+manually. The next increment should let that player inspect their kitchen garden
+from the meal tray, see which beds need planting/watering/harvesting, and choose
+one without implicitly ordering work or moving a resident. A missing bed should
+lead to an explicitly priced build action.
+
+Final UI review preserves the cooking-wish reward beside the empty-pantry hint.
+A focused compact native `pantry_ui` pass and headless `meal_wishes_ui` pass
+verify that correction after the full local run.
+
+Full regression passes all 108 local suites, six real Iroh scenarios (general,
+painting, meals, recreation, commissions, pantry), and dedicated-server startup:
+115 pass markers. The final cooking-wish UI adjustment has its separate focused
+passes above. The preceding pushed workflow `41899983365` failed all four
+platforms before executing any steps; the account-level hosted CI block remains.
+
+The final universal macOS export passes plist validation, strict signature checks
+for both architectures, and `EXPORTED_NATIVE_RUNTIME_PASS` on Apple Silicon.
+It remains locally ad-hoc signed; physical Intel/Android, cross-device and human
+family play, and notarization remain unverified. The pantry package checksum is
+`af71c5499b442d0bffd052e9b1f7a997e9a3900458e35f140752050116dc402f`.

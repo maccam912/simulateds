@@ -1060,7 +1060,7 @@ func _activity_prop(p: Vector2,kind: String,s: float,reduced: bool,facing: Vecto
 			var lift := 0.0 if reduced else sin(_time*4.0)*2.0
 			draw_line(p+Vector2(7,-21)*s,p+Vector2(15,-14+lift)*s,Color("ac8158"),3*s,true)
 			_poly([p+Vector2(12,-14+lift)*s,p+Vector2(18,-17+lift)*s,p+Vector2(20,-10+lift)*s],Color("9caaa3"))
-		"garden_harvest":
+		"garden_harvest", "garden_keep":
 			draw_arc(p+Vector2(12,-16)*s,7*s,PI,TAU,12,Color("b68e60"),2*s,true)
 			draw_rect(Rect2(p+Vector2(4,-15)*s,Vector2(16,9)*s),Color("bd9868"))
 			for index in range(3): draw_circle(p+Vector2(7+index*5,-15)*s,3*s,Color("d67954"))

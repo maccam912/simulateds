@@ -1360,3 +1360,41 @@ It remains locally ad-hoc signed. The preceding commission workflow `41896642921
 failed all four hosted platforms before executing any steps under the existing
 account-level CI block. Physical Intel/Android, cross-device and human-family play,
 and notarization remain unverified.
+
+
+## Household pantry and homegrown meals
+
+`pantry` covers actual planting/watering/growth/kept harvests, incoming capacity,
+recipe reservations across multiple tables, cancellation while carrying, exactly
+once serving after a runtime JSON snapshot, ordinary-load release, construction
+release and Undo/Discard, full stock/budget, foreign ownership, legacy defaults,
+and malformed stock/identity/overbooking rejection.
+
+`pantry_ui` passes native injected input at both standard and compact sizes. It
+builds from the garden’s explicit dining-table action, grows both crops, keeps
+them, opens recipes without changing world state, cancels through Plan, cooks,
+shares, and reloads leftovers. All choices and the empty-pantry explanation fit
+the tray. Compact `meals_ui` also passes the existing paid-recipe, visiting,
+autonomous-dining, and chosen-company paths with the extra recipe present.
+
+`PANTRY_IROH_PASS` uses one host and two independent clients. Mature-crop fixtures
+avoid waiting for growth in the transport test. All harvest/cooking/construction/
+cancellation/visit commands use the actual network; replay and foreign ownership
+are rejected, reconnects preserve stock, and the host’s normalized saved world
+retains both pantries and four-portioned meals.
+
+Final UI review preserves the cooking-wish reward beside the empty-pantry hint.
+A focused compact native `pantry_ui` pass and headless `meal_wishes_ui` pass
+verify that correction after the full local run.
+
+Full regression passes all 108 local suites, six real Iroh scenarios (general,
+painting, meals, recreation, commissions, pantry), and dedicated-server startup:
+115 pass markers. The final cooking-wish UI adjustment has its separate focused
+passes above. The preceding pushed workflow `41899983365` failed all four
+platforms before executing any steps; the account-level hosted CI block remains.
+
+The final universal macOS export passes plist validation, strict signature checks
+for both architectures, and `EXPORTED_NATIVE_RUNTIME_PASS` on Apple Silicon.
+It remains locally ad-hoc signed; physical Intel/Android, cross-device and human
+family play, and notarization remain unverified. The pantry package checksum is
+`af71c5499b442d0bffd052e9b1f7a997e9a3900458e35f140752050116dc402f`.

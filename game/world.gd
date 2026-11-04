@@ -28,6 +28,7 @@ const ArtAdmiration = preload("res://game/art_admiration.gd")
 const WallArt = preload("res://game/wall_art.gd")
 const Paintings = preload("res://game/paintings.gd")
 const Commissions = preload("res://game/art_commissions.gd")
+const Pantry = preload("res://game/pantry.gd")
 const Meals = preload("res://game/meals.gd")
 const HouseholdTravel = preload("res://game/household_travel.gd")
 const Gardens = preload("res://game/gardens.gd")
@@ -102,6 +103,7 @@ func ensure_family(profile_id: String, display_name: String) -> String:
 		state.families[profile_id].routines=Routines.create()
 		state.families[profile_id].room_library=RoomLibrary.create()
 		state.families[profile_id].commissions=Commissions.create()
+		state.families[profile_id].pantry=Pantry.create()
 		_event(clean_name + " moved into " + str(lot.name) + ".")
 		return lot_id
 	return ""
@@ -655,10 +657,12 @@ func meal_option(profile_id: String,member_id: String,lot_id: String,table_id: V
 	if spaces.capacity==0: return _result(false,"No path to the dining table. Leave a clear place around it.")
 	var result := {"ok":true,"batch":int(meal.batch),"target_id":table_id,"recipe":recipe,"message":""}
 	if action=="prepare":
-		if not Meals.RECIPES.has(recipe): return _result(false,"Choose a salad or sandwich platter.")
+		if not Meals.RECIPES.has(recipe): return _result(false,"Choose a recipe from the dining table.")
 		if int(meal.servings)>0: return _result(false,"Share the remaining portions or clear them before making a fresh meal.")
 		var definition: Dictionary=Meals.RECIPES[recipe]
 		if int(lot.funds)<int(definition.cost): return _result(false,"Need §%d more for these ingredients." % (int(definition.cost)-int(lot.funds)))
+		var produce:=Pantry.can_cook(state,profile_id,recipe)
+		if not produce.ok: return produce
 		var best := {}; var score := INF
 		for fridge: Dictionary in lot.objects:
 			if fridge.kind!="fridge": continue
@@ -670,6 +674,7 @@ func meal_option(profile_id: String,member_id: String,lot_id: String,table_id: V
 			if distance<score: score=distance; best=fridge
 		if best.is_empty(): return _result(false,"A reachable kitchen fridge and dining table are needed to prepare a meal.")
 		result.target_id=str(best.id); result.message="Four portions · §%d when served · Uses the kitchen fridge" % int(definition.cost)
+		if not Pantry.ingredients(recipe).is_empty(): result.message="Four portions · "+str(produce.message)+" · Uses the kitchen fridge"
 	else:
 		if not recipe.is_empty(): return _result(false,"Choose the meal currently served on this table.")
 		for plan: Dictionary in plans:
@@ -689,6 +694,8 @@ func _meal_task_option(member: Dictionary,lot: Dictionary,task: Dictionary) -> D
 		if _object(lot,str(task.target_id)).get("kind")!="fridge": return _result(false,"The kitchen fridge is no longer here.")
 		if int(table.meal.servings)>0 or not Meals.plans(state,str(lot.id),str(table.id),str(task.id)).is_empty(): return _result(false,"The table is already in use for a meal.")
 		if int(lot.funds)<int(Meals.RECIPES[task.meal_recipe].cost): return _result(false,"The household no longer has enough for the ingredients.")
+		var produce:=Pantry.can_cook(state,str(lot.owner),str(task.meal_recipe),str(task.id))
+		if not produce.ok: return produce
 	else:
 		if table.meal.recipe!=task.meal_recipe: return _result(false,"The meal changed before eating.")
 		if not task.get("meal_taken",false) and Meals.available(state,lot,table,str(task.id))<=0: return _result(false,"That portion is no longer available.")
@@ -716,10 +723,11 @@ func _tick_meal(member: Dictionary,lot: Dictionary,task: Dictionary,delta: float
 		if float(task.remaining)>0.000001: return
 		var recipe: String=task.meal_recipe; var cost: int=Meals.RECIPES[recipe].cost
 		if not _adjust_funds(str(lot.id),-cost): _end_task(member,"failed","The household budget changed before serving."); return
+		Pantry.consume(state.families[lot.owner],recipe)
 		table.meal={"recipe":recipe,"servings":Meals.PORTIONS,"batch":int(table.meal.batch)+1,"cook":str(member.id),"cook_name":str(member.name),"day":int(state.day)}
 		_record_hobby(member,"fridge"); _finish_wish(member,task,"meal_prepare")
 		_event(str(member.name)+" served "+str(Meals.RECIPES[recipe].name).to_lower()+" · Four portions ready.")
-		_end_task(member,"done","Four portions served · Ingredients §%d." % cost)
+		_end_task(member,"done","Four portions served · "+(Pantry.cost_label(recipe)+" from the pantry." if not Pantry.ingredients(recipe).is_empty() else "Ingredients §%d." % cost))
 	else:
 		if not task.get("meal_taken",false): table.meal.servings-=1; task.meal_taken=true
 		if not task.has("social_started"): task.social_started=int(state.tick)
@@ -834,6 +842,10 @@ func garden_option(profile_id: String,member_id: String,lot_id: String,target_id
 	if object.get("kind")!="garden_bed": return _result(false,"Choose a garden bed.")
 	var option := Gardens.inspect(object.garden,action,crop,lot.owner==profile_id,int(lot.funds))
 	if not option.ok: return option
+	if action=="keep":
+		var room:=Pantry.can_keep(state,profile_id,str(object.garden.crop))
+		if not room.ok: return room
+		option.message=room.message
 	for household: Dictionary in state.families.values():
 		for resident: Dictionary in household.members:
 			if resident.lot_id!=lot_id: continue
@@ -850,7 +862,12 @@ func _garden_task_option(member: Dictionary,lot: Dictionary,object: Dictionary,t
 	if object.get("kind")!="garden_bed" or not Gardens.valid_task(task): return _result(false,"This garden activity is no longer available.")
 	if int(task.garden_revision)!=int(object.garden.revision): return _result(false,"The garden changed before this activity.")
 	var owner: bool=state.families.get(lot.owner,{}).get("members",[]).has(member)
-	return Gardens.inspect(object.garden,task.garden_action,task.crop,owner,int(lot.funds))
+	var option:=Gardens.inspect(object.garden,task.garden_action,task.crop,owner,int(lot.funds))
+	if option.ok and task.garden_action=="keep":
+		var room:=Pantry.can_keep(state,str(lot.owner),str(object.garden.crop),str(task.id))
+		if not room.ok: return room
+		option.message=room.message
+	return option
 
 func _tick_garden(member: Dictionary,lot: Dictionary,object: Dictionary,task: Dictionary,delta: float) -> void:
 	var option := _garden_task_option(member,lot,object,task)
@@ -864,10 +881,12 @@ func _tick_garden(member: Dictionary,lot: Dictionary,object: Dictionary,task: Di
 	if float(task.remaining)>0.000001: return
 	if not _adjust_funds(str(lot.id),-int(option.cost)):
 		_end_task(member,"failed","The household budget changed.","The household budget changed"); return
+	var crop: String=object.garden.crop
+	if task.garden_action=="keep": Pantry.keep(state.families[lot.owner],crop)
 	Gardens.apply(object.garden,str(task.garden_action),str(task.crop))
 	_finish_hobby(member,task,"plant"); _finish_wish(member,task,"plant")
 	_event(str(member.name)+" finished: "+str(option.label).to_lower()+(" · §%d earned." % -int(option.cost) if int(option.cost)<0 else "."))
-	_end_task(member,"done","Harvest sold for §%d." % -int(option.cost) if int(option.cost)<0 else "Seeds planted." if task.garden_action=="plant" else "Garden watered.","Garden tended")
+	_end_task(member,"done","Kept %d %s in the pantry." % [Gardens.HARVEST_COUNT,str(Gardens.CROPS[crop].name).to_lower()] if task.garden_action=="keep" else "Harvest sold for §%d." % -int(option.cost) if int(option.cost)<0 else "Seeds planted." if task.garden_action=="plant" else "Garden watered.","Garden tended")
 
 func move_option(profile_id: String,member_id: String,lot_id: String,goal: Vector2i) -> Dictionary:
 	# Shared, read-only reachability for ground previews and accepted commands.
@@ -1829,6 +1848,8 @@ func _normalize_numbers() -> void:
 		RoomLibrary.normalize(family.room_library)
 		if not family.has("commissions"): family.commissions=Commissions.create()
 		Commissions.normalize(family.commissions)
+		if not family.has("pantry"): family.pantry=Pantry.create()
+		Pantry.normalize(family.pantry)
 		family.identity_revision=int(family.get("identity_revision",0))
 		for member: Dictionary in family.members:
 			if not member.has("favorite"): member.favorite="variety"
@@ -1938,6 +1959,7 @@ func _valid_state(data: Dictionary) -> bool:
 		if family.has("routines") and not Routines.valid(family.routines): return false
 		if family.has("room_library") and not RoomLibrary.valid(family.room_library): return false
 		if family.has("commissions") and not Commissions.valid(family.commissions,profile_id,int(data.day)): return false
+		if family.has("pantry") and not Pantry.valid(family.pantry): return false
 		if not _integer(family.get("identity_revision",0)) or float(family.get("identity_revision",0))<0 or float(family.get("identity_revision",0))>9007199254740000: return false
 		for member: Variant in family.members:
 			if not member is Dictionary or not member.get("id") is String or str(member.id).length() > 160 or members_seen.has(member.id) or not member.get("name") is String or str(member.name).length() > 32 or not data.lots.has(member.get("lot_id")) or not _valid_coord(member.get("x")) or not _valid_coord(member.get("y")) or not member.get("needs") is Dictionary:
@@ -1965,6 +1987,7 @@ func _valid_state(data: Dictionary) -> bool:
 					return false
 	if data.has("friendships") and not Friendships.valid(data.friendships,members_seen,int(data.day),int(data.tick)): return false
 	if not Meals.valid_reservations(data): return false
+	if not Pantry.valid_reservations(data): return false
 	if not Mailbox.valid(data): return false
 	if not Commissions.valid_receipts(data): return false
 	for lot: Dictionary in data.lots.values():

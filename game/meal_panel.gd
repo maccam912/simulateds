@@ -1,12 +1,14 @@
 extends VBoxContainer
 signal command_requested(command: Dictionary)
 const Meals=preload("res://game/meals.gd")
+const Pantry=preload("res://game/pantry.gd")
 const Wishes=preload("res://game/wishes.gd")
 const Style=preload("res://game/style.gd")
 var summary: Label
 var credit: Label
 var preview: Control
 var status: Label
+var pantry_label: Label
 var note: Label
 var feedback: Label
 var buttons := {}
@@ -26,7 +28,8 @@ func _ready() -> void:
 	summary=_label(14,Style.GOLD); credit=_label(12,Style.MUTED)
 	preview=preload("res://game/meal_preview.gd").new(); preview.custom_minimum_size=Vector2(200,66); preview.mouse_filter=Control.MOUSE_FILTER_IGNORE; add_child(preview)
 	status=_label(12,Style.GREEN)
-	for key: String in ["salad","sandwiches","eat","call","clear"]:
+	pantry_label=_label(11,Style.GREEN)
+	for key: String in ["salad","sandwiches","homegrown","eat","call","clear"]:
 		var button:=Button.new(); button.custom_minimum_size.y=32; button.add_theme_font_size_override("font_size",12); button.pressed.connect(func(): _request(key)); add_child(button); buttons[key]=button
 		if key=="call":
 			button.mouse_entered.connect(func(): _call_hover=true; refresh(_lot,_object,_member))
@@ -57,12 +60,15 @@ func refresh(lot_id: String,object_id: String,member_id: String) -> void:
 		else: applied=(pending.action=="clear" and int(table.get("meal",{}).get("batch",0))>int(pending.batch)) or (pending.action!="clear" and int(member.get("next_action",0))>_next)
 		if applied: pending={}; _ack=false
 	var exists: bool=table.get("kind")=="dining_table"
-	for control: Control in [preview,status,credit,note,feedback]: control.visible=exists
+	for control: Control in [preview,status,credit,note,feedback,pantry_label]: control.visible=exists
 	if not exists:
 		for button: Button in buttons.values(): button.visible=false
 		summary.text="This dining table is no longer here."; return
 	var meal: Dictionary=table.meal; var ready: bool=meal.recipe!="" and int(meal.servings)>0
 	var owner: bool=lot.owner==Session.profile_id
+	pantry_label.visible=owner and not ready
+	if pantry_label.visible:
+		pantry_label.text=Pantry.summary(Session.state,Session.profile_id); pantry_label.tooltip_text=Pantry.description(Session.state,Session.profile_id)
 	summary.text=Meals.summary(meal)
 	credit.visible=meal.recipe!=""; credit.text="By "+str(meal.cook_name)+" · Day %d" % int(meal.day)
 	preview.recipe=str(meal.recipe) if meal.recipe!="" else _preview_recipe; preview.portions=int(meal.servings) if meal.recipe!="" else 4; preview.queue_redraw()
@@ -74,6 +80,7 @@ func refresh(lot_id: String,object_id: String,member_id: String) -> void:
 	var choice: Dictionary=Session.world.meal_option(Session.profile_id,member_id,lot_id,object_id,"choose")
 	var call: Dictionary=Session.world.meal_call_option(Session.profile_id,member_id,lot_id,object_id)
 	if not ready and dining:
+		pantry_label.hide()
 		summary.text=str(Meals.RECIPES[meal.recipe].name)+" · Last portions at the table"
 		status.text="0 available · Diners have their portions"
 	for plan: Dictionary in plans:
@@ -81,14 +88,15 @@ func refresh(lot_id: String,object_id: String,member_id: String) -> void:
 			summary.text="Preparing "+str(Meals.RECIPES[plan.task.meal_recipe].name).to_lower(); credit.visible=false
 			status.text=str(plan.member.name)+" · Four portions when served"
 			preview.recipe=str(plan.task.meal_recipe); preview.portions=4; preview.queue_redraw(); break
-	note.text="Ingredients paid when served.\nLeftovers keep while you are away." if not ready else "One chosen portion · Hunger + comfort\nSocial when eating together."
+	note.text="Ingredients used when served.\nLeftovers keep while you are away." if not ready else "One chosen portion · Hunger + comfort\nSocial when eating together."
 	if owner and ready: note.text="Autonomy: hungry housemates can eat.\nHunger + comfort · Social together."
 	if choice.ok: note.text="Keep your portion and remaining time.\nChosen company starts now."
 	elif dining and not ready: note.text="Diners keep their current portions.\nWait for them to finish before preparing more."
 	elif not owner and not ready: note.text="This household prepares its meals. Visit again when food is served."
 	var wishes: Array=member.get("wishes",{}).get("wishes",[])
-	if wishes.any(func(wish): return wish.id=="homemade" and not wish.done) and not ready and not dining and owner:
-		note.text="Wish: serve a meal · Reward §%d.\nIngredients paid when served." % Wishes.REWARD
+	var homemade_wish: bool=wishes.any(func(wish): return wish.id=="homemade" and not wish.done)
+	if homemade_wish and not ready and not dining and owner:
+		note.text="Wish: serve a meal · Reward §%d.\nIngredients used when served." % Wishes.REWARD
 	if wishes.any(func(wish): return wish.id=="meal_together" and not wish.done) and (ready or dining):
 		note.text="Keep this portion and time.\nBoth diners choose 12 min together." if choice.ok else "Both diners choose 12 min together.\nCall household · Reward §%d." % Wishes.REWARD
 	if (_call_hover or buttons.call.has_focus()) and (ready or dining):
@@ -111,9 +119,14 @@ func refresh(lot_id: String,object_id: String,member_id: String) -> void:
 		var button: Button=buttons[key]
 		button.visible=owner and not ready and not dining if action=="prepare" else ready and owner if action=="clear" else (ready or dining) and call.ok if action=="call" else ready or dining
 		button.text="Prepare "+str(Meals.RECIPES[key].name).to_lower()+" · §%d" % int(Meals.RECIPES[key].cost) if action=="prepare" else ("Choose this meal" if choice.ok else "Eat a portion") if action=="eat" else "Call household · %d" % call.orders.size() if action=="call" else "Clear leftovers"
+		if key=="homegrown": button.text="Homegrown bowl · 2 of each"
 		button.disabled=not option.ok or not pending.is_empty() or Session.role=="joining"
 		button.tooltip_text=str(option.message)+(". A portion is taken when eating begins." if action=="eat" and option.ok and not choice.ok else "")
-		if button.visible and not option.ok and not call.ok and (action!="clear" or (unavailable.is_empty() and not choice.ok)): unavailable=str(option.message)
+		if button.visible and not option.ok and option.get("reason")!="pantry" and not call.ok and (action!="clear" or (unavailable.is_empty() and not choice.ok)): unavailable=str(option.message)
+	note.tooltip_text="Ingredients are used only when served. Leftovers keep while you are away."
+	if buttons.homegrown.visible and _options.homegrown.get("reason")=="pantry" and (_options.salad.ok or _options.sandwiches.ok):
+		note.text="Homegrown: keep ripe garden crops.\n"+("Wish: serve a meal · Reward §%d." % Wishes.REWARD if homemade_wish else "Ingredients used when served.")
+		note.tooltip_text=str(_options.homegrown.message)+"\nLeftovers keep while you are away."
 	feedback.text="Waiting for the neighborhood…" if not pending.is_empty() else _error if not _error.is_empty() else unavailable
 	feedback.visible=not feedback.text.is_empty()
 func _request(key: String) -> void:
