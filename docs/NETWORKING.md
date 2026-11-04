@@ -163,3 +163,25 @@ the neighborhood event history; normal snapshots replicate them. Speed is a
 runtime control, reset when changing worlds or leaving a session, and is not
 saved. This development console is intentionally available in the foundation;
 it is not a public-server moderation or privilege system.
+
+
+## Household art commissions
+
+`commission_accept`, `commission_cancel`, and `commission_deliver` are authority
+commands scoped to the authenticated household. Each carries `offer` and an exact
+`commission_revision`. Delivery additionally identifies the own-home lot revision,
+`art_source`, and `art_id`; its review never selects a replacement original.
+`WallArt.transfer_option` and `detach` now share custody rules between gifts and
+commissions. A delivery checks construction, current/queued painting plans, subject,
+original identity, and budget capacity before crediting §180 and removing the art.
+The accepted command is immediately saved by the authority. Replies remain
+correlated to the exact submitted intent; clients also wait for the newer board.
+
+The optional `family.commissions` field stores a revision, current acceptance,
+completion count/day, and four recent receipts. Old saves acquire an empty board
+without payment. Versioned offer terms are immutable. Add new IDs if terms change;
+never rewrite a published ID's subject or reward. Offers rotate only on delivery,
+not on cancel or reconnect. There is no expiry and at most one delivery per game
+day. Recent receipt IDs cannot also exist as held art or unclaimed mail escrow;
+claimed postcard receipts are historical and may retain the artist's picture.
+No schema or transport version change is required for this additive state.

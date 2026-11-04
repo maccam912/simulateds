@@ -1277,3 +1277,44 @@ Apple Silicon. It is locally ad-hoc signed, not notarized or physically tested
 on Intel/Android. Hosted workflow `41888525936` for the preceding checkpoint
 failed all platform jobs before any steps ran. The previously diagnosed GitHub
 billing/spending-limit block was not changed.
+
+
+## Optional household art commissions
+
+`art_commissions` covers pure offer inspection, exact board/original revisions,
+wrong subjects, foreign ownership, free cancel without reroll, absence across days,
+save/reconnect restore, construction and planned-sale rejection, budget-cap
+atomicity, one payment per game day, and no extra hobby/activity rewards. Delivery
+works from easels, mounted originals, and a received painting in the collection.
+Receipts preserve artist credit, stay bounded to four, and cannot coexist with
+held originals or unclaimed mail escrow. Claimed gift receipts remain valid after
+delivery. Malformed boards and receipts reject restore; pre-commission saves gain
+an empty board without income. Commands remain within the existing packet limit.
+The final focused model passes after skipping custody scans for empty history.
+
+`art_commissions_ui` passes with real native rendering and injected input at
+1440×900 and 1280×720 / 125% UI scale. It covers the complete accept/build/paint/
+resume/review/keep/Escape/deliver/restore flow, long credit text, visible irreversible
+consequences, fixed footer controls, changed-original invalidation, unrelated replies,
+rejection recovery, authoritative-snapshot waiting, and session-boundary cleanup.
+A final compact native pass verifies the requested-subject easel link. Existing
+compact `paintings_ui` also passes all subjects, ordinary sales, display history,
+and visitor restrictions. These are automated native checks, not human playtests.
+
+`commissions_peer` runs a real host and two clients, with independently accepted
+requests, reconnects, deliberate painting, stale-review/foreign-lot rejection,
+single payments, completed-state reconnect, and verification of the host's actual
+autosave. The existing painting/gift scenario still exercises the shared art
+custody helpers independently of commissions.
+
+Full regression passes all 104 local suites, the main, painting, meal, recreation,
+and commission Iroh scenarios, and dedicated-server startup (110 pass markers).
+The focused final model check covers the empty-history receipt-validation fast
+path added during the run. No existing player saves or settings were used.
+
+The refreshed universal macOS package passes plist validation, strict signature
+verification across ARM64 and Intel slices, and `EXPORTED_NATIVE_RUNTIME_PASS`
+on Apple Silicon. It remains locally ad-hoc signed. Hosted workflow `41892208025`
+for the preceding feedback checkpoint failed all four platforms before any steps
+ran; the previously diagnosed GitHub billing/spending-limit block was unchanged.
+Physical Intel/Android, cross-device, human-family play, and notarization remain open.

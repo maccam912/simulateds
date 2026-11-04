@@ -787,3 +787,26 @@ company** and includes that time in its estimate; the activity tray explains tha
 leaving is still free and existing plans come next. Queued, automatic, or absent
 participants do not hold a place open. Keep the same poses, music and world view,
 with no extra prompt, locked controls, or separate shared-activity timer.
+
+
+## Optional art commissions
+
+Use the existing floating Activities tray and original painting miniatures.
+The request names a small community recipient, one subject, and §180 payment.
+Show “No deadline · No fee” before acceptance. Reading an offer, finding an easel,
+or opening its catalog entry must never choose a painting or deliver artwork.
+The easel's commission link repeats the requested subject while work is active.
+
+A delivery review shows one exact original, its full artist credit and current
+location, and the fact that it leaves the home permanently. Keep Deliver and
+Keep this painting in the fixed footer. Escape backs out of that review before
+closing the tray. A changed original invalidates the review rather than silently
+substituting another one. Failed commands keep the reviewed picture available
+with an explanation. A successful reply waits for the authoritative board revision.
+
+Completion names the recipient and earned payment, keeps a short receipt, and
+says another request is available tomorrow. Avoid duplicating success notices
+inside the tray; the ordinary game notice already acknowledges the action.
+There is no countdown, penalty, new currency, or demand to log back in. Reuse the
+ordinary UI cues and existing painting activity sound; this small goal does not
+need another persistent HUD badge or music layer.

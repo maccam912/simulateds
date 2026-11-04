@@ -87,6 +87,12 @@ Painting now has five lasting hobby ranks, bounded daily practice, shared
 contribution credit, and better fun/comfort recovery. Hobbies opens the relevant
 easel without choosing a subject; rank links show painting progress directly.
 
+Optional household art commissions now give the subjects a community purpose:
+accept one request, choose an exact matching original, and deliver it for §180.
+No expiry or absence penalty; one delivery per game day, with receipts and
+artist credit. Existing art, including received gifts, qualifies. Construction
+and already-planned painting/sales block transfer; cancelled offers do not reroll.
+
 Mounted art now supports queued admiration at home and on visits. A Gathering
 dining table supports preparation at the fridge, carrying and serving four
 portions, distinct dining places, per-resident reservations, guest participation,

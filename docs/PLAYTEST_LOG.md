@@ -2288,3 +2288,73 @@ Silicon. This remains a local ad-hoc-signed build. The preceding hosted workflow
 `41888525936` failed each platform before executing steps; the previously
 diagnosed GitHub account billing/spending-limit block was not changed. Physical
 Intel/Android, cross-device and human-family play, and notarization remain open.
+
+
+## Community art commissions
+
+Activities now offers a household commission from the reading room, canal café,
+or garden club. The request names one existing painting subject and a §180
+payment. Acceptance is free and never starts painting. There is no deadline;
+putting it aside keeps the offer rather than rerolling it. One delivery per
+household per game day gives the goal a modest rhythm while leaving ordinary
+§60 sales, gifts, and decoration available. Either housemate can work on it.
+
+The flow links to a relevant home easel or the easel catalog entry. Its painting
+panel repeats the accepted subject. Matching finished originals can be reviewed
+from an easel, wall, or collection, including gifts from another artist. Delivery
+shows that exact picture, full artist credit, current location, payment, and the
+fact that it permanently leaves the home. Keep/Escape leaves it untouched. A
+changed original invalidates the review. Construction and already-planned paint
+or sale actions block transfer, preventing Undo or a queued sale from restoring
+or paying for the same asset. Receipts retain the actual artist's credit.
+
+Native injected-input playtests pass at 1440×900 and 1280×720 / 125%: read without
+accepting, accept without paying/starting work, find and place an easel, choose a
+subject, cancel/resume partial work, review/keep/Escape, invalidate an old original,
+wait for a correlated reply and newer snapshot, deliver once, and restore the paid
+state. The final compact pass also verifies the requested-subject easel hint.
+The review and its permanent-transfer explanation fit without scrolling; the
+confirm/back footer stays visible. Reviewed captures include
+`build/commissions-review-compact.png`, `build/commissions-accepted-compact.png`,
+and `build/commissions-delivered-compact.png`.
+
+Visual review removed redundant successful replies from the scrolling body and
+replaced an immediately rotated offer with a clear delivered/earned state. The
+completed receipt now fits in the compact tray. The first native harness attempted
+to click Activities content before opening its tray; its fixture now opens the
+tray and checks visibility before clicking. No product behavior was weakened.
+
+Model coverage includes absence across game days without expiry, free cancellation,
+stale/foreign/malformed commands, wrong subjects, planned sales, construction,
+budget overflow, bounded receipts, exact-original custody, legacy save migration,
+and delivering a claimed gift with its original artist credit. A claimed mail
+receipt can remember delivered art; live escrow cannot recreate it. No commission
+transfer grants additional hobby practice or changes a resident's activity plan.
+The final focused receipt-model check passes after the empty-history fast path.
+
+A real Iroh host and two clients each accept an independent request, reconnect,
+paint the requested subject, invalidate an old review by cancelling/reaccepting,
+and deliver exactly once. Foreign-lot and duplicate commands are rejected; the
+receipt, empty easel, and exact balance survive another reconnect and the host's
+actual autosave. This remains local-machine network testing.
+
+Fresh assessment: the optional goal is now playable, but its progress remains in
+the commission/easel trays. When a painting finishes while the player manages the
+other resident, there is no commission-specific ready indication. The next focused
+usability increment should surface newly ready commissions quietly and let the
+player reopen the originals list without issuing a delivery or household order.
+Loading/reconnecting must not replay old celebrations, and existing originals
+should remain discoverable without requiring a new painting. This is proposed
+follow-up work, not part of this commission checkpoint.
+
+Full regression passes all 104 local suites, the main, painting, meal, recreation,
+and commission Iroh scenarios, and dedicated-server startup (110 pass markers).
+The focused final model check covers the empty-history receipt-validation fast
+path added during the run. No existing player saves or settings were used.
+
+The refreshed universal macOS package passes plist validation, strict signature
+verification across ARM64 and Intel slices, and `EXPORTED_NATIVE_RUNTIME_PASS`
+on Apple Silicon. It remains locally ad-hoc signed. Hosted workflow `41892208025`
+for the preceding feedback checkpoint failed all four platforms before any steps
+ran; the previously diagnosed GitHub billing/spending-limit block was unchanged.
+Physical Intel/Android, cross-device, human-family play, and notarization remain open.

@@ -27,6 +27,7 @@ const Routines = preload("res://game/routines.gd")
 const ArtAdmiration = preload("res://game/art_admiration.gd")
 const WallArt = preload("res://game/wall_art.gd")
 const Paintings = preload("res://game/paintings.gd")
+const Commissions = preload("res://game/art_commissions.gd")
 const Meals = preload("res://game/meals.gd")
 const HouseholdTravel = preload("res://game/household_travel.gd")
 const Gardens = preload("res://game/gardens.gd")
@@ -100,6 +101,7 @@ func ensure_family(profile_id: String, display_name: String) -> String:
 		state.families[profile_id].home_news=HomeNews.create()
 		state.families[profile_id].routines=Routines.create()
 		state.families[profile_id].room_library=RoomLibrary.create()
+		state.families[profile_id].commissions=Commissions.create()
 		_event(clean_name + " moved into " + str(lot.name) + ".")
 		return lot_id
 	return ""
@@ -129,6 +131,10 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 	if not type is String:
 		return _result(false, "Unknown action.")
 	var family: Dictionary = state.families[profile_id]
+	if type in ["commission_accept","commission_cancel","commission_deliver"]:
+		var outcome:=Commissions.apply(state,profile_id,command,_adjust_funds)
+		if outcome.ok and type=="commission_deliver": _event(str(outcome.message))
+		return outcome
 	if type == "news_read": return HomeNews.read(family,command.get("revision"))
 	if type == "household_edit": return HouseholdProfile.edit(family,command)
 	if type in ["routine_save","routine_delete"]: return Routines.edit(family,command)
@@ -1821,6 +1827,8 @@ func _normalize_numbers() -> void:
 		Routines.normalize(family.routines)
 		if not family.has("room_library"): family.room_library=RoomLibrary.create()
 		RoomLibrary.normalize(family.room_library)
+		if not family.has("commissions"): family.commissions=Commissions.create()
+		Commissions.normalize(family.commissions)
 		family.identity_revision=int(family.get("identity_revision",0))
 		for member: Dictionary in family.members:
 			if not member.has("favorite"): member.favorite="variety"
@@ -1929,6 +1937,7 @@ func _valid_state(data: Dictionary) -> bool:
 		if family.has("home_news") and not HomeNews.valid(family.home_news): return false
 		if family.has("routines") and not Routines.valid(family.routines): return false
 		if family.has("room_library") and not RoomLibrary.valid(family.room_library): return false
+		if family.has("commissions") and not Commissions.valid(family.commissions,profile_id,int(data.day)): return false
 		if not _integer(family.get("identity_revision",0)) or float(family.get("identity_revision",0))<0 or float(family.get("identity_revision",0))>9007199254740000: return false
 		for member: Variant in family.members:
 			if not member is Dictionary or not member.get("id") is String or str(member.id).length() > 160 or members_seen.has(member.id) or not member.get("name") is String or str(member.name).length() > 32 or not data.lots.has(member.get("lot_id")) or not _valid_coord(member.get("x")) or not _valid_coord(member.get("y")) or not member.get("needs") is Dictionary:
@@ -1957,6 +1966,7 @@ func _valid_state(data: Dictionary) -> bool:
 	if data.has("friendships") and not Friendships.valid(data.friendships,members_seen,int(data.day),int(data.tick)): return false
 	if not Meals.valid_reservations(data): return false
 	if not Mailbox.valid(data): return false
+	if not Commissions.valid_receipts(data): return false
 	for lot: Dictionary in data.lots.values():
 		if not str(lot.owner).is_empty() and not data.families.has(lot.owner):
 			return false

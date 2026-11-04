@@ -29,6 +29,33 @@ static func sources(lot: Dictionary) -> Dictionary:
 	for id: String in lot.get("artworks",{}): result["art:"+id]=source(lot,"art:"+id)
 	return result
 
+## Shared custody check for gifts and commissions. Reviews identify one original.
+static func transfer_option(world: Dictionary,owner: String,command: Dictionary) -> Dictionary:
+	var home: Dictionary=world.lots[world.families[owner].home_lot]
+	if home.building: return _no("Finish construction before transferring a painting. Your draft stays intact.")
+	if not command.get("art_source") is String or not command.get("art_id") is String: return _no("Choose a finished painting.")
+	if not _integer(command.get("revision")) or int(command.revision)!=int(home.revision): return _no("Your home changed. Review the painting and choose it again.")
+	var chosen:=source(home,command.art_source)
+	if chosen.is_empty() or chosen.art_id!=command.art_id: return _no("That picture changed or is no longer here. Choose a finished painting again.")
+	if not str(chosen.object_id).is_empty():
+		if int(chosen.picture.revision)>=Paintings.MAX_REVISION: return _no("This easel has reached its activity limit.")
+		for member: Dictionary in world.families[owner].members:
+			if member.lot_id!=home.id: continue
+			var tasks: Array=member.queue.duplicate(); tasks.append(member.task)
+			for task: Dictionary in tasks:
+				if task.get("target_id")==chosen.object_id and task.has("paint_action"): return _no("This painting is already in "+str(member.name)+"'s plan. Cancel that activity before moving it.")
+	return {"ok":true,"lot_id":str(home.id),"source":str(command.art_source),"object_id":str(chosen.object_id),"art":{"id":str(chosen.art_id),"picture":chosen.picture.duplicate(true)}}
+
+static func detach(world: Dictionary,plan: Dictionary) -> void:
+	var home: Dictionary=world.lots[plan.lot_id]
+	if str(plan.object_id).is_empty(): home.artworks.erase(plan.art.id)
+	else:
+		for object: Dictionary in home.objects:
+			if object.id==plan.object_id:
+				var revision:=int(object.painting.revision)+1
+				object.painting=Paintings.create(); object.painting.revision=revision; break
+	home.revision+=1
+
 static func inspect(lot: Dictionary,command: Dictionary) -> Dictionary:
 	if not command.get("source") is String: return _no("Choose a finished painting.")
 	var chosen := source(lot,command.source)

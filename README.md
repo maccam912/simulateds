@@ -205,6 +205,16 @@ or shell expressions.
   Higher ranks restore more fun and comfort, with the same painting time and sale
   value. The rank link at an easel opens progress; Hobbies opens the easel for your
   chosen resident without selecting a subject for you.
+- **Activities → Art commissions** offers an optional household request for one
+  painting subject, paying §180. Accept it, then paint at your own pace: requests
+  have no fee or deadline. The easel link remembers the requested subject. Review
+  a matching finished original from an easel, wall, or collection before choosing
+  **Deliver original**. Delivery removes that particular painting and pays once;
+  it cannot be undone. Existing art and received gifts qualify, with the actual
+  artist credited. Finish construction and cancel any planned painting/sale first.
+  One delivery is available per household per game day; the next request waits
+  until tomorrow. **Put commission aside** is free and keeps the same offer.
+  The last four deliveries remain in the commission book through saves/reconnects.
 - **Hang on wall** takes a finished painting into build mode. Choose a solid wall
   without a window or another picture; the transfer is free and leaves a blank
   easel. **Wall art** in the catalog lets you move pictures, store them in the

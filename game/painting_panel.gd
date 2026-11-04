@@ -2,6 +2,7 @@ extends VBoxContainer
 signal command_requested(command: Dictionary)
 signal display_requested(source: String)
 signal hobbies_requested
+signal commissions_requested
 const Paintings = preload("res://game/paintings.gd")
 const Hobbies = preload("res://game/hobbies.gd")
 const Style = preload("res://game/style.gd")
@@ -15,6 +16,7 @@ var feedback: Label
 var buttons: Dictionary={}
 var hang_button: Button
 var hobby_button: Button
+var commission_button: Button
 var display_pending := false
 var pending: Dictionary={}
 var _acknowledged := false
@@ -46,6 +48,7 @@ func _ready() -> void:
 	hang_button=Button.new(); hang_button.text="Hang on wall · Build mode"; hang_button.add_theme_font_size_override("font_size",12); hang_button.custom_minimum_size.y=32; add_child(hang_button)
 	hang_button.pressed.connect(func(): display_requested.emit("easel:"+_object))
 	hobby_button=Button.new(); hobby_button.custom_minimum_size.y=28; hobby_button.add_theme_font_size_override("font_size",11); hobby_button.pressed.connect(func(): hobbies_requested.emit()); add_child(hobby_button)
+	commission_button=Button.new(); commission_button.text="Art commissions"; commission_button.custom_minimum_size.y=28; commission_button.add_theme_font_size_override("font_size",11); commission_button.pressed.connect(func(): commissions_requested.emit()); add_child(commission_button)
 	note=_label("",12,Style.MUTED); feedback=_label("",12,Style.GOLD)
 	Session.command_completed.connect(_completed); Soundscape.attach_controls(self)
 
@@ -63,7 +66,7 @@ func refresh(lot_id: String,object_id: String,member_id: String) -> void:
 	var member: Dictionary=Session.world._member(family,member_id) if not family.is_empty() else {}
 	if _acknowledged and not pending.is_empty() and int(member.get("next_action",0))>_next_action: pending={}; _acknowledged=false
 	var exists: bool=object.get("kind")=="easel"
-	for control: Control in [artist,preview,progress,note,feedback,hang_button,hobby_button,practice]: control.visible=exists
+	for control: Control in [artist,preview,progress,note,feedback,hang_button,hobby_button,commission_button,practice]: control.visible=exists
 	for button: Button in buttons.values(): button.visible=exists
 	if not exists: summary.text="This easel is no longer here."; return
 	var compact := get_viewport_rect().size.y<800
@@ -74,6 +77,14 @@ func refresh(lot_id: String,object_id: String,member_id: String) -> void:
 	var finished := Paintings.finished(picture)
 	var entry: Dictionary=member.get("hobbies",{}).get("painting",{})
 	hobby_button.visible=lot.owner==Session.profile_id and not member.is_empty()
+	commission_button.visible=lot.owner==Session.profile_id
+	var commission: Dictionary=family.get("commissions",{}).get("active",{})
+	commission_button.text="Art commissions"
+	commission_button.tooltip_text="Optional requests for finished originals."
+	if not commission.is_empty():
+		var terms: Dictionary=preload("res://game/art_commissions.gd").OFFERS[commission.offer]
+		commission_button.text="Commission · "+str(Paintings.SUBJECTS[terms.subject])
+		commission_button.tooltip_text=str(terms.client)+" · §%d · No deadline. Open to review a finished original." % int(terms.reward)
 	hobby_button.text="Painting · Rank %d · %s" % [Hobbies.rank(entry),Hobbies.title("painting",entry)]
 	hobby_button.tooltip_text="Open painting progress. "+Hobbies.benefit("painting",entry)+" Finish a canvas after contributing 12 game minutes; up to two practices daily."
 	summary.text=Paintings.summary(picture)

@@ -141,6 +141,7 @@ var _art_source := ""
 var _art_entry: Dictionary={}
 var _art_request: Dictionary={}
 var painting_panel: VBoxContainer
+var commission_panel: VBoxContainer
 var garden_panel: VBoxContainer
 var _view_context := ""
 var hud: Control
@@ -670,6 +671,7 @@ func _refresh() -> void:
 		tools_signature+=str(member.get("hobbies",{}))+str(day)+str(_hobby_options)
 	if _context_page=="care" and not build_mode: tools_signature+=str(_care_options)+str(Wellbeing.mood(member.get("needs",{})))
 	if build_mode and _context_page in ["blueprints","clear_lot"]: tools_signature=_context_page+":"+viewed_lot+str(Session.role)
+	if _context_page=="commissions" and not build_mode: tools_signature="commissions:"+str(Session.profile_id)+str(Session.world_generation)+str(Session.role)
 	if tools_signature!=_tools_signature:
 		_tools_signature=tools_signature
 		_rebuild_context(building and mine,lot)
@@ -677,6 +679,7 @@ func _refresh() -> void:
 	if _context_page=="painting" and not build_mode and is_instance_valid(painting_panel):
 		painting_panel.display_pending=not _art_entry.is_empty()
 		painting_panel.refresh(viewed_lot,_selected_object,selected_member)
+	if _context_page=="commissions" and not build_mode and is_instance_valid(commission_panel): commission_panel.refresh()
 	if _context_page=="recreation" and not build_mode and is_instance_valid(recreation_panel): recreation_panel.refresh(viewed_lot,_selected_object,selected_member)
 	if _context_page=="meal" and not build_mode and is_instance_valid(meal_panel): meal_panel.refresh(viewed_lot,_selected_object,selected_member)
 	if build_mode and _context_page=="blueprints" and is_instance_valid(library_panel):
@@ -908,10 +911,16 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 	elif _context_page=="care": _rebuild_care()
 	elif _context_page=="hobbies": _rebuild_hobbies()
 	elif _context_page=="wall_art_inspect": _build_art_panel()
+	elif _context_page=="commissions":
+		activity_label.text="Art commissions"
+		commission_panel=preload("res://game/commission_panel.gd").new(); tools_box.add_child(commission_panel); commission_panel.add_footer(context_box)
+		commission_panel.command_requested.connect(_send); commission_panel.easel_requested.connect(_commission_easel)
+		commission_panel.back_requested.connect(func(): _context_page="activities"; _refresh())
 	elif _context_page=="painting":
 		activity_label.text="At the easel"
 		painting_panel=PaintingPanel.new(); tools_box.add_child(painting_panel); painting_panel.command_requested.connect(_send); painting_panel.display_requested.connect(_open_art)
 		painting_panel.hobbies_requested.connect(func(): _open_hobbies("painting"))
+		painting_panel.commissions_requested.connect(_open_commissions)
 		context_box.add_child(_button("‹ Activities",func(): _context_page="activities"; _refresh()))
 	elif _context_page=="travel":
 		activity_label.text="Travel together"
@@ -931,6 +940,7 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 		context_box.add_child(_button("‹ Activities",func(): _context_page="activities"; _refresh()))
 	else:
 		activity_label.text="Activities"
+		var commissions:=_button("Art commissions",_open_commissions); commissions.add_theme_font_size_override("font_size",12); tools_box.add_child(commissions)
 		var shown: Dictionary={}
 		for obj in lot.get("objects",[]):
 			if shown.has(obj.kind) and not obj.kind in ["garden_bed","easel","dining_table","game_table","stereo"]: continue
@@ -951,6 +961,29 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 
 func _open_wishes() -> void:
 	_context_page="wishes"; _refresh(); _show_tray(context_panel,true)
+
+func _open_commissions() -> void:
+	_context_page="commissions"; _refresh(); _show_tray(context_panel,true); call_deferred("_reset_catalog_scroll")
+
+func _commission_easel() -> void:
+	var family:=_family()
+	if family.is_empty(): return
+	var home: Dictionary=Session.state.lots[family.home_lot]
+	if home.building: _notice("Finish construction before using the easel."); return
+	var subject: String=preload("res://game/art_commissions.gd").offer(Session.profile_id,family.commissions).subject
+	var easels: Array=home.objects.filter(func(object): return object.kind=="easel")
+	easels.sort_custom(func(a,b):
+		var a_match: bool=a.painting.subject==subject and not Paintings.finished(a.painting)
+		var b_match: bool=b.painting.subject==subject and not Paintings.finished(b.painting)
+		if a_match!=b_match: return a_match
+		return a.painting.subject=="" and b.painting.subject!="")
+	_select_lot(str(home.id))
+	if not easels.is_empty():
+		_interact(str(easels[0].id)); lot_view.focus_cell(Vector2(float(easels[0].x)+0.5,float(easels[0].y)+0.5))
+	else:
+		_context_page="activities"; _catalog_category="living"; _catalog_query="easel"
+		catalog_category.select(BuildCatalog.CATEGORIES.keys().find("living")); catalog_search.text="easel"
+		_select_build_tool("easel"); _send({"type":"build_begin","lot_id":str(home.id)}); _show_tray(context_panel,true); call_deferred("_reset_catalog_scroll")
 
 func _pursue_wish(wish_id: String) -> void:
 	if not wish_id in Wishes.MEALS:
@@ -1278,7 +1311,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		elif lot_view.building and (event.ctrl_pressed or event.meta_pressed) and event.keycode in [KEY_Z,KEY_Y]:
 			_build_history(event.shift_pressed or event.keycode==KEY_Y)
 		elif event.is_action_pressed("pause") or event.keycode==KEY_ESCAPE:
-			if _context_page in ["access","clear_lot"] and context_panel.visible:
+			if _context_page=="commissions" and context_panel.visible and is_instance_valid(commission_panel) and commission_panel.leave_review(): pass
+			elif _context_page in ["access","clear_lot"] and context_panel.visible:
 				_close_context()
 			elif selected_tool=="wall_art" and not _art_source.is_empty() and _art_request.is_empty():
 				_art_source=""; _refresh()
