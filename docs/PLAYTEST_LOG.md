@@ -915,3 +915,43 @@ them. Directing movement still has weak feedback: a nearby nameplate may receive
 an intended ground click, and accepted walking lacks a clear destination cue.
 Next: show movement intent and accepted destinations in the world, with reachable
 previews and useful feedback that stays quiet when the player is simply watching.
+
+
+## 2026-11-04 · Show where a walk will lead
+
+Ground hover now previews immediate walks with a reachable route, destination,
+and step count. A queued walk instead shows a gold destination and how many
+activities come first, explaining that its route will be chosen when it starts.
+Occupied/unreachable spots, full plans, and viewing a lot before visiting have
+clear feedback. The host and preview use the same read-only movement inspection;
+no new saved state, commands, or protocol fields are needed.
+
+Accepted manual walks show a current destination. A newly accepted queued walk
+shows briefly; opening Plan reveals its route and numbered queued destinations.
+Numbers match the Plan rows and change after reordering. Repeated destinations
+share a combined number label. The rendered route includes still-interpolating
+accepted steps before the remaining route, keeping corners connected to the
+moving resident. Lines stay behind furnishings and walls. Nameplate hover keeps
+selection feedback and offers no misleading ground action. Quiet watching hides
+route lines and expired queued confirmations.
+
+Validation: all 42 local suites, actual Iroh host/two-client checks, and server
+startup passed. The model compared previews with host decisions for all 256
+starter-lot tiles and exercised obstruction, ownership, queue limits, autonomy,
+reordering, cancellation, snapshots, construction, and travel. Real clients
+rejected a wall destination without a marker, received three accepted walks, and
+updated marker numbers after the host reordered their plan. The previous facing
+checkpoint passed all four platform CI jobs.
+
+Native standard and compact checks exercised the preview/click/queue/cancel loop,
+nameplate hover, hidden HUD, blocked/repaired entrances, snapshot replacement,
+reduced motion, construction, and neighbor travel. Final compact captures include
+actual walking, repeated destinations, and matching Plan numbers. Markers are
+derived from accepted tasks, not acknowledgements or a local click prediction.
+Human family and physical-device playtesting remain open.
+
+Fresh assessment: individual orders now communicate their intent and sequence in
+the world. Rebuilding a useful care/leisure sequence each day is still repetitive.
+Next: reusable household routines, so a player can prepare a familiar plan with
+fewer clicks and spend more time decorating or visiting. Routine execution must
+resolve current reachable furnishings and preserve the player's existing plan.

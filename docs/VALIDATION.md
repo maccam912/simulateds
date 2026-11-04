@@ -83,7 +83,7 @@ service mode was not repeated for this update.
 ## Still open
 
 The subsequent feature checks are recorded in [PLAYTEST_LOG.md](PLAYTEST_LOG.md).
-The current local suite contains forty model/application suites, plus real Iroh
+The current local suite contains forty-two model/application suites, plus real Iroh
 host/two-client reconnect and dedicated-server startup. The room-construction
 checkpoint passed Linux, Windows, macOS, and Android CI builds/exports. The later
 household checkpoint passed the three desktop jobs; Android built, tested,
@@ -285,3 +285,23 @@ between explicit simulation steps. Need labels no longer cover a neighbor's
 sleeping head, and shared conversation bubbles sit above both faces. The earlier
 activity render check plus compact urgent-cue and tabletop flows passed again.
 Captures are ignored `build/facing-*.png`. Human/device playtests remain open.
+
+
+Walk-feedback validation compares the preview with actual host decisions for all
+256 starter-lot tiles, including exact routes for accepted immediate walks.
+Additional checks cover sealed thresholds, ownership, absent lots, remote views,
+queue limits, direct orders interrupting autonomy, accepted identity, transient
+queued confirmations, plan reordering/cancellation, snapshot replacement, travel,
+construction, menus, and no authoritative mutation. All 42 suites and real Iroh
+host/two-client/server checks passed. Both real clients reject a wall destination
+without a marker, then derive three accepted walk markers and their reordered
+numbers from received snapshots. The resident-facing checkpoint passed all four
+platform CI jobs.
+
+Native standard/compact checks exercise ground hover, actual clicks, immediate
+and queued feedback, nameplate selection, Plan/cancel controls, hidden HUD,
+unreachable/repaired routes, replaced snapshots, construction, travel, and reduced
+motion. Final compact checks also inspect actual walking, combined numbers for
+repeated destinations, and Plan-number correspondence. Captures are ignored
+`build/walking-*.png`. These tests use native automated input; physical-device,
+human family, and impaired-network visual playtests remain open.

@@ -8,6 +8,7 @@ const Catalog = preload("res://game/catalog.gd")
 const BuildRules = preload("res://game/build_rules.gd")
 const RoomPlan = preload("res://game/room_plan.gd")
 const Finishes = preload("res://game/finishes.gd")
+const WalkFeedback = preload("res://game/walk_feedback.gd")
 const ResidentFacing = preload("res://game/resident_facing.gd")
 const ResidentMotion = preload("res://game/resident_motion.gd")
 const ActivityAudio = preload("res://game/activity_audio.gd")
@@ -16,6 +17,8 @@ const Daylight = preload("res://game/daylight.gd")
 const ResidentCues = preload("res://game/resident_cues.gd")
 const Tabletop = preload("res://game/tabletop.gd")
 var motion = ResidentMotion.new()
+var walking = WalkFeedback.new()
+var show_plan_routes := false
 var activity_audio = ActivityAudio.new()
 var _audio_tick := -1
 var light: Dictionary = Daylight.sample(480)
@@ -76,6 +79,9 @@ func _process(delta: float) -> void:
 	if not Session.menu_paused: _time += delta
 	motion.update(world,lot_id,delta,bool(Preferences.values.get("reduced_motion",false)),0.42 if Session.role=="client" else 0.22)
 	_update_activity_audio(delta)
+	_layout()
+	var ground_hover := Rect2(Vector2.ZERO,size).has_point(_pointer) and hit_target(_pointer).is_empty() and not _dragging
+	walking.update(world,str(Session.profile_id),selected_member,lot_id,cell_at(_pointer),ground_hover and _in_bounds(cell_at(_pointer)),show_plan_routes,delta,show_cues and not building and Session.role!="joining")
 	queue_redraw()
 
 func _update_activity_audio(delta: float) -> void:
@@ -305,6 +311,7 @@ func _draw() -> void:
 				_draw_floor_finish(x,y,Finishes.PALETTES.floor[_surface_finish(lot,"floor",x,y)])
 	if building and build_kind=="finish_floor" and finish_selection=="room" and not access_inspecting: _draw_room_finish_ground()
 	if building and access_visible: _draw_access_ground(lot)
+	_draw_walk_ground(scale_factor)
 	# Paint rear walls first. Near walls use a low cutaway for readable interiors.
 	for depth in range(31):
 		for x in range(16):
@@ -349,7 +356,7 @@ func _draw() -> void:
 	elif building and build_kind=="room":
 		_draw_room_preview(lot)
 	elif building and build_kind in ["finish_floor","finish_wall"]: _draw_finish_preview()
-	elif _in_bounds(hover_cell) and (building or hover_target.is_empty()):
+	elif building and _in_bounds(hover_cell):
 		var tint := Color(0.96,0.99,0.81,0.32)
 		var outline := Color("f8f3c7")
 		var footprint := Vector2i.ONE
@@ -375,10 +382,80 @@ func _draw() -> void:
 		elif building and build_kind=="erase": tint=Color(0.94,0.4,0.3,0.35)
 		_diamond(preview_cell.x,preview_cell.y,footprint.x,footprint.y,tint,4,outline)
 	if not building and not hover_target.is_empty(): _draw_hover()
+	elif not walking.preview.is_empty(): _draw_walk_hint()
 	if lot.building:
 		var badge := Rect2(Vector2(size.x*0.5-150,22),Vector2(300,34))
 		draw_style_box(preload("res://game/style.gd").box(Color("eac88c"),17),badge)
 		draw_string(_font,badge.position+Vector2(25,23),"UNDER CONSTRUCTION  ·  Lot paused",HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("5d4a2d"))
+
+func _walk_line(cells: Array,start_cell: Vector2,color: Color) -> void:
+	var previous := grid_point(start_cell.x,start_cell.y)+Vector2(0,-1)
+	for cell: Array in cells:
+		var point := grid_point(float(cell[0])+0.5,float(cell[1])+0.5)+Vector2(0,-1)
+		draw_line(previous,point,color,2.0,true)
+		draw_circle(point,2.0,color)
+		previous=point
+
+func _walk_marker(cell: Vector2i,color: Color,s: float,label: String="") -> void:
+	var point := grid_point(cell.x+0.5,cell.y+0.5)+Vector2(0,-2)
+	draw_set_transform(point,0,Vector2(1,0.5))
+	draw_arc(Vector2.ZERO,9*s,0,TAU,24,Color("283e38"),4*s,true)
+	draw_arc(Vector2.ZERO,9*s,0,TAU,24,color,2*s,true)
+	draw_set_transform(Vector2.ZERO)
+	if not label.is_empty():
+		var font_size := maxi(10,roundi(10*s))
+		var width := _font.get_string_size(label,HORIZONTAL_ALIGNMENT_LEFT,-1,font_size).x
+		var at := point+Vector2(-width*0.5,-s)
+		draw_style_box(preload("res://game/style.gd").box(Color("23373b"),5),Rect2(at+Vector2(-4,-font_size),Vector2(width+8,font_size+4)))
+		draw_string(_font,at,label,HORIZONTAL_ALIGNMENT_LEFT,-1,font_size,color)
+
+func _draw_walk_ground(s: float) -> void:
+	if not show_cues or building: return
+	var current := Color("c6d6a4")
+	var route_start: Vector2=walking.start
+	var displayed_route: Array=[]
+	if not walking.route.is_empty():
+		var track: Dictionary=motion.tracks.get(selected_member,{})
+		route_start=Vector2(track.get("position",walking.start-Vector2(0.5,0.5)))+Vector2(0.5,0.5)
+		for point: Vector2 in track.get("route",[]): displayed_route.append([roundi(point.x),roundi(point.y)])
+		displayed_route.append_array(walking.route)
+	_walk_line(displayed_route,route_start,Color(0.78,0.85,0.65,0.6))
+	var destinations := {}
+	for marker: Dictionary in walking.markers:
+		if not destinations.has(marker.cell): destinations[marker.cell]={"active":false,"orders":[]}
+		var entry: Dictionary=destinations[marker.cell]
+		entry.active=entry.active or marker.active
+		if not marker.active: entry.orders.append(str(marker.order))
+	for cell: Vector2i in destinations:
+		var entry: Dictionary=destinations[cell]
+		_walk_marker(cell,current if entry.active else Color("e9c987"),s," · ".join(entry.orders))
+	var preview: Dictionary=walking.preview
+	if preview.is_empty(): return
+	var cell: Vector2i=preview.cell
+	var good: bool=preview.ok
+	var queued: bool=good and int(preview.get("ahead",0))>0
+	var color := Color("e9c987") if queued else Color("d8edb4") if good else Color("e8a18a")
+	if good and not queued: _walk_line(preview.path,walking.start,Color(0.85,0.93,0.71,0.8))
+	_diamond(cell.x,cell.y,1,1,Color(color,0.13),1,color)
+	_walk_marker(cell,color,s)
+	if not good:
+		var at := grid_point(cell.x+0.5,cell.y+0.5)+Vector2(0,-3)
+		draw_line(at+Vector2(-4,-2)*s,at+Vector2(4,2)*s,color,2*s,true)
+		draw_line(at+Vector2(-4,2)*s,at+Vector2(4,-2)*s,color,2*s,true)
+
+func _draw_walk_hint() -> void:
+	var preview: Dictionary=walking.preview
+	var title := str(preview.message)
+	var detail := "Click to add to the plan"
+	if not preview.ok: detail="Choose another spot or review the resident's Plan"
+	elif int(preview.ahead)>0: detail="The route is chosen when this walk starts"
+	elif preview.here: detail="Already here"
+	else: detail="%d %s · Click to walk" % [preview.path.size(),"step" if preview.path.size()==1 else "steps"]
+	var width := maxf(_font.get_string_size(title,HORIZONTAL_ALIGNMENT_LEFT,-1,14).x,_font.get_string_size(detail,HORIZONTAL_ALIGNMENT_LEFT,-1,12).x)+24
+	var at := Vector2(clampf(_pointer.x+18,8,size.x-width-8),clampf(_pointer.y-62,8,size.y-220))
+	draw_style_box(preload("res://game/style.gd").box(Color("1c2a2f"),6,Color("71877b")),Rect2(at,Vector2(width,52)))
+	draw_string(_font,at+Vector2(12,20),title,HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("f4eedf"))
+	draw_string(_font,at+Vector2(12,39),detail,HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("bdd89e") if preview.ok else Color("e8a18a"))
 
 func _draw_access_ground(lot: Dictionary) -> void:
 	var reachable: Dictionary=access_report.get("reachable",{})

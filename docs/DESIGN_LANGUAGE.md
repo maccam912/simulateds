@@ -321,3 +321,23 @@ Screenshots captured from the running Godot application are in `docs/screenshots
 [display](screenshots/display.png), [bindings](screenshots/controls.png),
 [save](screenshots/save.png), [load](screenshots/load.png), and
 [console](screenshots/console.png). These are the implemented foundation, not mockups.
+
+
+## Movement intent
+
+Hovering exposed ground shows a thin floor-level route for an immediate walk,
+a destination ring, and the step count. A queued walk uses gold and explains how
+many planned activities precede it; it does not invent a route from an unknown
+future starting position. Occupied, disconnected, full-plan, and visit-first
+cases explain the same constraints that the host enforces. Hovering a resident's
+name or an object retains its selection/use feedback instead of offering a walk.
+
+Accepted manual walks own their destination markers. A current destination stays
+visible, a new queued destination appears for three seconds, and opening Plan
+reveals queued stops with numbers matching its rows. Multiple orders at one tile
+share a marker with combined numbers. Paths draw beneath furniture/walls and
+include any still-interpolating accepted steps before joining the remaining route.
+The plain watching view hides paths and expired queued confirmations. Cancellation,
+travel, construction, menus, and selection changes clear irrelevant feedback.
+Reduced motion keeps this static information. Request acknowledgements alone do
+not create markers: each one must exist in the accepted world snapshot.

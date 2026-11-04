@@ -351,6 +351,7 @@ func _build_ui() -> void:
 func _process(delta: float) -> void:
 	if lot_view == null: return
 	lot_view.show_cues=hud.is_visible_in_tree()
+	lot_view.show_plan_routes=plan_panel.visible and hud.is_visible_in_tree()
 	_refresh_clock += delta
 	_notice_time = maxf(0,_notice_time-delta)
 	if _refresh_clock>=0.2:
@@ -575,7 +576,7 @@ func _refresh_plan(member: Dictionary) -> void:
 		var waiting: bool = member.task.is_empty() and task == member.queue[0] and str(member.action).begins_with("Waiting")
 		var favorite: bool=bool(task.get("automatic",false)) and Pastimes.matches(member,Session.world.task_activity(task,str(member.lot_id)))
 		var suffix := " · auto · favorite" if favorite else " · auto" if task.get("automatic",false) else ""
-		var label := _label(("NOW  " if current else "WAIT  " if waiting else "NEXT  ") + title + suffix,13,Style.GREEN if current else Style.TEXT)
+		var label := _label(("NOW " if current else "WAIT " if waiting else "NEXT ") + str(tasks.find(task)+1) + " · " + title + suffix,13,Style.GREEN if current else Style.TEXT)
 		var content := _vbox(row,4); content.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 		label.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; label.tooltip_text=title+(" · A favorite pastime, chosen autonomously." if favorite else ""); content.add_child(label)
 		var action_id := str(task.get("id",""))

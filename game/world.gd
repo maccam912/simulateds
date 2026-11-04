@@ -308,10 +308,8 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 		if not _valid_coord(command.get("x")) or not _valid_coord(command.get("y")):
 			return _result(false, "Choose a tile inside the lot.")
 		var goal := Vector2i(int(command.x), int(command.y))
-		if not _walkable(lot, goal):
-			return _result(false, "That tile is occupied.")
-		if _path(lot, _position(member), [goal]).is_empty() and _position(member) != goal:
-			return _result(false, "There is no path to that tile.")
+		var option := move_option(profile_id,str(member.id),str(lot_id),goal)
+		if not option.ok: return _result(false,str(option.message))
 		_queue_action(member, {"type":"move", "x":goal.x, "y":goal.y})
 	elif type == "interact":
 		var target_id: Variant = command.get("target_id", "")
@@ -339,6 +337,25 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 	if member.task.is_empty():
 		_start_next(member, lot)
 	return _result(true, "Action queued.")
+
+func move_option(profile_id: String,member_id: String,lot_id: String,goal: Vector2i) -> Dictionary:
+	# Shared, read-only reachability for ground previews and accepted commands.
+	if not state.get("families",{}).has(profile_id): return _result(false,"Join a household first.")
+	if not state.get("lots",{}).has(lot_id): return _result(false,"That lot does not exist.")
+	var family: Dictionary=state.families[profile_id]
+	var member := _member(family,member_id)
+	if member.is_empty(): return _result(false,"You can only direct your own family.")
+	if state.lots[family.home_lot].building: return _result(false,"Finish construction before directing your family.")
+	if member.lot_id!=lot_id: return _result(false,"Visit this lot before walking here.")
+	var lot: Dictionary=state.lots[lot_id]
+	if lot.building: return _result(false,"This lot is under construction.")
+	if member.queue.size()>=MAX_QUEUE: return _result(false,"The action queue is full (8 actions).")
+	if not _inside(goal): return _result(false,"Choose a tile inside the lot.")
+	if not _walkable(lot,goal): return _result(false,"That tile is occupied.")
+	var route := _path(lot,_position(member),[goal])
+	if route.is_empty() and _position(member)!=goal: return _result(false,"There is no path to that tile.")
+	var ahead: int=member.queue.size()+(0 if member.task.is_empty() or member.task.get("automatic",false) else 1)
+	return {"ok":true,"message":"Walk here" if ahead==0 else "Queue walk · %d %s first" % [ahead,"activity" if ahead==1 else "activities"],"path":route,"ahead":ahead,"cell":goal,"here":_position(member)==goal}
 
 func _build(lot: Dictionary, command: Dictionary) -> Dictionary:
 	if not _valid_coord(command.get("x")) or not _valid_coord(command.get("y")):

@@ -1,5 +1,6 @@
 extends SceneTree
 ## Real Iroh processes: two independent builders, visitor recall and reconnect.
+const WalkFeedback = preload("res://game/walk_feedback.gd")
 var session: Node
 var ticket_path := ""
 var use_codes := false
@@ -213,6 +214,15 @@ func _client(index: String) -> void:
 	assert(session.world.task_activity(session.state.families[identity].members[0].task,home)=="fridge","Host-chosen care target was not replicated")
 	await _command({"type":"care","member_id":member_id,"need":"hunger"},false)
 	await _command({"type":"cancel","member_id":member_id})
+	for _attempt in range(30):
+		if session.state.families[identity].members[0].task.is_empty(): break
+		await create_timer(0.1).timeout
+	var walk_feedback := WalkFeedback.new()
+	walk_feedback.update(session.state,identity,member_id,home,Vector2i.ZERO,true,false,0)
+	assert(walk_feedback.preview.ok and walk_feedback.preview.ahead==0 and walk_feedback.markers.is_empty(),"Client's pure preview must not create accepted markers")
+	await _command({"type":"move","member_id":member_id,"lot_id":home,"x":3,"y":3},false)
+	walk_feedback.update(session.state,identity,member_id,home,Vector2i.ZERO,true,false,0)
+	assert(walk_feedback.markers.is_empty(),"Host rejection cannot create a walk marker")
 	await _command({"type":"move","member_id":member_id,"lot_id":home,"x":0,"y":0})
 	await _command({"type":"move","member_id":member_id,"lot_id":home,"x":15,"y":15})
 	await _command({"type":"move","member_id":member_id,"lot_id":home,"x":15,"y":14})
@@ -227,6 +237,9 @@ func _client(index: String) -> void:
 			break
 		await create_timer(0.1).timeout
 	assert(not queued_id.is_empty(), "Replicated plan did not expose stable action ID")
+	walk_feedback.update(session.state,identity,member_id,home,Vector2i(1,14),true,true,0)
+	assert(walk_feedback.markers.size()==3 and walk_feedback.markers[0].id==active_id and walk_feedback.markers[1].id==queued_id and walk_feedback.markers[2].id==later_id)
+	assert(walk_feedback.preview.ahead==3 and walk_feedback.markers[1].cell==Vector2i(15,15) and walk_feedback.markers[2].cell==Vector2i(15,14),"Client markers match host-accepted destinations and order")
 	var reorder := {"type":"reorder_action","member_id":member_id,"first_id":queued_id,"second_id":later_id}
 	await _command(reorder)
 	for _attempt in range(30):
@@ -235,6 +248,8 @@ func _client(index: String) -> void:
 		await create_timer(0.1).timeout
 	var planned: Dictionary=session.state.families[identity].members[0]
 	assert(planned.queue.size()==2 and planned.queue[0].id==later_id and planned.queue[1].id==queued_id and planned.task.id==active_id,"Edited order must replicate without interrupting the current activity")
+	walk_feedback.update(session.state,identity,member_id,home,Vector2i.ZERO,false,true,0)
+	assert(walk_feedback.markers[1].id==later_id and walk_feedback.markers[1].order==2 and walk_feedback.markers[2].id==queued_id,"Destination numbers follow the host's reordered plan")
 	await _command(reorder,false)
 	var foreign := reorder.duplicate(); foreign.member_id=session.state.families[str(session.state.lots[host_home].owner)].members[0].id
 	await _command(foreign,false)

@@ -33,7 +33,7 @@ func _ready() -> void:
 		var label := _text(str(Preferences.ACTION_NAMES[action]),14); label.size_flags_horizontal=Control.SIZE_EXPAND_FILL; grid.add_child(label)
 		var key := _text("",14,Style.GREEN); grid.add_child(key); binding_values[action]=key
 	_action_row(controls,[["bindings","Edit key bindings"]])
-	_card(controls,"Mouse & building shortcuts","Click: walk, use furniture, or place the selected item. Scroll: zoom. Middle-drag: pan. Click a selected household name again to find them, or use Find resident in Plan. Center resets the lot view. Ctrl/Cmd+F: search the catalog; Enter: select its first result. Ctrl/Cmd+Z: undo. Ctrl/Cmd+Shift+Z or Ctrl+Y: redo.",[])
+	_card(controls,"Mouse & building shortcuts","Click: walk, use furniture, or place the selected item. Hover ground to preview a route or queued walk; Plan shows numbered destinations. Scroll: zoom. Middle-drag: pan. Click a selected household name again to find them, or use Find resident in Plan. Center resets the lot view. Ctrl/Cmd+F: search the catalog; Enter: select its first result. Ctrl/Cmd+Z: undo. Ctrl/Cmd+Shift+Z or Ctrl+Y: redo.",[])
 	_card(controls,"Always a way back","Escape clears a search or unfinished placement before closing a tray, then opens the game menu. F1 always opens the developer console; try help or rosebud. Gameplay shortcuts wait while you type.",[])
 	context_hint=_text("",12,Style.GOLD); context_hint.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; add_child(context_hint)
 	refresh_bindings()

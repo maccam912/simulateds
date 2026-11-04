@@ -90,6 +90,10 @@ or shell expressions.
 
 - Select a resident in the household list or click their visible body. Click a floor or lawn tile to walk;
   click a furnishing to use it. Their needs and current action appear in the UI.
+  Hover empty ground to preview a reachable route or see why it is unavailable.
+  Gold destinations mean a walk will follow existing plans. **Plan** reveals the
+  accepted route and numbered queued destinations; numbers follow the Plan rows.
+  Newly accepted queued walks show briefly, and rejected requests add no marker.
 - Click a **need bar** to add a suitable care activity on the resident’s current
   lot. The host finds a reachable option, prefers free furnishings, and keeps
   existing player orders in sequence. **Care** beside the resident’s mood shows
