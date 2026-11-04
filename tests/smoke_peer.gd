@@ -100,6 +100,20 @@ func _client(index: String) -> void:
 	await _command({"type": "build_begin", "lot_id": home})
 	await _command({"type": "place", "lot_id": home, "kind": "floor", "x": 0, "y": 0})
 	await _command({"type": "build_end", "lot_id": home})
+	await _command({"type":"autonomy","member_id":member_id,"enabled":false})
+	await _command({"type":"cancel","member_id":member_id})
+	await _command({"type":"move","member_id":member_id,"lot_id":home,"x":0,"y":0})
+	await _command({"type":"move","member_id":member_id,"lot_id":home,"x":15,"y":15})
+	var queued_id := ""
+	for _attempt in range(30):
+		var resident: Dictionary = session.state.families[identity].members[0]
+		if not resident.queue.is_empty():
+			queued_id = str(resident.queue[0].id)
+			break
+		await create_timer(0.1).timeout
+	assert(not queued_id.is_empty(), "Replicated plan did not expose stable action ID")
+	await _command({"type":"remove_action","member_id":member_id,"action_id":queued_id})
+	await _command({"type":"remove_action","member_id":member_id,"action_id":queued_id},false)
 	await _command({"type": "visit", "lot_id": host_home, "member_id": member_id})
 	var recalled := false
 	for _attempt in range(300):
@@ -114,6 +128,7 @@ func _client(index: String) -> void:
 	await create_timer(0.7).timeout
 	await _connect()
 	assert(session.home_lot() == home, "Reconnect changed lot ownership")
+	assert(not session.state.families[identity].members[0].autonomy, "Reconnect lost autonomy preference")
 	assert(session.state.families.size() == 3, "Reconnect duplicated family")
 	assert([0, 0] in session.state.lots[home].floors, "Reconnect lost construction")
 	assert(session.state.lots[home].funds == funds, "Reconnect changed budget")

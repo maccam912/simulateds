@@ -25,7 +25,12 @@ var tools_box: VBoxContainer
 var context_box: VBoxContainer
 var activity_label: Label
 var needs_title: Label
-var queue_label: Label
+var queue_label: Button
+var plan_panel: PanelContainer
+var plan_box: VBoxContainer
+var plan_title: Label
+var autonomy_button: Button
+var _plan_signature := ""
 var need_bars: Dictionary = {}
 var need_values: Dictionary = {}
 var connection_label: Label
@@ -179,7 +184,19 @@ func _build_ui() -> void:
 	var needs := _vbox(needs_panel,9)
 	var needs_head := HBoxContainer.new(); needs.add_child(needs_head)
 	needs_title = _label("Alex · Taking it easy",15); needs_title.size_flags_horizontal=Control.SIZE_EXPAND_FILL; needs_head.add_child(needs_title)
-	queue_label = _label("",12,Style.MUTED); needs_head.add_child(queue_label)
+	queue_label = _button("Plan",func(): _show_tray(plan_panel,not plan_panel.visible))
+	queue_label.add_theme_font_size_override("font_size",12); needs_head.add_child(queue_label)
+	plan_panel = _hud_panel(Rect2(16,-480,408,300),Vector2(0,1))
+	plan_panel.hide()
+	var plan := _vbox(plan_panel,8)
+	var plan_head := HBoxContainer.new(); plan.add_child(plan_head)
+	plan_title = _label("Your day",18); plan_title.size_flags_horizontal=Control.SIZE_EXPAND_FILL; plan_head.add_child(plan_title)
+	plan_head.add_child(_button("×",func(): plan_panel.hide()))
+	autonomy_button = _button("Autonomy: on",func(): _send({"type":"autonomy","member_id":selected_member,"enabled":not bool(_member().get("autonomy",true))}))
+	autonomy_button.tooltip_text="When on, this resident tends their own needs between your orders. Your orders always take priority."
+	plan.add_child(autonomy_button)
+	var plan_scroll := ScrollContainer.new(); plan_scroll.size_flags_vertical=Control.SIZE_EXPAND_FILL; plan_scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED; plan.add_child(plan_scroll)
+	plan_box = _vbox(plan_scroll,5); plan_box.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	var bars := HBoxContainer.new(); bars.add_theme_constant_override("separation",12); needs.add_child(bars)
 	for need in ["hunger","energy","hygiene","bladder","fun","social","comfort"]:
 		var column := _vbox(bars,4); column.size_flags_horizontal=Control.SIZE_EXPAND_FILL
@@ -297,7 +314,8 @@ func _refresh() -> void:
 			b.alignment=HORIZONTAL_ALIGNMENT_LEFT; family_box.add_child(b)
 	if not member.is_empty():
 		needs_title.text=str(member.name)+"  /  "+str(member.get("action","Enjoying the day"))
-		queue_label.text="%d queued" % member.get("queue",[]).size()
+		queue_label.text="Plan · %d" % (member.get("queue",[]).size() + (0 if member.get("task",{}).is_empty() else 1))
+		_refresh_plan(member)
 		for need in need_bars:
 			var value := float(member.get("needs",{}).get(need,100))
 			need_bars[need].value=value; need_values[need].text=str(int(value))
@@ -307,6 +325,7 @@ func _refresh() -> void:
 	if build_mode != _last_build_mode:
 		_last_build_mode = build_mode
 		_show_tray(context_panel,build_mode)
+		if build_mode: plan_panel.hide()
 		if hud.visible: Soundscape.set_context("build" if build_mode else "live")
 	palette_button.text = "Catalog" if build_mode else "Activities"
 	var tools_signature := str(building and mine)+selected_tool+_selected_object+str(build_rotation)+viewed_lot+str(lot.get("revision",0))
@@ -318,6 +337,40 @@ func _refresh() -> void:
 		room_label.text=Session.status+("\nRoom code: "+Rooms.code if not Rooms.code.is_empty() else "")
 		if Session.role=="host": ticket_input.text=Session.ticket()
 	notice_panel.visible = _notice_time > 0.0
+
+func _refresh_plan(member: Dictionary) -> void:
+	plan_title.text = str(member.name) + "’s day"
+	autonomy_button.text = "Autonomy: " + ("on" if member.get("autonomy",true) else "off")
+	var tasks: Array = []
+	if not member.task.is_empty(): tasks.append(member.task)
+	tasks.append_array(member.queue)
+	var signature := selected_member + str(member.get("autonomy",true)) + str(member.task.get("id",""))
+	for task: Dictionary in tasks: signature += str(task.get("id",""))
+	if signature == _plan_signature: return
+	_plan_signature = signature
+	_clear(plan_box)
+	if tasks.is_empty():
+		var empty := _label("A little free time. Choose an activity or click something in the house.",13,Style.MUTED)
+		empty.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; empty.custom_minimum_size.x=270; plan_box.add_child(empty)
+	for task: Dictionary in tasks:
+		var row := HBoxContainer.new(); plan_box.add_child(row)
+		var current: bool = task == member.task
+		var title := _task_title(task,member)
+		var label := _label(("NOW  " if current else "NEXT  ") + title + (" · auto" if task.get("automatic",false) else ""),13,Style.GREEN if current else Style.TEXT)
+		label.size_flags_horizontal=Control.SIZE_EXPAND_FILL; label.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; label.tooltip_text=title; row.add_child(label)
+		var action_id := str(task.get("id",""))
+		var cancel := _button("×",func(): _send({"type":"remove_action","member_id":str(member.id),"action_id":action_id}))
+		cancel.tooltip_text="Cancel " + title; row.add_child(cancel)
+
+func _task_title(task: Dictionary, member: Dictionary) -> String:
+	if task.get("type") == "move": return "Walk to %d, %d" % [int(task.x),int(task.y)]
+	if task.get("target_kind","") == "member":
+		for family: Dictionary in Session.state.families.values():
+			for other: Dictionary in family.members:
+				if other.id == task.get("target_id"): return "Chat with " + str(other.name)
+	for object: Dictionary in Session.state.lots[member.lot_id].objects:
+		if object.id == task.get("target_id"): return str(Catalog.ITEMS[object.kind].name)
+	return "Activity"
 
 func _money(value: int) -> String:
 	var text := str(value)
@@ -458,8 +511,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if hud==null or not hud.visible: return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.is_action_pressed("pause") or event.keycode==KEY_ESCAPE:
-			if neighborhood_panel.visible or context_panel.visible:
-				neighborhood_panel.hide(); context_panel.hide()
+			if neighborhood_panel.visible or context_panel.visible or plan_panel.visible:
+				neighborhood_panel.hide(); context_panel.hide(); plan_panel.hide()
 			else: _request_pause()
 		elif event.is_action_pressed("rotate"): _rotate()
 		elif event.is_action_pressed("neighborhood"): _show_tray(neighborhood_panel,not neighborhood_panel.visible)

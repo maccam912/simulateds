@@ -21,6 +21,16 @@ func _run() -> void:
 	await RenderingServer.frame_post_draw
 	assert(root.get_texture().get_image().save_png("res://build/construction" + suffix + ".png") == OK)
 	game._toggle_build()
+	var session := root.get_node("Session")
+	game._send({"type":"cancel","member_id":game.selected_member})
+	game._send({"type":"autonomy","member_id":game.selected_member,"enabled":false})
+	for object: Dictionary in session.state.lots[game.viewed_lot].objects:
+		if object.kind in ["fridge","tv","bookshelf"]: game._interact(str(object.id))
+	session.menu_paused=true
+	game._show_tray(game.plan_panel,true)
+	await create_timer(0.4).timeout
+	await RenderingServer.frame_post_draw
+	assert(root.get_texture().get_image().save_png("res://build/plan" + suffix + ".png") == OK)
 	print("GAME_RENDER_PASS")
 	await root.get_node("Soundscape").shutdown_and_wait()
 	quit()

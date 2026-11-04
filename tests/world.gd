@@ -108,5 +108,35 @@ func _run() -> void:
 	check(sparse_member.needs.energy > 60.0, "missing hunger object does not block autonomous sleep")
 	check(world.apply_command("alice", {"type":"rename_family", "name":"Alex"}).ok, "rename own family")
 	check(world.state.families.alice.name == "Alex household" and alice.name == "Alex", "name changes preserve family identity")
+	# Stable queue IDs make delayed cancellation safe across simulation ticks.
+	var planner := World.new()
+	planner.initialize(); planner.ensure_family("plan", "Pat"); planner.set_online("plan", true)
+	var pat: Dictionary = planner.state.families.plan.members[0]
+	check(planner.apply_command("plan", {"type":"autonomy","member_id":pat.id,"enabled":false}).ok, "disable autonomy")
+	for index in range(90): planner.step(1.0)
+	check(pat.task.is_empty() and pat.queue.is_empty(), "autonomy off leaves resident idle")
+	check(planner.restore(planner.snapshot(),true), "long idle remains valid snapshot")
+	pat=planner.state.families.plan.members[0]
+	for target in [[1,1],[2,1],[2,2]]:
+		check(planner.apply_command("plan", {"type":"move","member_id":pat.id,"lot_id":"lot_1","x":target[0],"y":target[1]}).ok, "queue ordered walk")
+	var first_id: String=pat.task.id
+	var second_id: String=pat.queue[0].id
+	var third_id: String=pat.queue[1].id
+	check(planner.apply_command("plan", {"type":"remove_action","member_id":pat.id,"action_id":second_id}).ok, "remove middle queued action")
+	check(pat.task.id==first_id and pat.queue.size()==1 and pat.queue[0].id==third_id, "individual removal preserves remaining order")
+	check(not planner.apply_command("plan", {"type":"remove_action","member_id":pat.id,"action_id":second_id}).ok, "stale cancellation rejected")
+	check(planner.apply_command("plan", {"type":"remove_action","member_id":pat.id,"action_id":first_id}).ok, "cancel current action")
+	check(pat.task.id==third_id, "next player order starts after current cancellation")
+	planner.ensure_family("intruder","Other")
+	check(not planner.apply_command("intruder", {"type":"autonomy","member_id":pat.id,"enabled":true}).ok, "foreign autonomy rejected")
+	check(not planner.apply_command("intruder", {"type":"remove_action","member_id":pat.id,"action_id":third_id}).ok, "foreign queue cancellation rejected")
+	var legacy: Dictionary=planner.snapshot()
+	for family: Dictionary in legacy.families.values():
+		for resident: Dictionary in family.members:
+			resident.erase("autonomy"); resident.erase("next_action")
+			resident.task.erase("id")
+			for task: Dictionary in resident.queue: task.erase("id")
+	check(planner.restore(legacy,true), "old saves gain queue IDs and autonomy defaults")
+	check(planner.state.families.plan.members[0].autonomy and planner.state.families.plan.members[0].task.has("id"), "old runtime gets defaults")
 	if failures == 0: print("WORLD_PASS")
 	quit(1 if failures else 0)

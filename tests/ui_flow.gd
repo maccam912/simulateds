@@ -39,7 +39,20 @@ func _run() -> void:
 	_check(not game.context_panel.visible,"Finishing build closes catalog")
 	_check(game.viewed_lot == "lot_1","HUD opens own lot")
 	_check(not game.selected_member.is_empty(),"HUD selects a resident")
+	await _click(game.queue_label.get_global_rect().get_center())
+	_check(game.plan_panel.visible,"Plan opens over the world")
+	await _click(game.autonomy_button.get_global_rect().get_center())
+	_check(not game._member().autonomy,"Plan autonomy control reaches authoritative resident")
+	game._send({"type":"move","member_id":game.selected_member,"lot_id":"lot_1","x":1,"y":1})
+	game._send({"type":"move","member_id":game.selected_member,"lot_id":"lot_1","x":2,"y":2})
+	await process_frame
+	_check(game.plan_box.get_child_count()==2,"Plan displays current and queued actions")
+	var remaining_id: String=game._member().task.id
+	var remove: Button=game.plan_box.get_child(1).get_child(1)
+	await _click(remove.get_global_rect().get_center())
+	_check(game._member().queue.is_empty() and game._member().task.id==remaining_id,"Queue row removes only its own action")
 	game._toggle_build()
+	_check(not game.plan_panel.visible,"Building hides family plan")
 	_check(session.state.lots.lot_1.building,"Build button starts construction")
 	game.selected_tool = "floor"
 	game._tile_clicked(Vector2i(2,6))

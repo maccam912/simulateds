@@ -50,7 +50,7 @@ func ensure_family(profile_id: String, display_name: String) -> String:
 			var needs := {}
 			for need: String in NEEDS:
 				needs[need] = 70.0 + index * 8.0
-			members.append({"id":profile_id + "_" + str(index + 1), "name":clean_name if index == 0 else "Robin", "lot_id":lot_id, "x":7 + index, "y":7, "needs":needs, "action":"Taking it easy", "queue":[], "task":{}, "walk_clock":0.0, "idle_clock":float(index) * 2.0})
+			members.append({"id":profile_id + "_" + str(index + 1), "name":clean_name if index == 0 else "Robin", "lot_id":lot_id, "x":7 + index, "y":7, "needs":needs, "action":"Taking it easy", "queue":[], "task":{}, "walk_clock":0.0, "idle_clock":float(index) * 2.0, "autonomy":true, "next_action":1})
 		state.families[profile_id] = {"id":profile_id, "name":clean_name + " household", "home_lot":lot_id, "online":false, "members":members}
 		_event(clean_name + " moved into " + str(lot.name) + ".")
 		return lot_id
@@ -133,6 +133,29 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 	var member := _member(family, member_id)
 	if member.is_empty():
 		return _result(false, "You can only direct your own family.")
+	if type == "autonomy":
+		if not command.get("enabled") is bool:
+			return _result(false, "Choose whether this resident acts on their own.")
+		member.autonomy = command.enabled
+		if not member.autonomy and bool(member.task.get("automatic", false)):
+			member.task = {}
+			member.action = "Taking it easy"
+		return _result(true, "Autonomy " + ("on." if member.autonomy else "off. Your queued actions still continue."))
+	if type == "remove_action":
+		var action_id: Variant = command.get("action_id")
+		if not action_id is String or action_id.is_empty():
+			return _result(false, "Choose an action to cancel.")
+		if member.task.get("id", "") == action_id:
+			member.task = {}
+			member.action = "Taking it easy"
+			member.idle_clock = 0.0
+			_start_next(member, state.lots[member.lot_id])
+			return _result(true, "Current action canceled. The rest of the plan continues.")
+		for queued: Dictionary in member.queue:
+			if queued.get("id", "") == action_id:
+				member.queue.erase(queued)
+				return _result(true, "Action removed from the plan.")
+		return _result(false, "That action has already finished.")
 	if type == "cancel":
 		_clear_member(member)
 		return _result(true, "Action queue cleared.")
@@ -165,7 +188,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 			return _result(false, "That tile is occupied.")
 		if _path(lot, _position(member), [goal]).is_empty() and _position(member) != goal:
 			return _result(false, "There is no path to that tile.")
-		member.queue.append({"type":"move", "x":goal.x, "y":goal.y})
+		_queue_action(member, {"type":"move", "x":goal.x, "y":goal.y})
 	elif type == "interact":
 		var target_id: Variant = command.get("target_id", "")
 		if not target_id is String:
@@ -178,11 +201,11 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 			var goals := _social_cells(lot, neighbor)
 			if not goals.has(_position(member)) and _path(lot, _position(member), goals).is_empty():
 				return _result(false, "There is no path to chat with that resident.")
-			member.queue.append({"type":"interact", "target_id":target_id, "target_kind":"member"})
+			_queue_action(member, {"type":"interact", "target_id":target_id, "target_kind":"member"})
 		else:
 			if not _can_reach_object(lot, _position(member), object):
 				return _result(false, "There is no path to use that furnishing.")
-			member.queue.append({"type":"interact", "target_id":target_id})
+			_queue_action(member, {"type":"interact", "target_id":target_id})
 	else:
 		return _result(false, "Unknown action.")
 	# A direct order interrupts an autonomous task, but preserves player-queued work.
@@ -274,8 +297,8 @@ func _tick_member(member: Dictionary, lot: Dictionary, delta: float) -> void:
 		if not member.queue.is_empty():
 			_start_next(member, lot)
 		else:
-			member.idle_clock += delta
-			if member.idle_clock >= 2.0:
+			member.idle_clock = minf(2.0, float(member.idle_clock) + delta)
+			if member.idle_clock >= 2.0 and bool(member.get("autonomy", true)):
 				member.idle_clock = 0.0
 				_choose_autonomy(member, lot)
 	if member.task.is_empty():
@@ -345,8 +368,13 @@ func _choose_autonomy(member: Dictionary, lot: Dictionary) -> void:
 			best = object
 			best_score = score
 	if not best.is_empty():
-		member.queue.append({"type":"interact", "target_id":best.id, "automatic":true})
+		_queue_action(member, {"type":"interact", "target_id":best.id, "automatic":true})
 		_start_next(member, lot)
+
+func _queue_action(member: Dictionary, action: Dictionary) -> void:
+	action.id = str(member.id) + ":" + str(int(member.get("next_action", 1)))
+	member.next_action = int(member.get("next_action", 1)) + 1
+	member.queue.append(action)
 
 func _start_next(member: Dictionary, lot: Dictionary) -> void:
 	if member.queue.is_empty():
@@ -578,12 +606,17 @@ func _normalize_numbers() -> void:
 				object[key] = int(object[key])
 	for family: Dictionary in state.families.values():
 		for member: Dictionary in family.members:
+			member.autonomy = member.get("autonomy", true)
+			member.next_action = int(member.get("next_action", 1))
 			member.x = int(member.x)
 			member.y = int(member.y)
 			var tasks: Array = member.queue.duplicate()
 			if not member.task.is_empty():
 				tasks.append(member.task)
 			for task: Dictionary in tasks:
+				if not task.has("id"):
+					task.id = str(member.id) + ":" + str(member.next_action)
+					member.next_action += 1
 				if task.type == "move":
 					task.x = int(task.x)
 					task.y = int(task.y)
@@ -657,6 +690,8 @@ func _valid_state(data: Dictionary) -> bool:
 		for member: Variant in family.members:
 			if not member is Dictionary or not member.get("id") is String or str(member.id).length() > 160 or members_seen.has(member.id) or not member.get("name") is String or str(member.name).length() > 32 or not data.lots.has(member.get("lot_id")) or not _valid_coord(member.get("x")) or not _valid_coord(member.get("y")) or not member.get("needs") is Dictionary:
 				return false
+			if not member.get("autonomy", true) is bool or not _integer(member.get("next_action", 1)) or float(member.get("next_action", 1)) < 1 or float(member.get("next_action", 1)) > 9007199254740000:
+				return false
 			members_seen[member.id] = true
 			if not member.get("action") is String or str(member.action).length() > 100 or not member.get("queue") is Array or member.queue.size() > MAX_QUEUE or not member.get("task") is Dictionary or not _number(member.get("walk_clock")) or not _number(member.get("idle_clock")):
 				return false
@@ -677,6 +712,8 @@ func _valid_state(data: Dictionary) -> bool:
 
 func _valid_task(value: Variant, active: bool) -> bool:
 	if not value is Dictionary or not value.get("type") in ["move", "interact"]:
+		return false
+	if value.has("id") and (not value.id is String or str(value.id).is_empty() or str(value.id).length() > 180):
 		return false
 	if value.has("automatic") and not value.automatic is bool:
 		return false
