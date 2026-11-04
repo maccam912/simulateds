@@ -349,3 +349,38 @@ but recreation still mostly ends when a need bar fills. Next: small persistent
 hobby progress from deliberately completed activities, with readable milestones,
 bounded rewards, and no loss from being away. Keep autonomy useful without making
 an unattended household earn unlimited progress.
+
+## 2026-11-04 · A little better at the things you love
+
+Reading, gardening, and cooking now have five lasting ranks. Two deliberately
+completed practices per hobby per game day count toward thresholds of 0, 2, 5,
+9, and 14. Learned ranks improve primary need recovery by 10% each and add a
+secondary comfort/fun benefit. The same ordinary activities count when chosen
+through furniture, wishes, or care. Autonomy uses learned benefits without earning
+practice. Reaching a daily cap leaves the activity available for enjoyment, and
+absence neither earns nor removes personal progress. Rank changes add a bounded
+journal memory and a small confirmation notice/sound.
+
+Validation: all nineteen model/application suites passed, followed by real Iroh
+host/two-client and dedicated-server checks. Hobby-specific coverage includes all
+three real activities, exact novice/expert recovery differences, completed-only
+practice, duplicate/canceled plans, manual takeover of autonomy, daily rollover,
+maximum rank, ownership, construction, missing/blocked furnishings, exclusive
+fridge reservations/free alternatives, resident-current-lot selection, old-save
+defaults, corrupt-state rejection, JSON round-trips, and absence. Real clients
+practice reading, see host-owned progress, and retain it on reconnect.
+
+Graphical input playtests passed at 1440×900 and 1280×720/125% UI scale. They read
+twice to earn Page turner, tend a plant, cook, switch to Robin's independent
+progress, scroll the tray, inspect a missing shelf, close with Escape, and enter
+construction. No clicks pass through the panel to the lot. The first standard
+fixture expected the internal word "bookshelf" instead of the catalog's visible
+"Story shelf"; its corrected rerun passed. Visual review added the explicit word
+"Rank" to the card counter. The preceding decoration build passed all four CI
+platform jobs. These are agent playtests, not a human balance verdict.
+
+Fresh assessment: recreation now leaves something behind and the family loop has
+several useful entry points. Building has accumulated a long flat list of tools,
+furniture, and decorating options. Next, organize the catalog into readable
+categories with search and clear item details, and playtest furnishing a room at
+compact size. Keep the world visible and avoid adding permanent HUD clutter.

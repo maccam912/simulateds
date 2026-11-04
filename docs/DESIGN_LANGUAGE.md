@@ -52,6 +52,12 @@ show names as well as colors. Preview surfaces directly on the house before
 purchase, with an exact price and an area outline. Night lighting warms finishes
 gently enough to preserve the player's chosen hues.
 
+Hobby cards name an interest, its current title/rank, practices toward the next
+rank, and the actual benefit. Buttons describe activities rather than XP farming.
+At the daily limit they still allow recreation; the card says more practice is
+available tomorrow. Rank changes use one modest confirmation sound and a short
+notice, plus a saved journal memory. No streaks, expiry, or recurring reminders.
+
 ## Typography and layout
 
 Use one legible interface family and a system monospace face for development

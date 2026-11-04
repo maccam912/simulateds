@@ -29,7 +29,9 @@ household names/appearance, persistent friendships with a People panel, and
 household postcards with optional gifts for asynchronous play. Needs now offer
 care shortcuts and a derived mood summary, backed by host-selected activities.
 Floor/wall finish palettes now support priced rectangle painting, preview, and
-whole-area undo alongside room construction.
+whole-area undo alongside room construction. Reading, gardening, and cooking now
+have five persistent ranks, bounded deliberate practice, activity bonuses, and a
+Hobbies panel.
 See [the playtest log](PLAYTEST_LOG.md) for evidence
 and current usability priorities.
 
@@ -88,7 +90,7 @@ from a corrupt primary save; no inherited template results counted as game tests
 
 ## 5. Expand only after the loop holds up
 
-Candidate additions: skills and hobbies, aspirations, jobs with choices, community
+Candidate additions: deeper hobby choices, aspirations, jobs with choices, community
 lots, weather/seasons, pets, ages and family growth, neighborhood events, and
 content packs. Decide each feature's multiplayer ownership, absent-player
 behavior, save migration, and authority checks before implementing its UI.

@@ -5,6 +5,7 @@ const Catalog = preload("res://game/catalog.gd")
 const BuildRules = preload("res://game/build_rules.gd")
 const RoomPlan = preload("res://game/room_plan.gd")
 const Wishes = preload("res://game/wishes.gd")
+const Hobbies = preload("res://game/hobbies.gd")
 const Friendships = preload("res://game/friendships.gd")
 const Mailbox = preload("res://game/mailbox.gd")
 const Wellbeing = preload("res://game/wellbeing.gd")
@@ -67,6 +68,7 @@ func ensure_family(profile_id: String, display_name: String) -> String:
 			members.append({"id":profile_id + "_" + str(index + 1), "name":clean_name if index == 0 else "Robin", "lot_id":lot_id, "x":7 + index, "y":7, "needs":needs, "action":"Taking it easy", "queue":[], "task":{}, "walk_clock":0.0, "idle_clock":float(index) * 2.0, "autonomy":true, "next_action":1})
 		for member: Dictionary in members:
 			member.wishes=Wishes.create(str(member.id),int(state.day))
+			member.hobbies=Hobbies.create(int(state.day))
 			member.appearance=Appearance.defaults(member)
 		state.families[profile_id] = {"id":profile_id, "name":clean_name + " household", "home_lot":lot_id, "online":false, "identity_revision":0, "members":members}
 		Friendships.ensure_housemates(state,state.families[profile_id])
@@ -232,6 +234,12 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 		return _result(true, "Action queue cleared.")
 	if bool(state.lots[family.home_lot].building):
 		return _result(false, "Finish construction before directing your family.")
+	if type=="practice_hobby":
+		var hobby: Variant=command.get("hobby")
+		if not hobby is String or not Hobbies.CATALOG.has(hobby): return _result(false,"Choose reading, gardening, or cooking.")
+		var option := hobby_option(member,hobby)
+		if not option.available: return _result(false,str(option.detail))
+		return apply_command(profile_id,{"type":"interact","member_id":member.id,"lot_id":member.lot_id,"target_id":option.target_id})
 	if type=="care":
 		var need: Variant=command.get("need")
 		if not need is String or not NEEDS.has(need): return _result(false,"Choose one of this resident’s needs.")
@@ -442,7 +450,11 @@ func _tick_member(member: Dictionary, lot: Dictionary, delta: float) -> void:
 	var definition: Dictionary = Catalog.ITEMS[object.kind]
 	member.action = ACTION_NAMES.get(object.kind, "Enjoying home")
 	var need: String = definition.need
-	member.needs[need] = minf(100.0, float(member.needs[need]) + float(definition.rate) * delta)
+	member.needs[need] = minf(100.0, float(member.needs[need]) + float(definition.rate) * Hobbies.multiplier(member.hobbies,str(object.kind)) * delta)
+	var hobby := Hobbies.for_activity(str(object.kind))
+	if not hobby.is_empty():
+		var secondary: String=Hobbies.CATALOG[hobby].secondary
+		member.needs[secondary]=minf(100.0,float(member.needs[secondary])+(Hobbies.rank(member.hobbies[hobby])-1)*delta)
 	if object.kind == "bed" or object.kind == "sofa":
 		member.needs.comfort = minf(100.0, float(member.needs.comfort) + 2.0 * delta)
 	if object.kind == "table":
@@ -454,6 +466,7 @@ func _tick_member(member: Dictionary, lot: Dictionary, delta: float) -> void:
 	var minimum_time := 0.0 if task.get("automatic",false) else 4.0
 	if task.remaining <= 0.0 or (float(member.needs[need]) >= 99.0 and float(task.elapsed)>=minimum_time):
 		_finish_wish(member,task,str(object.kind))
+		_finish_hobby(member,task,str(object.kind))
 		member.task = {}
 		member.action = "Taking it easy"
 
@@ -506,6 +519,38 @@ func wish_status(member: Dictionary, activity: String) -> String:
 	for task: Dictionary in member.queue:
 		if not task.get("automatic",false) and task_activity(task,str(member.lot_id))==activity: return "In your plan"
 	return ""
+
+func hobby_option(member: Dictionary, hobby: String) -> Dictionary:
+	var activity: String=Hobbies.CATALOG[hobby].activity
+	var status := wish_status(member,activity)
+	if not status.is_empty(): return {"available":false,"status":status,"detail":status}
+	var lot: Dictionary=state.lots[member.lot_id]
+	var best: Dictionary={}
+	var best_score := 100000.0
+	for object: Dictionary in lot.objects:
+		if object.kind!=activity: continue
+		var goals := _interaction_cells(lot,object)
+		var path := _path(lot,_position(member),goals)
+		if path.is_empty() and not goals.has(_position(member)): continue
+		var busy := not _object_user(str(lot.id),object,str(member.id)).is_empty()
+		var score := float(path.size())+(1000.0 if busy else 0.0)
+		if score<best_score:
+			best_score=score
+			best={"available":true,"status":"","target_id":object.id,"detail":"Wait until it is free" if busy else "Here on this lot"}
+	if best.is_empty(): return {"available":false,"status":"Unavailable here","detail":"No reachable "+str(Catalog.ITEMS[activity].name)+" here. Build one or visit a neighbor."}
+	return best
+
+func _finish_hobby(member: Dictionary, task: Dictionary, activity: String) -> void:
+	if bool(task.get("automatic",false)) or float(task.get("elapsed",0.0))<4.0: return
+	for family: Dictionary in state.families.values():
+		if not family.online or not family.members.has(member): continue
+		var result := Hobbies.record(member.hobbies,activity,int(state.day))
+		if not result.is_empty() and result.rank_up:
+			var memory := str(result.title)+" · "+str(Hobbies.CATALOG[result.hobby].name)+" rank %d" % int(result.rank)
+			member.wishes.journal.push_front({"day":int(state.day),"text":memory})
+			if member.wishes.journal.size()>Wishes.MAX_JOURNAL: member.wishes.journal.resize(Wishes.MAX_JOURNAL)
+			_event(str(member.name)+" became a "+str(result.title).to_lower()+".")
+		return
 
 func _conversation_partner(member: Dictionary) -> Dictionary:
 	for family: Dictionary in state.families.values():
@@ -848,6 +893,8 @@ func _normalize_numbers() -> void:
 			for key: String in member.appearance: member.appearance[key]=int(member.appearance[key])
 			if not member.has("wishes"): member.wishes=Wishes.create(str(member.id),int(state.day))
 			Wishes.normalize(member.wishes)
+			if not member.has("hobbies"): member.hobbies=Hobbies.create(int(state.day))
+			Hobbies.normalize(member.hobbies)
 			member.autonomy = member.get("autonomy", true)
 			member.next_action = int(member.get("next_action", 1))
 			member.x = int(member.x)
@@ -942,6 +989,7 @@ func _valid_state(data: Dictionary) -> bool:
 				return false
 			if member.has("appearance") and not Appearance.valid(member.appearance): return false
 			if member.has("wishes") and not Wishes.valid(member.wishes,int(data.day)): return false
+			if member.has("hobbies") and not Hobbies.valid(member.hobbies,int(data.day)): return false
 			members_seen[member.id] = true
 			if not member.get("action") is String or str(member.action).length() > 100 or not member.get("queue") is Array or member.queue.size() > MAX_QUEUE or not member.get("task") is Dictionary or not _number(member.get("walk_clock")) or not _number(member.get("idle_clock")):
 				return false

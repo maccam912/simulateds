@@ -9,6 +9,7 @@ const Style = preload("res://game/style.gd")
 const Catalog = preload("res://game/catalog.gd")
 const RoomPlan = preload("res://game/room_plan.gd")
 const Wishes = preload("res://game/wishes.gd")
+const Hobbies = preload("res://game/hobbies.gd")
 const Friendships = preload("res://game/friendships.gd")
 const Portrait = preload("res://game/resident_portrait.gd")
 const Appearance = preload("res://game/appearance.gd")
@@ -37,6 +38,10 @@ var context_box: VBoxContainer
 var activity_label: Label
 var needs_title: Label
 var wishes_button: Button
+var hobbies_button: Button
+var hobby_buttons: Dictionary = {}
+var _hobby_options: Dictionary = {}
+var _hobby_seen: Dictionary = {}
 var people_button: Button
 var social_buttons: Dictionary = {}
 var _social_focus := ""
@@ -227,6 +232,7 @@ func _build_ui() -> void:
 	var needs_head := HBoxContainer.new(); needs.add_child(needs_head)
 	needs_title = _label("Alex · Taking it easy",15); needs_title.size_flags_horizontal=Control.SIZE_EXPAND_FILL; needs_title.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; needs_head.add_child(needs_title)
 	wishes_button = _button("Wishes",_open_wishes); wishes_button.add_theme_font_size_override("font_size",12); needs_head.add_child(wishes_button)
+	hobbies_button = _button("Hobbies",_open_hobbies); hobbies_button.add_theme_font_size_override("font_size",12); needs_head.add_child(hobbies_button)
 	queue_label = _button("Plan",func(): _show_tray(plan_panel,not plan_panel.visible))
 	queue_label.add_theme_font_size_override("font_size",12); needs_head.add_child(queue_label)
 	plan_panel = _hud_panel(Rect2(16,-480,408,300),Vector2(0,1))
@@ -324,7 +330,7 @@ func _refresh() -> void:
 		_view_context = view_context
 		viewed_lot = str(family.home_lot)
 		_selected_object = ""
-		_moving_object = ""; _move_request.clear(); _wish_seen.clear(); _friend_seen.clear(); _room_anchor=Vector2i(-1,-1); _room_request.clear()
+		_moving_object = ""; _move_request.clear(); _wish_seen.clear(); _friend_seen.clear(); _hobby_seen.clear(); _room_anchor=Vector2i(-1,-1); _room_request.clear()
 		_paint_anchor=Vector2i(-1,-1); _paint_request.clear()
 	if viewed_lot.is_empty() or not state.get("lots",{}).has(viewed_lot):
 		viewed_lot = str(family.get("home_lot","lot_1"))
@@ -408,6 +414,7 @@ func _refresh() -> void:
 		wishes_button.text="Wishes · %d/3" % Wishes.completed(member.get("wishes",{}))
 		_announce_wishes(family)
 		_announce_friendships(family)
+		_announce_hobbies(family)
 		var mood := Wellbeing.mood(member.needs)
 		mood_button.text=str(mood.label)+" · Care"
 		mood_button.add_theme_color_override("font_color",_mood_color(str(mood.tone)))
@@ -425,6 +432,7 @@ func _refresh() -> void:
 			if care_values.has(need) and is_instance_valid(care_values[need]): care_values[need].text=str(need).capitalize()+" · %d" % int(value)
 	var build_mode := building and mine
 	wishes_button.disabled=build_mode or member.is_empty()
+	hobbies_button.disabled=bool(state.lots.get(family.get("home_lot",""),{}).get("building",false)) or member.is_empty()
 	people_button.disabled=build_mode or member.is_empty()
 	mood_button.disabled=bool(state.lots.get(family.get("home_lot",""),{}).get("building",false)) or member.is_empty()
 	if build_mode != _last_build_mode:
@@ -442,6 +450,11 @@ func _refresh() -> void:
 		for household: Dictionary in state.families.values():
 			tools_signature+=str(household.get("identity_revision",0))+str(household.online)+str(state.lots[household.home_lot].building)
 			for resident: Dictionary in household.members: tools_signature+=str([resident.id,resident.lot_id,resident.task.get("id",""),resident.action])
+	if _context_page=="hobbies" and not build_mode:
+		_hobby_options.clear()
+		if not member.is_empty():
+			for hobby: String in Hobbies.ORDER: _hobby_options[hobby]=Session.world.hobby_option(member,hobby)
+		tools_signature+=str(member.get("hobbies",{}))+str(day)+str(_hobby_options)
 	if _context_page=="care" and not build_mode: tools_signature+=str(_care_options)+str(Wellbeing.mood(member.get("needs",{})))
 	if tools_signature!=_tools_signature:
 		_tools_signature=tools_signature
@@ -566,6 +579,7 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 		_rebuild_people()
 		if follow_social: call_deferred("_follow_social",_social_focus)
 	elif _context_page=="care": _rebuild_care()
+	elif _context_page=="hobbies": _rebuild_hobbies()
 	else:
 		activity_label.text="Activities"
 		var shown: Dictionary={}
@@ -992,3 +1006,52 @@ func _build_catalog() -> void:
 			b.tooltip_text=str(item.get("description",""))
 			if kind==selected_tool: b.add_theme_stylebox_override("normal",Style.box(Color("3b514b"),9,Style.GREEN))
 			tools_box.add_child(b)
+
+func _open_hobbies() -> void:
+	_context_page="hobbies"; _refresh(); _show_tray(context_panel,true)
+
+func _rebuild_hobbies() -> void:
+	hobby_buttons.clear()
+	var member := _member()
+	if member.is_empty(): return
+	activity_label.text=str(member.name)+"’s hobbies"
+	for hobby: String in Hobbies.ORDER:
+		var definition: Dictionary=Hobbies.CATALOG[hobby]
+		var entry: Dictionary=member.hobbies[hobby]
+		var level := Hobbies.rank(entry)
+		var card := PanelContainer.new(); tools_box.add_child(card)
+		var card_style := Style.box(Style.PANEL,5,Style.EDGE)
+		card_style.content_margin_left=8; card_style.content_margin_right=8; card_style.content_margin_top=8; card_style.content_margin_bottom=8
+		card.add_theme_stylebox_override("panel",card_style)
+		var body := _vbox(card,4)
+		var head := HBoxContainer.new(); body.add_child(head)
+		var name := _label(str(definition.name),14); name.size_flags_horizontal=Control.SIZE_EXPAND_FILL; head.add_child(name)
+		head.add_child(_label("Rank %d / 5" % level,11,Style.GOLD))
+		body.add_child(_label(Hobbies.title(hobby,entry),12,Style.GREEN))
+		var progress := "Mastered · Yours to enjoy"
+		if level<5:
+			var current: int=int(entry.sessions)-int(Hobbies.THRESHOLDS[level-1])
+			var needed: int=int(Hobbies.THRESHOLDS[level])-int(Hobbies.THRESHOLDS[level-1])
+			progress="%d / %d practices to next rank" % [current,needed]
+			if Hobbies.remaining(entry,int(Session.state.day))==0: progress="Two practices today · More tomorrow"
+		body.add_child(_label(progress,11,Style.MUTED))
+		var benefit := _label(Hobbies.benefit(hobby,entry),11,Style.MUTED)
+		benefit.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; benefit.custom_minimum_size.x=200; body.add_child(benefit)
+		var option: Dictionary=_hobby_options.get(hobby,{"available":false,"status":"Unavailable here","detail":""})
+		var button := _button(str(definition.action) if option.available else str(option.status),func(): _send({"type":"practice_hobby","member_id":selected_member,"hobby":hobby}))
+		button.disabled=not option.available; button.tooltip_text=str(option.detail); button.add_theme_font_size_override("font_size",12); body.add_child(button); hobby_buttons[hobby]=button
+		if not option.available and option.status=="Unavailable here":
+			var reason := _label(str(option.detail),11,Style.GOLD); reason.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; reason.custom_minimum_size.x=200; body.add_child(reason)
+	var note := _label("Finish activities you choose. Two practices per hobby each day; progress stays while away.",12,Style.MUTED)
+	note.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; note.custom_minimum_size.x=200; context_box.add_child(note)
+
+func _announce_hobbies(family: Dictionary) -> void:
+	for member: Dictionary in family.get("members",[]):
+		for hobby: String in Hobbies.ORDER:
+			var entry: Dictionary=member.hobbies[hobby]
+			var key := str(member.id)+":"+hobby
+			var level := Hobbies.rank(entry)
+			if _hobby_seen.has(key) and level>int(_hobby_seen[key]) and hud.visible:
+				notice_label.text=str(member.name)+" became a "+Hobbies.title(hobby,entry).to_lower()+"! "+str(Hobbies.CATALOG[hobby].name)+" rank %d." % level
+				_notice_time=7.0; notice_panel.show(); Soundscape.play_ui("confirm")
+			_hobby_seen[key]=level

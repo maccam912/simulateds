@@ -108,7 +108,8 @@ or shell expressions.
   wall tile), and one Undo restores the whole area. Finishes have no resale bonus.
 - **Plan** shows the selected resident's actions, individual cancel buttons, and
   autonomy switch. **Wishes** gives optional activities, rewards, and a saved
-  personal journal. Wishes never expire; completed sets can renew on a later day.
+  personal journal. **Hobbies** tracks reading, gardening, and cooking, with five
+  lasting ranks and useful activity bonuses. Wishes never expire; completed sets can renew on a later day.
 - **Edit** beside Household (or **Household** in the game menu) changes the
   household name, both resident names, clothing/skin/hair colors, and hair style.
   Preview your choices, then Apply changes; Cancel or Escape leaves them alone.
@@ -223,3 +224,12 @@ Completing an activity yourself earns §40; finishing the set adds §80. Wishes
 never expire while you are away. After completing a set, a new one is available
 on a later game day. Autonomous activities still tend needs but do not earn wish
 rewards. Completed and queued wishes cannot be claimed repeatedly.
+
+**Hobbies** grow when a resident completes reading, gardening, or cooking that you
+chose, whether through the hobby panel, care, wishes, or a furnishing. Each hobby
+can gain two practices per game day; the five ranks require 0, 2, 5, 9, and 14 total
+practices. Each rank above the first adds 10% primary need recovery and a small
+secondary benefit (comfort from reading/cooking, fun from gardening). You can
+keep enjoying an activity after the daily practice limit. Milestones appear in
+the personal journal. Autonomy uses learned benefits without earning practice,
+and being away never removes progress.
