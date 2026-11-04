@@ -114,3 +114,11 @@ Fresh assessment: activities now have a small, understandable purpose. Watching
 them still reveals stiff movement and almost identical poses, and midnight looks
 like midday. Next: resident movement/activity presentation and day/night lighting,
 while preserving authoritative positions and reduced-motion preferences.
+
+### Build iteration reliability
+
+Repeated feature pushes were canceling Windows/Android jobs before native builds
+and exports finished. Push workflows now let an active run finish while retaining
+the newest pending run; pull-request revisions still cancel superseded work.
+This follows [GitHub's documented concurrency behavior](https://docs.github.com/en/actions/concepts/workflows-and-actions/concurrency).
+The change also gives completed builds a chance to save their native caches.
