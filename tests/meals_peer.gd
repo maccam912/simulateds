@@ -133,6 +133,12 @@ func _client(index: String) -> void:
 	var places := {}
 	var diners: Array=preload("res://game/shared_leisure.gd").players(session.state,home,id,false)
 	assert(diners.size()==4)
+	var presence: Dictionary=preload("res://game/neighborhood.gd").cards(session.state,identity).filter(func(card): return card.id==home)[0]
+	assert(presence.people.size()==4 and presence.playing and presence.tooltip.contains("Visiting"))
+	if index=="2":
+		var empty_home: Dictionary=preload("res://game/neighborhood.gd").cards(session.state,identity).filter(func(card): return card.id==own_home)[0]
+		assert(empty_home.playing and empty_home.roster=="Nobody here")
+
 	for resident: Dictionary in diners:
 		var place: Vector2i=preload("res://game/shared_leisure.gd").place(resident)
 		assert(not places.has(place)); places[place]=true
@@ -158,6 +164,9 @@ func _client(index: String) -> void:
 			if not session.state.families[owner].online: break
 			await create_timer(0.1).timeout
 		assert(not session.state.families[owner].online)
+		var away_card: Dictionary=preload("res://game/neighborhood.gd").cards(session.state,identity).filter(func(card): return card.id==home)[0]
+		assert(not away_card.playing and away_card.people.size()==4 and away_card.status=="Owner away · Guests playing" and away_card.guest_players==1)
+
 		await _meal(home,id,member,"eat"); await _wait_servings(home,id,3)
 		await _command({"type":"cancel","member_id":member})
 		assert(_table(home,id).meal.servings==3,"A started portion is consumed once even if eating stops")
@@ -182,6 +191,8 @@ func _client(index: String) -> void:
 		var owner: String=session.state.lots[home].owner
 		for resident: Dictionary in session.state.families[owner].members:
 			assert(resident.task.get("automatic",false) and resident.task.get("meal_action")=="eat" and resident.task.get("meal_taken",false))
+		var back_card: Dictionary=preload("res://game/neighborhood.gd").cards(session.state,identity).filter(func(card): return card.id==home)[0]
+		assert(back_card.playing and back_card.people.size()==4)
 		_flag(".autonomy-observed"); await _wait_flag(".meal-chosen")
 		for attempt in range(50):
 			var chosen := true

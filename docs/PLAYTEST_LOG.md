@@ -1918,3 +1918,44 @@ dining. Final focused checks reject a missing destination without mutation.
 Native and headless input checks directly select both arriving residents by their
 bodies, confirming the entrance-spacing improvement is usable. The hosted Intel
 macOS CI result remains pending; no platform export success is inferred here.
+
+
+## Seeing who is in the neighborhood
+
+The household-travel review found that choosing a destination still meant guessing
+from a generic Neighbor label. Neighborhood now shows four compact cards with
+owner availability, actual resident counts/names, and construction closures.
+Hover lists each resident's household, home/visitor status, player presence, and
+where the household's missing residents are visiting. A card only changes the
+view; Visit and Together… still choose who travels.
+
+The first native review exposed an ambiguity: an absent owner's lot can host an
+active visiting player. That card now says Owner away · Guests playing, with
+per-resident player details in the tooltip. A playing household can also have
+Nobody here when both residents are elsewhere. These distinctions come directly
+from accepted state, without additional commands or saved fields.
+
+Native injected-input playthroughs passed at 1440×900 and 1280×720 / 125% UI scale.
+They browsed all four lots, followed Violet's household visiting an absent Cedar
+household, used keyboard activation without moving anyone, visited with Alex's
+whole household, and watched construction recall update both rosters. Long names
+clip inside the cards while full text stays available on hover. Cards keep their
+Button identities and focus across remote visits, player absence, and renames.
+Reviewed captures include `build/neighborhood-overview-compact.png`,
+`build/neighborhood-away-visiting-compact.png`, and
+`build/neighborhood-construction-compact.png`.
+
+All 90 local suites passed. Final focused model and compact headless/native checks
+passed after clarifying guest-player presence. The real Iroh meal scenario also
+passes with card assertions for four residents visiting, an empty home belonging
+to an active player, the owner's absence with active guests still present, and
+reconnect. The CI recovery checkpoint is running Linux, Windows, and Android;
+its Intel macOS job is still queued according to the commit checks. Earlier run
+summaries lagged behind those checks, so no hosted export success is claimed.
+
+Fresh assessment: visiting is now easier to organize and understand. Stepping
+back to homebuilding, Copy room still depends on its source room remaining in the
+current layout. The next useful building improvement is a bounded library of
+saved room designs, so a player can keep a favorite arrangement while remodeling
+and place it again with the existing cost, access, rotation, and undo previews.
+This is proposed next work, not behavior in this checkpoint.

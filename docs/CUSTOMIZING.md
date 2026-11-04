@@ -22,6 +22,8 @@ household or an absent player.
 | `game/meals.gd` | Recipes, portions, accepted-plan reservations, meal/task validation, and cross-resident serving consistency |
 | `game/meal_panel.gd` | Recipe previews, preparation, free/reserved portions, eating, clearing leftovers, and exact command acknowledgements |
 | `game/meal_art.gd` | Shared original salad/sandwich platter art for tables and previews; meal poses/audio remain presentation only |
+| `game/neighborhood.gd` | Read-only owner/player presence, actual lot occupants, guest players, and residents visiting elsewhere |
+| `game/neighborhood_card.gd` | Stable focusable lot cards with clipped labels and complete tooltip detail |
 | `game/world.gd` | Serializable neighborhood state; ownership, construction, pathfinding, actions, autonomy, and needs |
 | `game/main.gd` | Main scene UI, selection, tool catalog, connection panel, and command submission |
 | `game/lot_view.gd` | Isometric rendering, tile picking, placement preview, pan, and zoom |
@@ -128,3 +130,11 @@ forced returns advance the existing action counter so an old choice cannot be
 revived by a return trip. No new save fields are required. Ordinary arrivals and
 construction recalls use the same nearest-first entrance flood; forced returns
 retain a fallback for legacy homes with blocked entrances.
+
+
+Neighborhood presence is derived from accepted `family.online` and
+`member.lot_id` values. Never infer occupancy from home ownership or player
+presence: an active household may be visiting elsewhere, and an absent owner's
+home can contain another player's visitors. Cards retain their Button identities
+while labels update, so multiplayer changes do not steal keyboard focus. Card
+activation only selects the view; travel remains an explicit command.

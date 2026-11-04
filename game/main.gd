@@ -10,6 +10,8 @@ const Catalog = preload("res://game/catalog.gd")
 const WallArt = preload("res://game/wall_art.gd")
 const MealPanel = preload("res://game/meal_panel.gd")
 const TravelPanel = preload("res://game/travel_panel.gd")
+const Neighborhood = preload("res://game/neighborhood.gd")
+const NeighborhoodCard = preload("res://game/neighborhood_card.gd")
 const Meals = preload("res://game/meals.gd")
 const WallArtPanel = preload("res://game/wall_art_panel.gd")
 const Paintings = preload("res://game/paintings.gd")
@@ -44,6 +46,8 @@ var clock_panel: PanelContainer
 var time_buttons: Dictionary={}
 var funds_label: Label
 var neighborhood_title: Label
+var neighborhood_button: Button
+var lot_buttons := {}
 var lot_title: Label
 var lot_subtitle: Label
 var mode_button: Button
@@ -265,11 +269,11 @@ func _build_ui() -> void:
 	lot_subtitle.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; lot_subtitle.clip_text=true
 	location_box.add_child(lot_subtitle)
 	var location_actions := HBoxContainer.new(); location_box.add_child(location_actions)
-	location_actions.add_child(_button("Neighborhood",func(): _show_tray(neighborhood_panel,not neighborhood_panel.visible)))
+	neighborhood_button=_button("Neighborhood",func(): _show_tray(neighborhood_panel,not neighborhood_panel.visible)); location_actions.add_child(neighborhood_button)
 	var center := _button("Center",func(): lot_view.center_lot()); center.tooltip_text="Center view · Reset pan and zoom"; location_actions.add_child(center)
 	mail_button=_button("Mail",func(): mail_requested.emit()); location_actions.add_child(mail_button)
 
-	neighborhood_panel = _hud_panel(Rect2(16,146,260,330))
+	neighborhood_panel = _hud_panel(Rect2(16,146,260,394))
 	neighborhood_panel.visible = false
 	var neighborhood := _vbox(neighborhood_panel,8)
 	var neighborhood_head := HBoxContainer.new(); neighborhood.add_child(neighborhood_head)
@@ -557,22 +561,15 @@ func _refresh() -> void:
 		connection_label.text="Shared clock · "+("Hosting" if Session.role=="host" else "Joining…" if Session.role=="joining" else "Connected")
 		if not Rooms.code.is_empty(): connection_label.text+=" · "+Rooms.code
 	connection_label.tooltip_text=str(Session.status)
-	var lot_signature := viewed_lot+str(state.get("lots",{}).size())
-	for row in state.get("lots",{}).values():
-		lot_signature+=str(row.get("owner",""))+str(row.get("building",false))
+	var lot_cards := Neighborhood.cards(state,Session.profile_id)
+	var lot_signature := str(lot_cards.map(func(card): return str(card.id)))
 	if lot_signature!=_lots_signature:
-		_lots_signature=lot_signature
-		_clear(lots_box)
-		for id in state.get("lots",{}):
-			var other: Dictionary=state.lots[id]
-			var subtitle := "Your household" if str(other.owner)==str(Session.profile_id) else "Available lot" if str(other.owner).is_empty() else "Neighbor"
-			if other.building: subtitle="Under construction"
-			var b := _button(str(other.name)+"\n"+subtitle,func(): _select_lot(str(id)))
-			b.alignment=HORIZONTAL_ALIGNMENT_LEFT
-			b.add_theme_font_size_override("font_size",13)
-			if str(id)==viewed_lot:
-				b.add_theme_stylebox_override("normal",Style.box(Color("3b514b"),9,Style.GREEN))
-			lots_box.add_child(b)
+		_lots_signature=lot_signature; _clear(lots_box); lot_buttons.clear()
+		for card: Dictionary in lot_cards:
+			var id: String=card.id
+			var button:=NeighborhoodCard.new(); button.pressed.connect(func(): _select_lot(id)); lots_box.add_child(button)
+			Soundscape.attach_controls(button); lot_buttons[id]=button
+	for card: Dictionary in lot_cards: lot_buttons[card.id].refresh(card,str(card.id)==viewed_lot)
 	var family_signature := selected_member+str(family.get("name",""))+str(family.get("identity_revision",0))+str(family.get("members",[]).size())
 	if family_signature!=_family_signature:
 		_family_signature=family_signature; _clear(family_box)

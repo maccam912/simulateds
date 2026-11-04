@@ -1025,3 +1025,25 @@ dining. Final focused checks reject a missing destination without mutation.
 Native and headless input checks directly select both arriving residents by their
 bodies, confirming the entrance-spacing improvement is usable. The hosted Intel
 macOS CI result remains pending; no platform export success is inferred here.
+
+
+## Neighborhood presence cards
+
+All 90 local suites pass. `neighborhood` checks read-only discovery, actual
+occupants versus owner availability, home/visitor ordering, active guests in an
+absent owner's home, empty homes whose player is still active, disconnect recall,
+construction closure, renames, irrelevant activity changes, and accepted JSON
+snapshot restoration. The final focused model check includes guest-player status.
+
+Native `neighborhood_ui` passes at 1440×900 and 1280×720 / 125% UI scale, with
+final compact headless/native checks after the guest-presence clarification. Four
+cards fit above household selection; long labels stay inside them. Mouse and
+keyboard activation only change the view, without click-through or travel.
+Remote changes retain the existing card and keyboard focus. Group visiting and
+construction recall update both affected rosters from accepted state.
+
+The final separate-process Iroh meal scenario passes with presence checks before
+dining, during the owner's absence with visitors still present, and after
+reconnect. Native injected-input evidence does not establish human-family play,
+physical Android behavior, or overnight persistence. Hosted Intel macOS CI is
+still queued at this checkpoint; no export result is inferred from local tests.

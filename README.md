@@ -105,7 +105,10 @@ or shell expressions.
   lot. The host finds a reachable option, prefers free furnishings, and keeps
   existing player orders in sequence. **Care** beside the resident’s mood shows
   suggestions, planned activities, and explanations for unavailable furnishings.
-- Open **Neighborhood** to choose a lot. **Visit lot** sends the
+- Open **Neighborhood** to choose a lot. Its cards show who is there now,
+  whether the owner is playing or away, active visiting players, and construction
+  closures. Hover for the full resident list, household names, and where absent
+  residents are visiting. Viewing a lot does not move anyone. **Visit lot** sends the
   selected resident there; **Go home** returns them to their own lot.
   **Together…** opens a travel roster for the viewed lot. Choose one or both
   household residents, review their current locations and planned activity

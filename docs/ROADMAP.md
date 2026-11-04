@@ -112,6 +112,11 @@ preview shows locations and planned counts, cancels only chosen travellers' work
 keeps residents already at the destination untouched, and uses separate entrance
 spaces. Changed plans or a closed destination reject the complete group.
 
+Neighborhood cards now show current occupants, owner availability, active guest
+players, and construction closure. Full resident/household details and locations
+of household members visiting elsewhere appear on hover. Updates retain keyboard
+focus, and browsing never moves residents.
+
 ## 1. Make homebuilding dependable
 
 - Edge-based walls, room detection, door orientation, and roofs. Wall-mounted
