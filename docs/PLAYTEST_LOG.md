@@ -142,3 +142,23 @@ not device playtests.
 Fresh assessment: residents communicate what they are doing more clearly, but
 the neighborhood still looks identical at midnight and noon. Next: restrained
 day/night lighting with warm home lights and a readable construction workspace.
+
+## 2026-11-03 · A neighborhood after dark
+
+The shared clock now changes the exterior through dawn, day, evening, and night.
+Automatic home lights keep interiors warm and readable, street lamps light the
+pavement, and construction retains a visible property grid after dark. Time-of-day
+changes affect the world drawing, not HUD controls or placement feedback.
+
+Validation: twelve local suites passed, including midnight wrapping and continuous
+light transitions. Graphical captures passed at four times of day, with assertions
+for darker exterior pixels, readable interiors, and unchanged HUD control colors.
+Night construction was inspected at 1440×900 and at 1280×720 with 125% UI scale and
+low scenery detail. The initial HUD comparison sampled a translucent panel, which
+naturally reflects the changed background; the corrected check samples an opaque
+control. No simulation, save-format, or protocol changes were needed.
+
+Fresh assessment: the world now conveys both activity and time. The largest
+remaining friction in the core loop is construction speed: extending a house
+requires many isolated tile clicks. Next: room-sized construction with an upfront
+price and one undo step, preserving authoritative placement validation.

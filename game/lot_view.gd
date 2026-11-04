@@ -7,7 +7,9 @@ signal entity_clicked(target: Dictionary)
 const Catalog = preload("res://game/catalog.gd")
 const BuildRules = preload("res://game/build_rules.gd")
 const ResidentMotion = preload("res://game/resident_motion.gd")
+const Daylight = preload("res://game/daylight.gd")
 var motion = ResidentMotion.new()
+var light: Dictionary = Daylight.sample(480)
 var world: Dictionary = {}
 var lot_id := "lot_1"
 var selected_member := ""
@@ -148,6 +150,7 @@ func _draw() -> void:
 	_hit_regions.clear()
 	_drawing_target = {}
 	_layout()
+	light=Daylight.sample(float(world.get("day_minutes",480)))
 	_draw_neighborhood_ground()
 	if not world.has("lots") or not world.lots.has(lot_id):
 		draw_string(_font, Vector2(40,80), "Preparing your neighborhood…", HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color("34514c"))
@@ -160,26 +163,6 @@ func _draw() -> void:
 	for cell in lot.get("floors", []): floors[Vector2i(int(cell[0]),int(cell[1]))] = true
 	for cell in lot.get("walls", []): walls[Vector2i(int(cell[0]),int(cell[1]))] = true
 	for cell in lot.get("doors", []): doors[Vector2i(int(cell[0]),int(cell[1]))] = true
-	# A property lives in the neighborhood, rather than on an isolated plinth.
-	# Lawn is continuous; only construction exposes the editable grid.
-	if building:
-		_diamond(0,0,16,16,Color(0.89,0.96,0.72,0.045),0,Color(0.95,0.97,0.78,0.65))
-	for depth in range(31):
-		for x in range(16):
-			var y := depth-x
-			if y < 0 or y > 15: continue
-			var cell := Vector2i(x,y)
-			if building:
-				_diamond(x,y,1,1,Color.TRANSPARENT,0,Color(0.30,0.41,0.24,0.30))
-			# A garden path leads from the front door to the public sidewalk.
-			if x == 8 and y >= 11:
-				_diamond(x,y,1,1,Color("c5c4a5"),0,Color("b1b496"))
-			if floors.has(cell):
-				var floor_color := Color("d9bd93") if (x+y)%2==0 else Color("d5b58c")
-				_diamond(x,y,1,1,floor_color,1,Color("b59b7c"))
-				var a := grid_point(x+0.5,y)+Vector2(0,-1)
-				var b := grid_point(x+0.5,y+1)+Vector2(0,-1)
-				draw_line(a,b,Color("c6a880"),0.7,true)
 	# Planting sits along the property edges without boxing the entire view in.
 	for y in [1,3,5,7,9,11]:
 		_bush(0.35,float(y),scale_factor)
@@ -188,6 +171,28 @@ func _draw() -> void:
 	if Preferences.values.get("quality","high")=="high":
 		for location in [Vector2(-3,2), Vector2(2,-3), Vector2(10,-4), Vector2(17,1), Vector2(-3,11)]:
 			_tree(location.x,location.y,scale_factor)
+	draw_rect(Rect2(Vector2.ZERO,size),light.overlay)
+	# A property lives in the neighborhood, rather than on an isolated plinth.
+	# Lawn is continuous; only construction exposes the editable grid.
+	if building:
+		_diamond(0,0,16,16,Color(0.89,0.96,0.72,lerpf(0.045,0.12,float(light.night))),0,Color(0.95,0.97,0.78,0.65))
+	for depth in range(31):
+		for x in range(16):
+			var y := depth-x
+			if y < 0 or y > 15: continue
+			var cell := Vector2i(x,y)
+			if building:
+				_diamond(x,y,1,1,Color.TRANSPARENT,0,Color(0.30,0.41,0.24,0.30).lerp(Color(0.85,0.87,0.62,0.45),float(light.night)))
+			# A garden path leads from the front door to the public sidewalk.
+			if x == 8 and y >= 11:
+				_diamond(x,y,1,1,Daylight.outside(Color("c5c4a5"),light),0,Daylight.outside(Color("b1b496"),light))
+			if floors.has(cell):
+				var floor_color := Color("d9bd93") if (x+y)%2==0 else Color("d5b58c")
+				floor_color=floor_color.lerp(Color("e8c38c"),float(light.night)*0.35)
+				_diamond(x,y,1,1,floor_color,1,Color("b59b7c"))
+				var a := grid_point(x+0.5,y)+Vector2(0,-1)
+				var b := grid_point(x+0.5,y+1)+Vector2(0,-1)
+				draw_line(a,b,Color("c6a880"),0.7,true)
 	# Paint rear walls first. Near walls use a low cutaway for readable interiors.
 	for depth in range(31):
 		for x in range(16):
@@ -196,7 +201,7 @@ func _draw() -> void:
 			var cell := Vector2i(x,y)
 			if walls.has(cell):
 				var h := (39.0 if y <= 3 or x <= 3 else 8.0)*scale_factor
-				_block(x,y,1,1,h,Color("e6e2c6"))
+				_block(x,y,1,1,h,Color("e6e2c6").lerp(Color("f3dfb6"),float(light.night)*0.45))
 				if h > 20*scale_factor:
 					_diamond(x+0.04,y+0.04,0.92,0.92,Color("f6efd7"),h)
 			if doors.has(cell):
@@ -219,6 +224,7 @@ func _draw() -> void:
 			_furnishing(entity.object,scale_factor)
 		else:
 			_resident(entity.member, entity.family,scale_factor)
+	_draw_street_lights(scale_factor)
 	hover_target = hit_target(_pointer)
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if not building and not hover_target.is_empty() else Control.CURSOR_ARROW
 	if _in_bounds(hover_cell) and (building or hover_target.is_empty()):
@@ -447,7 +453,7 @@ func _resident(member: Dictionary, family: Dictionary,s: float) -> void:
 		_poly([q+Vector2(0,-7)*s,q+Vector2(4,0)*s,q+Vector2(0,7)*s,q+Vector2(-4,0)*s],Color("e9d695"),Color("fff3b4"))
 		var text := str(member.name)
 		var text_width := _font.get_string_size(text,HORIZONTAL_ALIGNMENT_LEFT,-1,13).x
-		draw_string(_font,p+Vector2(-text_width*0.5,18*s),text,HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("263f36"))
+		_resident_name(p+Vector2(-text_width*0.5,18*s),text)
 
 func _activity_pose(member: Dictionary) -> Dictionary:
 	if motion.moving(str(member.id)): return {}
@@ -485,7 +491,7 @@ func _sleeping_resident(member: Dictionary,family: Dictionary,object: Dictionary
 	if str(member.id)==selected_member:
 		draw_arc(head,10*s,0,TAU,24,Color("fff2bd"),1.5*s,true)
 		var width := _font.get_string_size(str(member.name),HORIZONTAL_ALIGNMENT_LEFT,-1,13).x
-		draw_string(_font,feet+Vector2(-width*0.5,20*s),str(member.name),HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("263f36"))
+		_resident_name(feet+Vector2(-width*0.5,20*s),str(member.name))
 
 func _activity_prop(p: Vector2,kind: String,s: float,reduced: bool) -> void:
 	match kind:
@@ -516,3 +522,27 @@ func _activity_prop(p: Vector2,kind: String,s: float,reduced: bool) -> void:
 			var q := p+Vector2(13,-43)*s
 			draw_style_box(preload("res://game/style.gd").box(Color("304b4f"),3),Rect2(q,Vector2(18,14)*s))
 			draw_line(q+Vector2(5,5)*s,q+Vector2(14,5)*s,Color("b9d69f"),2*s,true)
+
+func _resident_name(position: Vector2, text: String) -> void:
+	if float(light.night)>0.4:
+		draw_string_outline(_font,position,text,HORIZONTAL_ALIGNMENT_LEFT,-1,13,3,Color("26363b"))
+		draw_string(_font,position,text,HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("fff1ce"))
+	else:
+		draw_string(_font,position,text,HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("263f36"))
+
+func _draw_street_lights(s: float) -> void:
+	var night := float(light.night)
+	for x in [2.0,13.0]:
+		var p := grid_point(x,16.65)
+		if night>0.01:
+			draw_set_transform(p,0,Vector2(1,0.48))
+			for ring in range(24,0,-1):
+				draw_circle(Vector2.ZERO,float(ring)*2.5*s,Color(1.0,0.78,0.39,night*0.007))
+			draw_set_transform(Vector2.ZERO)
+		draw_line(p,p+Vector2(0,-49)*s,Daylight.outside(Color("58665c"),light),3*s,true)
+		draw_line(p+Vector2(0,-49)*s,p+Vector2(8,-49)*s,Daylight.outside(Color("58665c"),light),3*s,true)
+		var bulb := p+Vector2(8,-46)*s
+		if night>0.01:
+			for ring in range(12,0,-1):
+				draw_circle(bulb,float(ring)*1.33*s,Color(1.0,0.86,0.55,night*0.014))
+		draw_rect(Rect2(bulb-Vector2(4,2)*s,Vector2(8,5)*s),Color("fbe5a3") if night>0.2 else Color("a4ae91"))

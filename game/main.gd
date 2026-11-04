@@ -309,6 +309,7 @@ func _refresh() -> void:
 	var minutes := int(float(state.get("day_minutes",480)))
 	var day := int(state.get("day",1))
 	clock_label.text="DAY %02d  ·  %02d:%02d" % [day,int(minutes%1440/60),minutes%60]
+	clock_label.tooltip_text=preload("res://game/daylight.gd").sample(minutes).phase+" · The neighborhood shares one clock."
 	connection_label.text="%s · %s" % [str(Session.role).capitalize(),Rooms.code] if not Rooms.code.is_empty() else ("Local neighborhood" if Session.role=="offline" else str(Session.status).left(32))
 	var lot_signature := viewed_lot+str(state.get("lots",{}).size())
 	for row in state.get("lots",{}).values():

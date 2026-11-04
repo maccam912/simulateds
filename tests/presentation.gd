@@ -1,6 +1,7 @@
 extends SceneTree
 const World = preload("res://game/world.gd")
 const Motion = preload("res://game/resident_motion.gd")
+const Daylight = preload("res://game/daylight.gd")
 
 func _initialize() -> void:
 	call_deferred("_run")
@@ -37,5 +38,14 @@ func _run() -> void:
 	assert(not motion.tracks.has(member.id),"Travel clears old lot motion")
 	motion.update(world.state,"lot_2",0.1,false)
 	assert(motion.position(member)==Vector2(14,14),"New lot begins at accepted arrival")
+	var midnight: Dictionary=Daylight.sample(0)
+	var noon: Dictionary=Daylight.sample(720)
+	assert(midnight==Daylight.sample(1440) and midnight==Daylight.sample(-1440),"Light wraps across midnight")
+	assert(float(midnight.night)>float(noon.night) and float(noon.overlay.a)==0.0)
+	for minute in range(1440):
+		var light: Dictionary=Daylight.sample(minute)
+		assert(float(light.night)>=0 and float(light.night)<=1)
+		var next: Dictionary=Daylight.sample(minute+1)
+		assert(absf(float(light.overlay.a)-float(next.overlay.a))<0.02,"Sunrise and sunset do not flash between states")
 	print("PRESENTATION_PASS")
 	quit()

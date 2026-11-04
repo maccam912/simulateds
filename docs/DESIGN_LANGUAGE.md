@@ -72,14 +72,22 @@ action or make the player wait through repeated introductions.
 - Closing: 100–140 ms or immediate when input ownership changes.
 - Main-menu transition: 220–300 ms fade; the background remains a place.
 - Save feedback: brief confirmation, then return to normal. No false progress bar.
-- Resident movement and interaction: future animation should express the active
-  task and stop when the task changes. No ornamental bouncing of the whole HUD.
+- Resident movement and interaction express the active task and stop when the
+  task changes. Walking follows accepted routes; resting uses the furnishing;
+  simple props distinguish everyday activities. No bouncing of the whole HUD.
 
 Reduced motion removes slides, scale pulses, and camera flourishes. Essential
 state changes remain immediate. Splash screens are skippable; loading indicators
 report real work rather than holding the player for a fixed presentation beat.
-The foundation console uses a short fade and immediate safe close. Broader
-character animation remains a later art pass.
+The foundation console uses a short fade and immediate safe close. Reduced
+motion also bypasses movement interpolation and freezes decorative activity
+motion. Accepted simulation positions and activity state remain authoritative.
+
+The shared clock drives a smooth dawn/evening palette and a cool night exterior.
+Warm automatic home lights keep the cutaway interior readable. Street lamps add
+small pools of light. Construction brightens the property grid at night, while
+HUD controls and placement feedback retain their normal contrast. Lighting is
+presentation only; it does not create an electricity or visibility mechanic.
 
 ## Sound and music
 
