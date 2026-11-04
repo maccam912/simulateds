@@ -234,6 +234,9 @@ Use **↑ / ↓** to move upcoming activities earlier or later. The current acti
 continues, and occupied furniture keeps its reservation. You can move another
 activity ahead of a wait without canceling either one. Keyboard focus follows
 the edited row; delayed multiplayer edits are rejected if the plan has changed.
+The active row shows travel, who is keeping a furnishing busy, or activity
+progress with an estimated time in neighborhood-clock minutes. Estimates account
+for needs filling early and hobby bonuses. Progress waits with a paused world.
 Autonomy is saved separately for each resident. Direct orders take priority over
 automatic activities. Beds and bathroom fixtures allow one user at a time;
 waiting residents keep their place in their own plan.

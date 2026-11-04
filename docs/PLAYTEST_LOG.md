@@ -691,3 +691,35 @@ reveals the next usability gap: the active row says what is happening but does
 not distinguish travel, waiting, and progress toward finishing well enough.
 Next: clear, quiet activity feedback based on accepted state, without stealing
 focus or adding another permanent world panel.
+
+## 2026-11-04 · See how the day is going
+
+The Plan tray now distinguishes travel, arrival, waiting for another resident,
+and an activity in progress. Activities get a quiet progress bar and approximate
+remaining time in neighborhood-clock minutes. The estimate accounts for needs
+filling early, directed activity minimums, and hobby bonuses. The simulation
+and estimate share personal restoration rates after the first completion check
+exposed the sofa's extra comfort gain. Nearby social effects can still change an
+estimate as play continues. Conversation partners with no task of their own are
+described as chatting, rather than falsely shown as free.
+
+Labels and bars update in place from accepted state, preserving button identity,
+focus, and scroll through travel-to-activity changes and replacement snapshots.
+No local animation advances progress during pause or between snapshots. Travel
+and waiting have plain text without a misleading progress bar. The optional
+tray remains the only home for this extra detail.
+
+Validation: all 30 local suites, real Iroh host/two-client reconnect, and server
+startup passed. Completion comparisons covered nine furnishings at three need
+levels with both automatic and directed timing, plus hobby bonuses. Standard
+and compact graphical checks passed for travel, activity, waiting, and passive
+conversation. The compact household/favorite-pastime rendering regression also
+passed with the updated Plan rows. Captures wait for displayed movement to settle after manually
+advancing the fixture. The prior plan-editing checkpoint passed all four
+platform CI jobs. Human and physical-device playtests remain open.
+
+Fresh assessment: care and planning are now legible enough to watch a household
+work through a day. The next opportunity for fun is a reason to spend time with a
+visitor beyond a chat. Next: a tabletop recreation activity that can be enjoyed
+alone or together, with voluntary participation, clear shared benefits, and no
+takeover of another player's resident or existing plans.

@@ -83,7 +83,7 @@ service mode was not repeated for this update.
 ## Still open
 
 The subsequent feature checks are recorded in [PLAYTEST_LOG.md](PLAYTEST_LOG.md).
-The current local suite contains twenty-nine model/application suites, plus real Iroh
+The current local suite contains thirty model/application suites, plus real Iroh
 host/two-client reconnect and dedicated-server startup. The room-construction
 checkpoint passed Linux, Windows, macOS, and Android CI builds/exports. The later
 household checkpoint passed the three desktop jobs; Android built, tested,
@@ -183,6 +183,19 @@ after reordering, boundaries, and completed two-resident morning plans. Standard
 and compact graphical checks passed; plan confirmations were moved beside the
 tray after visual inspection exposed an overlap. Follow-up plan, HUD, camera,
 and application checks passed after that layout polish.
+
+The plan-editing checkpoint passed all four platform CI jobs. Activity-feedback
+checks compare estimated and actual completion for all nine furnishings at low,
+high, and full needs, with automatic/player-directed timing and hobby bonuses.
+They cover travel, arrival, waiting, missing furnishings, construction,
+conversation timing and passive participation, non-mutating derivation,
+monotonic ordinary progress, pause, and replacement snapshots. The first
+comparison exposed the sofa's extra comfort; the simulation and estimate now
+share personal restoration rates. All 30 suites and real Iroh/server checks
+passed. Standard/compact graphical feedback checks passed, including control
+identity and focus through the travel-to-activity transition. Remaining time is
+an estimate: nearby social effects or changed needs can change it. The UI
+snapshot-replacement check is local, not a multiplayer visual playtest.
 
 Physical Android operation, cross-OS multiplayer, exported game packages,
 production authentication, public matchmaking abuse resistance, long-term

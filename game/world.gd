@@ -19,6 +19,8 @@ const SCHEMA := 1
 const MAX_FAMILIES := 4
 const MAX_QUEUE := 8
 const MAX_BUILD_HISTORY := 32
+const MINUTES_PER_SECOND := 3.0
+const MIN_ACTIVITY_TIME := 4.0
 const BUILD_FIELDS := ["floors", "walls", "doors", "objects", "funds", "finishes"]
 const NEEDS := ["hunger", "energy", "hygiene", "bladder", "fun", "social", "comfort"]
 const DECAY := {"hunger":0.13, "energy":0.08, "hygiene":0.10, "bladder":0.15, "fun":0.12, "social":0.09, "comfort":0.07}
@@ -384,7 +386,7 @@ func step(delta: float) -> void:
 		return
 	delta = minf(delta, 1.0)
 	state.tick += 1
-	state.day_minutes += delta * 3.0
+	state.day_minutes += delta * MINUTES_PER_SECOND
 	if state.day_minutes >= 1440.0:
 		state.day_minutes -= 1440.0
 		state.day += 1
@@ -396,7 +398,7 @@ func step(delta: float) -> void:
 			if HomeNews.away(family): family.home_news.allowance+=allowance
 		_event("A new day. Households received their living allowance.")
 	for family: Dictionary in state.families.values():
-		if HomeNews.away(family): family.home_news.minutes+=delta*3.0
+		if HomeNews.away(family): family.home_news.minutes+=delta*MINUTES_PER_SECOND
 		if state.lots[family.home_lot].building:
 			continue
 		for member: Dictionary in family.members:
@@ -470,20 +472,16 @@ func _tick_member(member: Dictionary, lot: Dictionary, delta: float) -> void:
 	var definition: Dictionary = Catalog.ITEMS[object.kind]
 	member.action = ACTION_NAMES.get(object.kind, "Enjoying home")
 	var need: String = definition.need
-	member.needs[need] = minf(100.0, float(member.needs[need]) + float(definition.rate) * Hobbies.multiplier(member.hobbies,str(object.kind)) * delta)
-	var hobby := Hobbies.for_activity(str(object.kind))
-	if not hobby.is_empty():
-		var secondary: String=Hobbies.CATALOG[hobby].secondary
-		member.needs[secondary]=minf(100.0,float(member.needs[secondary])+(Hobbies.rank(member.hobbies[hobby])-1)*delta)
-	if object.kind == "bed" or object.kind == "sofa":
-		member.needs.comfort = minf(100.0, float(member.needs.comfort) + 2.0 * delta)
+	var rates := personal_activity_rates(member,str(object.kind))
+	for restored: String in rates:
+		member.needs[restored]=minf(100.0,float(member.needs[restored])+float(rates[restored])*delta)
 	if object.kind == "table":
 		for family: Dictionary in state.families.values():
 			for companion: Dictionary in family.members:
 				if companion.id != member.id and companion.lot_id == member.lot_id and _position(companion).distance_to(_position(member)) <= 4.0:
 					companion.needs.social = minf(100.0, float(companion.needs.social) + 2.0 * delta)
 	task.remaining -= delta
-	var minimum_time := 0.0 if task.get("automatic",false) else 4.0
+	var minimum_time := 0.0 if task.get("automatic",false) else MIN_ACTIVITY_TIME
 	if task.remaining <= 0.0 or (float(member.needs[need]) >= 99.0 and float(task.elapsed)>=minimum_time):
 		_finish_wish(member,task,str(object.kind))
 		_finish_hobby(member,task,str(object.kind))
@@ -494,6 +492,20 @@ func task_activity(task: Dictionary, lot_id: String) -> String:
 	if task.get("type")!="interact": return ""
 	if task.get("target_kind")=="member": return "chat"
 	return str(_object(state.lots[lot_id],str(task.get("target_id",""))).get("kind",""))
+
+static func personal_activity_rates(member: Dictionary, kind: String) -> Dictionary:
+	# The actor's restoration, shared by simulation and completion estimates.
+	# Tea's effect on nearby companions is applied separately by the simulation.
+	var definition: Dictionary=Catalog.ITEMS.get(kind,{})
+	if str(definition.get("need","")).is_empty(): return {}
+	var hobbies: Dictionary=member.get("hobbies",{})
+	var rates := {str(definition.need):float(definition.rate)*Hobbies.multiplier(hobbies,kind)}
+	var hobby := Hobbies.for_activity(kind)
+	if not hobby.is_empty():
+		var secondary: String=Hobbies.CATALOG[hobby].secondary
+		rates[secondary]=float(rates.get(secondary,0.0))+Hobbies.rank(hobbies.get(hobby,{}))-1
+	if kind in ["bed","sofa"]: rates.comfort=float(rates.get("comfort",0.0))+2.0
+	return rates
 
 func care_status(member: Dictionary, need: String) -> String:
 	if Wellbeing.restores(task_activity(member.task,str(member.lot_id)),need): return "In progress"

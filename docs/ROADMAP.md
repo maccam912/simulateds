@@ -64,9 +64,9 @@ understandable result. Fuzz placement and reopening around residents/visitors.
   appearance editor and favorite pastimes are implemented for both residents.
 - Visible plans with queued activity reordering, interruption rules, autonomy
   controls, actionable need thoughts, and resident camera focus are implemented.
-  Improve feedback for travel, waiting, and activity completion progress.
+  Travel/waiting feedback and estimated activity progress are implemented.
 - Object reservations, shared activities, conversations, and basic relationships
-  are implemented. Add richer shared recreation and personality-driven choices.
+  are implemented. Add a voluntary shared tabletop game and richer recreation.
 - Activity poses and sparse positional sounds are implemented. Improve resident
   readability, thoughtful need cues, richer animation, and the original art pass.
 

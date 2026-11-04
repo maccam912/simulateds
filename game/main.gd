@@ -17,6 +17,7 @@ const HomeNews = preload("res://game/home_news.gd")
 const Pastimes = preload("res://game/pastimes.gd")
 const Appearance = preload("res://game/appearance.gd")
 const Wellbeing = preload("res://game/wellbeing.gd")
+const ActivityStatus = preload("res://game/activity_status.gd")
 const Finishes = preload("res://game/finishes.gd")
 const LotView = preload("res://game/lot_view.gd")
 var viewed_lot := ""
@@ -63,6 +64,9 @@ var plan_panel: PanelContainer
 var plan_box: VBoxContainer
 var plan_scroll: ScrollContainer
 var plan_controls: Dictionary = {}
+var plan_titles: Dictionary = {}
+var _plan_detail: Label
+var _plan_progress: ProgressBar
 var plan_title: Label
 var autonomy_button: Button
 var find_button: Button
@@ -524,7 +528,8 @@ func _refresh_plan(member: Dictionary) -> void:
 	tasks.append_array(member.queue)
 	var signature := selected_member + Pastimes.of(member) + str(member.get("autonomy",true)) + str(member.task.get("id","")) + (str(member.action) if member.task.is_empty() else "")
 	for task: Dictionary in tasks: signature += str(task.get("id",""))
-	if signature == _plan_signature: return
+	if signature == _plan_signature:
+		_update_plan_feedback(member); return
 	_plan_signature = signature
 	var focus_action := ""; var focus_control := ""
 	var focused := get_viewport().gui_get_focus_owner()
@@ -533,8 +538,9 @@ func _refresh_plan(member: Dictionary) -> void:
 	var scroll_position := plan_scroll.scroll_vertical
 	_clear(plan_box)
 	plan_controls.clear()
+	plan_titles.clear(); _plan_detail=null; _plan_progress=null
 	if tasks.is_empty():
-		var empty := _label("A little free time. Choose an activity or click something in the house.",13,Style.MUTED)
+		var empty := _label(str(ActivityStatus.sample(member,Session.state.lots[member.lot_id]).detail),13,Style.MUTED)
 		empty.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; empty.custom_minimum_size.x=270; plan_box.add_child(empty)
 	for task: Dictionary in tasks:
 		var row := HBoxContainer.new(); plan_box.add_child(row)
@@ -544,8 +550,17 @@ func _refresh_plan(member: Dictionary) -> void:
 		var favorite: bool=bool(task.get("automatic",false)) and Pastimes.matches(member,Session.world.task_activity(task,str(member.lot_id)))
 		var suffix := " · auto · favorite" if favorite else " · auto" if task.get("automatic",false) else ""
 		var label := _label(("NOW  " if current else "WAIT  " if waiting else "NEXT  ") + title + suffix,13,Style.GREEN if current else Style.TEXT)
-		label.size_flags_horizontal=Control.SIZE_EXPAND_FILL; label.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; label.tooltip_text=title+(" · A favorite pastime, chosen autonomously." if favorite else ""); row.add_child(label)
+		var content := _vbox(row,4); content.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+		label.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; label.tooltip_text=title+(" · A favorite pastime, chosen autonomously." if favorite else ""); content.add_child(label)
 		var action_id := str(task.get("id",""))
+		plan_titles[action_id]=label
+		if current or waiting:
+			_plan_detail=_label("",12,Style.MUTED); _plan_detail.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; content.add_child(_plan_detail)
+			_plan_progress=ProgressBar.new(); _plan_progress.max_value=1.0; _plan_progress.show_percentage=false; _plan_progress.custom_minimum_size.y=4; _plan_progress.mouse_filter=Control.MOUSE_FILTER_IGNORE
+			for part: String in ["background","fill"]:
+				var track := StyleBoxFlat.new(); track.bg_color=Style.INK if part=="background" else Style.GREEN; track.set_corner_radius_all(2)
+				_plan_progress.add_theme_stylebox_override(part,track)
+			content.add_child(_plan_progress)
 		plan_controls[action_id]={}
 		if not current:
 			var index: int=member.queue.find(task)
@@ -562,7 +577,16 @@ func _refresh_plan(member: Dictionary) -> void:
 		var cancel := _button("×",func(): _send({"type":"remove_action","member_id":str(member.id),"action_id":action_id}))
 		cancel.tooltip_text="Cancel " + title; row.add_child(cancel)
 		cancel.set_meta("plan_action",action_id); cancel.set_meta("plan_control","cancel"); plan_controls[action_id].cancel=cancel
+	_update_plan_feedback(member)
 	call_deferred("_restore_plan_view",selected_member,focus_action,focus_control,scroll_position)
+
+func _update_plan_feedback(member: Dictionary) -> void:
+	if _plan_detail==null or _plan_progress==null: return
+	var status := ActivityStatus.sample(member,Session.state.lots[member.lot_id])
+	_plan_detail.text=str(status.detail)
+	_plan_detail.tooltip_text=str(status.detail)+( "\nEstimated time on the neighborhood clock. A fulfilled need can shorten an activity." if status.phase=="activity" else "")
+	_plan_progress.visible=float(status.progress)>=0.0
+	if _plan_progress.visible: _plan_progress.value=float(status.progress)
 
 func _restore_plan_view(member_id: String, action_id: String, control_key: String, scroll_position: int) -> void:
 	if member_id!=selected_member: return

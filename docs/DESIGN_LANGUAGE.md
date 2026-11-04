@@ -171,6 +171,14 @@ confirmation controls the visible order; a changed plan gets a useful rejection.
 Confirmation messages sit beside an open Plan tray and grow upward above the
 household controls, so feedback cannot cover the next edit.
 
+Within the active Plan row, travel and waiting use plain status text. Only an
+activity in progress gets a thin determinate bar and an approximate remaining
+time in neighborhood-clock minutes. Derive progress from accepted state and
+shared restoration rules; no local timer can run ahead of a paused world or
+stale snapshot. Update existing labels and bars so focus and scroll stay put.
+An idle conversation partner is still participating and should be described as
+chatting rather than free. Keep all of this inside the optional Plan tray.
+
 ## Everyday personality
 
 A favorite pastime is a preference, not a level or a reward multiplier. Reading,

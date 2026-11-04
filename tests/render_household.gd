@@ -56,7 +56,7 @@ func _run() -> void:
 	session.world._choose_autonomy(member,session.state.lots[member.lot_id]); app.game._refresh()
 	await _click(app.game.queue_label.get_global_rect().get_center())
 	assert(app.game.plan_panel.visible and app.game.pastime_label.text=="Unwinds with: Reading")
-	assert("favorite" in app.game.plan_box.get_child(0).get_child(0).text,"Autonomous favorite is visible in the ordinary plan")
+	assert("favorite" in app.game.plan_titles[member.task.id].text,"Autonomous favorite is visible in the ordinary plan")
 	await _capture("pastime-plan")
 	app.game.plan_panel.hide()
 	await _capture("world")
