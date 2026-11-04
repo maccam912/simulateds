@@ -1,6 +1,6 @@
 # Validation record
 
-Checked locally on November 3, 2026. This record describes **Simulateds**, not the
+Checked locally on November 3–4, 2026. This record describes **Simulateds**, not the
 upstream template demo. Template validation does not establish that this game's
 changed simulation, protocol, saves, interface, or exported builds work.
 
@@ -82,12 +82,20 @@ service mode was not repeated for this update.
 
 ## Still open
 
+The subsequent feature checks are recorded in [PLAYTEST_LOG.md](PLAYTEST_LOG.md).
+The current local suite contains fifteen model/application suites, plus real Iroh
+host/two-client reconnect and dedicated-server startup. The room-construction
+checkpoint passed Linux, Windows, macOS, and Android CI builds/exports. The later
+household checkpoint passed the three desktop jobs; Android built, tested,
+exported, and uploaded artifacts but failed when the runner ran out of disk during
+cache saving. A cache-size fix is pushed and its new workflow is still running.
+
 Physical Android operation, cross-OS multiplayer, exported game packages,
 production authentication, public matchmaking abuse resistance, long-term
-balance, overnight simulation, packet impairment, GitHub Actions/release status,
+balance, overnight simulation, packet impairment, release status,
 and human family playtests require separate evidence. A local headless pass does
 not prove any of those. macOS Intel, Windows, Linux, Android, and server export
-presets/build infrastructure are inherited targets; they were not exported or
-validated as this game by the checks above.
+presets/build infrastructure are inherited targets. CI exports establish package
+creation; they do not establish device playability or cross-platform multiplayer.
 
 See [ROADMAP.md](ROADMAP.md) for the next acceptance gates.

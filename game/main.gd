@@ -8,6 +8,9 @@ const Style = preload("res://game/style.gd")
 const Catalog = preload("res://game/catalog.gd")
 const RoomPlan = preload("res://game/room_plan.gd")
 const Wishes = preload("res://game/wishes.gd")
+const Friendships = preload("res://game/friendships.gd")
+const Portrait = preload("res://game/resident_portrait.gd")
+const Appearance = preload("res://game/appearance.gd")
 const LotView = preload("res://game/lot_view.gd")
 var viewed_lot := ""
 var selected_member := ""
@@ -30,6 +33,10 @@ var context_box: VBoxContainer
 var activity_label: Label
 var needs_title: Label
 var wishes_button: Button
+var people_button: Button
+var social_buttons: Dictionary = {}
+var _social_focus := ""
+var _friend_seen: Dictionary = {}
 var _context_page := "activities"
 var _wish_seen: Dictionary = {}
 var queue_label: Button
@@ -239,7 +246,10 @@ func _build_ui() -> void:
 	var travel_row := HBoxContainer.new(); actions.add_child(travel_row)
 	visit_button = _button("Visit lot",_visit); visit_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; travel_row.add_child(visit_button)
 	home_button = _button("Go home",_go_home); home_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; travel_row.add_child(home_button)
-	var cancel := _button("Cancel current actions",func(): _send({"type":"cancel","member_id":selected_member})); cancel.add_theme_font_size_override("font_size",12); actions.add_child(cancel)
+	var social_row := HBoxContainer.new(); actions.add_child(social_row)
+	people_button=_button("People",_open_people); people_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; social_row.add_child(people_button)
+	var cancel := _button("Cancel actions",func(): _send({"type":"cancel","member_id":selected_member})); cancel.add_theme_font_size_override("font_size",12); social_row.add_child(cancel)
+	cancel.tooltip_text="Clear the selected resident’s current action and plan."
 
 	# Only the requested catalog/activity tray is visible; it never resizes the world.
 	context_panel = _hud_panel(Rect2(-288,146,272,400),Vector2(1,0))
@@ -289,7 +299,7 @@ func _refresh() -> void:
 		_view_context = view_context
 		viewed_lot = str(family.home_lot)
 		_selected_object = ""
-		_moving_object = ""; _move_request.clear(); _wish_seen.clear(); _room_anchor=Vector2i(-1,-1); _room_request.clear()
+		_moving_object = ""; _move_request.clear(); _wish_seen.clear(); _friend_seen.clear(); _room_anchor=Vector2i(-1,-1); _room_request.clear()
 	if viewed_lot.is_empty() or not state.get("lots",{}).has(viewed_lot):
 		viewed_lot = str(family.get("home_lot","lot_1"))
 	if selected_member.is_empty() and not family.get("members",[]).is_empty():
@@ -360,6 +370,7 @@ func _refresh() -> void:
 		_refresh_plan(member)
 		wishes_button.text="Wishes · %d/3" % Wishes.completed(member.get("wishes",{}))
 		_announce_wishes(family)
+		_announce_friendships(family)
 		for need in need_bars:
 			var value := float(member.get("needs",{}).get(need,100))
 			need_bars[need].value=value; need_values[need].text=str(int(value))
@@ -367,6 +378,7 @@ func _refresh() -> void:
 			need_bars[need].add_theme_stylebox_override("fill",Style.box(color,4))
 	var build_mode := building and mine
 	wishes_button.disabled=build_mode or member.is_empty()
+	people_button.disabled=build_mode or member.is_empty()
 	if build_mode != _last_build_mode:
 		_last_build_mode = build_mode
 		_show_tray(context_panel,build_mode)
@@ -376,6 +388,11 @@ func _refresh() -> void:
 	var tools_signature := str(building and mine)+selected_tool+_moving_object+str(_move_request.is_empty())+_selected_object+str(build_rotation)+viewed_lot+str(lot.get("revision",0))+_context_page+selected_member+str(_room_anchor)+str(_room_request.is_empty())
 	if _context_page=="wishes" and not build_mode:
 		tools_signature+=str(member.get("wishes",{}))+str(day)+str(member.get("task",{}).get("id",""))+str(member.get("queue",[]))
+	if _context_page=="people" and not build_mode:
+		tools_signature+=str(state.get("friendships",{}))+str(day)+str(member.get("task",{}).get("id",""))+str(member.get("queue",[]))
+		for household: Dictionary in state.families.values():
+			tools_signature+=str(household.get("identity_revision",0))+str(household.online)+str(state.lots[household.home_lot].building)
+			for resident: Dictionary in household.members: tools_signature+=str([resident.id,resident.lot_id,resident.task.get("id",""),resident.action])
 	if tools_signature!=_tools_signature:
 		_tools_signature=tools_signature
 		_rebuild_context(building and mine,lot)
@@ -445,6 +462,10 @@ func _clear(node: Node) -> void:
 		node.remove_child(child); child.queue_free()
 
 func _rebuild_context(building: bool, lot: Dictionary) -> void:
+	var follow_social := false
+	if _context_page=="people" and social_buttons.has(_social_focus) and is_instance_valid(social_buttons[_social_focus]):
+		var card: Control=social_buttons[_social_focus].get_parent().get_parent()
+		follow_social=tools_box.get_parent().get_global_rect().intersects(card.get_global_rect())
 	_clear(tools_box); _clear(context_box)
 	if building:
 		activity_label.text="Build & buy"
@@ -500,6 +521,9 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 		description.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; description.custom_minimum_size.x=200; context_box.add_child(description)
 	elif _context_page=="wishes":
 		_rebuild_wishes()
+	elif _context_page=="people":
+		_rebuild_people()
+		if follow_social: call_deferred("_follow_social",_social_focus)
 	else:
 		activity_label.text="Activities"
 		var shown: Dictionary={}
@@ -735,3 +759,86 @@ func _open_connection() -> void:
 	var note:=_label("Keep this device or a dedicated server running for friends to play at different times. Joining does not replace your private neighborhood.",12,Style.MUTED)
 	note.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; box.add_child(note)
 	connection_dialog.popup_centered()
+
+func _open_people() -> void:
+	_context_page="people"; _refresh(); _show_tray(context_panel,true)
+
+func _rebuild_people() -> void:
+	var member := _member()
+	if member.is_empty(): return
+	activity_label.text=str(member.name)+"’s people"
+	social_buttons.clear()
+	var rows: Array=[]
+	for family: Dictionary in Session.state.families.values():
+		for other: Dictionary in family.members:
+			if other.id==member.id: continue
+			rows.append({"member":other,"family":family,"bond":Friendships.bond(Session.state,str(member.id),str(other.id))})
+	rows.sort_custom(func(a,b):
+		var a_here: bool=a.member.lot_id==member.lot_id; var b_here: bool=b.member.lot_id==member.lot_id
+		if a_here!=b_here: return a_here
+		if int(a.bond.get("score",0))!=int(b.bond.get("score",0)): return int(a.bond.get("score",0))>int(b.bond.get("score",0))
+		return str(a.member.name)<str(b.member.name))
+	for row: Dictionary in rows:
+		var other: Dictionary=row.member; var family: Dictionary=row.family; var bond: Dictionary=row.bond
+		var card := PanelContainer.new(); tools_box.add_child(card)
+		var card_style := Style.box(Style.PANEL,5,Style.EDGE); card_style.content_margin_left=8; card_style.content_margin_right=8; card_style.content_margin_top=8; card_style.content_margin_bottom=8
+		card.add_theme_stylebox_override("panel",card_style)
+		var body := _vbox(card,5)
+		var head := HBoxContainer.new(); body.add_child(head)
+		var portrait := Portrait.new(); portrait.look=Appearance.of(other).duplicate(); head.add_child(portrait); portrait.custom_minimum_size=Vector2(42,64)
+		var info := _vbox(head,3); info.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+		var name := _label(str(other.name),14); name.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; name.clip_text=true; name.tooltip_text=str(other.name); info.add_child(name)
+		info.add_child(_label(Friendships.title(bond),12,Style.GREEN if int(bond.get("score",0))>=40 else Style.MUTED))
+		var place := _label("Here" if other.lot_id==member.lot_id else str(Session.state.lots[other.lot_id].name),11,Style.MUTED)
+		place.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; place.clip_text=true; info.add_child(place)
+		var bar := ProgressBar.new(); bar.show_percentage=false; bar.value=int(bond.get("score",0)); bar.custom_minimum_size.y=7; body.add_child(bar)
+		for part: String in ["background","fill"]:
+			var bar_style := Style.box(Style.GREEN if part=="fill" else Style.INK,3)
+			bar_style.content_margin_top=0; bar_style.content_margin_bottom=0
+			bar.add_theme_stylebox_override(part,bar_style)
+		var status: String=Session.world.chat_status(member,str(other.id))
+		var here: bool=other.lot_id==member.lot_id
+		var building: bool=Session.state.lots[other.lot_id].building
+		var text := "Under construction" if building else status if not status.is_empty() else ("Queue chat" if Session.world._chat_busy(other,member) else "Chat") if here else "Visit"
+		var button := _button(text,func(): _social_action(str(other.id)))
+		button.disabled=building or not status.is_empty(); body.add_child(button); social_buttons[other.id]=button
+		var detail := ""
+		if not family.online: detail="Household away · Progress waits"
+		elif int(bond.get("score",0))>=100: detail="A lasting friendship"
+		elif Friendships.remaining(bond,int(Session.state.day))==0: detail="Caught up today · More tomorrow"
+		elif int(bond.get("last_chat_day",0))>0: detail="Last catch-up: day %d" % int(bond.last_chat_day)
+		if not detail.is_empty():
+			var hint := _label(detail,11,Style.MUTED); hint.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; hint.custom_minimum_size.x=200; body.add_child(hint)
+	var note := _label("Two catch-ups a day. No decay while away.",12,Style.MUTED)
+	note.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; note.custom_minimum_size.x=200; context_box.add_child(note)
+
+func _social_action(target_id: String) -> void:
+	_social_focus=target_id
+	var other := Session.world._find_member(target_id)
+	var member := _member()
+	if other.is_empty() or member.is_empty(): return
+	if other.lot_id==member.lot_id:
+		_send({"type":"interact","member_id":member.id,"lot_id":member.lot_id,"target_id":target_id})
+	else:
+		_send({"type":"visit","member_id":member.id,"lot_id":other.lot_id})
+		viewed_lot=str(other.lot_id); _refresh()
+
+func _announce_friendships(family: Dictionary) -> void:
+	var own_ids: Array=[]
+	for member: Dictionary in family.get("members",[]): own_ids.append(str(member.id))
+	for id: String in Session.state.get("friendships",{}):
+		var bond: Dictionary=Session.state.friendships[id]
+		if not own_ids.has(bond.a) and not own_ids.has(bond.b): continue
+		var before := int(_friend_seen.get(id,bond.score))
+		_friend_seen[id]=int(bond.score)
+		if not hud.visible: continue
+		if (before<40 and int(bond.score)>=40) or (before<70 and int(bond.score)>=70) or (before<100 and int(bond.score)==100):
+			var first := Session.world._find_member(str(bond.a)); var second := Session.world._find_member(str(bond.b))
+			notice_label.text=str(first.get("name","A resident"))+" and "+str(second.get("name","a neighbor"))+" are now "+Friendships.title(bond).to_lower()+"."
+			_notice_time=7.0; notice_panel.show(); Soundscape.play_ui("confirm")
+
+func _follow_social(target_id: String) -> void:
+	await get_tree().process_frame
+	if _context_page!="people" or target_id!=_social_focus or not context_panel.visible: return
+	if social_buttons.has(target_id) and is_instance_valid(social_buttons[target_id]):
+		tools_box.get_parent().ensure_control_visible(social_buttons[target_id].get_parent().get_parent())

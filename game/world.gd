@@ -5,6 +5,7 @@ const Catalog = preload("res://game/catalog.gd")
 const BuildRules = preload("res://game/build_rules.gd")
 const RoomPlan = preload("res://game/room_plan.gd")
 const Wishes = preload("res://game/wishes.gd")
+const Friendships = preload("res://game/friendships.gd")
 const Appearance = preload("res://game/appearance.gd")
 const HouseholdProfile = preload("res://game/household_profile.gd")
 const GRID_SIZE := 16
@@ -22,7 +23,7 @@ var _build_backups: Dictionary = {}
 var _build_history: Dictionary = {}
 
 func initialize() -> void:
-	state = {"schema":SCHEMA, "tick":0, "day":1, "day_minutes":480.0, "lots":{}, "families":{}, "events":[], "next_object":1}
+	state = {"schema":SCHEMA, "tick":0, "day":1, "day_minutes":480.0, "lots":{}, "families":{}, "friendships":{}, "events":[], "next_object":1}
 	_build_backups.clear()
 	_build_history.clear()
 	var names := ["Clover Cottage", "Willow House", "Juniper Place", "Maple Corner"]
@@ -64,6 +65,7 @@ func ensure_family(profile_id: String, display_name: String) -> String:
 			member.wishes=Wishes.create(str(member.id),int(state.day))
 			member.appearance=Appearance.defaults(member)
 		state.families[profile_id] = {"id":profile_id, "name":clean_name + " household", "home_lot":lot_id, "online":false, "identity_revision":0, "members":members}
+		Friendships.ensure_housemates(state,state.families[profile_id])
 		_event(clean_name + " moved into " + str(lot.name) + ".")
 		return lot_id
 	return ""
@@ -260,6 +262,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 			var neighbor := _find_member(target_id)
 			if neighbor.is_empty() or neighbor.id == member.id or neighbor.lot_id != member.lot_id:
 				return _result(false, "Choose another resident on this lot or a furnishing.")
+			if not chat_status(member,str(neighbor.id)).is_empty(): return _result(false,"That conversation is already in this resident’s plan.")
 			var goals := _social_cells(lot, neighbor)
 			if not goals.has(_position(member)) and _path(lot, _position(member), goals).is_empty():
 				return _result(false, "There is no path to chat with that resident.")
@@ -386,22 +389,30 @@ func _tick_member(member: Dictionary, lot: Dictionary, delta: float) -> void:
 	if task.type == "move":
 		member.task = {}
 		return
-	task.elapsed = float(task.get("elapsed",0.0)) + delta
 	if task.get("target_kind", "object") == "member":
 		var neighbor := _find_member(str(task.target_id))
 		if neighbor.is_empty() or neighbor.lot_id != member.lot_id or _position(member).distance_to(_position(neighbor)) > 2.0:
 			member.task = {}
 			member.action = "They moved away"
 			return
+		if _chat_busy(neighbor,member):
+			if float(task.get("elapsed",0))>0:
+				member.task={}; member.action="They have something to do"
+			else: member.action="Waiting for "+str(neighbor.name)+" · A chat"
+			return
+		if not task.has("social_started"): task.social_started=int(state.tick)
+		task.elapsed=float(task.get("elapsed",0.0))+delta
 		member.action = "Chatting with " + str(neighbor.name)
 		member.needs.social = minf(100.0, float(member.needs.social) + 7.0 * delta)
 		neighbor.needs.social = minf(100.0, float(neighbor.needs.social) + 7.0 * delta)
 		task.remaining -= delta
 		if task.remaining <= 0.0:
 			_finish_wish(member,task,"chat")
+			_finish_conversation(member,neighbor,task)
 			member.task = {}
 			member.action = "Taking it easy"
 		return
+	task.elapsed = float(task.get("elapsed",0.0)) + delta
 	var object := _object(lot, str(task.get("target_id", "")))
 	if object.is_empty():
 		member.task = {}
@@ -439,7 +450,7 @@ func _conversation_partner(member: Dictionary) -> Dictionary:
 	for family: Dictionary in state.families.values():
 		for other: Dictionary in family.members:
 			if other.id==member.id or other.lot_id!=member.lot_id: continue
-			if other.task.get("target_kind")=="member" and other.task.get("target_id")==member.id and other.task.get("path",[]).is_empty() and _position(other).distance_to(_position(member))<=2.0: return other
+			if other.task.get("target_kind")=="member" and other.task.get("target_id")==member.id and other.task.get("path",[]).is_empty() and float(other.task.get("elapsed",0))>0 and _position(other).distance_to(_position(member))<=2.0: return other
 	return {}
 
 func _finish_wish(member: Dictionary, task: Dictionary, activity: String) -> void:
@@ -488,6 +499,11 @@ func _start_next(member: Dictionary, lot: Dictionary) -> void:
 		var user := _object_user(str(lot.id),furnishing,str(member.id))
 		if not user.is_empty():
 			member.action = "Waiting for " + str(user.name) + " · " + str(Catalog.ITEMS[furnishing.kind].name)
+			return
+	if pending.type=="interact" and pending.get("target_kind")=="member":
+		var companion := _find_member(str(pending.target_id))
+		if not companion.is_empty() and companion.lot_id==member.lot_id and _chat_busy(companion,member):
+			member.action="Waiting for "+str(companion.name)+" · A chat"
 			return
 	var task: Dictionary = member.queue.pop_front()
 	var goals: Array = []
@@ -787,6 +803,7 @@ func _normalize_numbers() -> void:
 				for tile: Array in task.get("path", []):
 					tile[0] = int(tile[0])
 					tile[1] = int(tile[1])
+	Friendships.normalize(state)
 
 func _valid_state(data: Dictionary) -> bool:
 	if data.get("schema") != SCHEMA or not data.get("lots") is Dictionary or data.lots.size() != MAX_FAMILIES or not data.get("families") is Dictionary or data.families.size() > MAX_FAMILIES:
@@ -874,6 +891,7 @@ func _valid_state(data: Dictionary) -> bool:
 			for need: String in NEEDS:
 				if not _number(member.needs.get(need)) or float(member.needs[need]) < 0 or float(member.needs[need]) > 100:
 					return false
+	if data.has("friendships") and not Friendships.valid(data.friendships,members_seen,int(data.day),int(data.tick)): return false
 	for lot: Dictionary in data.lots.values():
 		if not str(lot.owner).is_empty() and not data.families.has(lot.owner):
 			return false
@@ -882,6 +900,7 @@ func _valid_state(data: Dictionary) -> bool:
 func _valid_task(value: Variant, active: bool) -> bool:
 	if not value is Dictionary or not value.get("type") in ["move", "interact"]:
 		return false
+	if value.has("social_started") and (not _integer(value.social_started) or float(value.social_started)<0 or float(value.social_started)>9007199254740991): return false
 	if value.has("elapsed") and (not _number(value.elapsed) or float(value.elapsed)<0 or float(value.elapsed)>120): return false
 	if value.has("id") and (not value.id is String or str(value.id).is_empty() or str(value.id).length() > 180):
 		return false
@@ -923,3 +942,35 @@ func _event(message: String) -> void:
 
 func _result(ok: bool, message: String) -> Dictionary:
 	return {"ok":ok, "message":message}
+
+func chat_status(member: Dictionary, target_id: String) -> String:
+	if member.task.get("target_kind")=="member" and member.task.get("target_id")==target_id: return "In progress"
+	for task: Dictionary in member.queue:
+		if task.get("target_kind")=="member" and task.get("target_id")==target_id: return "In your plan"
+	return ""
+
+func _chat_busy(target: Dictionary, initiator: Dictionary) -> bool:
+	if not target.task.is_empty():
+		if not (target.task.get("target_kind")=="member" and target.task.get("target_id")==initiator.id): return true
+	for family: Dictionary in state.families.values():
+		for member: Dictionary in family.members:
+			if member.id==initiator.id or member.id==target.id or member.lot_id!=target.lot_id: continue
+			if member.task.get("target_kind")=="member" and member.task.get("target_id")==target.id and member.task.get("path",[]).is_empty() and float(member.task.get("elapsed",0))>0: return true
+	return false
+
+func _online_member(member: Dictionary) -> bool:
+	for family: Dictionary in state.families.values():
+		if family.members.has(member): return bool(family.online)
+	return false
+
+func _finish_conversation(member: Dictionary, neighbor: Dictionary, task: Dictionary) -> void:
+	if task.get("automatic",false) or not _online_member(member) or not _online_member(neighbor): return
+	var result := Friendships.record(state,str(member.id),str(neighbor.id),int(task.get("social_started",state.tick)))
+	var milestone: String=result.get("milestone","")
+	if milestone.is_empty(): return
+	var detail := " got to know " if milestone=="met" else " became "+milestone+" with "
+	_event(str(member.name)+detail+str(neighbor.name)+".")
+	for pair in [[member,neighbor],[neighbor,member]]:
+		var text := ("Got to know " if milestone=="met" else "Became "+milestone+" with ")+str(pair[1].name)+"."
+		pair[0].wishes.journal.push_front({"day":int(state.day),"text":text})
+		if pair[0].wishes.journal.size()>Wishes.MAX_JOURNAL: pair[0].wishes.journal.resize(Wishes.MAX_JOURNAL)

@@ -49,8 +49,15 @@ def smoke(binary, relay_only=False, codes=False):
                 raise RuntimeError("Host did not publish a ticket:\n" + processes[0][1].read_text())
             start("client", 1)
             start("client", 2)
+            deadline = time.monotonic() + 100
+            while any(process.poll() is None for process, _, _ in processes):
+                logs = [path.read_text() for _, path, _ in processes]
+                if any("ERROR:" in text for text in logs) or any(process.poll() not in (None, 0) for process, _, _ in processes):
+                    raise RuntimeError("\n".join(logs))
+                if time.monotonic() >= deadline:
+                    raise RuntimeError("Peer test timed out:\n" + "\n".join(logs))
+                time.sleep(0.1)
             for process, path, marker in processes:
-                process.wait(timeout=100)
                 text = path.read_text()
                 if process.returncode or marker not in text or "ERROR:" in text:
                     raise RuntimeError("\n".join(p.read_text() for _, p, _ in processes))
@@ -92,7 +99,7 @@ if __name__ == "__main__":
     run(binary, ["--editor", "--quit-after", "180", "--max-fps", "60"], timeout=180)
     work = ROOT / "build" / "checks"
     work.mkdir(parents=True, exist_ok=True)
-    for script, marker in [("world", "WORLD_PASS"), ("build_history", "BUILD_HISTORY_PASS"), ("rooms", "ROOMS_PASS"), ("household", "HOUSEHOLD_PASS"), ("wishes", "WISHES_PASS"), ("presentation", "PRESENTATION_PASS"), ("integration_world", "INTEGRATION_WORLD_PASS"), ("protocol", "PROTOCOL_PASS"), ("persistence", "PERSISTENCE_PASS"), ("ui_flow", "UI_FLOW_PASS"), ("preferences", "PREFERENCES_PASS"), ("save_debug", "SAVE_DEBUG_PASS"), ("console", "CONSOLE_PASS"), ("app_flow", "APP_FLOW_PASS")]:
+    for script, marker in [("world", "WORLD_PASS"), ("build_history", "BUILD_HISTORY_PASS"), ("rooms", "ROOMS_PASS"), ("household", "HOUSEHOLD_PASS"), ("friendships", "FRIENDSHIPS_PASS"), ("wishes", "WISHES_PASS"), ("presentation", "PRESENTATION_PASS"), ("integration_world", "INTEGRATION_WORLD_PASS"), ("protocol", "PROTOCOL_PASS"), ("persistence", "PERSISTENCE_PASS"), ("ui_flow", "UI_FLOW_PASS"), ("preferences", "PREFERENCES_PASS"), ("save_debug", "SAVE_DEBUG_PASS"), ("console", "CONSOLE_PASS"), ("app_flow", "APP_FLOW_PASS")]:
         if not (ROOT / "tests" / f"{script}.gd").is_file():
             raise RuntimeError(f"Required test script missing: tests/{script}.gd")
         output = run(binary, ["--script", f"res://tests/{script}.gd", "--log-file", str(work / f"{script}-engine.log"),

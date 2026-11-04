@@ -166,6 +166,14 @@ func _client(index: String) -> void:
 		await create_timer(0.1).timeout
 	assert(fulfilled,"Host did not fulfill and replicate the client's wish")
 	await _command({"type":"pursue_wish","member_id":member_id,"wish_id":wished_id},false)
+	var companion_id: String=session.state.families[identity].members[1].id
+	await _command({"type":"autonomy","member_id":companion_id,"enabled":false})
+	await _command({"type":"cancel","member_id":companion_id})
+	await _command({"type":"interact","member_id":member_id,"lot_id":home,"target_id":companion_id})
+	for _attempt in range(200):
+		if int(preload("res://game/friendships.gd").bond(session.state,member_id,companion_id).get("score",0))==32: break
+		await create_timer(0.1).timeout
+	assert(int(preload("res://game/friendships.gd").bond(session.state,member_id,companion_id).get("score",0))==32,"Completed chat did not replicate friendship progress")
 	await _command({"type": "visit", "lot_id": host_home, "member_id": member_id})
 	var recalled := false
 	for _attempt in range(300):
@@ -175,15 +183,17 @@ func _client(index: String) -> void:
 			break
 	assert(recalled, "Host construction did not recall visitor in replicated state")
 	assert([0, 0] in session.state.lots[home].floors, "Accepted construction was not replicated")
+	var journal_before: Array=session.state.families[identity].members[0].wishes.journal.duplicate(true)
 	var funds: float = session.state.lots[home].funds
 	session.leave()
 	await create_timer(0.7).timeout
 	await _connect()
 	assert(session.home_lot() == home, "Reconnect changed lot ownership")
+	assert(int(preload("res://game/friendships.gd").bond(session.state,member_id,companion_id).get("score",0))==32,"Reconnect lost the friendship")
 	assert(session.state.families[identity].name=="Gardeners "+index and session.state.families[identity].members[1].appearance.style==1,"Reconnect lost household identity")
 	assert([14,1] in session.state.lots[home].floors and [14,2] in session.state.lots[home].doors,"Reconnect lost the new room")
 	assert(int(session.world._object(session.state.lots[home],moved_id).x)==9, "Reconnect lost furnishing move")
-	assert(session.state.families[identity].members[0].wishes.journal.size()==1,"Reconnect lost wish journal")
+	assert(session.state.families[identity].members[0].wishes.journal==journal_before,"Reconnect lost the activity journal")
 	assert(not session.state.families[identity].members[0].autonomy, "Reconnect lost autonomy preference")
 	assert(session.state.families.size() == 3, "Reconnect duplicated family")
 	assert([0, 0] in session.state.lots[home].floors, "Reconnect lost construction")

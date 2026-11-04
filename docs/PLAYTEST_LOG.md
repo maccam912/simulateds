@@ -221,3 +221,29 @@ restoring the old duplicate archive/extraction cache. Cleanup is restricted to
 generated template directories in disposable Actions checkouts; exports, engine
 binaries, source, and signing settings remain intact. The result still needs a
 completed workflow run to establish that runner disk pressure is resolved.
+
+## 2026-11-03 · People worth visiting again
+
+Completed, player-directed conversations now build a symmetric friendship when
+both households are online. Progress is bounded to two catch-ups per pair per day;
+there is no absence decay. Housemates start acquainted. Milestones appear in both
+personal journals and in the HUD. The People tray shows portraits, bonds, location,
+Visit/Chat actions, construction, and away status. A busy resident keeps their own
+orders, queued chats wait, and overlapping reciprocal chats count only once.
+
+Validation: fifteen local suites passed, followed by the real Iroh host/two-client
+reconnect check and dedicated startup. The reconnect test now compares the entire
+journal rather than assuming exactly one entry: chatting can fulfill another wish.
+Peer failures also surface promptly instead of waiting out the host timeout.
+Model checks cover reciprocal conversations, daily bounds, offline behavior,
+milestones, old saves, JSON round-trips, and malformed bonds. Graphical mouse-input
+playtests passed at 1440×900 and 1280×720/125% UI scale, including visit, chat,
+friendship milestone, construction recall, and away states. Review caught a card
+jumping above the scroll viewport when its score changed; the active card now
+stays visible. These are agent playtests, not a human family session.
+
+Fresh assessment: real-time visits now leave a lasting connection, but players at
+different schedules still have little to leave for each other. Next: persistent
+household postcards and small optional gifts, with a clear unread indicator,
+bounded storage, and host-authoritative delivery that works while recipients are
+away. Gifts must preserve exact funds through construction undo and save/reload.

@@ -24,7 +24,8 @@ Recent implemented increments include editable resident plans and autonomy,
 exclusive private furnishings, shape-based picking, free furniture moves,
 placement validation previews, 32-edit construction undo/redo, and persistent
 personal wishes/journals, resident movement/activity presentation, day/night
-lighting, and two-corner room construction with a shared cost/obstruction preview.
+lighting, two-corner room construction with a shared cost/obstruction preview,
+household names/appearance, and persistent friendships with a People panel.
 See [the playtest log](PLAYTEST_LOG.md) for evidence
 and current usability priorities.
 
@@ -46,7 +47,8 @@ understandable result. Fuzz placement and reopening around residents/visitors.
 - Household creation, traits, and preferences. Names and a palette-based
   appearance editor are implemented for both existing residents.
 - Visible action queues, interruption rules, autonomy controls, and thought icons.
-- Object reservations, shared activities, conversations, and basic relationships.
+- Object reservations, shared activities, conversations, and basic relationships
+  are implemented. Add richer shared recreation and personality-driven choices.
 - Sound and animation for each important action; original art pass.
 
 Exit: two residents can use a busy home without occupying the same object;

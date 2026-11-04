@@ -156,6 +156,19 @@ func _run() -> void:
 	_check(not session.state.lots.lot_1.floors.has([1,1]) and session.state.lots.lot_1.funds==room_funds,"One HUD undo reverses the room")
 	game._send({"type":"build_cancel","lot_id":"lot_1"})
 	game.context_panel.hide()
+	await _click(game.people_button.get_global_rect().get_center())
+	_check(game.context_panel.visible and game._context_page=="people","People opens the social overlay")
+	var neighbor: Dictionary=session.state.families[neighbor_id].members[0]
+	game.tools_box.get_parent().ensure_control_visible(game.social_buttons[neighbor.id])
+	await process_frame
+	await _click(game.social_buttons[neighbor.id].get_global_rect().get_center())
+	_check(game._member().lot_id==neighbor.lot_id,"Social card visits the actual resident's lot")
+	game.tools_box.get_parent().ensure_control_visible(game.social_buttons[neighbor.id])
+	await process_frame
+	await _click(game.social_buttons[neighbor.id].get_global_rect().get_center())
+	_check(not session.world.chat_status(game._member(),str(neighbor.id)).is_empty(),"Social card directs a real conversation")
+	_check(game.social_buttons[neighbor.id].disabled,"A conversation already in the plan cannot be queued again")
+	game._go_home(); game.context_panel.hide()
 	game._open_connection()
 	_check(game.connection_dialog.visible,"Multiplayer dialog opens")
 	game.connection_dialog.hide()
