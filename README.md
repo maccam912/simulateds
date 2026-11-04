@@ -120,6 +120,10 @@ or shell expressions.
   the same tile twice for a single tile. The preview shows the look and exact
   price. Only changed existing surfaces cost money (§4 per floor tile, §3 per
   wall tile), and one Undo restores the whole area. Finishes have no resale bonus.
+  Floors also offer **Room** mode: hover to preview connected floor and its exact
+  price, then click once to finish it. Walls, doorways, and gaps mark the edges;
+  furniture stays in place and floor beneath it is included. **Area** keeps the
+  two-corner workflow. A room already using the finish costs nothing.
 - Residents with a pressing need show a small thought cue above the house. Click
   it to select that resident and plan useful care. Needs already being handled
   or queued stay quiet, and cues belong only to your household. The selected

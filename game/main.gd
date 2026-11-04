@@ -114,6 +114,8 @@ var _move_request: Dictionary = {}
 var _room_anchor := Vector2i(-1,-1)
 var _room_request: Dictionary = {}
 var _paint_anchor := Vector2i(-1,-1)
+var _floor_selection := "area"
+var finish_mode_buttons: Dictionary={}
 var _paint_request: Dictionary = {}
 var finish_choice := {"floor":"walnut","wall":"sage"}
 var finish_buttons: Dictionary = {}
@@ -422,6 +424,7 @@ func _refresh() -> void:
 	lot_view.paint_anchor=_paint_anchor; lot_view.paint_pending=not _paint_request.is_empty()
 	lot_view.paint_plan=_paint_request.get("plan",{})
 	lot_view.finish_choice=str(finish_choice.get(_paint_surface(),""))
+	lot_view.finish_selection=_paint_selection()
 	lot_view.world=state; lot_view.lot_id=viewed_lot; lot_view.selected_member=selected_member
 	lot_view.build_object_id=_moving_object
 	lot_view.building=building and mine; lot_view.build_kind=selected_tool; lot_view.build_rotation=build_rotation
@@ -502,7 +505,7 @@ func _refresh() -> void:
 	palette_button.text = "Catalog" if build_mode else "Activities"
 	var tools_signature := str(building and mine)+selected_tool+_moving_object+str(_move_request.is_empty())+_selected_object+str(build_rotation)+viewed_lot+str(lot.get("revision",0))+_context_page+selected_member+str(_room_anchor)+str(_room_request.is_empty())
 	if build_mode: tools_signature+=_catalog_category+":"+_catalog_query+":"+str(lot.get("funds",0))+str(_access_visible)+str(_access_report.get("issues",[]))
-	tools_signature+=str(_paint_anchor)+str(_paint_request.is_empty())+str(finish_choice)
+	tools_signature+=str(_paint_anchor)+str(_paint_request.is_empty())+str(finish_choice)+_floor_selection
 	if _context_page=="wishes" and not build_mode:
 		tools_signature+=str(member.get("wishes",{}))+str(day)+str(member.get("task",{}).get("id",""))+str(member.get("queue",[]))
 	if _context_page=="people" and not build_mode:
@@ -524,9 +527,9 @@ func _refresh() -> void:
 		_tools_signature=tools_signature
 		_rebuild_context(building and mine,lot)
 	help_label.text="Click to place · " + Preferences.action_label("rotate") + " rotates · Ctrl/Cmd+Z undoes" if building and mine else "Click a need to care for it · Click the ground to walk"
-	if building and mine and _context_page=="access": help_label.text="Find an item · Choose Door, Move, or Sell to repair"
 	if building and mine and selected_tool=="room": help_label.text="Click two opposite corners · " + Preferences.action_label("rotate") + " changes door side · Escape cancels"
-	if building and mine and not _paint_surface().is_empty(): help_label.text="Click two corners to decorate · Same tile twice for one · Escape cancels"
+	if building and mine and not _paint_surface().is_empty(): help_label.text="Click to finish a room · Walls and doorways mark its edges" if _paint_selection()=="room" else "Click two corners to decorate · Same tile twice for one · Escape cancels"
+	if building and mine and _context_page=="access": help_label.text="Find an item · Choose Door, Move, or Sell to repair"
 	help_label.tooltip_text=help_label.text
 	if room_label!=null:
 		room_label.text=Session.status+("\nRoom code: "+Rooms.code if not Rooms.code.is_empty() else "")
@@ -806,11 +809,16 @@ func _tile_clicked(cell: Vector2i) -> void:
 		if _context_page=="access": return
 		if not _paint_surface().is_empty():
 			if not _paint_request.is_empty(): return
-			if _paint_anchor.x<0: _paint_anchor=cell; _refresh(); return
+			if _paint_selection()=="area" and _paint_anchor.x<0: _paint_anchor=cell; _refresh(); return
 			var surface := _paint_surface()
-			var command := {"type":"paint","lot_id":viewed_lot,"surface":surface,"finish":finish_choice[surface],"x":_paint_anchor.x,"y":_paint_anchor.y,"end_x":cell.x,"end_y":cell.y,"revision":lot.revision}
+			var anchor := cell if _paint_selection()=="room" else _paint_anchor
+			var command := {"type":"paint","lot_id":viewed_lot,"surface":surface,"finish":finish_choice[surface],"selection":_paint_selection(),"x":anchor.x,"y":anchor.y,"revision":lot.revision}
+			if _paint_selection()=="area": command.end_x=cell.x; command.end_y=cell.y
 			var plan := Finishes.inspect(lot,command)
-			if not plan.ok: _notice(str(plan.message)); Soundscape.play_ui("error"); return
+			if not plan.ok:
+				_notice(str(plan.message))
+				if plan.get("reason")!="unchanged": Soundscape.play_ui("error")
+				return
 			_paint_request={"revision":lot.revision,"plan":plan}; _send(command)
 			return
 		if selected_tool=="room":
@@ -1004,9 +1012,30 @@ func _open_people() -> void:
 func _paint_surface() -> String:
 	return selected_tool.trim_prefix("finish_") if selected_tool in ["finish_floor","finish_wall"] else ""
 
+func _paint_selection() -> String:
+	return _floor_selection if _paint_surface()=="floor" else "area"
+
+func _set_finish_selection(selection: String) -> void:
+	if not _paint_request.is_empty(): return
+	_floor_selection=selection; _paint_anchor=Vector2i(-1,-1); _refresh()
+	call_deferred("_restore_finish_focus","floor","mode",selection)
+
+func _select_finish(surface: String, id: String) -> void:
+	if not _paint_request.is_empty(): return
+	finish_choice[surface]=id; _paint_anchor=Vector2i(-1,-1); _refresh()
+	call_deferred("_restore_finish_focus",surface,"swatch",id)
+
+func _restore_finish_focus(surface: String, kind: String, id: String) -> void:
+	await get_tree().process_frame
+	if _paint_surface()!=surface or _context_page=="access" or not context_panel.visible or get_viewport().gui_get_focus_owner()!=null: return
+	var controls: Dictionary=finish_mode_buttons if kind=="mode" else finish_buttons
+	var button: Button=controls.get(id)
+	if button==null or not is_instance_valid(button) or button.disabled: return
+	button.grab_focus(); tools_box.get_parent().ensure_control_visible(button)
+
 func _build_finish_palette(surface: String) -> void:
 	activity_label.text=surface.capitalize()+" finishes"
-	finish_buttons.clear()
+	finish_buttons.clear(); finish_mode_buttons.clear()
 	var tabs := HBoxContainer.new(); tools_box.add_child(tabs)
 	tabs.add_theme_constant_override("separation",4)
 	var back := _button("‹ Catalog",func(): _select_build_tool("floor")); tabs.add_child(back)
@@ -1016,18 +1045,27 @@ func _build_finish_palette(surface: String) -> void:
 		tab.add_theme_font_size_override("font_size",11)
 		for part: String in ["normal","hover","pressed","disabled"]:
 			var style := tab.get_theme_stylebox(part).duplicate(); style.content_margin_left=6; style.content_margin_right=6; style.content_margin_top=6; style.content_margin_bottom=6; tab.add_theme_stylebox_override(part,style)
-	tools_box.add_child(_label("§%d per changed %s tile" % [Finishes.COST[surface],surface],11,Style.MUTED))
+	if surface=="floor":
+		var modes := HBoxContainer.new(); modes.add_theme_constant_override("separation",4); tools_box.add_child(modes)
+		for selection: String in ["area","room"]:
+			var active := _floor_selection==selection
+			var mode := _button(selection.capitalize(),func(): _set_finish_selection(selection),active)
+			mode.add_theme_font_size_override("font_size",11); mode.size_flags_horizontal=Control.SIZE_EXPAND_FILL; _compact_control(mode,active)
+			mode.disabled=not _paint_request.is_empty(); mode.tooltip_text="Choose two corners" if selection=="area" else "Fill connected floor with one click. Walls, doorways, and missing floor mark the edges."
+			modes.add_child(mode); finish_mode_buttons[selection]=mode
+		var cost := _label("§4 / tile",11,Style.MUTED); cost.tooltip_text="Only changed floor tiles cost money."; modes.add_child(cost)
+	else: tools_box.add_child(_label("§%d per changed %s tile" % [Finishes.COST[surface],surface],11,Style.MUTED))
 	var swatches := GridContainer.new(); swatches.columns=2; swatches.add_theme_constant_override("h_separation",6); swatches.add_theme_constant_override("v_separation",6); tools_box.add_child(swatches)
 	for id: String in Finishes.PALETTES[surface]:
 		var definition: Dictionary=Finishes.PALETTES[surface][id]
 		var title: String=definition.name; var split := title.rfind(" ")
 		if split>=0: title=title.substr(0,split)+"\n"+title.substr(split+1)
-		var button := _button(title,func(): finish_choice[surface]=id; _paint_anchor=Vector2i(-1,-1); _refresh(),finish_choice[surface]==id)
+		var button := _button(title,func(): _select_finish(surface,id),finish_choice[surface]==id)
 		button.alignment=HORIZONTAL_ALIGNMENT_LEFT; button.add_theme_font_size_override("font_size",12)
-		button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; button.custom_minimum_size.y=50
+		button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; button.custom_minimum_size.y=46 if surface=="floor" else 50
 		for part: String in ["normal","hover","pressed","disabled"]:
 			var style := button.get_theme_stylebox(part).duplicate(); style.content_margin_left=6; style.content_margin_right=6; style.content_margin_top=5; style.content_margin_bottom=5; button.add_theme_stylebox_override(part,style)
-		button.disabled=not _paint_request.is_empty(); button.tooltip_text="§%d per changed tile · Choose two corners" % int(Finishes.COST[surface])
+		button.disabled=not _paint_request.is_empty(); button.tooltip_text="§%d per changed tile · " % int(Finishes.COST[surface])+("Click a room" if _paint_selection()=="room" else "Choose two corners")
 		var swatch := Image.create(14,24,false,Image.FORMAT_RGBA8); swatch.fill(Color(definition.color))
 		button.icon=ImageTexture.create_from_image(swatch); swatches.add_child(button); finish_buttons[id]=button
 

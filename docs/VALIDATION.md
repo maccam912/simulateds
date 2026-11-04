@@ -83,7 +83,7 @@ service mode was not repeated for this update.
 ## Still open
 
 The subsequent feature checks are recorded in [PLAYTEST_LOG.md](PLAYTEST_LOG.md).
-The current local suite contains thirty-six model/application suites, plus real Iroh
+The current local suite contains thirty-eight model/application suites, plus real Iroh
 host/two-client reconnect and dedicated-server startup. The room-construction
 checkpoint passed Linux, Windows, macOS, and Android CI builds/exports. The later
 household checkpoint passed the three desktop jobs; Android built, tested,
@@ -240,6 +240,20 @@ The extended real Iroh check then closed each client's front door, verified that
 its locally derived report matched the host's rejected commit message, repaired
 the doorway, and reopened successfully. This establishes actual command/snapshot
 agreement; the native overlay captures are local graphical checks.
+
+The construction-access checkpoint passed all four platform CI jobs. Room floor
+finishing checks cover connected regions, doorway/wall/gap boundaries, diagonal
+separation, floor beneath furniture, mixed existing finishes, exact pricing,
+unchanged and unaffordable regions, malformed/foreign/stale requests, undo/redo,
+discard, crash-save protection, and committed reload. All 38 suites and real
+Iroh/server checks passed. Actual clients applied a 56-tile room for the previewed
+§224, rejected a replay, undid/redid it without losing earlier decoration, and
+retained the finish and door boundary after reconnect. Native standard/compact
+checks covered the whole mouse flow, connected extensions, all six visible
+swatches, over-budget previews, and returning through Access. The final preview
+renders its boundary on the floor behind furniture. Final compact keyboard tests
+and related catalog/help checks passed after adding focus retention. The older
+compact rectangle/wall graphical workflow also passed.
 
 Physical Android operation, cross-OS multiplayer, exported game packages,
 production authentication, public matchmaking abuse resistance, long-term

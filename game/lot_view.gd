@@ -39,6 +39,7 @@ var paint_anchor := Vector2i(-1,-1)
 var paint_pending := false
 var paint_plan: Dictionary = {}
 var finish_choice := ""
+var finish_selection := "area"
 var _paint_cells: Dictionary = {}
 var _preview_finish := ""
 var preview_result: Dictionary = {}
@@ -301,6 +302,7 @@ func _draw() -> void:
 				_diamond(x,y,1,1,Daylight.outside(Color("c5c4a5"),light),0,Daylight.outside(Color("b1b496"),light))
 			if floors.has(cell):
 				_draw_floor_finish(x,y,Finishes.PALETTES.floor[_surface_finish(lot,"floor",x,y)])
+	if building and build_kind=="finish_floor" and finish_selection=="room" and not access_inspecting: _draw_room_finish_ground()
 	if building and access_visible: _draw_access_ground(lot)
 	# Paint rear walls first. Near walls use a low cutaway for readable interiors.
 	for depth in range(31):
@@ -785,11 +787,11 @@ func _update_finish_preview(lot: Dictionary) -> void:
 	var plan: Dictionary={}
 	if paint_pending: plan=paint_plan
 	elif _in_bounds(hover_cell):
-		var anchor := hover_cell if paint_anchor.x<0 else paint_anchor
-		var signature := str(["finish",lot_id,lot.revision,lot.funds,anchor,hover_cell,build_kind,finish_choice])
+		var anchor := hover_cell if paint_anchor.x<0 or finish_selection=="room" else paint_anchor
+		var signature := str(["finish",lot_id,lot.revision,lot.funds,anchor,hover_cell,build_kind,finish_choice,finish_selection])
 		if signature!=_preview_signature:
 			_preview_signature=signature
-			preview_result=Finishes.inspect(lot,{"surface":build_kind.trim_prefix("finish_"),"finish":finish_choice,"x":anchor.x,"y":anchor.y,"end_x":hover_cell.x,"end_y":hover_cell.y})
+			preview_result=Finishes.inspect(lot,{"surface":build_kind.trim_prefix("finish_"),"finish":finish_choice,"selection":finish_selection,"x":anchor.x,"y":anchor.y,"end_x":hover_cell.x,"end_y":hover_cell.y})
 		plan=preview_result
 	if plan.get("ok",false):
 		_preview_finish=str(plan.finish)
@@ -818,6 +820,11 @@ func _draw_finish_preview() -> void:
 	if paint_pending:
 		_draw_preview_label("Decorating…",true); return
 	if not _in_bounds(hover_cell): return
+	if finish_selection=="room":
+		var valid := bool(preview_result.get("ok",false))
+		var unchanged: bool=preview_result.get("reason")=="unchanged"
+		_draw_preview_label(("Click to fill room · " if valid else "")+str(preview_result.get("message","")),valid or unchanged)
+		return
 	var anchor := hover_cell if paint_anchor.x<0 else paint_anchor
 	var low := Vector2i(mini(anchor.x,hover_cell.x),mini(anchor.y,hover_cell.y))
 	var high := Vector2i(maxi(anchor.x,hover_cell.x),maxi(anchor.y,hover_cell.y))
@@ -825,6 +832,21 @@ func _draw_finish_preview() -> void:
 	_diamond(low.x,low.y,high.x-low.x+1,high.y-low.y+1,Color.TRANSPARENT if valid else Color(0.94,0.36,0.3,0.22),3,Color("d8f1b2") if valid else Color("ffab8f"))
 	var hint := "Click first corner · " if paint_anchor.x<0 else "Click to apply · "
 	_draw_preview_label((hint if valid else "")+str(preview_result.get("message","")),valid)
+
+func _draw_room_finish_ground() -> void:
+	if not paint_pending and not _in_bounds(hover_cell): return
+	var plan: Dictionary=paint_plan if paint_pending else preview_result
+	var cells := {}
+	for cell: Array in plan.get("area",[]): cells[Vector2i(int(cell[0]),int(cell[1]))]=true
+	var valid: bool=plan.get("ok",false) or plan.get("reason")=="unchanged"
+	var color := Color("d8f1b2") if valid else Color("ffab8f")
+	var offset := Vector2(0,-3)
+	for cell: Vector2i in cells:
+		if not valid: _diamond(cell.x,cell.y,1,1,Color(0.94,0.36,0.3,0.16),2)
+		for edge: Array in [[Vector2i.UP,Vector2i.ZERO,Vector2i.RIGHT],[Vector2i.RIGHT,Vector2i.RIGHT,Vector2i.ONE],[Vector2i.DOWN,Vector2i.ONE,Vector2i.DOWN],[Vector2i.LEFT,Vector2i.DOWN,Vector2i.ZERO]]:
+			if cells.has(cell+edge[0]): continue
+			var start: Vector2i=cell+edge[1]; var end: Vector2i=cell+edge[2]
+			draw_line(grid_point(start.x,start.y)+offset,grid_point(end.x,end.y)+offset,color,1.8,true)
 
 func _draw_room_preview(lot: Dictionary) -> void:
 	if not _in_bounds(hover_cell): return

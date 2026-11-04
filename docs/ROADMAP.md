@@ -28,8 +28,8 @@ lighting, two-corner room construction with a shared cost/obstruction preview,
 household names/appearance, persistent friendships with a People panel, and
 household postcards with optional gifts for asynchronous play. Needs now offer
 care shortcuts and a derived mood summary, backed by host-selected activities.
-Floor/wall finish palettes now support priced rectangle painting, preview, and
-whole-area undo alongside room construction. Reading, gardening, and cooking now
+Floor/wall finish palettes now support priced rectangle painting, room-aware
+floor filling, preview, and whole-area undo alongside room construction. Reading, gardening, and cooking now
 have five persistent ranks, bounded deliberate practice, activity bonuses, and a
 Hobbies panel. The build catalog now offers categories, search by name/use,
 selected-item details, and compact editing controls. An optional first-day guide
@@ -52,8 +52,8 @@ and current usability priorities.
 
 - Edge-based walls, room detection, window and door orientation, and roofs.
 - Drag painting and richer selection; placement previews, furniture moves,
-  two-corner rooms, rectangle decoration, undo/redo, and exact undo refunds are
-  implemented. Add room-aware fill and broader architectural options.
+  two-corner rooms, rectangle decoration, room-aware floor fill, undo/redo, and
+  exact undo refunds are implemented. Add broader architectural options.
 - Room blueprints and reusable layouts on the existing draft/commit boundary.
 - Shared entrance routing checks and an access overlay now locate blocked
   furnishings and residents, with camera focus and direct repair tools. Extend

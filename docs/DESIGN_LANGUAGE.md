@@ -52,6 +52,14 @@ show names as well as colors. Preview surfaces directly on the house before
 purchase, with an exact price and an area outline. Night lighting warms finishes
 gently enough to preserve the player's chosen hues.
 
+Floor finishing offers Area and Room beside the per-tile price. Room previews
+the actual floor with a boundary at floor level, behind the furnishings. Avoid
+drawing a grid over the furniture. An unaffordable room keeps its original finish
+and shows the selected extent with a warm warning and exact shortfall. Matching
+finishes get a quiet no-charge response. Walls, doorways, and missing floor bound
+the room; furniture and residents do not. Keep all six swatches visible at the
+compact size, and retain keyboard focus when selecting a mode or finish.
+
 Hobby cards name an interest, its current title/rank, practices toward the next
 rank, and the actual benefit. Buttons describe activities rather than XP farming.
 At the daily limit they still allow recreation; the card says more practice is

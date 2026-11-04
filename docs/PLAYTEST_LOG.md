@@ -838,3 +838,41 @@ are immediately available. Decorating an enclosed room still requires carefully
 choosing rectangle corners. Next: room-aware floor finishing with a whole-room
 preview, an exact price, doorway boundaries, and one-step undo, making it easier
 to give each household a coherent home.
+
+## 2026-11-04 · Finish a room in one gesture
+
+Floor finishes now offer Area and Room. Room selects connected floor, bounded by
+walls, doorways, and missing floor. Hover previews the actual finish and exact
+price; one click applies it, and one Undo restores every changed tile and its
+cost. Floor under furniture is included, while the furnishing and residents stay
+put. Removing a threshold connects adjacent floor regions, making an open plan
+visible in the preview. Area remains the default and the wall-painting workflow.
+
+The host derives the region from the seed and accepted geometry, validates the
+draft revision, and uses the existing sparse finish storage and construction
+history. Only changed tiles cost money. Matching rooms report no charge and make
+no history entry; unaffordable rooms keep their original appearance and show the
+whole selected extent and exact shortfall. Mode changes cancel an uncommitted
+rectangle, and keyboard focus follows both mode and swatch selections.
+
+Validation: all 38 local suites, actual Iroh host/two-client checks, and server
+startup passed. Tests cover topology, under-furniture decoration, mixed finishes,
+malformed/foreign/stale input, prices, history, discard, crash saves, and reload.
+Both actual clients filled 56 tiles for the previewed §224, rejected the replay,
+undid/redid the room independently of earlier paint, and retained it after
+reconnecting. The access-view checkpoint passed all four platform CI jobs.
+
+Native standard/compact checks exercised room preview, single-click application,
+repeated no-charge clicks, undo/redo, a separately decorated extension, mode
+changes, Access, over-budget rejection, and reopening. All six floor swatches fit
+at 1280×720/125% UI. The established compact rectangle/wall flow also passed.
+The first visual review found per-tile preview lines drawing over furniture;
+the final preview uses only the region boundary, drawn on the floor behind the
+objects. Final compact keyboard and related catalog/help checks passed after
+focus polish. These are automated/native checks, not human family playtests.
+
+Fresh assessment: constructing, repairing, and decorating a personal home now
+requires fewer corrective clicks. Watching the household exposes the next visual
+weakness: residents use activity props but mostly keep the same facing. Next:
+derive their facing from accepted routes, furniture, and conversation partners,
+so movement and shared activities feel connected to the room around them.

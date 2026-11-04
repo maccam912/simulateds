@@ -171,6 +171,25 @@ func _client(index: String) -> void:
 		if session.state.lots[home].finishes.floor.get("14,1")=="sage_tile": break
 		await create_timer(0.1).timeout
 	assert(session.state.lots[home].finishes.floor.get("14,1")=="sage_tile","Painted floors did not replicate")
+	var fill := {"type":"paint","lot_id":home,"surface":"floor","selection":"room","finish":"walnut","x":7,"y":7,"revision":session.state.lots[home].revision}
+	var fill_plan: Dictionary=preload("res://game/finishes.gd").inspect(session.state.lots[home],fill)
+	assert(fill_plan.ok and fill_plan.area.size()==56 and fill_plan.cost==224)
+	var before_fill: int=session.state.lots[home].funds
+	await _command(fill); await _command(fill,false)
+	for _attempt in range(50):
+		if session.state.lots[home].finishes.floor.get("7,7")=="walnut": break
+		await create_timer(0.1).timeout
+	assert(session.state.lots[home].funds==before_fill-224 and not session.state.lots[home].finishes.floor.has("8,11"),"Actual room fill charges the preview price and stops at the door")
+	await _command({"type":"build_undo","lot_id":home,"revision":session.state.lots[home].revision})
+	for _attempt in range(50):
+		if not session.state.lots[home].finishes.floor.has("7,7"): break
+		await create_timer(0.1).timeout
+	assert(session.state.lots[home].funds==before_fill and session.state.lots[home].finishes.floor.get("14,1")=="sage_tile","One network undo restores the whole room while preserving earlier decoration")
+	await _command({"type":"build_redo","lot_id":home,"revision":session.state.lots[home].revision})
+	for _attempt in range(50):
+		if session.state.lots[home].finishes.floor.get("7,7")=="walnut": break
+		await create_timer(0.1).timeout
+	assert(session.state.lots[home].finishes.floor.get("7,7")=="walnut")
 	await _command({"type":"place","lot_id":home,"kind":"wall","x":8,"y":11})
 	for _attempt in range(50):
 		if not session.world.build_access(session.state.lots[home]).ok: break
@@ -324,6 +343,7 @@ func _client(index: String) -> void:
 	assert(session.state.families[identity].members[0].favorite=="reading" and session.state.families[identity].members[1].favorite=="gardening","Reconnect lost favorite pastimes")
 	assert([14,1] in session.state.lots[home].floors and [14,2] in session.state.lots[home].doors,"Reconnect lost the new room")
 	assert(session.state.lots[home].finishes.floor.get("14,1")=="sage_tile","Reconnect lost the floor finish")
+	assert(session.state.lots[home].finishes.floor.get("7,7")=="walnut" and not session.state.lots[home].finishes.floor.has("8,11"),"Reconnect retains the room fill and its doorway boundary")
 	assert(int(session.world._object(session.state.lots[home],moved_id).x)==9, "Reconnect lost furnishing move")
 	assert(session.state.families[identity].members[0].hobbies==hobbies_before,"Reconnect lost personal hobbies")
 	assert(session.state.families[identity].members[0].wishes.journal==journal_before,"Reconnect lost the activity journal")

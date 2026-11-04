@@ -36,22 +36,54 @@ static func inspect(lot: Dictionary, command: Dictionary) -> Dictionary:
 	var finish: Variant=command.get("finish")
 	if not surface is String or not PALETTES.has(surface): return _no("Choose floors or walls to decorate.")
 	if not finish is String or not PALETTES[surface].has(finish): return _no("Choose a finish from the palette.")
-	for field: String in ["x","y","end_x","end_y"]:
+	var selection: Variant=command.get("selection","area")
+	if not selection is String or not selection in ["area","room"]: return _no("Choose an area or a room to finish.")
+	if selection=="room" and surface!="floor": return _no("Room fill is for floors. Choose an area to paint walls.")
+	for field: String in (["x","y"] if selection=="room" else ["x","y","end_x","end_y"]):
 		if not Rules._coordinate(command.get(field)): return _no("Keep both painting corners inside the lot.")
-	var low := Vector2i(mini(int(command.x),int(command.end_x)),mini(int(command.y),int(command.end_y)))
-	var high := Vector2i(maxi(int(command.x),int(command.end_x)),maxi(int(command.y),int(command.end_y)))
+	var low := Vector2i(int(command.x),int(command.y)); var high := low
+	var area: Array=[]
+	if selection=="room":
+		area=room_cells(lot,low)
+		if area.is_empty(): return _no("Choose floor inside a room, away from walls and doorways.")
+		for cell: Array in area:
+			low=Vector2i(mini(low.x,int(cell[0])),mini(low.y,int(cell[1])))
+			high=Vector2i(maxi(high.x,int(cell[0])),maxi(high.y,int(cell[1])))
+	else:
+		low=Vector2i(mini(int(command.x),int(command.end_x)),mini(int(command.y),int(command.end_y)))
+		high=Vector2i(maxi(int(command.x),int(command.end_x)),maxi(int(command.y),int(command.end_y)))
+		for cell: Array in lot["floors" if surface=="floor" else "walls"]:
+			if int(cell[0])>=low.x and int(cell[0])<=high.x and int(cell[1])>=low.y and int(cell[1])<=high.y: area.append(cell.duplicate())
+	if area.is_empty(): return _no("No "+("floors" if surface=="floor" else "walls")+" in this area. Build them first.")
 	var cells: Array=[]
-	var found := false
-	for cell: Array in lot["floors" if surface=="floor" else "walls"]:
-		var x:=int(cell[0]); var y:=int(cell[1])
-		if x<low.x or y<low.y or x>high.x or y>high.y: continue
-		found=true
-		if at(lot,surface,x,y)!=finish: cells.append([x,y])
-	if not found: return _no("No "+("floors" if surface=="floor" else "walls")+" in this area. Build them first.")
-	if cells.is_empty(): return _no("This area already has that finish. No charge.")
+	for cell: Array in area:
+		if at(lot,surface,int(cell[0]),int(cell[1]))!=finish: cells.append(cell.duplicate())
 	var cost: int=cells.size()*int(COST[surface])
-	if cost>int(lot.funds): return _no("Finish costs § %d · Need § %d more." % [cost,cost-int(lot.funds)])
-	return {"ok":true,"surface":surface,"finish":finish,"cells":cells,"cost":cost,"low":low,"high":high,"message":"%s · %d tiles · § %d" % [PALETTES[surface][finish].name,cells.size(),cost]}
+	var plan := {"ok":true,"surface":surface,"finish":finish,"selection":selection,"area":area,"cells":cells,"cost":cost,"low":low,"high":high,"message":"%s · %d tiles · § %d" % [PALETTES[surface][finish].name,cells.size(),cost]}
+	if cells.is_empty():
+		plan.ok=false; plan.reason="unchanged"; plan.message="This "+("room" if selection=="room" else "area")+" already has that finish. No charge."
+	elif cost>int(lot.funds):
+		plan.ok=false; plan.reason="funds"; plan.message="Finish costs § %d · Need § %d more." % [cost,cost-int(lot.funds)]
+	return plan
+
+static func room_cells(lot: Dictionary, seed: Vector2i) -> Array:
+	# Decorate under furniture and residents. Architecture, missing floor, and
+	# door thresholds bound the region; occupants are not room dividers.
+	var floors := {}; var edges := {}
+	for cell: Array in lot.floors: floors[Vector2i(int(cell[0]),int(cell[1]))]=true
+	for kind: String in ["walls","doors"]:
+		for cell: Array in lot[kind]: edges[Vector2i(int(cell[0]),int(cell[1]))]=true
+	if not floors.has(seed) or edges.has(seed): return []
+	var reached := {seed:true}; var frontier: Array[Vector2i]=[seed]; var cursor := 0
+	while cursor<frontier.size():
+		var current := frontier[cursor]; cursor+=1
+		for direction: Vector2i in [Vector2i.RIGHT,Vector2i.DOWN,Vector2i.LEFT,Vector2i.UP]:
+			var next := current+direction
+			if floors.has(next) and not edges.has(next) and not reached.has(next): reached[next]=true; frontier.append(next)
+	var result: Array=[]
+	for cell: Array in lot.floors:
+		if reached.has(Vector2i(int(cell[0]),int(cell[1]))): result.append(cell.duplicate())
+	return result
 
 static func apply(lot: Dictionary, plan: Dictionary) -> void:
 	if not lot.has("finishes"): lot.finishes=create()
