@@ -377,6 +377,25 @@ func _client(index: String) -> void:
 		await create_timer(0.1).timeout
 	assert(session.world.build_access(session.state.lots[home]).ok,"Repairing the doorway clears access in the replicated draft")
 	assert(session.world.build_access(session.state.lots[home])==repair_impact.after)
+	# Moving residents aside changes no paid edit or history; the host chooses safe places.
+	var before_space: Dictionary=session.state.lots[home].duplicate(true)
+	var space_option: Dictionary=preload("res://game/construction_space.gd").request(session.state,identity,home)
+	assert(space_option.ok and space_option.orders.size()==2)
+	var space_intent := {"type":"construction_space","lot_id":home,"revision":before_space.revision,"orders":space_option.orders}
+	var foreign_space:=space_intent.duplicate(true); foreign_space.lot_id=host_home
+	await _command(foreign_space,false); await _command(space_intent); await _command(space_intent,false)
+	for attempt in range(50):
+		if session.world._member(session.state.families[identity],str(space_option.orders[0].member_id)).next_action>space_option.orders[0].next_action: break
+		await create_timer(0.1).timeout
+	assert(session.state.lots[home]==before_space,"Remote relocation preserves the full draft, budget, revision and undo/redo counts")
+	var staged_cells: Array=[]
+	for row: Dictionary in space_option.orders:
+		var staged: Dictionary=session.world._member(session.state.families[identity],str(row.member_id))
+		var cell:=Vector2i(int(staged.x),int(staged.y))
+		assert(staged.next_action==int(row.next_action)+1 and staged.task.is_empty() and staged.queue.is_empty())
+		assert(not staged_cells.has(cell) and session.world._walkable(session.state.lots[home],cell) and absi(cell.x-8)+absi(cell.y-14)<=3)
+		staged_cells.append(cell)
+	assert(session.state.families[identity].room_library.entries==[saved_room])
 	await _command({"type":"place","lot_id":home,"kind":"garden_bed","x":6,"y":13})
 	var garden_id := ""
 	for _attempt in range(50):

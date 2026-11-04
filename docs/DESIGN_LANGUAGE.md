@@ -736,3 +736,13 @@ protected paintings and lost consumables are explicit. Keep the confirm/back and
 history controls fixed at the bottom. A stale review asks for a new review and
 scrolls back to its updated quote, instead of silently accepting different
 contents. After acceptance, the tray offers Saved rooms and Build room.
+
+
+Move family belongs in the fixed construction footer, beside Access; the saved
+room footer keeps it beside Catalog and Rotate. Use an ordinary quiet action,
+with the resident names and free effect in its tooltip. Keep the active tool and
+selection visible. After acceptance, the same world view shows the residents
+beside the entrance and the normal notice explains that building can continue.
+Moving… disables only the pending button until the accepted state arrives. When
+everyone is visiting, disable it with an explicit explanation instead of recalling
+the family. Do not add a confirmation modal or another permanent HUD panel.

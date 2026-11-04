@@ -10,7 +10,8 @@ from clients, presentation derived from accepted state.
 - Separate player-owned households and construction rights.
 - Starter homes, floors, walls, doors, furnishing, costs, and erasing.
 - Resident selection, walking, object interactions, needs, and autonomy.
-- Lot-local construction shelter and safe visitor ejection.
+- Lot-local construction shelter and safe visitor ejection. Explicit entrance-side movement now makes space around
+  paused home residents while preserving build selections and Undo/Discard.
 - Persistent host world and reconnectable local player credentials.
 - Iroh hosting/joining, room codes/tickets, and bounded state replication.
 - Gentle absent-family behavior while the host keeps running.

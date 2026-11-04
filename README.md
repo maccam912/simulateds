@@ -121,6 +121,12 @@ or shell expressions.
   tile. **Sell** removes something; **R** rotates placement. **Move** rearranges
   furniture for free. Choose
   **Finish building** to resume life on the lot.
+- **Move family** in the construction controls makes space around paused
+  residents. Household members on this lot move to distinct clear spaces near
+  the entrance; anyone visiting another lot stays there. It is free and preserves
+  the selected tool, saved design, and Undo history. The host avoids spaces that
+  older edits or **Discard draft** could fill again. If there is no safe space,
+  finish a reachable layout and reopen **Build & buy**.
 - Placement, Move, and Room previews warn in amber when an edit would cut off
   furniture or residents. The label names the new problem, badges locate it, and
   newly disconnected floor is highlighted. Draft placement is still allowed;

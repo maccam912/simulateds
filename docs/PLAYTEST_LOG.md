@@ -2061,3 +2061,54 @@ mode cannot move that person. An explicit construction action to move the owner'
 family to reachable entrance-side spaces would keep rebuilding fluid, while
 leaving the rest of the neighborhood and the construction draft alone. This is
 proposed next work, not implemented at this checkpoint.
+
+## Making space for construction
+
+Move family now lives in the fixed build footer, including Saved rooms. It moves
+only the owner's residents who are currently on the home lot to distinct clear
+spaces near the entrance. Visiting housemates keep their positions and plans.
+The host excludes obstacles in the current house, every undo/redo layout, and
+the committed house; destinations must also remain reachable in the current and
+committed layouts. If there is no safe space, the whole action is rejected with
+an explanation. It costs nothing, keeps the selected furnishing or room design,
+and does not consume an Undo entry or change the lot revision.
+
+Native injected-input passes at 1440×900 and 1280×720 / 125% UI scale exercise an
+entrance obstruction, safe relocation around a furnishing retained in Redo,
+placing where a resident stood, undoing that placement, retaining Copy room and
+Saved room selections, exact pending acknowledgement/snapshot handling, and
+leaving visiting housemates alone. The compact footer fits without another
+panel. Reviewed captures include `build/construction-space-space-made.png`,
+`build/construction-space-space-made-compact.png`, and
+`build/construction-space-library-compact.png`.
+
+The model covers current/undo/redo/committed obstacles, atomic rejection when
+history occupies all nearby space, save recovery, distinct positions, repeated
+use without swapping, stale/malformed/foreign requests, and unchanged budgets,
+layouts, neighbors, and object IDs. Review found and fixed an omitted-lot command
+edge case: the world passes its already-validated home-lot default to the action.
+The final focused model pass verifies that default and rejects invalid lot types.
+
+Full regression passed all 96 local suites, `IROH_SMOKE_PASS`,
+`PAINTINGS_IROH_PASS`, `MEALS_IROH_PASS`, and `SERVER_SMOKE_PASS`. Both independent
+builders in the main real-Iroh scenario use Move family, reject duplicate and
+foreign commands, receive distinct reachable positions with new action counters,
+and retain the entire lot snapshot, history counts, funds, and saved design.
+The final omitted-lot fix also has a focused passing model run.
+
+Fresh assessment: the remodeling loop now gives paused residents a safe way out
+of the build area. A fresh compact native tabletop playthrough also passed,
+including two people playing, positional audio, and one participant leaving
+without stopping the other. However, starting a game or dance for both own
+housemates still needs separate resident selections and orders. The next useful
+playability increment is an explicit household recreation choice at shared game
+and music furnishings: show who can join, preserve existing plans, and leave
+other players in control of their own residents. This is proposed next work,
+not implemented by the construction checkpoint.
+
+The refreshed local universal macOS package also passed plist validation, strict
+signature verification across both architectures, and packaged native startup
+on Apple Silicon (`EXPORTED_NATIVE_RUNTIME_PASS`). This is an ad-hoc-signed local
+build; physical Intel execution, notarization, and hosted platform checks remain
+separate gaps. The existing GitHub account billing/spending-limit block was not
+changed.

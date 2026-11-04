@@ -1126,3 +1126,40 @@ Intel runtime test. Export smoke checks now use temporary profile/save paths,
 so validating a package does not load or create the player's normal profile.
 The final focused clear-lot model pass uses the universal library and verifies
 that committed artwork also survives crash-save recovery and Discard draft.
+
+## Construction space for the household
+
+`construction_space` verifies free, atomic relocation of only home residents,
+with distinct entrance-side destinations that remain free across current,
+undo/redo, and committed layouts. Tests cover stale/malformed/foreign commands,
+blocked or exhausted staging space, visiting relatives retaining exact plans,
+unchanged budgets/history/object IDs, repeated use without swapping, and saved
+recovery into the committed house. The final focused model check also covers an
+omitted lot ID defaulting safely to home and rejects invalid explicit lot types.
+
+`construction_space_ui` passes with native injected input at 1440×900 and
+1280×720 / 125% UI scale. The test places furniture where a resident had stood,
+undoes without moving the residents back, preserves Copy room and Saved room
+selections, correlates exact command acknowledgements and accepted snapshots,
+and disables the control when all housemates are away. A furnishing kept in
+Redo reserves its former space even though it is absent from the visible draft.
+Normal and compact captures were reviewed for footer fit and visible positions.
+
+A separate compact native tabletop assessment passes with pointer-aligned input,
+shared activity status, distinct places, recorded positional audio, and voluntary
+leaving. This rechecks existing recreation while selecting the next feature; it
+is injected-input evidence, not a human-family playtest.
+
+Full regression passed all 96 local suites, `IROH_SMOKE_PASS`,
+`PAINTINGS_IROH_PASS`, `MEALS_IROH_PASS`, and `SERVER_SMOKE_PASS`. Both independent
+builders in the main real-Iroh scenario use Move family, reject duplicate and
+foreign commands, receive distinct reachable positions with new action counters,
+and retain the entire lot snapshot, history counts, funds, and saved design.
+The final omitted-lot fix also has a focused passing model run.
+
+The refreshed local universal macOS package also passed plist validation, strict
+signature verification across both architectures, and packaged native startup
+on Apple Silicon (`EXPORTED_NATIVE_RUNTIME_PASS`). This is an ad-hoc-signed local
+build; physical Intel execution, notarization, and hosted platform checks remain
+separate gaps. The existing GitHub account billing/spending-limit block was not
+changed.

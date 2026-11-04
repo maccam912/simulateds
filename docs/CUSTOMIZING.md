@@ -7,6 +7,7 @@ household or an absent player.
 | File | Responsibility |
 | --- | --- |
 | `game/catalog.gd` | Furniture prices, footprints, need effects, duration, labels, and color hints |
+| `game/construction_space.gd` | Own-lot resident stamps and host-only entrance placement that respects current, committed, and reversible layouts |
 | `game/clear_lot.gd` | Shared whole-lot resale preview, finished-art preservation, unfinished/capacity guards, and atomic application |
 | `game/clear_lot_panel.gd` | Revision-bound clearing review, consumable warnings, exact acknowledgement, and rebuild shortcuts |
 | `game/room_library.gd` | Canonical host-captured room recipes, four-entry/32 KiB household bounds, revision-checked edits, and legacy defaults |
@@ -175,3 +176,22 @@ meal portions and planted beds that will be discarded. Existing construction
 history restores their exact contents and any artwork transfer atomically;
 external allowances/gifts remain handled by the shared balance-history logic.
 No new saved fields are required. Saved room libraries stay outside the edit.
+
+## Making construction space
+
+`construction_space` is a household action, outside the paid edit/history path.
+Require ownership, active construction, the accepted lot revision, and exact
+member/position/action-counter stamps for all own residents currently home. The
+host derives destinations; a client must never supply or predict them from an
+incomplete construction history. Exclude stationary residents and every physical
+obstacle in the current, undo, redo, and committed layouts. Require paths from
+the entrance in both the current and committed house and use distinct spaces
+within three tiles of the entrance. Reject before moving anyone if there are
+not enough spaces. Visiting housemates and other families remain unchanged.
+
+Relocation advances each moved resident's action counter but not the lot revision,
+price, object allocator, or history. This preserves copy-room/blueprint selections
+and makes repeated stale requests harmless. The UI correlates the exact command
+acknowledgement and then waits for the new member counters in a snapshot. New
+building edits must continue rejecting occupied tiles; Undo and Discard must not
+put an obstacle back on a staged resident. No new save metadata is required.

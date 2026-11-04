@@ -21,6 +21,7 @@ const GardenPanel = preload("res://game/garden_panel.gd")
 const BuildCatalog = preload("res://game/build_catalog.gd")
 const RoomPlan = preload("res://game/room_plan.gd")
 const RoomCopy = preload("res://game/room_copy.gd")
+const ConstructionSpace = preload("res://game/construction_space.gd")
 const ClearLotPanel = preload("res://game/clear_lot_panel.gd")
 const RoomLibrary = preload("res://game/room_library.gd")
 const RoomLibraryPanel = preload("res://game/room_library_panel.gd")
@@ -160,6 +161,9 @@ var _copy_revision := -1
 var _copy_request: Dictionary={}
 var _blueprint_id := ""
 var _blueprint_revision := -1
+var space_button: Button
+var _space_request: Dictionary={}
+var _space_ack := false
 var clear_panel: VBoxContainer
 var clear_discard_button: Button
 var library_panel: VBoxContainer
@@ -194,6 +198,7 @@ func _ready() -> void:
 	Session.command_completed.connect(_art_completed)
 	Session.command_completed.connect(_copy_completed)
 	Session.command_completed.connect(_color_completed)
+	Session.command_completed.connect(_space_completed)
 	Rooms.changed.connect(_refresh)
 	_refresh()
 
@@ -463,7 +468,7 @@ func _refresh() -> void:
 	if view_context != _view_context and Session.role != "joining" and not family.is_empty():
 		_view_context = view_context
 		viewed_lot = str(family.home_lot)
-		_selected_object = ""
+		_selected_object = ""; _space_request={}; _space_ack=false
 		_art_source=""; _art_entry.clear(); _art_request.clear()
 		_moving_object = ""; _move_request.clear(); _wish_seen.clear(); _friend_seen.clear(); _hobby_seen.clear(); _room_anchor=Vector2i(-1,-1); _room_request.clear()
 		_paint_anchor=Vector2i(-1,-1); _paint_request.clear(); _window_request.clear(); _color_request.clear(); _copy_source=Vector2i(-1,-1); _copy_request.clear(); _blueprint_id=""
@@ -488,6 +493,12 @@ func _refresh() -> void:
 	mail_button.add_theme_color_override("font_color",Style.GOLD if unread>0 or news_pending else Style.TEXT)
 	var mine := str(lot.get("owner",""))==str(Session.profile_id)
 	var building := bool(lot.get("building",false))
+	if not building or not mine or (_space_request.get("lot_id",viewed_lot)!=viewed_lot): _space_request={}; _space_ack=false
+	elif _space_ack and not _space_request.is_empty():
+		var applied: bool=_space_request.orders.all(func(row):
+			var resident: Dictionary=Session.world._member(family,str(row.member_id))
+			return resident.get("lot_id")==viewed_lot and int(resident.get("next_action",0))>int(row.next_action))
+		if applied: _space_request={}; _space_ack=false
 	if building and mine:
 		_access_report=Session.world.build_access(lot)
 		var found := false
@@ -666,6 +677,11 @@ func _refresh() -> void:
 		clear_panel.refresh(viewed_lot)
 		undo_button.disabled=_clear_busy() or int(lot.get("build_undo",0))==0; redo_button.disabled=_clear_busy() or int(lot.get("build_redo",0))==0
 		clear_discard_button.disabled=_clear_busy(); mode_button.disabled=mode_button.disabled or _clear_busy()
+	if build_mode and is_instance_valid(space_button):
+		var space:=ConstructionSpace.request(state,Session.profile_id,viewed_lot)
+		space_button.text="Moving…" if not _space_request.is_empty() else "Move family"
+		space_button.disabled=not space.ok or not _space_request.is_empty() or Session.role=="joining"
+		space_button.tooltip_text=str(space.message)+"\nResidents visiting another lot stay there."
 	if _context_page=="travel" and not build_mode and is_instance_valid(travel_panel): travel_panel.refresh(viewed_lot,selected_member)
 	if _context_page=="garden" and not build_mode and is_instance_valid(garden_panel): garden_panel.refresh(viewed_lot,_selected_object,selected_member)
 	help_label.text="Click to place · " + Preferences.action_label("rotate") + " rotates · Ctrl/Cmd+Z undoes" if building and mine else "Click a need to care for it · Click the ground to walk"
@@ -1577,6 +1593,19 @@ func _place_blueprint(id: String,revision: int) -> void:
 	_blueprint_id=id; _blueprint_revision=revision; _copy_source=Vector2i(-1,-1); build_rotation=0
 	get_viewport().gui_release_focus(); _refresh()
 
+func _move_family_aside() -> void:
+	if not _space_request.is_empty(): return
+	var option:=ConstructionSpace.request(Session.state,Session.profile_id,viewed_lot)
+	if not option.ok: _notice(str(option.message)); return
+	_space_request={"type":"construction_space","lot_id":viewed_lot,"revision":Session.state.lots[viewed_lot].revision,"orders":option.orders.duplicate(true)}
+	_space_ack=false; _send(_space_request.duplicate(true))
+
+func _space_completed(intent: Dictionary,ok: bool,_message: String) -> void:
+	if _space_request.is_empty() or intent!=_space_request: return
+	if ok: _space_ack=true
+	else: _space_request={}; _space_ack=false
+	_refresh()
+
 func _clear_busy() -> bool:
 	return _context_page=="clear_lot" and is_instance_valid(clear_panel) and not clear_panel.pending.is_empty()
 
@@ -1588,6 +1617,7 @@ func _build_edit_controls(lot: Dictionary) -> void:
 		var library_actions:=HBoxContainer.new(); context_box.add_child(library_actions)
 		_edit_button("‹ Catalog",func(): _select_build_tool("copy_room"),library_actions)
 		_edit_button("Rotate ↻",_rotate,library_actions,"Rotate selected room · "+Preferences.action_label("rotate"))
+		space_button=_edit_button("Move family",_move_family_aside,library_actions)
 	elif _context_page=="access":
 		var repairs := HBoxContainer.new(); repairs.add_theme_constant_override("separation",5); context_box.add_child(repairs)
 		_edit_button("Door",func(): _select_build_tool("door"),repairs,"Choose a door to reconnect a room.")
@@ -1633,7 +1663,9 @@ func _build_edit_controls(lot: Dictionary) -> void:
 		cancel.disabled=_paint_anchor.x<0 or not _paint_request.is_empty()
 		_edit_button("Discard draft",func(): _send({"type":"build_cancel","lot_id":viewed_lot}),finish,"Restore the whole house and budget from before construction.")
 	if _context_page in ["blueprints","clear_lot"]: return
-	access_button=_edit_button("Hide access" if _context_page=="access" else "Access · Clear" if _access_report.get("ok",true) else "Access · %d issues" % _access_report.issues.size(),_toggle_access,context_box,"Show routes from the entrance and locate blocked residents or furnishings.")
+	var access_actions:=HBoxContainer.new(); access_actions.add_theme_constant_override("separation",5); context_box.add_child(access_actions)
+	space_button=_edit_button("Move family",_move_family_aside,access_actions)
+	access_button=_edit_button("Hide access" if _context_page=="access" else "Access · Clear" if _access_report.get("ok",true) else "Access · %d issues" % _access_report.issues.size(),_toggle_access,access_actions,"Show routes from the entrance and locate blocked residents or furnishings.")
 	if not _access_report.get("ok",true): access_button.add_theme_color_override("font_color",Style.GOLD)
 
 func _build_access_list() -> void:

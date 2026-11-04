@@ -5,6 +5,7 @@ const Catalog = preload("res://game/catalog.gd")
 const BuildRules = preload("res://game/build_rules.gd")
 const RoomPlan = preload("res://game/room_plan.gd")
 const RoomCopy = preload("res://game/room_copy.gd")
+const ConstructionSpace = preload("res://game/construction_space.gd")
 const ClearLot = preload("res://game/clear_lot.gd")
 const RoomLibrary = preload("res://game/room_library.gd")
 const FurnitureColors = preload("res://game/furniture_colors.gd")
@@ -145,6 +146,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 	if not lot_id is String or not state.lots.has(lot_id):
 		return _result(false, "That lot does not exist.")
 	var lot: Dictionary = state.lots[lot_id]
+	if type=="construction_space": return _construction_space(profile_id,command,lot)
 	if type in ["blueprint_save","blueprint_rename","blueprint_delete"]:
 		if lot.owner!=profile_id: return _result(false,"Only your own household can edit its saved rooms.")
 		var captured := {}
@@ -424,6 +426,28 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 	if member.task.is_empty():
 		_start_next(member, lot)
 	return _result(true, "Action queued.")
+
+func _construction_space(profile_id: String,command: Dictionary,lot: Dictionary) -> Dictionary:
+	var option:=ConstructionSpace.request(state,profile_id,str(lot.id))
+	if not option.ok: return _result(false,str(option.message))
+	if not _integer(command.get("revision")) or int(command.revision)!=int(lot.revision): return _result(false,"The lot changed. Try moving the family from the current draft.")
+	if not ConstructionSpace.matches(command.get("orders"),option.orders): return _result(false,"The family's positions changed. Try moving them from their current places.")
+	var moving: Array=option.orders.map(func(row): return str(row.member_id))
+	var stationary: Array=[]
+	for family: Dictionary in state.families.values():
+		for resident: Dictionary in family.members:
+			if resident.lot_id==lot.id and not moving.has(resident.id): stationary.append(_position(resident))
+	var history: Dictionary=_build_history.get(lot.id,{"undo":[],"redo":[]})
+	var placement:=ConstructionSpace.places(lot,option.orders,stationary,history.undo+history.redo,_build_backups.get(lot.id,{}))
+	if not placement.ok: return _result(false,str(placement.message))
+	var changed:=0
+	for index in range(option.orders.size()):
+		var member:=_member(state.families[profile_id],str(option.orders[index].member_id))
+		var at: Vector2i=placement.places[index]
+		if _position(member)!=at: changed+=1
+		_clear_member(member,"Waiting for construction","Moved aside for construction.")
+		member.x=at.x; member.y=at.y; member.next_action+=1
+	return _result(true,"Your family is already by the entrance." if changed==0 else ", ".join(option.names)+" moved aside. Keep building; Undo still restores your house edits.")
 
 func travel_option(profile_id: String,lot_id: String,travelers: Variant) -> Dictionary:
 	var result := {"ok":false,"message":"Choose household residents to travel.","orders":[],"places":[]}
