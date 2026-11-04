@@ -70,3 +70,24 @@ Fresh assessment: experimentation is safer, but rearranging a room still require
 selling and rebuying. Next: moving owned furniture at no cost, with rotation and
 clear valid/invalid placement previews that use the same rules as the host.
 After that, add an enjoyable purpose to daily play beyond refilling needs.
+
+## 2026-11-03 · Rearrange a room
+
+Existing furniture can move and rotate for free, preserving object identity and
+participating in undo/redo. Local placement previews and authoritative commands
+share one pure rule module. Green/red footprints explain missing floors,
+obstructions, residents, doors, bounds, and budget before a click. Selling shows
+the actual furnishing footprint and refund. A successful replicated move releases
+the selection; a rejected move leaves it available to correct.
+
+Validation: all ten suites, two Iroh clients moving furnishings and reconnecting,
+and server startup passed. Mouse-driven UI checks cover picking a tall furnishing,
+placing it, releasing the selection, and undo. Graphical playtesting at 1280×720
+with 125% UI scale exposed an overly compressed catalog; paired edit controls now
+keep at least 80 logical pixels available for catalog scrolling. Valid and invalid
+preview captures passed and were inspected.
+
+Fresh assessment: building now supports affordable experimentation and clear
+feedback. The next biggest playability gap is purpose: residents mostly refill
+bars. Next: small personal daily wishes with visible progress, modest rewards,
+and a saved journal, keeping absent households protected from missed deadlines.

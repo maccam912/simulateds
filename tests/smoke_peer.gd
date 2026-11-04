@@ -108,6 +108,10 @@ func _client(index: String) -> void:
 		await create_timer(0.1).timeout
 	assert(not [0,0] in session.state.lots[home].floors,"Client undo did not restore layout")
 	await _command({"type":"build_redo","lot_id":home,"revision":session.state.lots[home].revision})
+	var moved_id := ""
+	for object: Dictionary in session.state.lots[home].objects:
+		if object.kind=="fridge": moved_id=str(object.id)
+	await _command({"type":"move_object","lot_id":home,"object_id":moved_id,"x":9,"y":4,"rotation":0})
 	await _command({"type": "build_end", "lot_id": home})
 	await _command({"type":"autonomy","member_id":member_id,"enabled":false})
 	await _command({"type":"cancel","member_id":member_id})
@@ -137,6 +141,7 @@ func _client(index: String) -> void:
 	await create_timer(0.7).timeout
 	await _connect()
 	assert(session.home_lot() == home, "Reconnect changed lot ownership")
+	assert(int(session.world._object(session.state.lots[home],moved_id).x)==9, "Reconnect lost furnishing move")
 	assert(not session.state.families[identity].members[0].autonomy, "Reconnect lost autonomy preference")
 	assert(session.state.families.size() == 3, "Reconnect duplicated family")
 	assert([0, 0] in session.state.lots[home].floors, "Reconnect lost construction")

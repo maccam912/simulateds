@@ -5,11 +5,15 @@ signal hovered(cell: Vector2i)
 signal entity_clicked(target: Dictionary)
 
 const Catalog = preload("res://game/catalog.gd")
+const BuildRules = preload("res://game/build_rules.gd")
 var world: Dictionary = {}
 var lot_id := "lot_1"
 var selected_member := ""
 var build_kind := "floor"
 var build_rotation := 0
+var build_object_id := ""
+var preview_result: Dictionary = {}
+var _preview_signature := ""
 var building := false
 var zoom := 1.0
 var pan := Vector2.ZERO
@@ -67,7 +71,9 @@ func _gui_input(event: InputEvent) -> void:
 			elif event.button_index == MOUSE_BUTTON_LEFT:
 				var target := hit_target(event.position)
 				var cell := cell_at(event.position)
-				if not building and not target.is_empty():
+				if building and build_kind=="move" and build_object_id.is_empty() and target.get("type")=="object":
+					entity_clicked.emit(target)
+				elif not building and not target.is_empty():
 					entity_clicked.emit(target)
 				elif building and build_kind == "erase" and target.get("type") == "object":
 					tile_clicked.emit(Vector2i(int(target.x),int(target.y)))
@@ -191,22 +197,52 @@ func _draw() -> void:
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if not building and not hover_target.is_empty() else Control.CURSOR_ARROW
 	if _in_bounds(hover_cell) and (building or hover_target.is_empty()):
 		var tint := Color(0.96,0.99,0.81,0.32)
-		var w := 1.0
-		var d := 1.0
-		if building and Catalog.ITEMS.has(build_kind):
-			var item: Dictionary = Catalog.ITEMS[build_kind]
-			w = float(item.get("size",[1,1])[0])
-			d = float(item.get("size",[1,1])[1])
-			if build_rotation%2==1:
-				var old := w; w=d; d=old
-		if building and build_kind=="erase": tint=Color(0.94,0.4,0.3,0.35)
-		_diamond(hover_cell.x,hover_cell.y,w,d,tint,4,Color("f8f3c7"))
+		var outline := Color("f8f3c7")
+		var footprint := Vector2i.ONE
+		var preview_cell := hover_cell
+		if building and build_kind!="erase" and (build_kind!="move" or not build_object_id.is_empty()):
+			_update_preview(lot)
+			var kind := build_kind
+			if build_kind=="move":
+				for object: Dictionary in lot.objects:
+					if object.id==build_object_id: kind=str(object.kind)
+			footprint=Catalog.footprint(kind,build_rotation)
+			tint=Color(0.62,0.88,0.49,0.42) if preview_result.get("ok",false) else Color(0.93,0.32,0.26,0.45)
+			outline=Color("d8f1b2") if preview_result.get("ok",false) else Color("ffab8f")
+			_draw_preview_label(str(preview_result.get("message","")),bool(preview_result.get("ok",false)))
+		elif building and build_kind in ["erase","move"] and hover_target.get("type")=="object":
+			preview_cell=Vector2i(int(hover_target.x),int(hover_target.y))
+			footprint=Catalog.footprint(str(hover_target.kind),int(hover_target.rotation))
+			var item: Dictionary=Catalog.ITEMS[hover_target.kind]
+			if build_kind=="erase":
+				tint=Color(0.94,0.4,0.3,0.35)
+				_draw_preview_label("Sell " + str(item.name) + " · § %d" % int(float(item.cost)*0.6),false)
+			else: _draw_preview_label("Move " + str(item.name) + " · Click to select",true)
+		elif building and build_kind=="erase": tint=Color(0.94,0.4,0.3,0.35)
+		_diamond(preview_cell.x,preview_cell.y,footprint.x,footprint.y,tint,4,outline)
 	if not building and not hover_target.is_empty(): _draw_hover()
 	if lot.building:
 		var badge := Rect2(Vector2(size.x*0.5-150,22),Vector2(300,34))
 		draw_style_box(preload("res://game/style.gd").box(Color("eac88c"),17),badge)
 		draw_string(_font,badge.position+Vector2(25,23),"UNDER CONSTRUCTION  ·  Lot paused",HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("5d4a2d"))
 
+
+func _update_preview(lot: Dictionary) -> void:
+	var signature := str([lot_id,lot.revision,lot.funds,hover_cell,build_kind,build_rotation,build_object_id])
+	if signature==_preview_signature: return
+	_preview_signature=signature
+	var residents: Array=[]
+	for family: Dictionary in world.families.values():
+		for member: Dictionary in family.members:
+			if member.lot_id==lot_id: residents.append(Vector2i(int(member.x),int(member.y)))
+	var command := {"type":"move_object" if build_kind=="move" else "place","kind":build_kind,"object_id":build_object_id,"x":hover_cell.x,"y":hover_cell.y,"rotation":build_rotation}
+	preview_result=BuildRules.inspect(lot,command,residents)
+
+func _draw_preview_label(message: String, valid: bool) -> void:
+	var width := _font.get_string_size(message,HORIZONTAL_ALIGNMENT_LEFT,-1,12).x+24
+	var position := Vector2(clampf(_pointer.x+16,8,size.x-width-8),clampf(_pointer.y-40,8,size.y-220))
+	draw_style_box(preload("res://game/style.gd").box(Color("1c2a2f"),6),Rect2(position,Vector2(width,30)))
+	draw_string(_font,position+Vector2(12,20),message,HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("d8f1b2") if valid else Color("ffab8f"))
 
 func _draw_hover() -> void:
 	var title := str(hover_target.get("name",""))

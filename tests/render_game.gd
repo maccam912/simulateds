@@ -7,6 +7,9 @@ func _run() -> void:
 	var compact := "--compact" in OS.get_cmdline_user_args()
 	root.size = Vector2i(1280,720) if compact else Vector2i(1440,900)
 	var suffix := "-compact" if compact else ""
+	if "--large-ui" in OS.get_cmdline_user_args():
+		root.get_node("Preferences").set_value("ui_scale",1.25)
+		suffix += "-large"
 	var scene := load("res://game/main.tscn") as PackedScene
 	var game := scene.instantiate()
 	root.add_child(game)
@@ -20,6 +23,25 @@ func _run() -> void:
 	await create_timer(0.4).timeout
 	await RenderingServer.frame_post_draw
 	assert(root.get_texture().get_image().save_png("res://build/construction" + suffix + ".png") == OK)
+	var sofa_id := ""
+	for object: Dictionary in root.get_node("Session").state.lots[game.viewed_lot].objects:
+		if object.kind=="sofa": sofa_id=str(object.id)
+	game.selected_tool="move"; game._select_moving_object(sofa_id); game.build_rotation=1; game._refresh()
+	var cursor := InputEventMouseMotion.new()
+	cursor.position=game.lot_view.grid_point(5.5,8.5)
+	root.push_input(cursor,true)
+	await create_timer(0.3).timeout
+	await RenderingServer.frame_post_draw
+	assert(game.lot_view.preview_result.get("ok",false),"Moving preview allows rotated overlap with itself")
+	assert(game.tools_box.get_parent().size.y>=80,"Construction catalog retains usable scroll area")
+	assert(root.get_texture().get_image().save_png("res://build/move-valid" + suffix + ".png") == OK)
+	cursor=InputEventMouseMotion.new(); cursor.position=game.lot_view.grid_point(0.5,0.5)
+	root.push_input(cursor,true)
+	await create_timer(0.3).timeout
+	await RenderingServer.frame_post_draw
+	assert(not game.lot_view.preview_result.get("ok",true),"Moving preview rejects missing floor")
+	assert(root.get_texture().get_image().save_png("res://build/move-invalid" + suffix + ".png") == OK)
+	game._moving_object=""; game.selected_tool="floor"; game._refresh()
 	game._toggle_build()
 	var session := root.get_node("Session")
 	game._send({"type":"cancel","member_id":game.selected_member})

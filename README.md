@@ -179,3 +179,8 @@ the entire committed house. The neighborhood allowance survives these actions.
 
 See [the playtest log](docs/PLAYTEST_LOG.md) for tested checkpoints and the next
 usability priorities.
+
+In construction, choose **Move**, click existing furniture, rotate if desired,
+and click its new location. Moves are free and support undo. Green/red placement
+footprints explain whether the position is valid before you commit; **Sell**
+shows its refund. Escape releases an unplaced move selection.

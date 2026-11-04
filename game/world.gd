@@ -2,6 +2,7 @@ extends RefCounted
 ## Pure host-owned simulation: no networking, Nodes, clocks, or filesystem access.
 ## Commands are the only external mutations; the whole state is JSON-compatible.
 const Catalog = preload("res://game/catalog.gd")
+const BuildRules = preload("res://game/build_rules.gd")
 const GRID_SIZE := 16
 const SCHEMA := 1
 const MAX_FAMILIES := 4
@@ -95,7 +96,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 	if not lot_id is String or not state.lots.has(lot_id):
 		return _result(false, "That lot does not exist.")
 	var lot: Dictionary = state.lots[lot_id]
-	if type in ["build_begin", "build_end", "build_cancel", "build_undo", "build_redo", "place", "erase"]:
+	if type in ["build_begin", "build_end", "build_cancel", "build_undo", "build_redo", "place", "erase", "move_object"]:
 		if lot.owner != profile_id:
 			return _result(false, "Only the owner can build on this lot.")
 		if type == "build_begin":
@@ -254,41 +255,29 @@ func _build(lot: Dictionary, command: Dictionary) -> Dictionary:
 				lot.revision += 1
 				return _result(true, "Tile removed.")
 		return _result(false, "There is nothing to remove here.")
-	var kind: Variant = command.get("kind")
-	if not kind is String or not Catalog.ITEMS.has(kind):
-		return _result(false, "Unknown catalog item.")
-	var rotation_value: Variant = command.get("rotation", 0)
-	if not _integer(rotation_value) or int(rotation_value) < 0 or int(rotation_value) > 3:
-		return _result(false, "Invalid rotation.")
-	var rotation := int(rotation_value)
-	var definition: Dictionary = Catalog.ITEMS[kind]
-	if lot.funds < definition.cost:
-		return _result(false, "Your household cannot afford this yet.")
-	var existing := [cell.x, cell.y]
-	if kind in ["floor", "wall", "door"]:
-		if lot[_tile_key(kind)].has(existing):
-			return _result(false, "That tile is already placed.")
-		if kind != "floor":
-			if not _object_at(lot, cell).is_empty() or _resident_at(str(lot.id), cell):
-				return _result(false, "Move the furnishing or choose an empty tile.")
-			if cell == Vector2i(8,14):
-				return _result(false, "Keep the lot entrance clear.")
-			if kind == "wall":
-				lot.doors.erase(existing)
-			else:
-				lot.walls.erase(existing)
+	var residents: Array=[]
+	for family: Dictionary in state.families.values():
+		for member: Dictionary in family.members:
+			if member.lot_id==lot.id: residents.append(_position(member))
+	var preview := BuildRules.inspect(lot,command,residents)
+	if not preview.ok: return preview
+	var kind: String=preview.kind
+	var rotation: int=preview.rotation
+	if command.type=="move_object":
+		var object := _object(lot,str(command.object_id))
+		object.x=cell.x; object.y=cell.y; object.rotation=rotation
+		lot.revision+=1
+		return _result(true,str(Catalog.ITEMS[kind].name)+" moved. No charge.")
+	var existing := [cell.x,cell.y]
+	if kind in ["floor","wall","door"]:
+		if kind=="wall": lot.doors.erase(existing)
+		elif kind=="door": lot.walls.erase(existing)
 		lot[_tile_key(kind)].append(existing)
 	else:
-		var size := Catalog.footprint(kind, rotation)
-		for y in range(cell.y, cell.y + size.y):
-			for x in range(cell.x, cell.x + size.x):
-				var tile := Vector2i(x,y)
-				if not _inside(tile) or not lot.floors.has([x,y]) or not _walkable(lot, tile) or _resident_at(str(lot.id), tile) or lot.doors.has([x,y]):
-					return _result(false, "Furniture needs clear floor space, away from doors and residents.")
-		lot.objects.append(_new_object(kind, cell.x, cell.y, rotation))
-	lot.funds -= int(definition.cost)
+		lot.objects.append(_new_object(kind,cell.x,cell.y,rotation))
+	lot.funds -= int(preview.cost)
 	lot.revision += 1
-	return _result(true, str(definition.name) + " placed.")
+	return _result(true,str(Catalog.ITEMS[kind].name)+" placed.")
 
 func step(delta: float) -> void:
 	if not is_finite(delta) or delta <= 0.0 or state.is_empty():

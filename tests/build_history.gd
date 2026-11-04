@@ -68,5 +68,36 @@ func _run() -> void:
 	assert(_edit("place",{"kind":"floor","x":1,"y":1}).ok)
 	assert(_edit("build_end").ok)
 	assert(lot.build_undo==0 and not _edit("build_undo").ok,"History cannot undo a published house")
+	# Moving is a free edit, with the same rules used by the preview.
+	assert(_edit("build_begin").ok)
+	var sofa: Dictionary={}
+	for object: Dictionary in lot.objects:
+		if object.kind=="sofa": sofa=object
+	var before_move: Dictionary=sofa.duplicate()
+	var funds_before: int=lot.funds
+	var new_object_before: int=world.state.next_object
+	assert(_edit("move_object",{"object_id":sofa.id,"x":5,"y":8,"rotation":1}).ok,"Move may overlap its own previous footprint")
+	assert(lot.funds==funds_before and world.state.next_object==new_object_before,"Rearranging costs nothing and preserves identity")
+	assert(int(sofa.x)==5 and int(sofa.rotation)==1)
+	var snapshot_before: Dictionary=world.snapshot()
+	assert(not _edit("move_object",{"object_id":sofa.id,"x":11,"y":6,"rotation":1}).ok,"Occupied move rejected")
+	assert(world.snapshot()==snapshot_before,"Rejected move is atomic")
+	assert(_edit("build_undo").ok)
+	assert(world._object(lot,str(sofa.id))==before_move,"Undo restores original furnishing placement")
+	assert(_edit("build_redo").ok)
+	assert(int(world._object(lot,str(sofa.id)).rotation)==1)
+	var Rules = preload("res://game/build_rules.gd")
+	var preview_before: Dictionary=world.snapshot()
+	assert(not Rules.inspect(lot,{"type":"place","kind":"bed","x":0,"y":0,"rotation":0},[]).ok,"Preview rejects missing floor")
+	assert(not Rules.inspect(lot,{"type":"place","kind":"bed","x":15,"y":15,"rotation":0},[]).ok,"Preview rejects footprint beyond lot")
+	assert(not Rules.inspect(lot,{"type":"move_object","object_id":sofa.id,"x":8,"y":11,"rotation":0},[]).ok,"Preview protects doorway")
+	assert(not Rules.inspect(lot,{"type":"place","kind":"plant","x":9,"y":9,"rotation":0},[Vector2i(9,9)]).ok,"Preview protects resident tile")
+	assert(Rules.inspect(lot,{"type":"place","kind":"plant","x":9,"y":9,"rotation":0},[]).ok,"Preview accepts clear floor")
+	var empty_wallet: Dictionary=lot.duplicate(true); empty_wallet.funds=0
+	assert(not Rules.inspect(empty_wallet,{"type":"place","kind":"plant","x":9,"y":9,"rotation":0},[]).ok,"Preview reflects household funds")
+	assert(Rules.inspect(empty_wallet,{"type":"move_object","object_id":sofa.id,"x":4,"y":8,"rotation":0},[]).ok,"Moving needs no funds")
+	assert(world.snapshot()==preview_before,"Preview never mutates world or budget")
+	assert(not world.apply_command("neighbor",{"type":"move_object","lot_id":"lot_1","object_id":sofa.id,"x":4,"y":8,"rotation":0}).ok,"Only owner rearranges")
+	assert(_edit("build_cancel").ok)
 	print("BUILD_HISTORY_PASS")
 	quit()
