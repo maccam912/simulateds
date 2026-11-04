@@ -152,7 +152,15 @@ ambience should retain these bus boundaries and comparable loudness.
 | Settings | Clear Audio, Display, Controls, and Accessibility groups; immediate preview where safe; persisted values, reset defaults, and key-conflict feedback. |
 | Save | Give a save a readable name, show the current world context, and report success only when the write succeeds. Overwriting is an explicit choice. |
 | Load | Show names, time/day, and saved date. Unreadable saves remain visible with a reason; they do not replace the current world. |
+| Guide & controls | Optional, reopenable pages for the first day, building, neighbors, and current key bindings. Links enter real controls; reading help never grants progress or rewards. |
 | Developer console | Literal command input, help, bounded history, Tab completion, readable results. It blocks gameplay input while open. |
+
+The first-day guide offers suggestions in any order. New-neighborhood setup has
+an explicit opt-out, remembered on the device; existing saves never open help
+unexpectedly. Guide links explain unavailable actions during construction or
+joining, and opening a catalog preserves a draft already in progress. Controls
+show both rebound keys and the Escape/F1 rescue bindings. Keep help in the menus,
+not as another permanent panel over the house.
 
 The developer console intentionally exposes cheats such as `rosebud` during
 iteration. It invokes a bounded command registry rather than evaluating scripts

@@ -132,6 +132,11 @@ or shell expressions.
 - The world fills the window behind the HUD. **Activities** opens the optional
   action tray; construction opens the catalog. **Escape** closes either tray.
 - Scroll to zoom and middle-drag to pan. **F11** toggles fullscreen.
+- **Guide & controls** is available from the main and pause menus. Its First day,
+  Building, Neighbors, and Controls pages open the relevant game controls and
+  reflect your current key bindings. New neighborhoods can show the guide first;
+  uncheck that option to start directly in the world. The choice is saved on this
+  device and can also be changed in Settings → Comfort.
 - Idle residents can meet their own needs. There is no death in this foundation.
 
 Construction shelters that home's residents, sends visitors home, and closes the

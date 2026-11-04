@@ -5,6 +5,7 @@ const GameScene = preload("res://game/main.tscn")
 const Console = preload("res://game/debug_console.gd")
 const HouseholdEditor = preload("res://game/household_editor.gd")
 const MailPanel = preload("res://game/mail_panel.gd")
+const GuidePanel = preload("res://game/guide_panel.gd")
 var game: Control
 var console: Control
 var menu_root: Control
@@ -27,6 +28,10 @@ var household_editor: Control
 var household_apply: Button
 var _pending_household: Dictionary = {}
 var mail_panel: Control
+var guide_panel: Control
+var _guide_return := "main"
+var _guide_tab := 0
+var _guide_welcome := false
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -44,6 +49,7 @@ func _ready() -> void:
 	game.mail_requested.connect(open_mail)
 	Session.action_result.connect(_household_result)
 	Session.world_changed.connect(_household_changed)
+	Session.world_changed.connect(_refresh_guide_context)
 	menu_root = Control.new()
 	add_child(menu_root)
 	menu_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -99,8 +105,8 @@ func _show_page(value: String, title: String = "", subtitle: String = "") -> voi
 	menu_root.add_child(menu_panel)
 	menu_panel.anchor_left=0.5; menu_panel.anchor_right=0.5
 	menu_panel.anchor_top=0.5; menu_panel.anchor_bottom=0.5
-	var width := 720.0 if value in ["settings","save","load","household","mail"] else 440.0
-	var height := 600.0 if value in ["settings","save","load","household","mail"] else 490.0
+	var width := 720.0 if value in ["settings","save","load","household","mail","guide"] else 440.0
+	var height := 600.0 if value in ["settings","save","load","household","mail","guide"] else 490.0
 	if value=="splash": height=230
 	menu_panel.offset_left=-width/2; menu_panel.offset_right=width/2
 	menu_panel.offset_top=-height/2; menu_panel.offset_bottom=height/2
@@ -135,9 +141,9 @@ func show_main() -> void:
 	menu_content.add_child(_button("New neighborhood",_new_game_menu))
 	menu_content.add_child(_button("Load neighborhood",func(): open_saves("load")))
 	menu_content.add_child(_button("Play together",func(): show_game(); game._open_connection()))
-	menu_content.add_child(_button("Settings",func(): open_settings()))
+	_settings_help_row()
 	menu_content.add_child(_button("Quit",_request_quit))
-	var footer:=_label("Development build · F1 opens the console",12,Style.MUTED)
+	var footer:=_label("First time here? Open Guide & controls." if bool(Preferences.values.first_day_guide) else "Development build · F1 opens the console",12,Style.MUTED)
 	menu_content.add_child(footer)
 	if not Session.saving_enabled:
 		var warning:=_label("The current save could not be loaded. Its files are protected. Save a new copy to preserve this temporary neighborhood.",13,Style.GOLD)
@@ -161,7 +167,7 @@ func open_pause() -> void:
 	menu_content.add_child(_button("Household",open_household))
 	menu_content.add_child(_button("Save neighborhood",func(): open_saves("save")))
 	menu_content.add_child(_button("Load neighborhood",func(): open_saves("load")))
-	menu_content.add_child(_button("Settings",func(): open_settings()))
+	_settings_help_row()
 	menu_content.add_child(_button("Developer console",_open_console))
 	menu_content.add_child(_button("Main menu",_request_main))
 	menu_content.add_child(_button("Quit to desktop",_request_quit))
@@ -191,10 +197,16 @@ func _new_game_menu() -> void:
 	previous_page=page
 	_show_page("new","New neighborhood","Start with a furnished home and two residents. Your current neighborhood is preserved in a recovery save.")
 	var name:=LineEdit.new(); name.placeholder_text="Neighborhood name"; name.text="Linden Grove"; name.max_length=40; menu_content.add_child(name)
+	var offer_guide := CheckButton.new(); offer_guide.text="Show the first-day guide"; offer_guide.button_pressed=bool(Preferences.values.first_day_guide); menu_content.add_child(offer_guide)
 	var create:=_button("Create neighborhood",func():
 		var result:Dictionary=Session.new_world(name.text)
 		if result.ok:
 			game.viewed_lot=""; game.selected_member=""; show_game(); game._notice(result.message)
+			var guide_saved := Preferences.set_value("first_day_guide",offer_guide.button_pressed)
+			if offer_guide.button_pressed: open_guide(true)
+			if not guide_saved:
+				if page=="guide": _feedback(Preferences.last_error,false)
+				else: game._notice(Preferences.last_error)
 		else: _feedback(result.message,false),true)
 	create.disabled=Session.role!="offline"
 	menu_content.add_child(create)
@@ -261,7 +273,7 @@ func _perform_load() -> void:
 		show_game(); game._notice(result.message)
 	else: _feedback(result.message,false)
 
-func open_settings() -> void:
+func open_settings(selected_tab: String = "") -> void:
 	if page!="settings": previous_page=page
 	_show_page("settings","Settings","Changes apply immediately and are saved on this device.")
 	var tabs:=TabContainer.new(); tabs.size_flags_vertical=Control.SIZE_EXPAND_FILL; menu_content.add_child(tabs)
@@ -277,6 +289,7 @@ func open_settings() -> void:
 	_option_setting(display,"ui_scale","Interface scale",[0.9,1.0,1.1,1.25],["90%","100%","110%","125%"])
 	var access:=_settings_tab(tabs,"Comfort")
 	_check_setting(access,"reduced_motion","Reduce interface animation")
+	_check_setting(access,"first_day_guide","Offer the guide in new neighborhoods")
 	var note:=_label("Need bars also show numbers. Sound is never the only indication of success or failure.",14,Style.MUTED); note.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; access.add_child(note)
 	var controls:=_settings_tab(tabs,"Controls")
 	binding_hint=_label("Choose a binding, then press a key. Escape cancels.",13,Style.MUTED); controls.add_child(binding_hint)
@@ -286,6 +299,8 @@ func open_settings() -> void:
 		var button:=_button(Preferences.action_label(action),func():
 			binding_action=str(action); binding_hint.text="Press a key for "+str(action).replace("_"," ")+". Escape cancels.")
 		button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; grid.add_child(button); binding_buttons[action]=button
+	for index in range(tabs.get_tab_count()):
+		if tabs.get_tab_title(index)==selected_tab: tabs.current_tab=index
 	var row:=HBoxContainer.new(); menu_content.add_child(row)
 	row.add_child(_button("Restore defaults",func():
 		if Preferences.reset_defaults(): open_settings()
@@ -379,14 +394,17 @@ func _update_pause() -> void:
 
 func _preferences_changed() -> void:
 	if game!=null: game.lot_view.queue_redraw()
+	if page=="guide" and is_instance_valid(guide_panel): guide_panel.refresh_bindings()
 
 func _session_status(_message: String) -> void:
 	if page=="game" and game!=null: game._refresh()
+	_refresh_guide_context()
 
 func _back() -> void:
 	match previous_page:
 		"game": show_game()
 		"pause": open_pause()
+		"guide": open_guide()
 		"save","load": open_saves(previous_page)
 		_: show_main()
 
@@ -490,3 +508,53 @@ func _household_changed() -> void:
 	_back()
 	game._refresh()
 	game._notice("Household updated.")
+
+func _settings_help_row() -> void:
+	var row := HBoxContainer.new(); menu_content.add_child(row)
+	for button: Button in [_button("Settings",func(): open_settings()),_button("Guide & controls",func(): open_guide())]:
+		button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; row.add_child(button)
+
+func open_guide(welcome: bool=false) -> void:
+	if page in ["main","pause","game"]:
+		_guide_return=page; _guide_welcome=welcome; _guide_tab=0
+	previous_page=_guide_return
+	_show_page("guide","Welcome home" if _guide_welcome else "Guide & controls","A few ways to make this place your own. Explore in any order.")
+	guide_panel=GuidePanel.new(); menu_content.add_child(guide_panel)
+	guide_panel.action_requested.connect(_guide_action)
+	guide_panel.tabs.current_tab=_guide_tab
+	_refresh_guide_context()
+	menu_content.add_child(_button("Start your day" if _guide_welcome else "Back",_back,true))
+	_message_area()
+
+func _refresh_guide_context() -> void:
+	if page!="guide" or not is_instance_valid(guide_panel): return
+	var family: Dictionary=game._family()
+	var building := bool(Session.state.lots.get(family.get("home_lot",""),{}).get("building",false))
+	guide_panel.refresh_context(not family.is_empty(),building,Session.role=="joining",Session.is_authority())
+
+func _guide_action(action: String) -> void:
+	if page!="guide": return
+	_guide_tab=guide_panel.tabs.current_tab
+	_refresh_guide_context()
+	if not guide_panel.action_buttons.has(action) or guide_panel.action_buttons[action][0].disabled: return
+	if action=="bindings": open_settings("Controls"); return
+	show_game()
+	match action:
+		"household": open_household()
+		"care": game._context_page="care"; game._refresh(); game._show_tray(game.context_panel,true)
+		"wishes": game._open_wishes()
+		"hobbies": game._open_hobbies()
+		"people": game._open_people()
+		"mail": open_mail()
+		"connect": game._open_connection()
+		"save": open_saves("save")
+		"build","catalog","move","decorate":
+			var family: Dictionary=game._family()
+			if family.is_empty(): return
+			game._select_lot(str(family.home_lot))
+			if action=="decorate":
+				game._clear_catalog_filters(); game._catalog_category="finishes"; game.catalog_category.select(game.BuildCatalog.CATEGORIES.keys().find("finishes"))
+			else: game._clear_catalog_filters()
+			game._select_build_tool("move" if action=="move" else "room" if action=="build" else "floor")
+			if not Session.state.lots[family.home_lot].building: game._toggle_build()
+			else: game._refresh(); game._show_tray(game.context_panel,true)

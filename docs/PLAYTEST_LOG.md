@@ -426,3 +426,39 @@ several meaningful activities. A newcomer still has to discover most of them by
 opening panels. Next: an optional first-day guide with direct links into existing
 controls, plus a clear controls reference that reflects key bindings. Keep it
 reopenable and dismissible, with no forced tutorial or persistent extra HUD panel.
+
+## 2026-11-04 · A first day without a compulsory tutorial
+
+Main and pause menus now offer Guide & controls alongside Settings. Four pages
+cover the first day, building, neighbors, and the current key bindings. Cards
+open the ordinary family editor, care/wish/hobby trays, build tools, finishes,
+People, Mail, saves, or connection choices. Opening help does not award progress
+or alter a household. New-neighborhood setup includes a guide checkbox; opting
+out starts directly in the world and is remembered on the device. Existing saves
+continue normally, and help remains available regardless of that preference.
+
+The controls page updates with changed bindings and names the Escape/F1 rescue
+keys. Backtick is labeled plainly rather than as the engine's "QuoteLeft" name.
+Editing bindings from help returns to the same Controls tab. Build links target
+the player's own home and preserve an existing draft; care/visit links explain
+construction restrictions. Guests cannot access host saves through help. Reading
+the guide pauses solo play while the shared clock continues under host policy.
+
+Validation: all twenty-one local suites passed, then real Iroh host/two-client
+and dedicated-server checks passed. The guide-specific session clock check uses
+simulated host/client roles, not a separate network guide playtest. Graphical
+input runs passed at 1440×900 and 1280×720/125% UI scale. Coverage includes all
+four tabs, every direct action, startup with no interruption, welcome dismissal,
+new-world opt-out and preference reload, return navigation, live binding changes,
+rescue labels, own-home routing while viewing a neighbor, existing construction,
+and guest/joining restrictions. The first scrolling fixture clicked before the
+new page had laid out; it now waits for layout and verifies that the target is
+inside the scrolling viewport. Corrected runs passed. The preceding catalog
+checkpoint passed all four CI platform jobs. These remain agent playtests.
+
+Fresh assessment: the game's controls are now much easier to discover, and the
+household/building/social loop is coherent. Residents still make very similar
+leisure choices on their own. Next: distinct, editable leisure preferences that
+influence autonomy while keeping urgent needs and explicit player plans first.
+Make the difference visible in ordinary play, without unattended reward farming
+or penalties for being away.

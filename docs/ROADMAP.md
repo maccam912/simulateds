@@ -32,7 +32,9 @@ Floor/wall finish palettes now support priced rectangle painting, preview, and
 whole-area undo alongside room construction. Reading, gardening, and cooking now
 have five persistent ranks, bounded deliberate practice, activity bonuses, and a
 Hobbies panel. The build catalog now offers categories, search by name/use,
-selected-item details, and compact editing controls.
+selected-item details, and compact editing controls. An optional first-day guide
+and live controls reference now lead into the existing systems without adding
+permanent HUD clutter.
 See [the playtest log](PLAYTEST_LOG.md) for evidence
 and current usability priorities.
 

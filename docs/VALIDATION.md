@@ -83,7 +83,7 @@ service mode was not repeated for this update.
 ## Still open
 
 The subsequent feature checks are recorded in [PLAYTEST_LOG.md](PLAYTEST_LOG.md).
-The current local suite contains twenty model/application suites, plus real Iroh
+The current local suite contains twenty-one model/application suites, plus real Iroh
 host/two-client reconnect and dedicated-server startup. The room-construction
 checkpoint passed Linux, Windows, macOS, and Android CI builds/exports. The later
 household checkpoint passed the three desktop jobs; Android built, tested,
@@ -111,6 +111,11 @@ footprints and affordability, construction purchase/undo, and compact palette
 regression coverage. A native mouse/keyboard playtest separately verified the
 actual category popup, search, bookshelf purchase, undo/redo commands, and
 save/reload; its saved world retained two bookshelves and the exact §160 purchase.
+The catalog checkpoint passed all four CI platform jobs. Guide checks cover
+main/pause/new-world navigation, every direct action, construction and guest-save
+restrictions, own-home routing, live binding updates and rescue keys, persistent
+opt-out, and compact/standard layouts. The guide-specific shared-clock assertion
+uses the local session path with simulated roles; real Iroh checks also passed.
 
 Physical Android operation, cross-OS multiplayer, exported game packages,
 production authentication, public matchmaking abuse resistance, long-term
