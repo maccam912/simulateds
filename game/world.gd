@@ -236,6 +236,20 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 				member.queue.erase(queued)
 				return _result(true, "Action removed from the plan.")
 		return _result(false, "That action has already finished.")
+	if type == "reorder_action":
+		var first: Variant=command.get("first_id")
+		var second: Variant=command.get("second_id")
+		if not first is String or not second is String or first.is_empty() or second.is_empty() or first==second:
+			return _result(false,"Choose two neighboring actions in the upcoming plan.")
+		# Ordered stable IDs describe exactly the pair the player saw. A delayed
+		# repeat or an action that has started cannot swap an unintended pair.
+		for index in range(member.queue.size()-1):
+			if member.queue[index].get("id")==first and member.queue[index+1].get("id")==second:
+				var earlier: Dictionary=member.queue[index]
+				member.queue[index]=member.queue[index+1]
+				member.queue[index+1]=earlier
+				return _result(true,"Upcoming plan updated. The current activity continues.")
+		return _result(false,"The plan has changed. Choose from the current upcoming actions.")
 	if type == "cancel":
 		_clear_member(member)
 		return _result(true, "Action queue cleared.")

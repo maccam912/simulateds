@@ -230,6 +230,10 @@ See [THIRD_PARTY.md](THIRD_PARTY.md) for upstream transport attribution and
 ## Everyday controls added during playtesting
 
 Open **Plan** beside a resident's needs to see and cancel individual activities.
+Use **↑ / ↓** to move upcoming activities earlier or later. The current activity
+continues, and occupied furniture keeps its reservation. You can move another
+activity ahead of a wait without canceling either one. Keyboard focus follows
+the edited row; delayed multiplayer edits are rejected if the plan has changed.
 Autonomy is saved separately for each resident. Direct orders take priority over
 automatic activities. Beds and bathroom fixtures allow one user at a time;
 waiting residents keep their place in their own plan.

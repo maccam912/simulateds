@@ -171,14 +171,29 @@ func _client(index: String) -> void:
 	await _command({"type":"cancel","member_id":member_id})
 	await _command({"type":"move","member_id":member_id,"lot_id":home,"x":0,"y":0})
 	await _command({"type":"move","member_id":member_id,"lot_id":home,"x":15,"y":15})
+	await _command({"type":"move","member_id":member_id,"lot_id":home,"x":15,"y":14})
 	var queued_id := ""
+	var later_id := ""
+	var active_id := ""
 	for _attempt in range(30):
 		var resident: Dictionary = session.state.families[identity].members[0]
-		if not resident.queue.is_empty():
+		if resident.queue.size()==2 and not resident.task.is_empty():
 			queued_id = str(resident.queue[0].id)
+			later_id = str(resident.queue[1].id); active_id=str(resident.task.id)
 			break
 		await create_timer(0.1).timeout
 	assert(not queued_id.is_empty(), "Replicated plan did not expose stable action ID")
+	var reorder := {"type":"reorder_action","member_id":member_id,"first_id":queued_id,"second_id":later_id}
+	await _command(reorder)
+	for _attempt in range(30):
+		var resident: Dictionary=session.state.families[identity].members[0]
+		if resident.queue.size()==2 and resident.queue[0].id==later_id: break
+		await create_timer(0.1).timeout
+	var planned: Dictionary=session.state.families[identity].members[0]
+	assert(planned.queue.size()==2 and planned.queue[0].id==later_id and planned.queue[1].id==queued_id and planned.task.id==active_id,"Edited order must replicate without interrupting the current activity")
+	await _command(reorder,false)
+	var foreign := reorder.duplicate(); foreign.member_id=session.state.families[str(session.state.lots[host_home].owner)].members[0].id
+	await _command(foreign,false)
 	await _command({"type":"remove_action","member_id":member_id,"action_id":queued_id})
 	await _command({"type":"remove_action","member_id":member_id,"action_id":queued_id},false)
 	await _command({"type":"cancel","member_id":member_id})

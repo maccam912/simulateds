@@ -83,7 +83,7 @@ service mode was not repeated for this update.
 ## Still open
 
 The subsequent feature checks are recorded in [PLAYTEST_LOG.md](PLAYTEST_LOG.md).
-The current local suite contains twenty-seven model/application suites, plus real Iroh
+The current local suite contains twenty-nine model/application suites, plus real Iroh
 host/two-client reconnect and dedicated-server startup. The room-construction
 checkpoint passed Linux, Windows, macOS, and Android CI builds/exports. The later
 household checkpoint passed the three desktop jobs; Android built, tested,
@@ -170,6 +170,19 @@ Settings checks migrate the older nine-action map, preserving custom swaps and
 choosing an unused focus key when F is already bound. Invalid maps still fall
 back atomically. Headless mouse checks allow a frame for pointer routing before
 pressing a control, as native rendering already does.
+
+The camera checkpoint passed all four platform CI jobs. Plan-editing checks cover
+full queues, exact mutation of an adjacent pair, preserved current progress and
+action IDs, malformed/foreign/stale/repeated requests, complete reordered
+execution, snapshot round trips, and moving a useful activity ahead of a busy
+fixture without stealing its reservation. Both real Iroh clients edited plans,
+observed the new order while their current action continued, and received
+rejections for stale and foreign edits. All 29 local suites and dedicated-server
+startup passed. Actual mouse/keyboard playtests cover focus, scroll, cancellation
+after reordering, boundaries, and completed two-resident morning plans. Standard
+and compact graphical checks passed; plan confirmations were moved beside the
+tray after visual inspection exposed an overlap. Follow-up plan, HUD, camera,
+and application checks passed after that layout polish.
 
 Physical Android operation, cross-OS multiplayer, exported game packages,
 production authentication, public matchmaking abuse resistance, long-term

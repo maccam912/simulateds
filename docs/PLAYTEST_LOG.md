@@ -659,3 +659,35 @@ changing the order of upcoming activities requires canceling and recreating
 orders. Next: let players rearrange their queued plans while preserving the
 current activity, stable action identities, and host ownership/stale-request
 checks, then test it during a busy two-resident morning.
+
+## 2026-11-04 · Revise the morning plan
+
+Upcoming activities now have earlier/later arrows. An edit swaps the exact
+adjacent pair of stable action IDs shown to the player. The current task,
+elapsed progress, reservations, and all other residents remain unchanged.
+Repeated, stale, nonadjacent, foreign, and malformed requests fail without
+mutation. Even a full eight-action queue can be rearranged. The ordinary
+scheduler then executes the new order, including moving a useful activity ahead
+of an occupied fixture without canceling the waiting order.
+
+The Plan tray preserves focus and useful scroll position through its row rebuild;
+at a boundary it focuses the available reverse arrow. Actual mouse and keyboard
+checks also cancel the intended action after multiple moves. A two-resident
+morning moved the bathroom earlier for Alex and reading ahead of an occupied
+fridge for Robin, then completed both residents' care/recreation plans in order.
+Compact visual inspection exposed notices covering the lower plan rows; they
+now sit beside the tray and grow upward above the household controls.
+
+Validation: all 29 suites, real Iroh host/two-client plan reordering, stale and
+foreign rejection, reconnect, and dedicated-server startup passed. Standard and
+compact rendered input checks passed, including notice layout. The affected
+plan/HUD/camera/application suites passed again after the layout adjustment.
+The camera checkpoint passed all four platform CI jobs. Human family and
+physical-device playtests remain separate work.
+
+Fresh assessment: a busy household's upcoming day is easier to change, including
+when another resident occupies the desired fixture. Watching the revised plan
+reveals the next usability gap: the active row says what is happening but does
+not distinguish travel, waiting, and progress toward finishing well enough.
+Next: clear, quiet activity feedback based on accepted state, without stealing
+focus or adding another permanent world panel.

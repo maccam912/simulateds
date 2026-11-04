@@ -48,7 +48,7 @@ func _run() -> void:
 	await process_frame
 	_check(game.plan_box.get_child_count()==2,"Plan displays current and queued actions")
 	var remaining_id: String=game._member().task.id
-	var remove: Button=game.plan_box.get_child(1).get_child(1)
+	var remove: Button=game.plan_controls[game._member().queue[0].id].cancel
 	await _click(remove.get_global_rect().get_center())
 	_check(game._member().queue.is_empty() and game._member().task.id==remaining_id,"Queue row removes only its own action")
 	game._toggle_build()

@@ -164,6 +164,13 @@ zooming cancels the movement immediately. Changing lots resets the pan while
 retaining zoom, and Center restores both. Resolve current snapshot positions
 when finding a visiting resident; camera actions never issue simulation orders.
 
+Plan arrows revise only upcoming activities. Keep the current activity visually
+distinct and never offer to reorder it. Retain focus on the edited action and
+keep it in the scroll view, including when a boundary disables one arrow. Host
+confirmation controls the visible order; a changed plan gets a useful rejection.
+Confirmation messages sit beside an open Plan tray and grow upward above the
+household controls, so feedback cannot cover the next edit.
+
 ## Everyday personality
 
 A favorite pastime is a preference, not a level or a reward multiplier. Reading,

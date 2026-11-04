@@ -61,6 +61,8 @@ var _wish_seen: Dictionary = {}
 var queue_label: Button
 var plan_panel: PanelContainer
 var plan_box: VBoxContainer
+var plan_scroll: ScrollContainer
+var plan_controls: Dictionary = {}
 var plan_title: Label
 var autonomy_button: Button
 var find_button: Button
@@ -260,7 +262,7 @@ func _build_ui() -> void:
 	find_button=_button("Find resident",_find_resident); plan_actions.add_child(find_button)
 	pastime_label=_label("",13,Style.MUTED); plan.add_child(pastime_label)
 	pastime_label.tooltip_text="Change this in Household. A favorite nudges free-time choices; urgent needs and your orders come first."
-	var plan_scroll := ScrollContainer.new(); plan_scroll.size_flags_vertical=Control.SIZE_EXPAND_FILL; plan_scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED; plan.add_child(plan_scroll)
+	plan_scroll = ScrollContainer.new(); plan_scroll.size_flags_vertical=Control.SIZE_EXPAND_FILL; plan_scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED; plan.add_child(plan_scroll)
 	plan_box = _vbox(plan_scroll,5); plan_box.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	var bars := HBoxContainer.new(); bars.add_theme_constant_override("separation",12); needs.add_child(bars)
 	for need: String in Wellbeing.ORDER:
@@ -324,6 +326,7 @@ func _build_ui() -> void:
 	context_box = _vbox(context,6)
 
 	notice_panel = _hud_panel(Rect2(-340,-222,680,42),Vector2(0.5,1))
+	notice_panel.grow_vertical=Control.GROW_DIRECTION_BEGIN
 	notice_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	notice_panel.hide()
 	notice_label = _label("",13,Style.TEXT)
@@ -501,7 +504,16 @@ func _refresh() -> void:
 	if room_label!=null:
 		room_label.text=Session.status+("\nRoom code: "+Rooms.code if not Rooms.code.is_empty() else "")
 		if Session.role=="host": ticket_input.text=Session.ticket()
+	_layout_notice()
 	notice_panel.visible = _notice_time > 0.0
+
+func _layout_notice() -> void:
+	if notice_panel==null: return
+	var left := -minf(340.0,size.x*0.5-16.0)
+	if plan_panel.visible: left=maxf(left,plan_panel.get_rect().end.x+16.0-size.x*0.5)
+	notice_panel.offset_left=left
+	notice_panel.offset_right=minf(340.0,size.x*0.5-16.0)
+	notice_panel.offset_top=-222.0; notice_panel.offset_bottom=-180.0
 
 func _refresh_plan(member: Dictionary) -> void:
 	plan_title.text = str(member.name) + "’s day"
@@ -514,7 +526,13 @@ func _refresh_plan(member: Dictionary) -> void:
 	for task: Dictionary in tasks: signature += str(task.get("id",""))
 	if signature == _plan_signature: return
 	_plan_signature = signature
+	var focus_action := ""; var focus_control := ""
+	var focused := get_viewport().gui_get_focus_owner()
+	if focused!=null and plan_box.is_ancestor_of(focused):
+		focus_action=str(focused.get_meta("plan_action","")); focus_control=str(focused.get_meta("plan_control",""))
+	var scroll_position := plan_scroll.scroll_vertical
 	_clear(plan_box)
+	plan_controls.clear()
 	if tasks.is_empty():
 		var empty := _label("A little free time. Choose an activity or click something in the house.",13,Style.MUTED)
 		empty.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; empty.custom_minimum_size.x=270; plan_box.add_child(empty)
@@ -528,8 +546,35 @@ func _refresh_plan(member: Dictionary) -> void:
 		var label := _label(("NOW  " if current else "WAIT  " if waiting else "NEXT  ") + title + suffix,13,Style.GREEN if current else Style.TEXT)
 		label.size_flags_horizontal=Control.SIZE_EXPAND_FILL; label.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; label.tooltip_text=title+(" · A favorite pastime, chosen autonomously." if favorite else ""); row.add_child(label)
 		var action_id := str(task.get("id",""))
+		plan_controls[action_id]={}
+		if not current:
+			var index: int=member.queue.find(task)
+			for direction: int in [-1,1]:
+				var neighbor := index+direction
+				var available: bool=neighbor>=0 and neighbor<member.queue.size()
+				var first_id := str(member.queue[mini(index,neighbor)].id) if available else ""
+				var second_id := str(member.queue[maxi(index,neighbor)].id) if available else ""
+				var key := "earlier" if direction<0 else "later"
+				var reorder := _button("↑" if direction<0 else "↓",func(): _send({"type":"reorder_action","member_id":str(member.id),"first_id":first_id,"second_id":second_id}))
+				reorder.disabled=not available; reorder.tooltip_text="Move "+title+" "+key+" in the upcoming plan. The current activity continues."
+				reorder.set_meta("plan_action",action_id); reorder.set_meta("plan_control",key)
+				row.add_child(reorder); plan_controls[action_id][key]=reorder
 		var cancel := _button("×",func(): _send({"type":"remove_action","member_id":str(member.id),"action_id":action_id}))
 		cancel.tooltip_text="Cancel " + title; row.add_child(cancel)
+		cancel.set_meta("plan_action",action_id); cancel.set_meta("plan_control","cancel"); plan_controls[action_id].cancel=cancel
+	call_deferred("_restore_plan_view",selected_member,focus_action,focus_control,scroll_position)
+
+func _restore_plan_view(member_id: String, action_id: String, control_key: String, scroll_position: int) -> void:
+	if member_id!=selected_member: return
+	plan_scroll.scroll_vertical=scroll_position
+	if not plan_panel.visible or not plan_controls.has(action_id) or get_viewport().gui_get_focus_owner()!=null: return
+	var controls: Dictionary=plan_controls[action_id]
+	var target: Button=controls.get(control_key)
+	if target==null or target.disabled:
+		target=controls.get("later" if control_key=="earlier" else "earlier",controls.cancel)
+		if target.disabled: target=controls.cancel
+	target.grab_focus()
+	plan_scroll.ensure_control_visible(target)
 
 func _task_title(task: Dictionary, member: Dictionary) -> String:
 	if task.get("type") == "move": return "Walk to %d, %d" % [int(task.x),int(task.y)]
@@ -793,6 +838,7 @@ func _request_save_menu() -> void:
 
 func _show_tray(panel: Control,show_panel: bool) -> void:
 	panel.visible=show_panel
+	_layout_notice()
 	if show_panel and not bool(Preferences.values.reduced_motion):
 		panel.modulate.a=0
 		create_tween().tween_property(panel,"modulate:a",1.0,0.14).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
