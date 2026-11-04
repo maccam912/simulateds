@@ -485,6 +485,13 @@ pantry leaves the crop available to sell or keep later. **Homegrown meals ›**
 opens your dining table without choosing a recipe or moving anyone. If you have
 no table, the button explicitly offers to enter construction with one selected.
 
+**Garden ›** in either the dining-table or garden tray opens **Your kitchen
+garden**, also available from Activities. It lists your own beds, their crops,
+water and current plans, plus free pantry stock and possible homegrown bowls.
+Choose a bed to inspect and center it; your resident stays where they are and
+keeps their plan. The overview also offers explicit priced build actions and a
+link back to homegrown meals.
+
 A **Homegrown bowl** uses two radishes and two tomatoes for four portions, with
 no additional currency cost. It restores hunger and comfort and supports the
 same shared dining and cooking practice as purchased recipes. The pantry count

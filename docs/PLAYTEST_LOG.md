@@ -2485,3 +2485,58 @@ for both architectures, and `EXPORTED_NATIVE_RUNTIME_PASS` on Apple Silicon.
 It remains locally ad-hoc signed; physical Intel/Android, cross-device and human
 family play, and notarization remain unverified. The pantry package checksum is
 `af71c5499b442d0bffd052e9b1f7a997e9a3900458e35f140752050116dc402f`.
+
+
+## 2026-11-04 · A kitchen garden overview and a clean renderer handoff
+
+Dining-table and garden trays now have a Garden link beside Activities. The same
+household overview is available from Activities even without a bed. It lists
+each own-home bed’s crop, growth/water, ripeness, pantry-space constraints, or
+current planned gardener. Free pantry counts and possible bowls reflect recipe
+reservations. A stable button opens and centers that exact bed without moving a
+resident, clearing a plan, or issuing a gardening order. Explicit priced actions
+lead to adding a bed or dining table, and Homegrown meals returns to recipes.
+
+The native standard and compact flows build both furnishings, inspect dry/ripe
+fixtures, water a crop, observe live growth without losing keyboard focus, keep
+harvests, inspect meal reservations, cancel through Plan, and browse home while
+the selected resident visits Violet. Removing a focused bed returns focus to a
+usable control; a stale click never selects a replacement. Runtime replacement
+refreshes the list and keeps pantry facts. Model checks cover foreign watering,
+stale garden tasks, ownership filtering, construction pause, capacity, and pure
+read-only presentation state. Mature-crop UI fixtures are explicit; the separate
+pantry flow still covers actual growth from seeds.
+
+Visual inspection found the possible-bowls caption wrapping above the second
+compact bed. Shorter wording keeps both starter beds visible, and long home names
+truncate with a tooltip. Final compact native overview and complete pantry flows
+pass after that polish. The new footer does not shrink the recipe area. CI log
+uploads now retain every peer scenario’s logs.
+
+Fresh assessment and user direction: the garden-to-table loop is now connected
+and usable. The user asked to stop at a solid checkpoint to reconsider isometric
+versus 3D presentation, replacing the weekly-usage stopping condition. Finish
+validation and push this checkpoint, then pause feature work for that decision.
+No renderer conversion has begun.
+
+The first active hosted run exposed an interprocess test-handoff race on the
+Android job’s Linux host: `meals_peer` observed a flag file before its JSON payload
+was written. Test tickets and handoff payloads now write, flush, and close a
+process-specific temporary file before atomic rename. All six peer scenarios
+share this helper. Production saves already used atomic replacement. The same
+previous checkpoint’s Linux and Windows tests and exports succeeded; macOS was
+still compiling its native library at that observation.
+
+Final local regression passes all 110 local suites, all six real Iroh scenarios
+using the atomic handoff helper, and dedicated-server startup (117 pass markers,
+no engine errors). This is the completed local stopping checkpoint; physical
+mobile/cross-device and human-family play remain separate validation work.
+
+The final universal macOS package passes plist validation, strict signing checks
+for ARM64 and Intel slices, and `EXPORTED_NATIVE_RUNTIME_PASS` on Apple Silicon.
+It remains ad-hoc signed. Its SHA-256 is
+`d296a012edbd08b66f0e83a20ad1da099783b47ac9ca380e233ef5119a8fa1ce`.
+The final push’s hosted workflow is a separate pending check: the preceding
+`c715ed7` run passed Linux/Windows, exposed the now-corrected test race on Android,
+and was still compiling macOS at handoff. No all-platform success is claimed for
+the final head. Feature work stops here for the user’s renderer evaluation.

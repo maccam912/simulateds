@@ -1398,3 +1398,43 @@ for both architectures, and `EXPORTED_NATIVE_RUNTIME_PASS` on Apple Silicon.
 It remains locally ad-hoc signed; physical Intel/Android, cross-device and human
 family play, and notarization remain unverified. The pantry package checksum is
 `af71c5499b442d0bffd052e9b1f7a997e9a3900458e35f140752050116dc402f`.
+
+
+## Kitchen garden overview
+
+`garden_overview` checks empty/missing households, own-bed filtering, ripe/dry/
+growing and watered states, pantry capacity and possible recipe counts, foreign
+watering plans, stale plan rejection, construction state, and presentation data
+that cannot mutate the world. `garden_overview_ui` passes native input at standard
+and compact sizes: actual furnishing placement, read-only recipe/bed navigation,
+watering and growth, stable focus, keeping harvests, recipe reservation/cancel
+updates, visit/plan preservation, removed-bed focus recovery, stale click, and
+world replacement. After shortening the caption, a compact native pass also
+asserts both starter beds fit; the full compact native pantry flow passes with
+the new shared footer.
+
+Hosted workflow `41904730196` for pantry commit `c715ed7` began executing steps on
+all four platforms. This supersedes the earlier account-level no-start failures;
+starting jobs alone is not a successful cross-platform validation result.
+
+The first active hosted run exposed an interprocess test-handoff race on the
+Android job’s Linux host: `meals_peer` observed a flag file before its JSON payload
+was written. Test tickets and handoff payloads now write, flush, and close a
+process-specific temporary file before atomic rename. All six peer scenarios
+share this helper. Production saves already used atomic replacement. The same
+previous checkpoint’s Linux and Windows tests and exports succeeded; macOS was
+still compiling its native library at that observation.
+
+Final local regression passes all 110 local suites, all six real Iroh scenarios
+using the atomic handoff helper, and dedicated-server startup (117 pass markers,
+no engine errors). This is the completed local stopping checkpoint; physical
+mobile/cross-device and human-family play remain separate validation work.
+
+The final universal macOS package passes plist validation, strict signing checks
+for ARM64 and Intel slices, and `EXPORTED_NATIVE_RUNTIME_PASS` on Apple Silicon.
+It remains ad-hoc signed. Its SHA-256 is
+`d296a012edbd08b66f0e83a20ad1da099783b47ac9ca380e233ef5119a8fa1ce`.
+The final push’s hosted workflow is a separate pending check: the preceding
+`c715ed7` run passed Linux/Windows, exposed the now-corrected test race on Android,
+and was still compiling macOS at handoff. No all-platform success is claimed for
+the final head. Feature work stops here for the user’s renderer evaluation.

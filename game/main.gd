@@ -148,6 +148,7 @@ var _art_request: Dictionary={}
 var painting_panel: VBoxContainer
 var commission_panel: VBoxContainer
 var garden_panel: VBoxContainer
+var garden_overview_panel: VBoxContainer
 var _view_context := ""
 var hud: Control
 var neighborhood_panel: PanelContainer
@@ -684,6 +685,7 @@ func _refresh() -> void:
 	if _context_page=="care" and not build_mode: tools_signature+=str(_care_options)+str(Wellbeing.mood(member.get("needs",{})))
 	if build_mode and _context_page in ["blueprints","clear_lot"]: tools_signature=_context_page+":"+viewed_lot+str(Session.role)
 	if _context_page=="commissions" and not build_mode: tools_signature="commissions:"+str(Session.profile_id)+str(Session.world_generation)+str(Session.role)
+	if _context_page=="garden_overview" and not build_mode: tools_signature="garden_overview:"+str(Session.profile_id)+str(Session.world_generation)+str(Session.role)
 	if tools_signature!=_tools_signature:
 		_tools_signature=tools_signature
 		_rebuild_context(building and mine,lot)
@@ -696,6 +698,7 @@ func _refresh() -> void:
 		painting_panel.display_pending=not _art_entry.is_empty()
 		painting_panel.refresh(viewed_lot,_selected_object,selected_member)
 	if _context_page=="commissions" and not build_mode and is_instance_valid(commission_panel): commission_panel.refresh()
+	if _context_page=="garden_overview" and not build_mode and is_instance_valid(garden_overview_panel): garden_overview_panel.refresh()
 	if _context_page=="recreation" and not build_mode and is_instance_valid(recreation_panel): recreation_panel.refresh(viewed_lot,_selected_object,selected_member)
 	if _context_page=="meal" and not build_mode and is_instance_valid(meal_panel): meal_panel.refresh(viewed_lot,_selected_object,selected_member)
 	if build_mode and _context_page=="blueprints" and is_instance_valid(library_panel):
@@ -949,15 +952,22 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 	elif _context_page=="meal":
 		activity_label.text="At the dining table"
 		meal_panel=MealPanel.new(); tools_box.add_child(meal_panel); meal_panel.command_requested.connect(_send)
-		context_box.add_child(_button("‹ Activities",func(): _context_page="activities"; _refresh()))
+		_garden_navigation(meal_panel)
+	elif _context_page=="garden_overview":
+		activity_label.text="Your kitchen garden"
+		garden_overview_panel=preload("res://game/garden_overview_panel.gd").new(); tools_box.add_child(garden_overview_panel); garden_overview_panel.add_footer(context_box)
+		garden_overview_panel.bed_requested.connect(_open_garden_bed); garden_overview_panel.build_requested.connect(_build_garden_bed)
+		garden_overview_panel.meals_requested.connect(_open_homegrown_meals)
+		garden_overview_panel.back_requested.connect(func(): _context_page="activities"; _refresh())
 	elif _context_page=="garden":
 		activity_label.text="Kitchen garden"
 		garden_panel=GardenPanel.new(); tools_box.add_child(garden_panel); garden_panel.command_requested.connect(_send)
 		garden_panel.add_footer(context_box); garden_panel.meals_requested.connect(_open_homegrown_meals)
-		context_box.add_child(_button("‹ Activities",func(): _context_page="activities"; _refresh()))
+		_garden_navigation(garden_panel)
 	else:
 		activity_label.text="Activities"
 		commission_entry=_button("Art commissions",_open_commissions); commission_entry.add_theme_font_size_override("font_size",12); tools_box.add_child(commission_entry)
+		var garden_entry:=_button("Your kitchen garden",_open_garden_overview); garden_entry.add_theme_font_size_override("font_size",12); tools_box.add_child(garden_entry)
 		var shown: Dictionary={}
 		for obj in lot.get("objects",[]):
 			if shown.has(obj.kind) and not obj.kind in ["garden_bed","easel","dining_table","game_table","stereo"]: continue
@@ -995,6 +1005,36 @@ func _open_homegrown_meals() -> void:
 	_context_page="activities"; _catalog_category="kitchen"; _catalog_query="dining"
 	catalog_category.select(BuildCatalog.CATEGORIES.keys().find("kitchen")); catalog_search.text="dining"
 	_select_build_tool("dining_table"); _send({"type":"build_begin","lot_id":str(home.id)}); _show_tray(context_panel,true); call_deferred("_reset_catalog_scroll")
+
+func _garden_navigation(panel: VBoxContainer) -> void:
+	var row:=HBoxContainer.new(); row.add_theme_constant_override("separation",8); context_box.add_child(row)
+	var back:=_button("‹ Activities",func(): _context_page="activities"; _refresh()); row.add_child(back)
+	panel.overview_button=_button("Garden ›",_open_garden_overview); row.add_child(panel.overview_button)
+	for button: Button in [back,panel.overview_button]:
+		button.custom_minimum_size.y=32; button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; button.add_theme_font_size_override("font_size",12)
+	panel.overview_button.tooltip_text="Inspect your home garden and pantry without changing anyone’s plan."
+
+func _open_garden_overview() -> void:
+	_context_page="garden_overview"; _refresh(); _show_tray(context_panel,true); call_deferred("_reset_catalog_scroll")
+
+func _open_garden_bed(id: String) -> void:
+	var family:=_family()
+	if family.is_empty(): return
+	var home: Dictionary=Session.state.lots[family.home_lot]
+	var bed: Dictionary=Session.world._object(home,id)
+	if bed.get("kind")!="garden_bed": _notice("That garden bed is no longer here."); return
+	if home.building: _notice("Finish construction before tending the garden."); return
+	_select_lot(str(home.id)); _interact(id)
+	lot_view.focus_cell(Vector2(float(bed.x)+1.0,float(bed.y)+0.5)); call_deferred("_reset_catalog_scroll")
+
+func _build_garden_bed() -> void:
+	var family:=_family()
+	if family.is_empty() or Session.role=="joining": return
+	var home: Dictionary=Session.state.lots[family.home_lot]
+	if home.building: _notice("Finish the current construction before adding a garden bed."); return
+	_select_lot(str(home.id)); _context_page="activities"; _catalog_category="garden"; _catalog_query="garden bed"
+	catalog_category.select(BuildCatalog.CATEGORIES.keys().find("garden")); catalog_search.text="garden bed"
+	_select_build_tool("garden_bed"); _send({"type":"build_begin","lot_id":str(home.id)}); _show_tray(context_panel,true); call_deferred("_reset_catalog_scroll")
 
 func _commission_easel() -> void:
 	var family:=_family()

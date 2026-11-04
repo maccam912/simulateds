@@ -9,6 +9,7 @@ var credit: Label
 var preview: Control
 var status: Label
 var pantry_label: Label
+var overview_button: Button
 var note: Label
 var feedback: Label
 var buttons := {}
@@ -60,6 +61,9 @@ func refresh(lot_id: String,object_id: String,member_id: String) -> void:
 		else: applied=(pending.action=="clear" and int(table.get("meal",{}).get("batch",0))>int(pending.batch)) or (pending.action!="clear" and int(member.get("next_action",0))>_next)
 		if applied: pending={}; _ack=false
 	var exists: bool=table.get("kind")=="dining_table"
+	if overview_button!=null:
+		overview_button.visible=exists and lot.owner==Session.profile_id
+		overview_button.disabled=not pending.is_empty() or Session.role=="joining"
 	for control: Control in [preview,status,credit,note,feedback,pantry_label]: control.visible=exists
 	if not exists:
 		for button: Button in buttons.values(): button.visible=false

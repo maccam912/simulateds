@@ -852,3 +852,21 @@ both crops. When stock is missing, show the garden hint beside the recipes; keep
 exact shortfalls and reservation details in the tooltip rather than a clipped
 paragraph below the tray. Reuse the harvest basket pose and quiet garden sound.
 No additional HUD panel, spoilage timer, or reminder sound is needed.
+
+
+## Finding garden work from a meal
+
+Use the existing tray footer for a small Garden link beside Activities, so recipe
+choices retain their space. Your kitchen garden is a household overview, including
+when the selected resident is visiting. Each bed is a stable button with a crop
+name, bed number, and a concise state: needs water, growing with water percentage,
+ready to sell/keep, or already planned by a named resident. Put detailed actions,
+capacity constraints, and full names in tooltips. Refresh text in place so growth
+does not disturb keyboard focus.
+
+Keep two starter beds visible at compact size by shortening the possible-bowls
+caption. Truncate long house names with a full tooltip. A removed focused bed
+returns keyboard focus to Activities. Selecting a bed centers and inspects it;
+only its existing activity controls issue orders. Explicit priced build buttons
+enter construction; the overview itself never places a bed or orders tending.
+Use ordinary interface sounds and existing transitions.

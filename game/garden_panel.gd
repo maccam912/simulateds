@@ -10,6 +10,7 @@ var water: ProgressBar
 var water_label: Label
 var pantry_label: Label
 var meals_button: Button
+var overview_button: Button
 var note: Label
 var feedback: Label
 var buttons: Dictionary={}
@@ -60,6 +61,9 @@ func refresh(lot_id: String,object_id: String,member_id: String) -> void:
 	if _acknowledged and not pending.is_empty() and int(member.get("next_action",0))>_next_action:
 		pending={}; _acknowledged=false
 	var exists: bool=object.get("kind")=="garden_bed"
+	if overview_button!=null:
+		overview_button.visible=exists and lot.owner==Session.profile_id
+		overview_button.disabled=not pending.is_empty() or Session.role=="joining"
 	if meals_button!=null: meals_button.visible=exists
 	for button: Button in buttons.values(): button.visible=exists
 	for control: Control in [growth,water,water_label,note,pantry_label]: control.visible=exists
