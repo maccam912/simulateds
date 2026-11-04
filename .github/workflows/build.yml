@@ -49,7 +49,7 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: .tools
-          key: godot-${{ runner.os }}-${{ matrix.platform }}-${{ hashFiles('tools/versions.json') }}
+          key: godot-archives-v2-${{ runner.os }}-${{ matrix.platform }}-${{ hashFiles('tools/versions.json') }}
       - name: Rust checks
         if: matrix.platform == 'linux'
         run: |
@@ -80,6 +80,9 @@ jobs:
       - name: Export dedicated server
         if: matrix.platform == 'linux'
         run: python tools/export.py server --skip-build
+      - name: Trim extracted export templates before caching
+        if: always()
+        run: python tools/trim_ci_cache.py
       - name: Upload games
         uses: actions/upload-artifact@v4
         with:

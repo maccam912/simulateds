@@ -210,3 +210,14 @@ Fresh assessment: the house and its residents can now feel personally chosen.
 Social play still has little memory: a visit mostly refills a bar. Next: simple
 friendships and a readable social panel so conversations and return visits build
 something lasting without penalizing absent players.
+
+### Android cache disk pressure
+
+The household checkpoint's Android job completed its native build, tests, export,
+and artifact uploads, then the runner reported `No space left on device` while
+saving caches. The workflow now removes extracted Godot export templates after
+export, retaining their verified archive for the next run. A new cache key avoids
+restoring the old duplicate archive/extraction cache. Cleanup is restricted to
+generated template directories in disposable Actions checkouts; exports, engine
+binaries, source, and signing settings remain intact. The result still needs a
+completed workflow run to establish that runner disk pressure is resolved.
