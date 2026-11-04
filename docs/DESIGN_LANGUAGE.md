@@ -156,6 +156,14 @@ name on hover, and night colors keep readable contrast. Cues do not blink or
 bounce. Construction, menus, and offscreen actors leave no floating controls.
 A double click on a disappearing cue must never fall through into an extra order.
 
+Finding a resident uses one brief 200 ms camera move, preserving the player's
+zoom. Reduced motion snaps immediately. Selecting someone already visible keeps
+the composition; clicking the selected household name again explicitly centers
+them. The Plan tray and a rebindable shortcut provide the same action. Panning or
+zooming cancels the movement immediately. Changing lots resets the pan while
+retaining zoom, and Center restores both. Resolve current snapshot positions
+when finding a visiting resident; camera actions never issue simulation orders.
+
 ## Everyday personality
 
 A favorite pastime is a preference, not a level or a reward multiplier. Reading,

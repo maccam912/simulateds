@@ -147,7 +147,10 @@ or shell expressions.
   appears on Mail without interrupting play. Host downtime creates no catch-up.
 - The world fills the window behind the HUD. **Activities** opens the optional
   action tray; construction opens the catalog. **Escape** closes either tray.
-- Scroll to zoom and middle-drag to pan. **F11** toggles fullscreen.
+- Scroll to zoom and middle-drag to pan. **F** finds the selected resident;
+  click their household name again or use **Plan → Find resident** for the same
+  action. Selecting someone offscreen brings them into view. **Center** resets
+  pan and zoom. **F11** toggles fullscreen. Key bindings are editable in Settings.
 - **Guide & controls** is available from the main and pause menus. Its First day,
   Building, Neighbors, and Controls pages open the relevant game controls and
   reflect your current key bindings. New neighborhoods can show the guide first;

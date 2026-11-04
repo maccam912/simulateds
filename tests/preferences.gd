@@ -33,6 +33,21 @@ func _run() -> void:
 	assert(is_equal_approx(prefs.values.music_volume,0.25))
 	assert(int(prefs.values.bindings.rotate)==KEY_T)
 	assert(prefs.action_label("rotate")=="T")
+	# An old complete map has no camera action. Keep custom keys and swaps,
+	# including a preexisting F, and persist the collision-free migrated binding.
+	var legacy: Dictionary=prefs.values.duplicate(true)
+	legacy.bindings.erase("focus_resident")
+	legacy.bindings.rotate=KEY_F; legacy.bindings.build=KEY_C
+	legacy.bindings.home=KEY_N; legacy.bindings.neighborhood=KEY_H
+	assert(prefs.Persistence.write_json(prefs.settings_path,legacy))
+	prefs.load_and_apply()
+	for action: String in legacy.bindings: assert(int(prefs.values.bindings[action])==int(legacy.bindings[action]))
+	assert(prefs.values.bindings.focus_resident==KEY_G and prefs.action_label("focus_resident")=="G")
+	assert(prefs.save()); prefs.load_and_apply()
+	assert(prefs.values.bindings.focus_resident==KEY_G and prefs.values.bindings.rotate==KEY_F)
+	legacy.bindings.rotate=KEY_C
+	assert(prefs.Persistence.write_json(prefs.settings_path,legacy)); prefs.load_and_apply()
+	assert(prefs.values.bindings==prefs.DEFAULTS.bindings,"An invalid duplicate map still falls back as a whole")
 	assert(prefs.reset_defaults())
 	assert(int(prefs.values.bindings.rotate)==KEY_R)
 	var sound: Node=root.get_node("Soundscape")

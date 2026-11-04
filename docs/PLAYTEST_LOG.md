@@ -631,3 +631,31 @@ remaining navigation gap clear: after panning away, selecting a household member
 can leave them outside the useful view. Next: a discoverable camera focus action
 and sensible resident/lot framing, preserving manual camera control, existing key
 bindings, reduced motion, and the full-screen world.
+
+## 2026-11-04 · Find your resident
+
+F, a repeated click on a selected household name, and Plan's Find resident button
+center the selected resident without resetting zoom. Selecting an offscreen
+household member also brings them into view; selecting a visible one preserves
+the composition. The camera moves for 200 ms, snaps with reduced motion, and
+yields immediately to pan or zoom input. Lot changes reset pan but retain zoom;
+Center resets both. Current member lookup handles replacement snapshots and
+visiting residents. The camera changes no simulation state or orders.
+
+Older custom key maps migrate without losing swaps or existing F bindings; a
+free alternative is assigned and shown in controls. The first regression exposed
+JSON's floating-point key codes defeating a strict array collision check; codes
+are now normalized before migration. Rendered standard and compact checks cover
+actual input, long-name Plan layout, visiting, menus, and typing. The headless
+fixture also needed complete wheel events and a frame for mouse routing before
+a button press. All 27 local suites, real Iroh host/two-client reconnect, and
+dedicated-server startup passed. The final compact graphical rerun passed too.
+The preceding resident-cue checkpoint passed all four platform
+CI jobs. These remain agent checks, not human family or physical Android tests.
+
+Fresh assessment: finding a household member is now easy without disturbing the
+camera every time selection changes. The Plan tray exposes the next useful gap:
+changing the order of upcoming activities requires canceling and recreating
+orders. Next: let players rearrange their queued plans while preserving the
+current activity, stable action identities, and host ownership/stale-request
+checks, then test it during a busy two-resident morning.

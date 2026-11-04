@@ -6,14 +6,15 @@ const Persistence = preload("res://game/persistence.gd")
 const ACTION_NAMES := {
 	"pause":"Pause / game menu", "console":"Developer console", "rotate":"Rotate furnishing",
 	"quick_save":"Quick save", "fullscreen":"Toggle fullscreen", "neighborhood":"Neighborhood",
-	"build":"Build / live mode", "home":"Go home", "cancel":"Cancel resident actions"
+	"build":"Build / live mode", "home":"Go home", "cancel":"Cancel resident actions",
+	"focus_resident":"Find selected resident"
 }
 const DEFAULTS := {
 	"master_volume":0.8, "music_volume":0.35, "effects_volume":0.7, "ambience_volume":0.35,
 	"fullscreen":false, "vsync":true, "fps_limit":60, "ui_scale":1.0,
 	"reduced_motion":false, "quality":"high", "first_day_guide":true,
 	"bindings":{"pause":KEY_ESCAPE,"console":KEY_QUOTELEFT,"rotate":KEY_R,
-		"quick_save":KEY_F5,"fullscreen":KEY_F11,"neighborhood":KEY_N,"build":KEY_B,"home":KEY_H,"cancel":KEY_X}
+		"quick_save":KEY_F5,"fullscreen":KEY_F11,"neighborhood":KEY_N,"build":KEY_B,"home":KEY_H,"cancel":KEY_X,"focus_resident":KEY_F}
 }
 const VOLUMES := {"master_volume":"Master","music_volume":"Music","effects_volume":"Effects","ambience_volume":"Ambience"}
 var values: Dictionary = DEFAULTS.duplicate(true)
@@ -43,9 +44,11 @@ func load_and_apply() -> void:
 			if key != "bindings" and data.has(key) and _valid_value(key,data[key]):
 				values[key]=data[key]
 		# Validate the complete key map before replacing any binding, so saved swaps work.
-		if data.get("bindings") is Dictionary and _valid_bindings(data.bindings):
-			for action in DEFAULTS.bindings:
-				values.bindings[action]=int(data.bindings[action])
+		if data.get("bindings") is Dictionary:
+			var bindings := _upgraded_bindings(data.bindings)
+			if _valid_bindings(bindings):
+				for action in DEFAULTS.bindings:
+					values.bindings[action]=int(bindings[action])
 	elif reply.get("exists",false):
 		last_error="Settings could not be read; defaults are active."
 	_loading=false
@@ -155,6 +158,22 @@ func _valid_value(key: String,value: Variant) -> bool:
 		"ui_scale": return _finite_number(value) and float(value) in [0.9,1.0,1.1,1.25]
 		"quality": return value is String and value in ["low","high"]
 	return false
+
+func _upgraded_bindings(saved: Dictionary) -> Dictionary:
+	var bindings := {}
+	for action: String in DEFAULTS.bindings:
+		if saved.has(action):
+			if not _finite_number(saved[action]) or float(saved[action])!=floorf(float(saved[action])): return {}
+			bindings[action]=int(saved[action])
+	# Older versions have nine bindings. Preserve their complete map, including
+	# swaps and a custom F, before assigning the newly introduced camera action.
+	if not bindings.has("focus_resident"):
+		var candidates: Array=[KEY_F,KEY_C,KEY_G]
+		for key in range(KEY_A,KEY_Z+1): candidates.append(key)
+		for key: int in candidates:
+			if not key in bindings.values():
+				bindings.focus_resident=key; break
+	return bindings
 
 func _valid_bindings(bindings: Dictionary) -> bool:
 	var seen: Array=[]

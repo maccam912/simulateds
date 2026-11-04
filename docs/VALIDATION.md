@@ -83,7 +83,7 @@ service mode was not repeated for this update.
 ## Still open
 
 The subsequent feature checks are recorded in [PLAYTEST_LOG.md](PLAYTEST_LOG.md).
-The current local suite contains twenty-six model/application suites, plus real Iroh
+The current local suite contains twenty-seven model/application suites, plus real Iroh
 host/two-client reconnect and dedicated-server startup. The room-construction
 checkpoint passed Linux, Windows, macOS, and Android CI builds/exports. The later
 household checkpoint passed the three desktop jobs; Android built, tested,
@@ -158,6 +158,18 @@ actual care, double-click protection, sleeping labels, settled residents, long
 names, night/edge layouts, unavailable furniture, construction, menus, and
 offscreen removal. The initial edge fixture framed an old displayed position;
 it now waits for presentation to update before positioning the camera.
+
+The resident-cue checkpoint passed all four platform CI jobs. Camera checks
+exercise actual keyboard/mouse input, visible versus offscreen selection,
+repeat-click focus, Plan controls, preservation of zoom, interruption by manual
+pan/zoom, Center, reduced motion, current locations after snapshot replacement,
+lot changes, custom bindings, menu suppression, and catalog typing. Graphical
+checks cover standard and compact windows with long names and a visiting
+resident. These snapshot checks use local replacement, not a network camera test.
+Settings checks migrate the older nine-action map, preserving custom swaps and
+choosing an unused focus key when F is already bound. Invalid maps still fall
+back atomically. Headless mouse checks allow a frame for pointer routing before
+pressing a control, as native rendering already does.
 
 Physical Android operation, cross-OS multiplayer, exported game packages,
 production authentication, public matchmaking abuse resistance, long-term

@@ -63,6 +63,7 @@ var plan_panel: PanelContainer
 var plan_box: VBoxContainer
 var plan_title: Label
 var autonomy_button: Button
+var find_button: Button
 var pastime_label: Label
 var _plan_signature := ""
 var need_bars: Dictionary = {}
@@ -202,7 +203,7 @@ func _build_ui() -> void:
 	location_box.add_child(lot_subtitle)
 	var location_actions := HBoxContainer.new(); location_box.add_child(location_actions)
 	location_actions.add_child(_button("Neighborhood",func(): _show_tray(neighborhood_panel,not neighborhood_panel.visible)))
-	var center := _button("Center",func(): lot_view.zoom=1.0; lot_view.pan=Vector2.ZERO); center.tooltip_text="Center view · Reset pan and zoom"; location_actions.add_child(center)
+	var center := _button("Center",func(): lot_view.center_lot()); center.tooltip_text="Center view · Reset pan and zoom"; location_actions.add_child(center)
 	mail_button=_button("Mail",func(): mail_requested.emit()); location_actions.add_child(mail_button)
 
 	neighborhood_panel = _hud_panel(Rect2(16,146,260,330))
@@ -250,11 +251,13 @@ func _build_ui() -> void:
 	plan_panel.hide()
 	var plan := _vbox(plan_panel,8)
 	var plan_head := HBoxContainer.new(); plan.add_child(plan_head)
-	plan_title = _label("Your day",18); plan_title.size_flags_horizontal=Control.SIZE_EXPAND_FILL; plan_head.add_child(plan_title)
+	plan_title = _label("Your day",18); plan_title.size_flags_horizontal=Control.SIZE_EXPAND_FILL; plan_title.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; plan_head.add_child(plan_title)
 	plan_head.add_child(_button("×",func(): plan_panel.hide()))
 	autonomy_button = _button("Autonomy: on",func(): _send({"type":"autonomy","member_id":selected_member,"enabled":not bool(_member().get("autonomy",true))}))
 	autonomy_button.tooltip_text="When on, this resident tends their own needs between your orders. Your orders always take priority."
-	plan.add_child(autonomy_button)
+	var plan_actions := HBoxContainer.new(); plan.add_child(plan_actions)
+	autonomy_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; plan_actions.add_child(autonomy_button)
+	find_button=_button("Find resident",_find_resident); plan_actions.add_child(find_button)
 	pastime_label=_label("",13,Style.MUTED); plan.add_child(pastime_label)
 	pastime_label.tooltip_text="Change this in Household. A favorite nudges free-time choices; urgent needs and your orders come first."
 	var plan_scroll := ScrollContainer.new(); plan_scroll.size_flags_vertical=Control.SIZE_EXPAND_FILL; plan_scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED; plan.add_child(plan_scroll)
@@ -365,6 +368,8 @@ func _refresh() -> void:
 	var member := _member()
 	if member.is_empty() and not family.get("members",[]).is_empty():
 		selected_member=str(family.members[0].id); member=_member()
+	find_button.disabled=member.is_empty() or Session.role=="joining"
+	find_button.tooltip_text="Center on the selected resident · "+Preferences.action_label("focus_resident")+" · Middle-drag to pan again"
 	var lot: Dictionary = state.get("lots",{}).get(viewed_lot,{})
 	household_button.disabled=family.is_empty() or Session.role=="joining"
 	mail_button.disabled=family.is_empty() or Session.role=="joining"
@@ -433,8 +438,8 @@ func _refresh() -> void:
 	if family_signature!=_family_signature:
 		_family_signature=family_signature; _clear(family_box)
 		for resident in family.get("members",[]):
-			var b := _button(("●  " if str(resident.id)==selected_member else "○  ")+str(resident.name),func(): selected_member=str(resident.id); viewed_lot=str(resident.lot_id); _refresh())
-			b.alignment=HORIZONTAL_ALIGNMENT_LEFT; b.clip_text=true; b.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; b.tooltip_text=str(resident.name)+" · Unwinds with: "+Pastimes.label(resident); family_box.add_child(b)
+			var b := _button(("●  " if str(resident.id)==selected_member else "○  ")+str(resident.name),func(): _select_resident(str(resident.id)))
+			b.alignment=HORIZONTAL_ALIGNMENT_LEFT; b.clip_text=true; b.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; b.tooltip_text=str(resident.name)+" · Unwinds with: "+Pastimes.label(resident)+" · Click again to find this resident"; family_box.add_child(b)
 	if not member.is_empty():
 		needs_title.text=str(member.name)+"  /  "+str(member.get("action","Enjoying the day"))
 		queue_label.text="Plan · %d" % (member.get("queue",[]).size() + (0 if member.get("task",{}).is_empty() else 1))
@@ -633,6 +638,24 @@ func _select_lot(id: String) -> void:
 	_paint_anchor=Vector2i(-1,-1); _paint_request.clear()
 	viewed_lot=id; _selected_object=""; _room_anchor=Vector2i(-1,-1); _room_request.clear(); neighborhood_panel.hide(); _refresh()
 
+func _select_resident(id: String) -> void:
+	var same := selected_member==id
+	selected_member=id
+	# Resolve the current member; button callbacks can outlive a client snapshot.
+	var member := _member()
+	if member.is_empty(): return
+	var changed_lot := viewed_lot!=str(member.lot_id)
+	if changed_lot: _select_lot(str(member.lot_id))
+	else: _refresh()
+	if same or changed_lot or not lot_view.resident_in_view(member): lot_view.focus_resident(member)
+
+func _find_resident() -> void:
+	if Session.role=="joining": return
+	var member := _member()
+	if member.is_empty(): return
+	if viewed_lot!=str(member.lot_id): _select_lot(str(member.lot_id))
+	lot_view.focus_resident(member)
+
 func _send(command: Dictionary) -> void:
 	if command.get("type")=="move_object":
 		_move_request=command.duplicate()
@@ -777,6 +800,8 @@ func _show_tray(panel: Control,show_panel: bool) -> void:
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if hud==null or not hud.visible: return
+	var focused := get_viewport().gui_get_focus_owner()
+	if focused is LineEdit or focused is TextEdit: return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if lot_view.building and (event.ctrl_pressed or event.meta_pressed) and event.keycode==KEY_F:
 			if not _paint_surface().is_empty(): _select_build_tool("floor")
@@ -797,6 +822,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		elif event.is_action_pressed("neighborhood"): _show_tray(neighborhood_panel,not neighborhood_panel.visible)
 		elif event.is_action_pressed("build"): _toggle_build()
 		elif event.is_action_pressed("home"): _go_home()
+		elif event.is_action_pressed("focus_resident") and not event.ctrl_pressed and not event.meta_pressed and not event.alt_pressed: _find_resident()
 		elif event.is_action_pressed("cancel"): _send({"type":"cancel","member_id":selected_member})
 		else: return
 		get_viewport().set_input_as_handled()

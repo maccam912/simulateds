@@ -18,7 +18,13 @@ var activity_audio = ActivityAudio.new()
 var _audio_tick := -1
 var light: Dictionary = Daylight.sample(480)
 var world: Dictionary = {}
-var lot_id := "lot_1"
+var lot_id := "lot_1":
+	set(value):
+		if lot_id!=value:
+			stop_camera_motion()
+			pan=Vector2.ZERO
+			motion.tracks.clear()
+		lot_id=value
 var selected_member := ""
 var show_cues := true
 var resident_labels: Dictionary={}
@@ -39,6 +45,7 @@ var _preview_signature := ""
 var building := false
 var zoom := 1.0
 var pan := Vector2.ZERO
+var _camera_tween: Tween
 var hover_cell := Vector2i(-1, -1)
 var _dragging := false
 var _cell := Vector2(48, 24)
@@ -98,6 +105,36 @@ func _layout() -> void:
 	var focus := Vector2(size.x * 0.5, play_height * 0.53)
 	_origin = focus - Vector2(_cell.x * 0.25, _cell.y * 7.75) + pan
 
+func stop_camera_motion() -> void:
+	if _camera_tween!=null:
+		_camera_tween.kill(); _camera_tween=null
+
+func center_lot() -> void:
+	stop_camera_motion()
+	zoom=1.0; pan=Vector2.ZERO
+	_layout(); queue_redraw()
+
+func camera_focus_point() -> Vector2:
+	# Leave room for the bottom household HUD and the resident's name above them.
+	return Vector2(size.x*0.56,maxf(360.0,size.y-160.0)*0.53+35.0)
+
+func resident_in_view(member: Dictionary) -> bool:
+	if member.is_empty() or member.get("lot_id")!=lot_id: return false
+	_layout()
+	var safe := Rect2(Vector2(70,125),Vector2(maxf(1,size.x-140),maxf(1,size.y-330)))
+	return safe.has_point(resident_anchor(member))
+
+func focus_resident(member: Dictionary) -> bool:
+	if member.is_empty() or member.get("lot_id")!=lot_id: return false
+	stop_camera_motion(); _layout()
+	var destination := pan+camera_focus_point()-resident_anchor(member)
+	if bool(Preferences.values.reduced_motion): pan=destination
+	else:
+		_camera_tween=create_tween()
+		_camera_tween.tween_property(self,"pan",destination,0.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_layout(); queue_redraw()
+	return true
+
 func object_point(object: Dictionary, local: Vector2) -> Vector2:
 	var dimensions: Array=Catalog.ITEMS[object.kind].size
 	var w := float(dimensions[0]); var d := float(dimensions[1])
@@ -126,11 +163,14 @@ func _gui_input(event: InputEvent) -> void:
 	_layout()
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_MIDDLE:
+			if event.pressed: stop_camera_motion()
 			_dragging = event.pressed
 		if event.pressed:
 			if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+				stop_camera_motion()
 				zoom = minf(1.8, zoom + 0.1)
 			elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+				stop_camera_motion()
 				zoom = maxf(0.65, zoom - 0.1)
 			elif event.button_index == MOUSE_BUTTON_LEFT:
 				if event.double_click and Time.get_ticks_msec()-_last_care_click<500 and not building:
@@ -150,6 +190,7 @@ func _gui_input(event: InputEvent) -> void:
 			accept_event()
 	elif event is InputEventMouseMotion:
 		if _dragging:
+			stop_camera_motion()
 			pan += event.relative
 		_pointer = event.position
 		hover_cell = cell_at(event.position)

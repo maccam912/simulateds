@@ -62,8 +62,9 @@ understandable result. Fuzz placement and reopening around residents/visitors.
 
 - Household creation, traits, and preferences. Names and a palette-based
   appearance editor and favorite pastimes are implemented for both residents.
-- Visible plans, interruption rules, autonomy controls, and actionable need
-  thoughts are implemented. Improve camera focus and ease of finding residents.
+- Visible plans, interruption rules, autonomy controls, actionable need thoughts,
+  and resident camera focus are implemented. Improve the ability to revise an
+  upcoming plan without canceling and rebuilding it.
 - Object reservations, shared activities, conversations, and basic relationships
   are implemented. Add richer shared recreation and personality-driven choices.
 - Activity poses and sparse positional sounds are implemented. Improve resident

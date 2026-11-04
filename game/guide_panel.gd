@@ -11,7 +11,7 @@ func _ready() -> void:
 	size_flags_vertical=Control.SIZE_EXPAND_FILL
 	tabs=TabContainer.new(); tabs.size_flags_vertical=Control.SIZE_EXPAND_FILL; add_child(tabs)
 	var first := _page("First day")
-	_card(first,"01 · Meet your household","Select a resident at the lower left. Edit gives each resident a name, a look, and a favorite pastime.",[["household","Meet your household"]])
+	_card(first,"01 · Meet your household","Select a resident at the lower left; click their name again to find them in the world. Edit gives each resident a name, a look, and a favorite pastime.",[["household","Meet your household"]])
 	_card(first,"02 · A little care","Click a need bar or a resident’s thought cue to plan a useful activity. Your orders take priority; autonomy looks after residents between your plans.",[["care","Open care suggestions"]])
 	_card(first,"03 · Something to enjoy","Wishes offer small goals and a journal. Reading, gardening, and cooking develop lasting hobbies. Nothing expires while you are away.",[["wishes","See wishes"],["hobbies","Find a hobby"]])
 	_card(first,"04 · Make it home","Move furniture for free, decorate a room, or build an addition. Your household waits safely while you build.",[["build","Open build mode"]])
@@ -33,7 +33,7 @@ func _ready() -> void:
 		var label := _text(str(Preferences.ACTION_NAMES[action]),14); label.size_flags_horizontal=Control.SIZE_EXPAND_FILL; grid.add_child(label)
 		var key := _text("",14,Style.GREEN); grid.add_child(key); binding_values[action]=key
 	_action_row(controls,[["bindings","Edit key bindings"]])
-	_card(controls,"Mouse & building shortcuts","Click: walk, use furniture, or place the selected item. Scroll: zoom. Middle-drag: pan. Ctrl/Cmd+F: search the catalog; Enter: select its first result. Ctrl/Cmd+Z: undo. Ctrl/Cmd+Shift+Z or Ctrl+Y: redo.",[])
+	_card(controls,"Mouse & building shortcuts","Click: walk, use furniture, or place the selected item. Scroll: zoom. Middle-drag: pan. Click a selected household name again to find them, or use Find resident in Plan. Center resets the lot view. Ctrl/Cmd+F: search the catalog; Enter: select its first result. Ctrl/Cmd+Z: undo. Ctrl/Cmd+Shift+Z or Ctrl+Y: redo.",[])
 	_card(controls,"Always a way back","Escape clears a search or unfinished placement before closing a tray, then opens the game menu. F1 always opens the developer console; try help or rosebud. Gameplay shortcuts wait while you type.",[])
 	context_hint=_text("",12,Style.GOLD); context_hint.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; add_child(context_hint)
 	refresh_bindings()
