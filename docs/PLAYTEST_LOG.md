@@ -1339,3 +1339,36 @@ walls, finishes, windows, and furniture item by item. Next, add room duplication
 with a complete cost/access preview and a single undoable placement, so extending
 a family home is quicker without making construction unpredictable. This is
 proposed next work, not implemented behavior in this checkpoint.
+
+## Repeat a furnished room
+
+Copy room now selects an enclosed room with a doorway and repeats its actual
+shape on the same lot. The world preview rotates floors, walls, doors, furniture,
+finishes, and windows together, with a complete component price breakdown. Empty
+floor can be reused; existing walls and furnishings cannot be overwritten. The
+whole resulting lot must retain access to its residents and furnishings. A copy
+is one purchase and one Undo step. Furnishings receive fresh IDs and garden beds
+start empty; the original room, crops, residents, and activities are preserved.
+
+The native standard/compact flows selected a blue bedroom, inspected all four
+rotations, rejected occupied and out-of-bounds positions, placed the copy,
+undid/redid it, and returned to live play. The rotated bed, doorway, low walls,
+window, source highlight, and price breakdown remained readable over the world.
+Escape cancels selection. Source edits require a new selection, and an unrelated
+command failure cannot dismiss a copy waiting for the host.
+
+All 64 local suites passed, plus a final pending-request UI check. The real Iroh
+host/two-client scenario and dedicated startup passed after correcting a test
+layout that sealed a later walking destination and then a doorway orientation.
+Both clients copied their own decorated room for the exact price, observed new
+object IDs, undid/redid the whole edit, and retained the design and identities
+after reconnect. The previous friendship checkpoint passed all four CI platforms.
+These are automated native input/rendering and separate-process network checks,
+not human family or physical-device playtests.
+
+Fresh assessment: extending a home is now much quicker, but repeated bedrooms
+and living spaces still share identical furnishing colors. The next useful
+step is a small, coherent furnishing palette with in-world previews and undo,
+so households can give their rooms distinct looks without buying replacement
+furniture. Preserve those choices through moves, room copies, saves, and remote
+play. This is proposed next work, not implemented behavior in this checkpoint.

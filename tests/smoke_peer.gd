@@ -247,6 +247,36 @@ func _client(index: String) -> void:
 		if session.state.lots[home].finishes.floor.get("14,1")=="sage_tile": break
 		await create_timer(0.1).timeout
 	assert(session.state.lots[home].finishes.floor.get("14,1")=="sage_tile","Painted floors did not replicate")
+	await _command({"type":"place","lot_id":home,"kind":"plant","x":14,"y":1})
+	for _attempt in range(50):
+		if not session.world._object_at(session.state.lots[home],Vector2i(14,1)).is_empty(): break
+		await create_timer(0.1).timeout
+	var source_plant: String=session.world._object_at(session.state.lots[home],Vector2i(14,1)).id
+	await _command({"type":"set_window","lot_id":home,"style":"cottage","x":13,"y":1,"revision":session.state.lots[home].revision})
+	for _attempt in range(50):
+		if session.state.lots[home].windows.get("13,1")=="cottage": break
+		await create_timer(0.1).timeout
+	var copy_intent := {"type":"copy_room","lot_id":home,"source_x":14,"source_y":1,"x":4,"y":0,"rotation":1,"revision":session.state.lots[home].revision}
+	var copy_plan: Dictionary=preload("res://game/room_copy.gd").inspect(session.state.lots[home],copy_intent,[])
+	assert(copy_plan.ok and copy_plan.cost==482,str(copy_plan))
+	var before_copy: int=session.state.lots[home].funds
+	await _command(copy_intent); await _command(copy_intent,false)
+	for _attempt in range(50):
+		if preload("res://game/room_copy.gd").is_applied(session.state.lots[home],copy_plan): break
+		await create_timer(0.1).timeout
+	assert(preload("res://game/room_copy.gd").is_applied(session.state.lots[home],copy_plan) and session.state.lots[home].funds==before_copy-482)
+	var copied_plant: String=session.world._object_at(session.state.lots[home],Vector2i(5,1)).id
+	assert(copied_plant!=source_plant,"The host allocates a new object instead of copying the source identity")
+	await _command({"type":"build_undo","lot_id":home,"revision":session.state.lots[home].revision})
+	for _attempt in range(50):
+		if not [5,1] in session.state.lots[home].floors: break
+		await create_timer(0.1).timeout
+	assert(session.state.lots[home].funds==before_copy and not session.state.lots[home].windows.has("5,0") and session.world._object(session.state.lots[home],copied_plant).is_empty())
+	await _command({"type":"build_redo","lot_id":home,"revision":session.state.lots[home].revision})
+	for _attempt in range(50):
+		if preload("res://game/room_copy.gd").is_applied(session.state.lots[home],copy_plan): break
+		await create_timer(0.1).timeout
+	assert(preload("res://game/room_copy.gd").is_applied(session.state.lots[home],copy_plan) and not session.world._object(session.state.lots[home],copied_plant).is_empty())
 	var fill := {"type":"paint","lot_id":home,"surface":"floor","selection":"room","finish":"walnut","x":7,"y":7,"revision":session.state.lots[home].revision}
 	var fill_plan: Dictionary=preload("res://game/finishes.gd").inspect(session.state.lots[home],fill)
 	assert(fill_plan.ok and fill_plan.area.size()==56 and fill_plan.cost==224)
@@ -551,6 +581,7 @@ func _client(index: String) -> void:
 	assert(session.state.families[identity].name=="Gardeners "+index and session.state.families[identity].members[1].appearance.style==1,"Reconnect lost household identity")
 	assert(session.state.families[identity].members[0].favorite=="reading" and session.state.families[identity].members[1].favorite=="gardening","Reconnect lost favorite pastimes")
 	assert([14,1] in session.state.lots[home].floors and [14,2] in session.state.lots[home].doors,"Reconnect lost the new room")
+	assert(preload("res://game/room_copy.gd").is_applied(session.state.lots[home],copy_plan) and not session.world._object(session.state.lots[home],copied_plant).is_empty(),"Reconnect retains the copied design and its new object identities")
 	assert(session.state.lots[home].finishes.floor.get("14,1")=="sage_tile","Reconnect lost the floor finish")
 	assert(session.state.lots[home].finishes.floor.get("7,7")=="walnut" and not session.state.lots[home].finishes.floor.has("8,11"),"Reconnect retains the room fill and its doorway boundary")
 	assert(int(session.world._object(session.state.lots[home],moved_id).x)==9, "Reconnect lost furnishing move")

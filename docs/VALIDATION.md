@@ -83,7 +83,7 @@ service mode was not repeated for this update.
 ## Still open
 
 The subsequent feature checks are recorded in [PLAYTEST_LOG.md](PLAYTEST_LOG.md).
-The current local suite contains forty-six model/application suites, plus real Iroh
+The current local suite contains 64 model/application suites, plus real Iroh
 host/two-client reconnect and dedicated-server startup. The room-construction
 checkpoint passed Linux, Windows, macOS, and Android CI builds/exports. The later
 household checkpoint passed the three desktop jobs; Android built, tested,
@@ -587,3 +587,30 @@ limits, and last-encounter metadata. The courtesy handoff, construction recall, 
 startup also pass. The preceding courtesy checkpoint passed all four platform CI
 jobs. Automated native/real-process evidence does not establish human family play,
 physical Android or cross-OS play, or overnight host reliability.
+
+## Copying furnished rooms
+
+All 64 local suites passed, including new room-copy model and UI checks. The
+model covers four rotations, exact component pricing, sparse/irregular room
+shapes, reuse of existing floor, fresh furnishing IDs, fresh empty garden beds,
+source preservation, access/occupancy/budget failures, malformed and stale
+requests, ownership, atomic undo/redo, and save restoration. The host recaptures
+the accepted source; clients cannot supply copied object state.
+
+Native injected-input runs passed at 1440×900 and 1280×720 / 125% UI scale.
+They select a furnished, painted room with a window, preview all rotations,
+reject occupied/out-of-bounds destinations, place it for the displayed price,
+undo/redo, cancel selection, and invalidate selection after a source edit.
+Inspected captures are under ignored `build/room-copy-*.png`. An additional UI
+pass verifies that unrelated failures cannot clear a pending placement and that
+acceptance waits for its authoritative snapshot. The Building guide explains
+copying alongside the existing catalog workflow.
+
+The actual Iroh host/two-client scenario passed with independent decorated-room
+copies, new replicated object identities, stale-request rejection, whole-copy
+undo/redo, and exact design/identity retention across reconnect. Dedicated startup
+passed as well. Initial test layouts either sealed a later walking destination
+or pointed a doorway into an inaccessible strip; the final fixture uses a clear
+location and accessible rotation. These fixture corrections did not relax the
+game's access checks. The preceding shared-friendship checkpoint passed all four
+platform CI jobs. Human family play and physical-device checks remain open.

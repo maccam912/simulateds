@@ -8,6 +8,7 @@ const Catalog = preload("res://game/catalog.gd")
 const Gardens = preload("res://game/gardens.gd")
 const BuildRules = preload("res://game/build_rules.gd")
 const RoomPlan = preload("res://game/room_plan.gd")
+const RoomCopy = preload("res://game/room_copy.gd")
 const Finishes = preload("res://game/finishes.gd")
 const Windows = preload("res://game/windows.gd")
 const WalkFeedback = preload("res://game/walk_feedback.gd")
@@ -42,6 +43,11 @@ var build_rotation := 0
 var build_object_id := ""
 var room_anchor := Vector2i(-1,-1)
 var room_pending := false
+var copy_source := Vector2i(-1,-1)
+var copy_pending := false
+var copy_plan: Dictionary={}
+var _copy_preview_key := ""
+var copy_preview: Dictionary={}
 var paint_anchor := Vector2i(-1,-1)
 var paint_pending := false
 var paint_plan: Dictionary = {}
@@ -388,6 +394,7 @@ func _draw() -> void:
 	hover_target = hit_target(_pointer)
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if (not building and not hover_target.is_empty()) or (building and access_inspecting and hover_target.get("type")=="access") else Control.CURSOR_ARROW
 	if building and access_inspecting: pass
+	elif building and build_kind=="copy_room": _draw_room_copy(lot)
 	elif building and build_kind=="room":
 		_draw_room_preview(lot)
 	elif building and build_kind in ["finish_floor","finish_wall"]: _draw_finish_preview()
@@ -1140,6 +1147,50 @@ func _draw_room_finish_ground() -> void:
 			if cells.has(cell+edge[0]): continue
 			var start: Vector2i=cell+edge[1]; var end: Vector2i=cell+edge[2]
 			draw_line(grid_point(start.x,start.y)+offset,grid_point(end.x,end.y)+offset,color,1.8,true)
+
+func _draw_room_copy(lot: Dictionary) -> void:
+	if not _in_bounds(hover_cell) and not copy_pending: return
+	var residents: Array=[]
+	for family: Dictionary in world.families.values():
+		for member: Dictionary in family.members:
+			if member.lot_id==lot_id: residents.append(Vector2i(int(member.x),int(member.y)))
+	var key := str([lot_id,lot.revision,lot.funds,copy_source,hover_cell,build_rotation,residents])
+	if key!=_copy_preview_key:
+		_copy_preview_key=key
+		copy_preview=RoomCopy.capture(lot,hover_cell) if copy_source.x<0 else RoomCopy.inspect(lot,{"source_x":copy_source.x,"source_y":copy_source.y,"x":hover_cell.x,"y":hover_cell.y,"rotation":build_rotation},residents)
+	var plan: Dictionary=copy_plan if copy_pending else copy_preview
+	var source: Dictionary=plan if copy_source.x<0 else plan.get("source",{})
+	if source.get("ok",false):
+		for cell: Array in source.interior: _diamond(int(cell[0])+source.low.x,int(cell[1])+source.low.y,1,1,Color(0.55,0.78,0.88,0.22),2,Color("a9d6dd"))
+	if copy_source.x<0:
+		_draw_preview_label(str(plan.message),bool(plan.ok)); return
+	var valid: bool=plan.get("ok",false)
+	var color := Color("b9de99") if valid else Color("eda58e")
+	if plan.has("extent"):
+		_diamond(plan.low.x,plan.low.y,plan.extent.x,plan.extent.y,Color(color,0.18),3,color)
+	if valid:
+		var scale := _cell.x/48.0
+		for cell: Array in plan.floors:
+			var finish: String=plan.finishes.floor.get(Finishes.key(int(cell[0]),int(cell[1])),"oak")
+			_draw_floor_finish(int(cell[0]),int(cell[1]),Finishes.PALETTES.floor[finish])
+		for cell: Array in plan.walls:
+			var finish: String=plan.finishes.wall.get(Finishes.key(int(cell[0]),int(cell[1])),"cream")
+			_block(int(cell[0]),int(cell[1]),1,1,16*scale,Color(Finishes.PALETTES.wall[finish].color))
+			var style: String=plan.windows.get(Windows.key(int(cell[0]),int(cell[1])),"")
+			if not style.is_empty(): _draw_window(plan,int(cell[0]),int(cell[1]),16*scale,style,scale,true)
+		for cell: Array in plan.doors: _diamond(int(cell[0]),int(cell[1]),1,1,Color("dfbb7d"),3,Color("fff0b9"))
+		var ordered: Array=plan.objects.duplicate()
+		ordered.sort_custom(func(a,b): return int(a.x)+int(a.y)<int(b.x)+int(b.y))
+		for item: Dictionary in ordered:
+			var object := item.duplicate(true)
+			if object.kind=="garden_bed": object.garden=Gardens.create()
+			var hits := _hit_regions.size(); _furnishing(object,scale); _hit_regions.resize(hits)
+		_diamond(plan.low.x,plan.low.y,plan.extent.x,plan.extent.y,Color.TRANSPARENT,3,color)
+	var message := "Copying room…" if copy_pending else str(plan.message)
+	if valid:
+		message+="\nStructure §%d · Furniture §%d · Finishes §%d · Windows §%d" % [plan.structure_cost,plan.furniture_cost,plan.finish_cost,plan.window_cost]
+		if plan.garden: message+="\nGarden beds start empty. Crops are not copied."
+	_draw_preview_label(message,valid)
 
 func _draw_room_preview(lot: Dictionary) -> void:
 	if not _in_bounds(hover_cell): return

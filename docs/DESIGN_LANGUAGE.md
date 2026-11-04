@@ -495,3 +495,21 @@ its game day, and the remaining daily catch-ups. Keep those details on the perso
 card and explain the threshold in the existing footer; no separate friendship
 currency or HUD gauge is needed. A shared activity can continue after it qualifies.
 Repeated snapshots and the two participants' views must never duplicate its gain.
+
+### Repeat a room's design
+
+Room copying uses the same world and catalog. Hover an enclosed interior to
+highlight its extent; select it, then show the actual rotated floors, low walls,
+doorway, windows, and furnishings at the destination. Keep the source visibly
+highlighted. The preview label gives the complete total and separate structure,
+furniture, finish, and window costs. Use the established green/red placement
+colors and build sound, with no separate blueprint editor or modal confirmation.
+
+The destination needs clear space and a usable route through the resulting lot.
+Existing empty floor can be reused; walls and furniture cannot be overwritten.
+Escape cancels selection, and one Undo restores the entire purchase. Source
+revisions invalidate an old selection. The authoritative snapshot completes the
+pending preview; unrelated acknowledgements cannot dismiss it. New furnishings
+receive new identities, and garden beds begin empty, with that limitation named
+in the preview when applicable. Saved designs and cross-lot copying remain future
+work.

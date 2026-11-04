@@ -11,6 +11,7 @@ const Gardens = preload("res://game/gardens.gd")
 const GardenPanel = preload("res://game/garden_panel.gd")
 const BuildCatalog = preload("res://game/build_catalog.gd")
 const RoomPlan = preload("res://game/room_plan.gd")
+const RoomCopy = preload("res://game/room_copy.gd")
 const Wishes = preload("res://game/wishes.gd")
 const Hobbies = preload("res://game/hobbies.gd")
 const Friendships = preload("res://game/friendships.gd")
@@ -128,6 +129,9 @@ var _moving_object := ""
 var _move_request: Dictionary = {}
 var _room_anchor := Vector2i(-1,-1)
 var _room_request: Dictionary = {}
+var _copy_source := Vector2i(-1,-1)
+var _copy_revision := -1
+var _copy_request: Dictionary={}
 var _paint_anchor := Vector2i(-1,-1)
 var _floor_selection := "area"
 var finish_mode_buttons: Dictionary={}
@@ -152,6 +156,7 @@ func _ready() -> void:
 	Session.status_changed.connect(func(_message): _refresh())
 	Session.action_result.connect(_notice)
 	Session.command_completed.connect(_window_completed)
+	Session.command_completed.connect(_copy_completed)
 	Rooms.changed.connect(_refresh)
 	_refresh()
 
@@ -417,7 +422,7 @@ func _refresh() -> void:
 		viewed_lot = str(family.home_lot)
 		_selected_object = ""
 		_moving_object = ""; _move_request.clear(); _wish_seen.clear(); _friend_seen.clear(); _hobby_seen.clear(); _room_anchor=Vector2i(-1,-1); _room_request.clear()
-		_paint_anchor=Vector2i(-1,-1); _paint_request.clear(); _window_request.clear()
+		_paint_anchor=Vector2i(-1,-1); _paint_request.clear(); _window_request.clear(); _copy_source=Vector2i(-1,-1); _copy_request.clear()
 	if viewed_lot.is_empty() or not state.get("lots",{}).has(viewed_lot):
 		viewed_lot = str(family.get("home_lot","lot_1"))
 	if selected_member.is_empty() and not family.get("members",[]).is_empty():
@@ -460,6 +465,13 @@ func _refresh() -> void:
 		_room_anchor=Vector2i(-1,-1); _room_request.clear()
 	lot_view.room_anchor=_room_anchor
 	lot_view.room_pending=not _room_request.is_empty()
+	if not building or not mine or selected_tool!="copy_room":
+		_copy_source=Vector2i(-1,-1); _copy_request.clear()
+	elif not _copy_request.is_empty():
+		if int(lot.revision)>int(_copy_request.intent.revision) and RoomCopy.is_applied(lot,_copy_request.plan):
+			_copy_source=Vector2i(-1,-1); _copy_request.clear()
+	elif _copy_source.x>=0 and int(lot.revision)!=_copy_revision: _copy_source=Vector2i(-1,-1)
+	lot_view.copy_source=_copy_source; lot_view.copy_pending=not _copy_request.is_empty(); lot_view.copy_plan=_copy_request.get("plan",{})
 	if not building or not mine or _paint_surface().is_empty():
 		_paint_anchor=Vector2i(-1,-1); _paint_request.clear()
 	elif not _paint_request.is_empty() and int(lot.revision)>int(_paint_request.revision) and Finishes.is_applied(lot,_paint_request.plan):
@@ -560,6 +572,7 @@ func _refresh() -> void:
 	var tools_signature := str(building and mine)+selected_tool+_moving_object+str(_move_request.is_empty())+_selected_object+str(build_rotation)+viewed_lot+str(lot.get("revision",0))+_context_page+selected_member+str(_room_anchor)+str(_room_request.is_empty())
 	if build_mode: tools_signature+=_catalog_category+":"+_catalog_query+":"+str(lot.get("funds",0))+str(_access_visible)+str(_access_report.get("issues",[]))
 	tools_signature+=window_style+str(_window_request.is_empty())
+	tools_signature+=str(_copy_source)+str(_copy_request.is_empty())
 	tools_signature+=str(_paint_anchor)+str(_paint_request.is_empty())+str(finish_choice)+_floor_selection
 	if _context_page=="wishes" and not build_mode:
 		tools_signature+=str(member.get("wishes",{}))+str(day)+str(member.get("task",{}).get("id",""))+str(member.get("queue",[]))
@@ -585,6 +598,7 @@ func _refresh() -> void:
 	help_label.text="Click to place · " + Preferences.action_label("rotate") + " rotates · Ctrl/Cmd+Z undoes" if building and mine else "Click a need to care for it · Click the ground to walk"
 	if building and mine and selected_tool=="room": help_label.text="Click two opposite corners · " + Preferences.action_label("rotate") + " changes door side · Escape cancels"
 	if building and mine and not _paint_surface().is_empty(): help_label.text="Click to finish a room · Walls and doorways mark its edges" if _paint_selection()=="room" else "Click two corners to decorate · Same tile twice for one · Escape cancels"
+	if building and mine and selected_tool=="copy_room": help_label.text="Choose a room to copy" if _copy_source.x<0 else "Choose clear space · "+Preferences.action_label("rotate")+" rotates the copy · Escape cancels"
 	if building and mine and selected_tool=="window": help_label.text="Choose a style, then click a wall · Windows follow its direction"
 	if building and mine and _context_page=="access": help_label.text="Find an item · Choose Door, Move, or Sell to repair"
 	help_label.tooltip_text=help_label.text
@@ -837,7 +851,7 @@ func _announce_wishes(family: Dictionary) -> void:
 		_wish_seen[resident.id]=count
 
 func _select_lot(id: String) -> void:
-	_paint_anchor=Vector2i(-1,-1); _paint_request.clear(); _window_request.clear()
+	_paint_anchor=Vector2i(-1,-1); _paint_request.clear(); _window_request.clear(); _copy_source=Vector2i(-1,-1); _copy_request.clear()
 	viewed_lot=id; _selected_object=""; _room_anchor=Vector2i(-1,-1); _room_request.clear(); neighborhood_panel.hide(); _refresh()
 
 func _select_resident(id: String) -> void:
@@ -892,7 +906,7 @@ func _select_build_tool(kind: String) -> void:
 	var reset_scroll := kind.begins_with("finish_") or not _paint_surface().is_empty() or kind=="window" or selected_tool=="window"
 	selected_tool=kind; _moving_object=""; _move_request.clear()
 	_paint_anchor=Vector2i(-1,-1); _paint_request.clear()
-	_room_anchor=Vector2i(-1,-1); _room_request.clear(); _refresh()
+	_room_anchor=Vector2i(-1,-1); _room_request.clear(); _copy_source=Vector2i(-1,-1); _copy_request.clear(); _refresh()
 	if reset_scroll: call_deferred("_reset_catalog_scroll")
 
 func _reset_catalog_scroll() -> void:
@@ -910,6 +924,20 @@ func _tile_clicked(cell: Vector2i) -> void:
 	if lot.is_empty(): return
 	if bool(lot.building) and str(lot.owner)==str(Session.profile_id):
 		if _context_page=="access": return
+		if selected_tool=="copy_room":
+			if not _copy_request.is_empty(): return
+			if _copy_source.x<0:
+				var captured := RoomCopy.capture(lot,cell)
+				if not captured.ok: _notice(str(captured.message)); Soundscape.play_ui("error"); return
+				_copy_source=cell; _copy_revision=int(lot.revision); build_rotation=0; _refresh(); return
+			var command := {"type":"copy_room","lot_id":viewed_lot,"source_x":_copy_source.x,"source_y":_copy_source.y,"x":cell.x,"y":cell.y,"rotation":build_rotation,"revision":lot.revision}
+			var residents: Array=[]
+			for family: Dictionary in Session.state.families.values():
+				for member: Dictionary in family.members:
+					if member.lot_id==viewed_lot: residents.append(Vector2i(int(member.x),int(member.y)))
+			var plan := RoomCopy.inspect(lot,command,residents)
+			if not plan.ok: _notice(str(plan.message)); Soundscape.play_ui("error"); return
+			_copy_request={"intent":command.duplicate(true),"plan":plan}; _send(command); return
 		if selected_tool=="window":
 			if not _window_request.is_empty(): return
 			var command := {"type":"set_window","lot_id":viewed_lot,"style":window_style,"x":cell.x,"y":cell.y,"revision":lot.revision}
@@ -1024,6 +1052,7 @@ func _build_history(redo: bool) -> void:
 	_send({"type":"build_redo" if redo else "build_undo","lot_id":viewed_lot,"revision":lot.get("revision",-1)})
 
 func _rotate() -> void:
+	if not _copy_request.is_empty(): return
 	if not _paint_surface().is_empty() or selected_tool=="window": return
 	build_rotation=(build_rotation+1)%4; _refresh()
 
@@ -1062,6 +1091,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		elif event.is_action_pressed("pause") or event.keycode==KEY_ESCAPE:
 			if _context_page=="access" and context_panel.visible:
 				_close_context()
+			elif _copy_source.x>=0 and _copy_request.is_empty():
+				_copy_source=Vector2i(-1,-1); _refresh()
 			elif _paint_anchor.x>=0 and _paint_request.is_empty():
 				_paint_anchor=Vector2i(-1,-1); _refresh()
 			elif _room_anchor.x>=0 and _room_request.is_empty():
@@ -1499,6 +1530,13 @@ func _announce_hobbies(family: Dictionary) -> void:
 				_notice_time=7.0; notice_panel.show(); Soundscape.play_ui("confirm")
 			_hobby_seen[key]=level
 
+
+func _copy_completed(intent: Dictionary, ok: bool, _message: String) -> void:
+	if intent.get("type")!="copy_room": return
+	if ok and hud.is_visible_in_tree(): Soundscape.play_ui("build")
+	if not _copy_request.is_empty() and intent==_copy_request.intent:
+		if not ok: _copy_request.clear()
+		_refresh()
 
 func _window_completed(intent: Dictionary,ok: bool,_message: String) -> void:
 	if intent.get("type")!="set_window": return

@@ -121,6 +121,12 @@ or shell expressions.
   The preview shows the full price; **R** changes the doorway side. Existing
   floors, walls, and doors are preserved where possible and only new pieces cost
   money. **Escape** cancels the first corner. Rooms need at least 3 × 3 tiles.
+- **Copy room** selects an enclosed room with a doorway, then previews its design
+  in clear space on your lot. **R** rotates the whole copy, including furnishings,
+  finishes, and windows. The preview itemizes the full price and checks access;
+  click to place everything as one undoable edit. Existing empty floor is reused.
+  Existing walls and furniture stay in place. Garden beds start empty, and
+  residents and crops stay in the original room. **Escape** cancels selection.
 - The build **Catalog** groups items by room/use. Search within a category by
   name or activity (for example, "sleep", "meal", or "book"). **Ctrl/Cmd+F** focuses
   search, **Enter** selects the first result, and **Escape** clears a search before

@@ -84,7 +84,9 @@ and current usability priorities.
 - Drag painting and richer selection; placement previews, furniture moves,
   two-corner rooms, rectangle decoration, room-aware floor fill, undo/redo, and
   exact undo refunds are implemented. Add broader architectural options.
-- Room blueprints and reusable layouts on the existing draft/commit boundary.
+- Room duplication now copies an enclosed design with rotated furnishings,
+  finishes, windows, full cost/access preview, and one undoable placement. Add
+  saved blueprint libraries and cross-lot reusable layouts later.
 - Shared entrance routing checks and an access overlay now locate blocked
   furnishings and residents, with camera focus and direct repair tools. Extend
   routing as architectural options become richer.
