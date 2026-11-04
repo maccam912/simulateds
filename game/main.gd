@@ -63,6 +63,8 @@ var _catalog_query := ""
 var context_box: VBoxContainer
 var activity_label: Label
 var needs_title: Label
+var wish_buttons := {}
+var _meal_wish_options := {}
 var wishes_button: Button
 var hobbies_button: Button
 var hobby_buttons: Dictionary = {}
@@ -608,6 +610,10 @@ func _refresh() -> void:
 	tools_signature+=str(_copy_source)+str(_copy_request.is_empty())
 	tools_signature+=str(_paint_anchor)+str(_paint_request.is_empty())+str(finish_choice)+_floor_selection
 	if _context_page=="wishes" and not build_mode:
+		_meal_wish_options.clear()
+		for wish: Dictionary in member.get("wishes",{}).get("wishes",[]):
+			if wish.id in Wishes.MEALS: _meal_wish_options[wish.id]=Session.world.meal_wish_option(Session.profile_id,selected_member,str(wish.id))
+		tools_signature+=str(_meal_wish_options)
 		tools_signature+=str(member.get("wishes",{}))+str(day)+str(member.get("task",{}).get("id",""))+str(member.get("queue",[]))
 	if _context_page=="people" and not build_mode:
 		_leisure_options.clear()
@@ -873,7 +879,24 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 func _open_wishes() -> void:
 	_context_page="wishes"; _refresh(); _show_tray(context_panel,true)
 
+func _pursue_wish(wish_id: String) -> void:
+	if not wish_id in Wishes.MEALS:
+		_send({"type":"pursue_wish","member_id":selected_member,"wish_id":wish_id}); return
+	var option: Dictionary=Session.world.meal_wish_option(Session.profile_id,selected_member,wish_id)
+	if not option.available: _notice(str(option.detail)); return
+	_select_lot(str(option.lot_id))
+	if option.action=="inspect":
+		_interact(str(option.target_id))
+		var table: Dictionary=Session.world._object(Session.state.lots[viewed_lot],str(option.target_id))
+		lot_view.focus_cell(Vector2(float(table.x)+1,float(table.y)+1))
+	else:
+		_context_page="activities"; _catalog_category="kitchen"; _catalog_query="dining"
+		catalog_category.select(BuildCatalog.CATEGORIES.keys().find("kitchen")); catalog_search.text="dining"
+		_select_build_tool("dining_table"); _send({"type":"build_begin","lot_id":viewed_lot}); _show_tray(context_panel,true)
+		call_deferred("_reset_catalog_scroll")
+
 func _rebuild_wishes() -> void:
+	wish_buttons.clear()
 	var member := _member()
 	if member.is_empty(): return
 	var board: Dictionary=member.get("wishes",{})
@@ -882,9 +905,14 @@ func _rebuild_wishes() -> void:
 		var definition: Dictionary=Wishes.CATALOG[wish.id]
 		var status: String=Session.world.wish_status(member,str(definition.activity))
 		var detail := "Complete" if wish.done else (status if not status.is_empty() else "Try this")+" · § %d" % Wishes.REWARD
-		var button := _button(("✓ " if wish.done else "♡ ")+str(definition.title)+"\n"+detail,func(): _send({"type":"pursue_wish","member_id":selected_member,"wish_id":str(wish.id)}))
+		var meal_option: Dictionary=_meal_wish_options.get(wish.id,{})
+		if not wish.done and not meal_option.is_empty(): detail=str(meal_option.label)+" · Reward §%d" % Wishes.REWARD
+		var button := _button(("✓ " if wish.done else "♡ ")+str(definition.title)+"\n"+detail,func(): _pursue_wish(str(wish.id)))
+		wish_buttons[wish.id]=button
 		button.alignment=HORIZONTAL_ALIGNMENT_LEFT; button.add_theme_font_size_override("font_size",12)
 		button.custom_minimum_size.y=60; button.disabled=bool(wish.done) or not status.is_empty(); button.tooltip_text=str(definition.description)
+		if not meal_option.is_empty():
+			button.disabled=bool(wish.done) or not meal_option.available; button.tooltip_text+="\n"+str(meal_option.detail)
 		if wish.done: button.add_theme_color_override("font_disabled_color",Style.GREEN)
 		tools_box.add_child(button)
 	var bonus := _label("All three: § %d extra" % Wishes.SET_BONUS,12,Style.GOLD); tools_box.add_child(bonus)

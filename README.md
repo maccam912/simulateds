@@ -209,6 +209,14 @@ or shell expressions.
   Leftovers keep until eaten or explicitly removed with **Clear leftovers**.
   A portion is consumed when eating starts; cancelling before arrival frees the
   reservation. Moving/undoing a table preserves food; room copies start empty.
+- Later wish sets can include **Something homemade** (serve a meal) and
+  **Share a meal** (both diners choose twelve game minutes together). They use
+  the usual §40 reward and once-per-set bonus. Click a meal wish to inspect a
+  table or open Kitchen with its §280 table selected; placement and ingredients
+  remain your choices. Cooking pays only after serving. Shared dining pays each
+  participant's own household, even if that pair has used today's friendship
+  catch-ups. Starter sets keep their familiar activities, and saved wishes stay
+  unchanged until you finish and renew them on a later day.
 - Residents with a pressing need show a small thought cue above the house. Click
   it to select that resident and plan useful care. Needs already being handled
   or queued stay quiet, and cues belong only to your household. The selected

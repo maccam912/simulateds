@@ -3,20 +3,25 @@ extends RefCounted
 const REWARD := 40
 const SET_BONUS := 80
 const MAX_JOURNAL := 12
-const ORDER := ["story","greenery","tea","show","company","rest"]
+const STARTER_ORDER := ["story","greenery","tea","show","company","rest"]
+const ORDER := ["story","greenery","tea","show","company","rest","homemade","meal_together"]
+const MEALS := ["homemade","meal_together"]
 const CATALOG := {
 	"story":{"title":"Get lost in a story","activity":"bookshelf","description":"Finish a reading session at a bookshelf."},
 	"greenery":{"title":"A little green company","activity":"plant","description":"Spend a moment tending a plant."},
 	"tea":{"title":"Make time for tea","activity":"table","description":"Enjoy a quiet tea break at a table."},
 	"show":{"title":"Something wonderfully silly","activity":"tv","description":"Settle in for a little television."},
 	"company":{"title":"A proper catch-up","activity":"chat","description":"Finish a conversation with another resident."},
-	"rest":{"title":"Put your feet up","activity":"sofa","description":"Take a relaxing break on a sofa."}
+	"rest":{"title":"Put your feet up","activity":"sofa","description":"Take a relaxing break on a sofa."},
+	"homemade":{"title":"Something homemade","activity":"meal_prepare","description":"Serve four portions of salad or sandwiches at home. Ingredients are paid when served."},
+	"meal_together":{"title":"Share a meal","activity":"meal_company","description":"Both residents choose their meal, then eat together for 12 game minutes. Each player directs their own diners."}
 }
 
 static func create(member_id: String, day: int, round_number: int = 0, journal: Array = []) -> Dictionary:
 	var wishes: Array=[]
-	var offset := posmod(member_id.hash()+round_number*3,ORDER.size())
-	for index in range(3): wishes.append({"id":ORDER[(offset+index)%ORDER.size()],"done":false})
+	var pool: Array=STARTER_ORDER if round_number==0 else ORDER
+	var offset := posmod(member_id.hash()+round_number*3,pool.size())
+	for index in range(3): wishes.append({"id":pool[(offset+index)%pool.size()],"done":false})
 	return {"day":day,"round":round_number,"wishes":wishes,"journal":journal.duplicate(true)}
 
 static func completed(board: Dictionary) -> int:

@@ -694,6 +694,26 @@ do not prematurely replace it with recipe buttons.
 The action binds to the current meal and resident activity. Stale or repeated
 choices reject politely, and early acknowledgements wait for accepted state.
 Friendship uses only newly chosen overlap; a late choice may simply finish the
-meal without a catch-up. A wish completion hook also requires enough newly chosen
-time; the present wish catalog has no food wish. No retroactive cooking practice
+meal without a catch-up. Meal wishes also require enough newly chosen time, including the final
+qualifying step when a meal ends. No retroactive cooking practice
 is granted for eating.
+
+
+## Small wishes around meals
+
+Keep the first wish set on starter-home activities. Later sets can ask for
+Something homemade or Share a meal; existing sets and journals remain intact.
+Both use the ordinary reward, set bonus, and later-day renewal. Cooking must
+reach serving, not merely start. Shared company needs both diners to choose
+participation for twelve game minutes; each reward belongs to that resident's
+own household, independent of the pair's friendship budget.
+
+Meal wish cards are navigation. Show Build table when equipment is missing,
+then open Kitchen with the table selected and its real price visible. Otherwise
+open the relevant table and frame it in the world. Cooking points to the owner's
+home; sharing can use a visited table. Never select a recipe, spend ingredients,
+or direct a companion just because a wish card was clicked. The card remains
+usable to inspect an ongoing meal. At the table, show the unfinished meal wish's
+rule beside its controls: serving for the cooking wish, and chosen company for
+the shared wish. Completed cards, the HUD count, and the existing Little Moments
+journal provide the reward feedback.

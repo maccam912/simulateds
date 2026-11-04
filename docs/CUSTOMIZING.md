@@ -96,3 +96,12 @@ a headless test cannot prove the interface fits or controls are understandable.
 Cross-platform exports, physical Android operation, suspend/resume, long host
 sessions, network impairment, and family playtesting are separate acceptance
 steps. Keep [VALIDATION.md](VALIDATION.md) accurate about which were exercised.
+
+Meal wishes live in `game/wishes.gd`: `STARTER_ORDER` preserves the initial
+starter-home set, while `ORDER` supplies later sets. Their cards navigate through
+`World.meal_wish_option` to equipment or the table; they never issue a preparation
+or eating command. The cook earns `meal_prepare` only after serving and charging
+ingredients. `meal_company` uses the same newly chosen shared-time qualification
+as friendship, but its once-per-wish reward is independent of the pair/day cap.
+The qualifying frame's elapsed slice is included, so a meal ending on exactly
+twelve chosen game minutes can still fulfill the wish.

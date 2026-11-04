@@ -1784,3 +1784,48 @@ explicit ingredient spending and counting actual chosen activity. This is
 proposed next work, not behavior in this checkpoint.
 
 Final checkpoint regression: all 82 local suites passed with no errors.
+
+
+## Wishes for cooking and company
+
+The meal loop now has optional direction: later wish sets can ask for Something
+homemade and Share a meal. Initial sets keep the six starter-home activities.
+Existing saved wishes and journals do not change. Serving earns the cook's usual
+§40; chosen company earns each participant's own household §40 after twelve game
+minutes together. Rewards and the set bonus remain once per wish/set, with
+renewal on a later day. Today's friendship cap does not block a wish.
+
+A wish card opens the relevant table, or opens Kitchen with the Gathering table
+selected when one is missing. Building/placement and ingredient choices stay
+explicit. The native flow started while viewing Violet's lot and correctly
+found the selected family's home table. Cooking still charges only when served.
+The table shows the unfinished wish's rule beside the controls; a compact-size
+review confirmed that both chosen participation and the twelve-minute requirement
+are visible, rather than depending on a tooltip alone.
+
+Focused checks passed cancellation, insufficient funds at serving, solo/automatic
+meals, visitors receiving their own rewards, cap independence, saved/runtime
+snapshots, no repeated payouts, and an adopted meal ending on the exact qualifying
+tick. A visitor fixture initially placed a guest on the idle housemate's cell;
+its legitimate detour delayed the overlap. Distinct starting places now make the
+exact-time check meaningful. Shared reward accounting includes the qualifying
+frame so the final tick can earn the wish without extending the meal.
+
+Both native layouts completed equipment discovery, placement, recipe choice,
+serving, two individually chosen diners, their wish journals, and a whole-set
+bonus. Captures in `build/meal-wishes-*.png` were reviewed, including compact
+wish cards, the shared-rule tray, and the completed set. All 84 local suites
+passed. The real Iroh host/two-client sequence also observed the two authoritative
+shared-wish rewards after meal adoption, with the same portions. The preceding
+`489a7e5` checkpoint passed Linux, Windows, and Android CI; its macOS job was
+cancelled before running, following the earlier hosted-runner capacity problem.
+
+Fresh assessment: the wishes make the meal loop rewarding and discoverable, but
+starting a family meal still means choosing each resident in turn. Next, offer
+one explicit household call to the table that handles existing plans, current
+automatic meals, and available portions. It must reserve food only for the
+player's own residents on that lot and leave guests under their own control.
+This is proposed next work, not behavior in this checkpoint.
+
+The final focused model, compact native playthrough, and editor import passed
+after replacing duplicated displayed amounts with shared price/reward constants.

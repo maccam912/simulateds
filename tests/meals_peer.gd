@@ -58,6 +58,7 @@ func _host() -> void:
 			for resident: Dictionary in session.state.families[request.owner].members:
 				for need: String in resident.needs: resident.needs[need]=100.0
 				resident.needs.hunger=20; resident.idle_clock=2
+				resident.wishes={"day":int(session.state.day),"round":1,"wishes":[{"id":"meal_together","done":false},{"id":"story","done":false},{"id":"rest","done":false}],"journal":[]}
 			_flag(".autonomy-primed")
 		if FileAccess.file_exists(ticket_path+".done1") and FileAccess.file_exists(ticket_path+".done2"):
 			assert(session.state.families.size()==3)
@@ -159,7 +160,11 @@ func _client(index: String) -> void:
 			await _command(choice); await _command(choice,false)
 		_flag(".meal-chosen"); await _wait_flag(".choice-observed")
 		for resident: String in [member,housemate]: await _command({"type":"autonomy","member_id":resident,"enabled":false})
-		assert(session.state.lots[home].funds==funds_before and _table(home,id).meal.servings==1)
+		for attempt in range(100):
+			if session.state.families[identity].members.all(func(resident): return resident.wishes.wishes[0].done): break
+			await create_timer(0.1).timeout
+		assert(session.state.families[identity].members.all(func(resident): return resident.wishes.wishes[0].done))
+		assert(session.state.lots[home].funds==funds_before+80 and _table(home,id).meal.servings==1,"Each diner earns one shared-meal wish, keeping the same servings")
 		_flag(".autonomy-finished")
 	else:
 		await _wait_flag(".autonomy-primed"); await _wait_servings(home,id,1)
@@ -176,4 +181,8 @@ func _client(index: String) -> void:
 			assert(resident.task.has("meal_chosen_at") and not resident.task.get("automatic",false) and resident.task.get("meal_taken",false))
 		assert(_table(home,id).meal.servings==1)
 		_flag(".choice-observed"); await _wait_flag(".autonomy-finished")
+		for attempt in range(60):
+			if session.state.families[owner].members.all(func(resident): return resident.wishes.wishes[0].done): break
+			await create_timer(0.1).timeout
+		assert(session.state.families[owner].members.all(func(resident): return resident.wishes.wishes[0].done) and _table(home,id).meal.servings==1)
 	_flag(".done"+index); print("CLIENT_PASS"); session.leave(); await root.get_node("Soundscape").shutdown_and_wait(); quit()

@@ -97,7 +97,10 @@ own meals; absent caretakers preserve stored portions. Automatic eating cannot
 prepare food, spend ingredients, or earn deliberate-play rewards. An ongoing
 automatic meal can become chosen shared time from the table or People without
 using another serving or restarting its timer. Friendship counts only newly
-chosen time together.
+chosen time together. Later optional wish sets now include serving homemade food
+and sharing chosen meal time, using the existing bounded rewards. Wish navigation
+finds a relevant table or its Kitchen catalog entry without choosing ingredients
+or controlling other diners. Starter sets and existing saved wishes are preserved.
 
 ## 1. Make homebuilding dependable
 

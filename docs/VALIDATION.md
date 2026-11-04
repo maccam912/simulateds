@@ -918,8 +918,7 @@ Friendship checks require four new simulation seconds after both residents
 choose. Older automatic time earns nothing, a late choice does not extend its
 meal, and a qualifying encounter survives snapshot handoff without duplicate
 credit. Eating grants no cooking practice. The completion hook also guards
-newly chosen time before any future food-wish award; the current wish catalog
-contains no food wish.
+newly chosen time before any future food-wish award; that checkpoint predates the meal wishes below.
 
 Both native meal UI layouts pass: 1440×900 and 1280×720 at 125% scale. Tests use
 real mouse input to choose through the table and People, exercise exact/early
@@ -936,3 +935,32 @@ hosted runner after multiple attempts; annotations cite macOS arm64 capacity.
 The local native runs pass but do not prove that missing CI job.
 
 Final checkpoint regression: all 82 local suites passed with no errors.
+
+
+## Cooking and shared-meal wishes
+
+All 84 local suites pass. `meal_wishes` covers unchanged starter sets, both new
+IDs in later sets, read-only guidance, cancellation and failed serving, cook-only
+rewards after payment, solo and automatic exclusions, independently chosen
+company, exact overlap timing, shared reward ownership for visitors, friendship-
+cap independence, repeated-tick/snapshot idempotence, the normal set bonus,
+renewal gating, absence, and saved-board preservation. An adopted meal ending on
+its final qualifying frame can earn its wish; earlier automatic time cannot.
+
+`meal_wishes_ui` passes in the native renderer at 1440×900 and 1280×720 with 125%
+UI scale. Injected mouse input follows wishes into the correct household's
+Kitchen catalog, places a table, opens recipe choices without spending, serves,
+chooses each diner, and completes the set. The final compact rule text fits beside
+Eat and Clear. Existing cards, HUD completion, and Little Moments journal show
+the rewards. Reviewed captures live in ignored `build/meal-wishes-*.png`.
+
+The extended separate-process Iroh meal scenario passes. The authoritative host
+seeds the later wish board; clients issue ordinary autonomy and choice commands.
+After newly chosen company, each owned diner receives its one wish reward, and
+the observing client sees both completions with unchanged serving counts. This
+continues the earlier visit/absence/reconnect and duplicate-choice coverage.
+Human-family play, physical-device certification, and overnight host soak remain
+open; native injected-input results do not establish those.
+
+The final focused model, compact native playthrough, and editor import passed
+after replacing duplicated displayed amounts with shared price/reward constants.

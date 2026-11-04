@@ -213,6 +213,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 		for wish: Dictionary in member.wishes.wishes:
 			if wish.id==wish_id and not wish.done: activity=str(Wishes.CATALOG[wish_id].activity)
 		if activity.is_empty(): return _result(false,"That wish is already complete or unavailable.")
+		if wish_id in Wishes.MEALS: return _result(false,"Open this wish to find a dining table, then choose a recipe or meal. Ingredients are paid only when served.")
 		if not wish_status(member,activity).is_empty(): return _result(false,"That activity is already in this resident’s plan.")
 		var destination: Dictionary=state.lots[member.lot_id]
 		var target := ""
@@ -496,7 +497,7 @@ func _tick_meal(member: Dictionary,lot: Dictionary,task: Dictionary,delta: float
 		var recipe: String=task.meal_recipe; var cost: int=Meals.RECIPES[recipe].cost
 		if not _adjust_funds(str(lot.id),-cost): _end_task(member,"failed","The household budget changed before serving."); return
 		table.meal={"recipe":recipe,"servings":Meals.PORTIONS,"batch":int(table.meal.batch)+1,"cook":str(member.id),"cook_name":str(member.name),"day":int(state.day)}
-		_record_hobby(member,"fridge")
+		_record_hobby(member,"fridge"); _finish_wish(member,task,"meal_prepare")
 		_event(str(member.name)+" served "+str(Meals.RECIPES[recipe].name).to_lower()+" · Four portions ready.")
 		_end_task(member,"done","Four portions served · Ingredients §%d." % cost)
 	else:
@@ -1012,7 +1013,45 @@ func care_option(member: Dictionary, need: String) -> Dictionary:
 	if best.is_empty(): return {"available":false,"status":"Unavailable here","label":"No reachable activity","detail":"No reachable "+str(Wellbeing.FURNISHINGS.get(need,"activity"))+" here. Build one or visit a neighbor."}
 	return best
 
+func meal_wish_option(profile_id: String,member_id: String,wish_id: String) -> Dictionary:
+	var result := {"available":false,"label":"Unavailable","detail":"Choose an unfinished meal wish.","action":""}
+	var family: Dictionary=state.families.get(profile_id,{})
+	var member := _member(family,member_id) if not family.is_empty() else {}
+	if member.is_empty() or not wish_id in Wishes.MEALS: return result
+	if not member.wishes.wishes.any(func(wish): return wish.id==wish_id and not wish.done): return result
+	var home: Dictionary=state.lots[family.home_lot]; var lot: Dictionary=state.lots[member.lot_id]
+	if home.building or lot.building:
+		result.label="Finish building"; result.detail="Finish construction before making time for a meal."; return result
+	if wish_id=="homemade" or not lot.objects.any(func(object): return object.kind=="dining_table"): lot=home
+	var table := {}; var score := INF
+	var origin := _position(member) if member.lot_id==lot.id else BuildAccess.GATE
+	for object: Dictionary in lot.objects:
+		if object.kind!="dining_table": continue
+		var distance := origin.distance_to(Vector2i(int(object.x),int(object.y)))
+		if member.lot_id==lot.id and not _can_reach_object(lot,origin,object): distance+=10000
+		if wish_id=="meal_together" and int(object.meal.servings)>0: distance-=100
+		if member.task.get("meal_table")==object.id and member.lot_id==lot.id: distance-=1000
+		if distance<score: score=distance; table=object
+	result.available=true; result.lot_id=str(lot.id)
+	if table.is_empty():
+		result.action="build"; result.label="Build table"; result.lot_id=str(home.id)
+		result.detail="Open Kitchen to place a Gathering dining table (§%d). A reachable fridge is needed to cook; choose and pay for ingredients separately." % int(Catalog.ITEMS.dining_table.cost)
+		return result
+	result.action="inspect"; result.target_id=str(table.id)
+	result.label="Choose a recipe" if wish_id=="homemade" else "Choose a meal"
+	result.detail="Open this dining table. Choose a recipe; ingredients are charged when served." if wish_id=="homemade" else "Open this table to choose food. Choose the other diner from People or let their player join. Both need 12 game minutes of chosen time together."
+	if member.lot_id!=lot.id: result.label="See home table"; result.detail="View your home table, then go home before preparing or eating."
+	elif member.task.get("meal_table")==table.id: result.label="See your table"
+	elif not _can_reach_object(lot,origin,table): result.label="Check table access"; result.detail="This table needs a clear path. Inspect it, then adjust the room in Build & buy."
+	return result
+
 func wish_status(member: Dictionary, activity: String) -> String:
+	if activity in ["meal_prepare","meal_company"]:
+		var meal_action := "prepare" if activity=="meal_prepare" else "eat"
+		if not member.task.get("automatic",false) and member.task.get("meal_action")==meal_action: return "In progress"
+		for task: Dictionary in member.queue:
+			if not task.get("automatic",false) and task.get("meal_action")==meal_action: return "In your plan"
+		return ""
 	if not member.task.get("automatic",false) and task_activity(member.task,str(member.lot_id))==activity: return "In progress"
 	for task: Dictionary in member.queue:
 		if not task.get("automatic",false) and task_activity(task,str(member.lot_id))==activity: return "In your plan"
@@ -1117,9 +1156,9 @@ func _conversation_partner(member: Dictionary) -> Dictionary:
 			if other.task.get("target_kind")=="member" and other.task.get("target_id")==member.id and other.task.get("path",[]).is_empty() and float(other.task.get("elapsed",0))>0 and _position(other).distance_to(_position(member))<=2.0: return other
 	return {}
 
-func _finish_wish(member: Dictionary, task: Dictionary, activity: String) -> void:
+func _finish_wish(member: Dictionary, task: Dictionary, activity: String, qualifying_delta: float=0.0) -> void:
 	if bool(task.get("automatic",false)): return
-	if task.has("meal_chosen_at") and Meals.chosen_time(task)+0.000001<MIN_ACTIVITY_TIME: return
+	if task.has("meal_chosen_at") and Meals.chosen_time(task)+qualifying_delta+0.000001<MIN_ACTIVITY_TIME: return
 	for family: Dictionary in state.families.values():
 		if not family.online: continue
 		if not family.members.has(member): continue
@@ -1804,6 +1843,8 @@ func _tick_shared_friendships(delta: float) -> void:
 			var started := maxi(int(a.social_started),int(b.social_started))
 			var result := Friendships.record(state,str(first.member.id),str(second.member.id),started,str(first.object.kind))
 			_announce_friendship(first.member,second.member,result)
+			if first.object.kind=="dining_table":
+				_finish_wish(first.member,a,"meal_company",minf(delta,float(a.remaining))); _finish_wish(second.member,b,"meal_company",minf(delta,float(b.remaining)))
 
 func _finish_conversation(member: Dictionary, neighbor: Dictionary, task: Dictionary) -> void:
 	if task.get("automatic",false) or not _online_member(member) or not _online_member(neighbor): return

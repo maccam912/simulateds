@@ -1,6 +1,7 @@
 extends VBoxContainer
 signal command_requested(command: Dictionary)
 const Meals=preload("res://game/meals.gd")
+const Wishes=preload("res://game/wishes.gd")
 const Style=preload("res://game/style.gd")
 var summary: Label
 var credit: Label
@@ -72,6 +73,11 @@ func refresh(lot_id: String,object_id: String,member_id: String) -> void:
 	if choice.ok: note.text="Keep your portion and remaining time.\nChosen company starts now."
 	elif dining and not ready: note.text="Diners keep their current portions.\nWait for them to finish before preparing more."
 	elif not owner and not ready: note.text="This household prepares its meals. Visit again when food is served."
+	var wishes: Array=member.get("wishes",{}).get("wishes",[])
+	if wishes.any(func(wish): return wish.id=="homemade" and not wish.done) and not ready and not dining and owner:
+		note.text="Wish: serve a meal · Reward §%d.\nIngredients paid when served." % Wishes.REWARD
+	if wishes.any(func(wish): return wish.id=="meal_together" and not wish.done) and (ready or dining):
+		note.text="Keep this portion and time.\nBoth diners choose 12 min together." if choice.ok else "Both diners choose 12 min together.\nPeople → Join meal · Reward §%d." % Wishes.REWARD
 	_options.clear(); var unavailable := ""
 	for key: String in buttons:
 		var action := "prepare" if Meals.RECIPES.has(key) else key
