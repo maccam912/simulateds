@@ -200,7 +200,11 @@ or shell expressions.
   taking fridge snacks. Urgent needs and your orders still take priority.
   Automatic eating earns no wishes, friendship, or cooking practice; it never
   prepares food or spends ingredients. Caretakers preserve portions while you
-  are away. Hunger care can choose a ready meal. Visitors choose to eat served food,
+  are away. Click **Choose this meal** at the table, or **People → Join meal**,
+  to make an ongoing automatic meal chosen shared time. It keeps the current
+  serving, place, and remaining eating time, even when no portions remain.
+  Friendship counts only shared time after both residents choose; a late choice
+  does not prolong the meal to earn a catch-up. Hunger care can choose a ready meal. Visitors choose to eat served food,
   including while its household is away, but cannot spend its money or clear it.
   Leftovers keep until eaten or explicitly removed with **Clear leftovers**.
   A portion is consumed when eating starts; cancelling before arrival frees the

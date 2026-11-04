@@ -319,7 +319,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 		return _result(false, "Visit this lot before using it.")
 	if lot.building:
 		return _result(false, "This lot is under construction.")
-	if member.queue.size() >= MAX_QUEUE and not (type=="meal" and command.get("action")=="clear"):
+	if member.queue.size() >= MAX_QUEUE and not (type=="meal" and command.get("action") in ["clear","choose"]) and not (type=="join_meal" and command.has("own_activity_id")):
 		return _result(false, "The action queue is full (8 actions).")
 	if type in ["join_game","join_dance","join_meal"]:
 		var companion_id: Variant=command.get("companion_id")
@@ -330,7 +330,12 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 		if option.is_empty() or option.activity_id!=activity_id:
 			return _result(false,"That activity has changed. Choose a current activity from People.")
 		if not option.available: return _result(false,str(option.detail))
-		if type=="join_meal": return apply_command(profile_id,{"type":"meal","member_id":member.id,"lot_id":lot_id,"target_id":option.target_id,"action":"eat","recipe":"","batch":_object(lot,str(option.target_id)).meal.batch})
+		if type=="join_meal":
+			var own: String=option.get("own_activity_id","")
+			if not command.get("own_activity_id","") is String or command.get("own_activity_id","")!=own: return _result(false,"Your meal changed. Choose from People again.")
+			var intent := {"type":"meal","member_id":member.id,"lot_id":lot_id,"target_id":option.target_id,"action":"eat" if own.is_empty() else "choose","recipe":"","batch":_object(lot,str(option.target_id)).meal.batch}
+			if not own.is_empty(): intent.activity_id=own
+			return apply_command(profile_id,intent)
 		var result := apply_command(profile_id,{"type":"interact","member_id":member.id,"lot_id":lot_id,"target_id":option.target_id})
 		if result.ok: result.message="Dancing added to your plan." if type=="join_dance" else "Tabletop game added to your plan."
 		return result
@@ -338,6 +343,12 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 		var option := meal_option(profile_id,str(member.id),str(lot_id),command.get("target_id"),command.get("action"),command.get("recipe",""))
 		if not option.ok: return option
 		if not _integer(command.get("batch")) or int(command.batch)!=int(option.batch): return _result(false,"The meal changed. Choose from the table again.")
+		if command.action=="choose":
+			if not command.get("activity_id") is String or command.get("activity_id")!=option.activity_id: return _result(false,"Your meal changed. Choose it again at the table.")
+			var chosen: Dictionary=member.task.duplicate(true)
+			chosen.erase("automatic"); chosen.erase("social_started"); chosen.meal_chosen_at=float(chosen.elapsed)
+			_queue_action(member,chosen); member.task=member.queue.pop_back()
+			return _result(true,"Meal chosen · Your serving and remaining time are kept.")
 		if command.action=="clear":
 			var table := _object(lot,str(command.target_id)); var batch := int(table.meal.batch)+1
 			table.meal=Meals.create(); table.meal.batch=batch
@@ -403,7 +414,7 @@ func meal_option(profile_id: String,member_id: String,lot_id: String,table_id: V
 	if lot.is_empty(): return _result(false,"Choose a dining table.")
 	if lot.building or state.lots[family.home_lot].building: return _result(false,"Finish construction before preparing or sharing a meal.")
 	if member.lot_id!=lot_id: return _result(false,"Visit this home with "+str(member.name)+" to share a meal.")
-	if not table_id is String or not action is String or not action in ["prepare","eat","clear"] or not recipe is String: return _result(false,"Choose a meal activity.")
+	if not table_id is String or not action is String or not action in ["prepare","eat","clear","choose"] or not recipe is String: return _result(false,"Choose a meal activity.")
 	var table := _object(lot,table_id)
 	if table.get("kind")!="dining_table": return _result(false,"Choose a dining table.")
 	var meal: Dictionary=table.meal
@@ -415,6 +426,9 @@ func meal_option(profile_id: String,member_id: String,lot_id: String,table_id: V
 	if action=="clear":
 		if not recipe.is_empty() or meal.recipe=="": return _result(false,"There are no leftovers to clear.")
 		return {"ok":true,"message":"Remove remaining portions. No refund.","batch":int(meal.batch)}
+	if action=="choose":
+		if not recipe.is_empty() or not Meals.choosing(member,table) or not _meal_task_option(member,lot,member.task).ok: return _result(false,"Choose a current automatic meal for this resident.")
+		return {"ok":true,"batch":int(meal.batch),"activity_id":str(member.task.id),"message":"Keep your serving and remaining time. Chosen company starts now."}
 	if member.queue.size()>=MAX_QUEUE: return _result(false,"The action queue is full (8 actions).")
 	var spaces := Leisure.spaces(state,lot,table,member)
 	if spaces.capacity==0: return _result(false,"No path to the dining table. Leave a clear place around it.")
@@ -437,9 +451,9 @@ func meal_option(profile_id: String,member_id: String,lot_id: String,table_id: V
 		result.target_id=str(best.id); result.message="Four portions · §%d when served · Uses the kitchen fridge" % int(definition.cost)
 	else:
 		if not recipe.is_empty(): return _result(false,"Choose the meal currently served on this table.")
-		if meal.recipe=="" or int(meal.servings)==0: return _result(false,"Prepare a meal before choosing a portion.")
 		for plan: Dictionary in plans:
 			if plan.member.id==member_id: return _result(false,"Already in "+str(member.name)+"'s plan.")
+		if meal.recipe=="" or int(meal.servings)==0: return _result(false,"Prepare a meal before choosing a portion.")
 		if Meals.available(state,lot,table)<=0: return _result(false,"The remaining portions are reserved in other residents' plans.")
 		result.recipe=str(meal.recipe); result.message="One portion reserved · Hunger + comfort · Social when eating together"
 		if spaces.available.is_empty(): result.message=Leisure.waiting_reason(spaces)+" Your portion will wait."
@@ -931,7 +945,12 @@ func leisure_option(member: Dictionary, companion_id: String, kind: String="") -
 	var tasks: Array=member.queue.duplicate()
 	if not member.task.is_empty(): tasks.push_front(member.task)
 	for task: Dictionary in tasks:
-		if task==member.task and task.get("automatic",false) and object.kind!="dining_table": continue
+		if task==member.task and task.get("automatic",false):
+			if object.kind!="dining_table": continue
+			if Meals.choosing(member,object) and _meal_task_option(member,state.lots[member.lot_id],task).ok:
+				option.available=true; option.own_activity_id=str(task.id)
+				option.detail="Choose your current meal as shared time. Keep the same serving and remaining time; chosen company starts now."
+				return option
 		if task.get("type")=="interact" and task.get("target_kind","object")=="object" and task.get("target_id")==object.id:
 			option.label="In your plan"; option.detail="This "+noun+" is already in your plan."
 			if task==member.task and task.get("path",[]).is_empty() and float(task.get("elapsed",0.0))>0.0:
@@ -1100,6 +1119,7 @@ func _conversation_partner(member: Dictionary) -> Dictionary:
 
 func _finish_wish(member: Dictionary, task: Dictionary, activity: String) -> void:
 	if bool(task.get("automatic",false)): return
+	if task.has("meal_chosen_at") and Meals.chosen_time(task)+0.000001<MIN_ACTIVITY_TIME: return
 	for family: Dictionary in state.families.values():
 		if not family.online: continue
 		if not family.members.has(member): continue
@@ -1686,7 +1706,7 @@ func _adjust_funds(lot_id: String, amount: int) -> bool:
 func _valid_task(value: Variant, active: bool) -> bool:
 	if not value is Dictionary or not value.get("type") in ["move", "interact"]:
 		return false
-	if value.has("meal_action") or value.has("meal_table") or value.has("meal_recipe") or value.has("meal_batch") or value.has("meal_taken") or value.has("meal_phase"):
+	if value.has("meal_action") or value.has("meal_table") or value.has("meal_recipe") or value.has("meal_batch") or value.has("meal_taken") or value.has("meal_phase") or value.has("meal_chosen_at"):
 		if not Meals.valid_task(value,active): return false
 	if value.get("target_kind")=="art":
 		if not ArtAdmiration.valid_task(value,active): return false
@@ -1779,7 +1799,7 @@ func _tick_shared_friendships(delta: float) -> void:
 			var second: Dictionary=participants[next]
 			if first.member.lot_id!=second.member.lot_id or first.object.id!=second.object.id: continue
 			var a: Dictionary=first.member.task; var b: Dictionary=second.member.task
-			var together := minf(float(a.elapsed),float(b.elapsed))+minf(delta,minf(float(a.remaining),float(b.remaining)))
+			var together := minf(Meals.chosen_time(a),Meals.chosen_time(b))+minf(delta,minf(float(a.remaining),float(b.remaining)))
 			if together+0.0000001<Friendships.SHARED_TIME: continue
 			var started := maxi(int(a.social_started),int(b.social_started))
 			var result := Friendships.record(state,str(first.member.id),str(second.member.id),started,str(first.object.kind))

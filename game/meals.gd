@@ -32,6 +32,13 @@ static func can_autoeat(world: Dictionary,lot: Dictionary,member: Dictionary) ->
 	var family: Dictionary=world.get("families",{}).get(lot.get("owner",""),{})
 	return not lot.get("building",false) and family.get("online",false) and family.get("home_lot")==lot.id and member.get("lot_id")==lot.id and member.get("autonomy",false) and family.get("members",[]).has(member)
 
+static func choosing(member: Dictionary,table: Dictionary) -> bool:
+	var task: Dictionary=member.get("task",{})
+	return task.get("automatic",false) and task.get("meal_action")=="eat" and task.get("meal_table")==table.id and task.get("meal_batch")==table.meal.batch and task.get("meal_recipe")==table.meal.recipe
+
+static func chosen_time(task: Dictionary) -> float:
+	return maxf(0.0,float(task.get("elapsed",0.0))-float(task.get("meal_chosen_at",0.0)))
+
 static func summary(meal: Dictionary) -> String:
 	if meal.recipe=="": return "Set the table for a meal"
 	return str(RECIPES[meal.recipe].name)+(" · All eaten" if int(meal.servings)==0 else " · %d portions left" % int(meal.servings))
@@ -66,6 +73,10 @@ static func valid_task(task: Dictionary,active: bool) -> bool:
 		if absf(float(task.elapsed)+float(task.remaining)-total)>0.00001: return false
 		if task.get("meal_taken",false) and float(task.elapsed)<=0: return false
 		if task.meal_action=="prepare" and task.has("social_started"): return false
+	if task.has("meal_chosen_at"):
+		var chosen: Variant=task.meal_chosen_at
+		if not active or task.meal_action!="eat" or task.get("automatic",false) or not (chosen is int or chosen is float): return false
+		if not is_finite(float(chosen)) or float(chosen)<0 or float(chosen)>float(task.elapsed): return false
 	return true
 
 static func valid_reservations(world: Dictionary) -> bool:

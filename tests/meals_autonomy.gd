@@ -41,7 +41,7 @@ func _run() -> void:
 	_fresh(); second.autonomy=true; second.idle_clock=2; second.needs.hunger=20; second.needs.social=40; member.needs.social=40
 	var friendships: Dictionary=world.state.friendships.duplicate(true)
 	_advance(4); assert(member.action=="Eating together" and second.action=="Eating together" and table.meal.servings==2)
-	assert(not world.leisure_option(member,str(second.id),"dining_table").available,"People does not offer another portion to an automatic diner already here")
+	assert(world.leisure_option(member,str(second.id),"dining_table").get("own_activity_id")==member.task.id,"People can choose an automatic meal without claiming another portion")
 	var eating:=_copy(); var saved:=World.new(); assert(saved.restore(JSON.parse_string(JSON.stringify(world.snapshot_for_save()))))
 	assert(saved.state.lots.lot_1.objects[-1].meal.servings==2 and saved.state.families.a.members[0].task.is_empty())
 	_advance(12); assert(world.state.friendships==friendships and member.needs.social>60 and second.needs.social>60)

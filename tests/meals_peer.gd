@@ -153,6 +153,11 @@ func _client(index: String) -> void:
 		var funds_before: int=session.state.lots[home].funds
 		for resident: String in [member,housemate]: await _command({"type":"autonomy","member_id":resident,"enabled":true})
 		await _wait_servings(home,id,1); await _wait_flag(".autonomy-observed")
+		for resident: String in [member,housemate]:
+			var task: Dictionary=session.world._member(session.state.families[identity],resident).task
+			var choice := {"type":"meal","lot_id":home,"target_id":id,"member_id":resident,"action":"choose","recipe":"","batch":int(_table(home,id).meal.batch),"activity_id":str(task.id)}
+			await _command(choice); await _command(choice,false)
+		_flag(".meal-chosen"); await _wait_flag(".choice-observed")
 		for resident: String in [member,housemate]: await _command({"type":"autonomy","member_id":resident,"enabled":false})
 		assert(session.state.lots[home].funds==funds_before and _table(home,id).meal.servings==1)
 		_flag(".autonomy-finished")
@@ -161,5 +166,14 @@ func _client(index: String) -> void:
 		var owner: String=session.state.lots[home].owner
 		for resident: Dictionary in session.state.families[owner].members:
 			assert(resident.task.get("automatic",false) and resident.task.get("meal_action")=="eat" and resident.task.get("meal_taken",false))
-		_flag(".autonomy-observed"); await _wait_flag(".autonomy-finished")
+		_flag(".autonomy-observed"); await _wait_flag(".meal-chosen")
+		for attempt in range(50):
+			var chosen := true
+			for resident: Dictionary in session.state.families[owner].members: chosen=chosen and resident.task.has("meal_chosen_at") and not resident.task.get("automatic",false)
+			if chosen: break
+			await create_timer(0.1).timeout
+		for resident: Dictionary in session.state.families[owner].members:
+			assert(resident.task.has("meal_chosen_at") and not resident.task.get("automatic",false) and resident.task.get("meal_taken",false))
+		assert(_table(home,id).meal.servings==1)
+		_flag(".choice-observed"); await _wait_flag(".autonomy-finished")
 	_flag(".done"+index); print("CLIENT_PASS"); session.leave(); await root.get_node("Soundscape").shutdown_and_wait(); quit()

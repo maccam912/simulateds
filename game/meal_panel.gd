@@ -57,6 +57,11 @@ func refresh(lot_id: String,object_id: String,member_id: String) -> void:
 	var free := Meals.available(Session.state,lot,table)
 	status.text="%d available · %d reserved" % [free,int(meal.servings)-free] if ready else "Four portions · Prepare at your fridge"
 	var plans:=Meals.plans(Session.state,lot_id,object_id)
+	var dining: bool=plans.any(func(plan): return plan.task.meal_action=="eat" and plan.task.meal_batch==meal.batch and plan.task.meal_recipe==meal.recipe)
+	var choice: Dictionary=Session.world.meal_option(Session.profile_id,member_id,lot_id,object_id,"choose")
+	if not ready and dining:
+		summary.text=str(Meals.RECIPES[meal.recipe].name)+" · Last portions at the table"
+		status.text="0 available · Diners have their portions"
 	for plan: Dictionary in plans:
 		if plan.task.meal_action=="prepare":
 			summary.text="Preparing "+str(Meals.RECIPES[plan.task.meal_recipe].name).to_lower(); credit.visible=false
@@ -64,24 +69,27 @@ func refresh(lot_id: String,object_id: String,member_id: String) -> void:
 			preview.recipe=str(plan.task.meal_recipe); preview.portions=4; preview.queue_redraw(); break
 	note.text="Ingredients paid when served.\nLeftovers keep while you are away." if not ready else "One chosen portion · Hunger + comfort\nSocial when eating together."
 	if owner and ready: note.text="Autonomy: hungry housemates can eat.\nHunger + comfort · Social together."
-	if not owner and not ready: note.text="This household prepares its meals. Visit again when food is served."
+	if choice.ok: note.text="Keep your portion and remaining time.\nChosen company starts now."
+	elif dining and not ready: note.text="Diners keep their current portions.\nWait for them to finish before preparing more."
+	elif not owner and not ready: note.text="This household prepares its meals. Visit again when food is served."
 	_options.clear(); var unavailable := ""
 	for key: String in buttons:
 		var action := "prepare" if Meals.RECIPES.has(key) else key
-		var option: Dictionary=Session.world.meal_option(Session.profile_id,member_id,lot_id,object_id,action,key if action=="prepare" else "")
+		var option: Dictionary=choice if action=="eat" and choice.ok else Session.world.meal_option(Session.profile_id,member_id,lot_id,object_id,action,key if action=="prepare" else "")
 		_options[key]=option
 		var button: Button=buttons[key]
-		button.visible=owner and not ready if action=="prepare" else ready and owner if action=="clear" else ready
-		button.text="Prepare "+str(Meals.RECIPES[key].name).to_lower()+" · §%d" % int(Meals.RECIPES[key].cost) if action=="prepare" else "Eat a portion" if action=="eat" else "Clear leftovers"
+		button.visible=owner and not ready and not dining if action=="prepare" else ready and owner if action=="clear" else ready or dining
+		button.text="Prepare "+str(Meals.RECIPES[key].name).to_lower()+" · §%d" % int(Meals.RECIPES[key].cost) if action=="prepare" else ("Choose this meal" if choice.ok else "Eat a portion") if action=="eat" else "Clear leftovers"
 		button.disabled=not option.ok or not pending.is_empty() or Session.role=="joining"
-		button.tooltip_text=str(option.message)+(". A portion is taken when eating begins." if action=="eat" and option.ok else "")
-		if button.visible and not option.ok and (action!="clear" or unavailable.is_empty()): unavailable=str(option.message)
+		button.tooltip_text=str(option.message)+(". A portion is taken when eating begins." if action=="eat" and option.ok and not choice.ok else "")
+		if button.visible and not option.ok and (action!="clear" or (unavailable.is_empty() and not choice.ok)): unavailable=str(option.message)
 	feedback.text="Waiting for the neighborhood…" if not pending.is_empty() else _error if not _error.is_empty() else unavailable
 	feedback.visible=not feedback.text.is_empty()
 func _request(key: String) -> void:
 	if not pending.is_empty() or not _options.get(key,{}).get("ok",false): return
-	var action: String="prepare" if Meals.RECIPES.has(key) else key
+	var action: String="prepare" if Meals.RECIPES.has(key) else "choose" if key=="eat" and _options[key].has("activity_id") else key
 	pending={"type":"meal","lot_id":_lot,"target_id":_object,"member_id":_member,"action":action,"recipe":key if action=="prepare" else "","batch":int(_options[key].batch)}
+	if action=="choose": pending.activity_id=str(_options[key].activity_id)
 	_next=int(Session.world._member(Session.state.families[Session.profile_id],_member).next_action); _ack=false; _error=""
 	refresh(_lot,_object,_member); command_requested.emit(pending.duplicate(true))
 func _completed(intent: Dictionary,ok: bool,message: String) -> void:

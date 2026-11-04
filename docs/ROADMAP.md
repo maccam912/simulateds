@@ -94,7 +94,10 @@ room copies preserve the distinction between an existing meal and a new table.
 Hungry household members now use available prepared food autonomously at home,
 with ordinary urgency, reservation, and player-order rules. Guests choose their
 own meals; absent caretakers preserve stored portions. Automatic eating cannot
-prepare food, spend ingredients, or earn deliberate-play rewards.
+prepare food, spend ingredients, or earn deliberate-play rewards. An ongoing
+automatic meal can become chosen shared time from the table or People without
+using another serving or restarting its timer. Friendship counts only newly
+chosen time together.
 
 ## 1. Make homebuilding dependable
 

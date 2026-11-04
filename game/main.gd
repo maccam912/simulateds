@@ -1372,7 +1372,7 @@ func _rebuild_people() -> void:
 			var leisure_summary := _label(str(leisure_option.summary),12,Style.GREEN)
 			leisure_summary.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; leisure_summary.custom_minimum_size.x=200; body.add_child(leisure_summary)
 			if here:
-				var join := _button(str(leisure_option.label),func(): _join_leisure(str(other.id),str(leisure_option.activity_id),str(leisure_option.kind)))
+				var join := _button(str(leisure_option.label),func(): _join_leisure(str(other.id),str(leisure_option.activity_id),str(leisure_option.kind),str(leisure_option.get("own_activity_id",""))))
 				join.disabled=not leisure_option.available; join.tooltip_text=str(leisure_option.detail)
 				join.set_meta("person_id",str(other.id)); join.set_meta("people_action","leisure")
 				body.add_child(join); leisure_buttons[other.id]=join
@@ -1398,11 +1398,13 @@ func _social_action(target_id: String) -> void:
 		_send({"type":"visit","member_id":member.id,"lot_id":other.lot_id})
 		viewed_lot=str(other.lot_id); _refresh()
 
-func _join_leisure(target_id: String, activity_id: String, kind: String) -> void:
+func _join_leisure(target_id: String, activity_id: String, kind: String, own_activity_id: String="") -> void:
 	_social_focus=target_id
 	var member := _member()
 	if member.is_empty(): return
-	_send({"type":"join_dance" if kind=="stereo" else "join_meal" if kind=="dining_table" else "join_game","member_id":member.id,"lot_id":member.lot_id,"companion_id":target_id,"activity_id":activity_id})
+	var intent := {"type":"join_dance" if kind=="stereo" else "join_meal" if kind=="dining_table" else "join_game","member_id":member.id,"lot_id":member.lot_id,"companion_id":target_id,"activity_id":activity_id}
+	if not own_activity_id.is_empty(): intent.own_activity_id=own_activity_id
+	_send(intent)
 
 func _restore_people_focus(previous: Dictionary) -> void:
 	await get_tree().process_frame

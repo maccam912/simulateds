@@ -1732,3 +1732,55 @@ Next, let a player adopt that resident's current automatic meal as deliberate
 shared time without taking another serving. Preserve the remaining eating time;
 friendship and wish credit must count only time after the player's choice. This
 is proposed next work, not behavior in this checkpoint.
+
+
+## Choosing company during an automatic meal
+
+The prior review found an awkward gap: hungry housemates might take portions
+before the player chooses to make the meal shared time. Cancelling and choosing
+another meal would waste food. Choose this meal and People → Join meal now adopt
+that resident's current automatic meal, preserving its route, place, walking
+progress, consumed/reserved portion, and remaining eating time. Other residents
+remain under their own player's control. The choice gets a new action identity;
+stale commands cannot adopt a later meal from the same platter.
+
+The table keeps the choice visible when diners have taken every remaining
+portion. It explains that the serving and timer are kept. After adoption, the
+existing plan loses its auto suffix. Friendship requires twelve game minutes of
+newly chosen overlap; choosing a nearly finished meal does not extend it to earn
+credit. The wish hook likewise excludes earlier automatic time, though there is
+currently no food wish in the catalog.
+
+Focused model checks passed for portion/time preservation, zero available food,
+unchanged companions, two independently chosen diners, exact overlap boundaries,
+late choices, walking adoption, full future plans, interruption, stale/repeated
+requests, malformed identifiers, and runtime/save snapshots. A malformed array
+identifier initially triggered a GDScript comparison error; explicit type checks
+now reject it without mutation. The first native run revealed an outdated test
+reference after a context panel rebuild; it now uses the current table panel.
+
+The native standard and compact playthroughs now pass. They adopt a current meal
+from the table after the last two portions are taken, confirm no extra serving
+or reset timer, choose the housemate through People, and observe the friendship
+milestone after twelve newly chosen game minutes. Turning autonomy off leaves
+the newly deliberate meal running. Exact acknowledgement correlation and early
+acceptance are exercised. Reviewed captures include `build/meals-autonomy-compact.png`
+(before choosing), `build/meals-chosen-compact.png`, and both
+`build/meals-chosen-company*.png` layouts.
+
+The real Iroh host/two-client meal scenario passes with adoption of both current
+automatic diners. Repeated choices reject, and the observing client receives
+valid chosen-time snapshots with the same consumed portions and remaining food.
+Editor import passed. Linux, Windows, and Android passed the preceding shared-
+meals checkpoint; its macOS CI job never acquired a runner, ran no steps, and
+was cancelled by GitHub for hosted-runner capacity. Local native macOS evidence
+does not substitute for that missing CI result.
+
+Fresh assessment: serving, spontaneous dining, and choosing company now fit one
+coherent loop. Optional wishes still cover the older activities, giving little
+direction toward cooking or sharing meals. Next, add discoverable optional meal
+wishes with bounded rewards and useful table/recipe navigation, preserving
+explicit ingredient spending and counting actual chosen activity. This is
+proposed next work, not behavior in this checkpoint.
+
+Final checkpoint regression: all 82 local suites passed with no errors.

@@ -675,7 +675,25 @@ Hungry housemates with autonomy on can use available prepared food at home. The
 same place and portion reservations apply, and the plan carries the existing
 “auto” suffix. The ready-food tray explains this in two short lines alongside
 its benefits. Guests still choose a portion explicitly; caretakers leave stored
-food alone during absence. Never suggest Join meal when this resident is already
-eating it automatically. A player's next order or autonomy toggle interrupts
-normally; an already taken portion stays consumed. Ordinary spontaneous dining
+food alone during absence. People → Join meal lets this resident choose an ongoing automatic meal without
+claiming another portion. A player's next order or autonomy toggle interrupts
+automatic dining normally; an already taken portion stays consumed. Ordinary spontaneous dining
 restores needs without earning deliberate-play rewards.
+
+
+## Choosing company at the table
+
+An autonomous meal can become an intentional moment through Choose this meal on
+the table or Join meal in People. The table explains “Keep your portion and
+remaining time. Chosen company starts now.” Use the existing plan and progress
+presentation, removing its auto suffix after the accepted choice. Do not restart
+walking or eating, take another serving, or control the companion. Keep this
+choice visible after the platter is empty while diners have its last portions;
+do not prematurely replace it with recipe buttons.
+
+The action binds to the current meal and resident activity. Stale or repeated
+choices reject politely, and early acknowledgements wait for accepted state.
+Friendship uses only newly chosen overlap; a late choice may simply finish the
+meal without a catch-up. A wish completion hook also requires enough newly chosen
+time; the present wish catalog has no food wish. No retroactive cooking practice
+is granted for eating.

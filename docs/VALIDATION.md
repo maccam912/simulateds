@@ -901,3 +901,38 @@ clients see two automatic diners and the same single remaining portion. Stopping
 them neither consumes another serving nor changes funds. This adds network
 coverage for the new automatic task validation; it does not establish physical
 Android cross-play or overnight persistence.
+
+
+## Choosing an existing automatic meal
+
+Focused `meal_choice`, `meals_autonomy`, `meals`, `shared_friendships`, and
+`join_game` checks pass. Adoption binds to the current activity and platter batch;
+it preserves path, walking progress, elapsed/remaining time, the consumed flag,
+and other residents' state. It works with no free portions and a full future
+plan. Malformed, repeated, and stale commands reject atomically, including stale
+choices against a later meal from the same platter. Invalid chosen-time offsets
+and incompatible snapshot fields reject. Runtime snapshots resume accurately;
+save loading clears plans without creating food.
+
+Friendship checks require four new simulation seconds after both residents
+choose. Older automatic time earns nothing, a late choice does not extend its
+meal, and a qualifying encounter survives snapshot handoff without duplicate
+credit. Eating grants no cooking practice. The completion hook also guards
+newly chosen time before any future food-wish award; the current wish catalog
+contains no food wish.
+
+Both native meal UI layouts pass: 1440×900 and 1280×720 at 125% scale. Tests use
+real mouse input to choose through the table and People, exercise exact/early
+acknowledgements, inspect unchanged food/time, and keep deliberate dining running
+after autonomy is disabled. Before/after and company screenshots were visually
+reviewed. The real Iroh meal scenario passes adoption and duplicate rejection
+with one host and two clients; both clients see the same chosen-time state and
+serving count. Editor import passes. Human-family play, physical-device checks,
+and overnight host soak remain open.
+
+For the earlier `3141b59` shared-meal checkpoint, CI passed Linux, Windows, and
+Android. GitHub cancelled macOS before any steps because it could not acquire a
+hosted runner after multiple attempts; annotations cite macOS arm64 capacity.
+The local native runs pass but do not prove that missing CI job.
+
+Final checkpoint regression: all 82 local suites passed with no errors.

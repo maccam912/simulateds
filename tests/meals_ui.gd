@@ -116,6 +116,7 @@ func _run() -> void:
 	game._select_lot("lot_1"); await process_frame; await process_frame
 	await _mouse(_point(id),true); await _button(game.meal_panel.buttons.salad); await _advance(20)
 	assert(table.meal.servings==4)
+	table.meal.servings=2 # A valid leftover meal: the two remaining portions will both be taken.
 	for resident: Dictionary in [member,housemate]:
 		for need: String in resident.needs: resident.needs[need]=100.0
 		resident.needs.hunger=20; resident.needs.social=40; resident.idle_clock=2
@@ -123,9 +124,25 @@ func _run() -> void:
 	await _button(game.family_box.get_child(0)); await _button(game.autonomy_button)
 	assert(member.autonomy and housemate.autonomy)
 	await _advance(4); await _mouse(_point(id),true); await _capture("autonomy")
-	assert(member.task.get("automatic",false) and housemate.task.get("automatic",false) and table.meal.servings==2)
-	assert(game.meal_panel.note.text.contains("hungry housemates") and game.meal_panel.note.get_global_rect().end.y<=game.tools_box.get_parent().get_global_rect().end.y)
-	await _button(game.autonomy_button); assert(not member.autonomy and member.task.is_empty() and table.meal.servings==2)
-	await _advance(12); assert(not housemate.task.has("meal_action") and housemate.needs.hunger>85 and table.meal.servings==2)
+	assert(member.task.get("automatic",false) and housemate.task.get("automatic",false) and table.meal.servings==0)
+	assert(game.meal_panel.buttons.eat.text=="Choose this meal" and not game.meal_panel.buttons.eat.disabled and not game.meal_panel.buttons.salad.visible)
+	assert(game.meal_panel.note.text.contains("Keep your portion") and game.meal_panel.note.get_global_rect().end.y<=game.tools_box.get_parent().get_global_rect().end.y)
+	panel=game.meal_panel
+	var remaining: float=member.task.remaining; var action: String=member.task.id
+	var choice: Dictionary={"type":"meal","lot_id":lot.id,"target_id":id,"member_id":member.id,"action":"choose","recipe":"","batch":table.meal.batch,"activity_id":action}
+	panel.pending=choice.duplicate(true); panel._next=int(member.next_action); game._refresh()
+	session.command_completed.emit({"type":"meal","action":"eat"},false,"Unrelated"); assert(not panel.pending.is_empty())
+	session.command_completed.emit(choice,true,"Accepted early"); assert(not panel.pending.is_empty() and member.task.automatic)
+	session.command_completed.emit(choice,false,"That meal changed"); assert(panel.pending.is_empty() and panel.feedback.text=="That meal changed")
+	await _button(panel.buttons.eat); await _capture("chosen")
+	assert(not member.task.get("automatic",false) and member.task.id!=action and member.task.remaining==remaining and table.meal.servings==0 and panel.pending.is_empty())
+	assert(game.plan_titles[member.task.id].text.contains("salad") and not game.plan_titles[member.task.id].text.contains("auto"))
+	await _button(game.family_box.get_child(1)); await _button(game.people_button)
+	assert(not game.leisure_buttons[member.id].disabled and game.leisure_buttons[member.id].text=="Join meal")
+	var score: int=preload("res://game/friendships.gd").bond(session.state,member.id,housemate.id).score
+	await _button(game.leisure_buttons[member.id]); await _advance(4); await _capture("chosen-company")
+	assert(not housemate.task.get("automatic",false) and table.meal.servings==0 and preload("res://game/friendships.gd").bond(session.state,member.id,housemate.id).score==score+12)
+	await _button(game.autonomy_button); assert(not housemate.autonomy and not housemate.task.is_empty(),"Autonomy off leaves the newly chosen meal in progress")
+	await _advance(12); assert(not housemate.task.has("meal_action") and housemate.needs.hunger>85 and table.meal.servings==0)
 	game.queue_free(); await process_frame; await root.get_node("Soundscape").shutdown_and_wait()
 	print("MEALS_UI_PASS"); quit()
