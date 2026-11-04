@@ -54,6 +54,8 @@ var context_panel: PanelContainer
 var notice_panel: PanelContainer
 var palette_button: Button
 var _last_build_mode := false
+var undo_button: Button
+var redo_button: Button
 
 func _ready() -> void:
 	if "--native-smoke" in OS.get_cmdline_user_args():
@@ -416,6 +418,13 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 				b.tooltip_text=str(item.get("description",""))
 				if kind==selected_tool: b.add_theme_stylebox_override("normal",Style.box(Color("3b514b"),9,Style.GREEN))
 				tools_box.add_child(b)
+		var history_row := HBoxContainer.new(); context_box.add_child(history_row)
+		undo_button = _button("Undo",func(): _build_history(false)); undo_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; history_row.add_child(undo_button)
+		redo_button = _button("Redo",func(): _build_history(true)); redo_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; history_row.add_child(redo_button)
+		undo_button.disabled=int(lot.get("build_undo",0))==0
+		redo_button.disabled=int(lot.get("build_redo",0))==0
+		undo_button.tooltip_text="Undo the last building edit, including its price. Ctrl/Cmd+Z"
+		redo_button.tooltip_text="Redo a building edit. Ctrl/Cmd+Shift+Z or Ctrl+Y"
 		context_box.add_child(_button("Demolish / sell",func(): selected_tool="erase"; _refresh()))
 		context_box.add_child(_button("Rotate  ↻  %d°" % (build_rotation*90),_rotate))
 		context_box.add_child(_button("Discard building changes",func(): _send({"type":"build_cancel","lot_id":viewed_lot})))
@@ -496,6 +505,10 @@ func _go_home() -> void:
 	_send({"type":"go_home","member_id":selected_member})
 	viewed_lot=str(_family().get("home_lot",viewed_lot))
 
+func _build_history(redo: bool) -> void:
+	var lot: Dictionary=Session.state.get("lots",{}).get(viewed_lot,{})
+	_send({"type":"build_redo" if redo else "build_undo","lot_id":viewed_lot,"revision":lot.get("revision",-1)})
+
 func _rotate() -> void:
 	build_rotation=(build_rotation+1)%4; _refresh()
 
@@ -521,7 +534,9 @@ func _show_tray(panel: Control,show_panel: bool) -> void:
 func _unhandled_key_input(event: InputEvent) -> void:
 	if hud==null or not hud.visible: return
 	if event is InputEventKey and event.pressed and not event.echo:
-		if event.is_action_pressed("pause") or event.keycode==KEY_ESCAPE:
+		if lot_view.building and (event.ctrl_pressed or event.meta_pressed) and event.keycode in [KEY_Z,KEY_Y]:
+			_build_history(event.shift_pressed or event.keycode==KEY_Y)
+		elif event.is_action_pressed("pause") or event.keycode==KEY_ESCAPE:
 			if neighborhood_panel.visible or context_panel.visible or plan_panel.visible:
 				neighborhood_panel.hide(); context_panel.hide(); plan_panel.hide()
 			else: _request_pause()

@@ -63,6 +63,11 @@ func _run() -> void:
 	for item in session.state.lots.lot_1.objects:
 		if item.x==2 and item.y==6: object_id=str(item.id)
 	_check(not object_id.is_empty(),"Canvas click places furniture")
+	await process_frame
+	await _click(game.undo_button.get_global_rect().get_center())
+	_check(session.world._object(session.state.lots.lot_1,object_id).is_empty(),"Undo button restores prior layout")
+	await _click(game.redo_button.get_global_rect().get_center())
+	_check(not session.world._object(session.state.lots.lot_1,object_id).is_empty(),"Redo button restores exact purchase")
 	game._toggle_build()
 	_check(not session.state.lots.lot_1.building,"Finish button commits safe layout")
 	game._tile_clicked(Vector2i(2,6))

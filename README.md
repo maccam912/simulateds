@@ -163,3 +163,19 @@ transport. Clients send intentions; the host validates and applies them.
 
 See [THIRD_PARTY.md](THIRD_PARTY.md) for upstream transport attribution and
 [LICENSE](LICENSE) for the project license.
+
+## Everyday controls added during playtesting
+
+Open **Plan** beside a resident's needs to see and cancel individual activities.
+Autonomy is saved separately for each resident. Direct orders take priority over
+automatic activities. Beds and bathroom fixtures allow one user at a time;
+waiting residents keep their place in their own plan.
+
+Click the visible furniture or resident body, and hover to see an object's use
+and occupancy. In construction, **Undo** and **Redo** restore exact purchases
+and sales within the current draft (up to 32 edits). Use Ctrl/Cmd+Z to undo,
+Ctrl/Cmd+Shift+Z or Ctrl+Y to redo. **Discard building changes** still restores
+the entire committed house. The neighborhood allowance survives these actions.
+
+See [the playtest log](docs/PLAYTEST_LOG.md) for tested checkpoints and the next
+usability priorities.

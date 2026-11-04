@@ -6,20 +6,24 @@ const GRID_SIZE := 16
 const SCHEMA := 1
 const MAX_FAMILIES := 4
 const MAX_QUEUE := 8
+const MAX_BUILD_HISTORY := 32
+const BUILD_FIELDS := ["floors", "walls", "doors", "objects", "funds"]
 const NEEDS := ["hunger", "energy", "hygiene", "bladder", "fun", "social", "comfort"]
 const DECAY := {"hunger":0.13, "energy":0.08, "hygiene":0.10, "bladder":0.15, "fun":0.12, "social":0.09, "comfort":0.07}
 const ACTION_NAMES := {"bed":"Sleeping", "fridge":"Making a meal", "shower":"Showering", "toilet":"Using the bathroom", "sofa":"Relaxing", "tv":"Watching television", "bookshelf":"Reading", "plant":"Tending plants", "table":"Having tea"}
 const DIRECTIONS := [Vector2i(1,0), Vector2i(0,1), Vector2i(-1,0), Vector2i(0,-1)]
 var state: Dictionary = {}
 var _build_backups: Dictionary = {}
+var _build_history: Dictionary = {}
 
 func initialize() -> void:
 	state = {"schema":SCHEMA, "tick":0, "day":1, "day_minutes":480.0, "lots":{}, "families":{}, "events":[], "next_object":1}
 	_build_backups.clear()
+	_build_history.clear()
 	var names := ["Clover Cottage", "Willow House", "Juniper Place", "Maple Corner"]
 	for index in range(MAX_FAMILIES):
 		var id := "lot_%d" % (index + 1)
-		var lot := {"id":id, "name":names[index], "owner":"", "funds":12000, "building":false, "revision":0, "floors":[], "walls":[], "doors":[], "objects":[]}
+		var lot := {"id":id, "name":names[index], "owner":"", "funds":12000, "building":false, "revision":0, "build_undo":0, "build_redo":0, "floors":[], "walls":[], "doors":[], "objects":[]}
 		for y in range(3, 12):
 			for x in range(3, 13):
 				lot.floors.append([x,y])
@@ -91,13 +95,15 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 	if not lot_id is String or not state.lots.has(lot_id):
 		return _result(false, "That lot does not exist.")
 	var lot: Dictionary = state.lots[lot_id]
-	if type in ["build_begin", "build_end", "build_cancel", "place", "erase"]:
+	if type in ["build_begin", "build_end", "build_cancel", "build_undo", "build_redo", "place", "erase"]:
 		if lot.owner != profile_id:
 			return _result(false, "Only the owner can build on this lot.")
 		if type == "build_begin":
 			if lot.building:
 				return _result(true, "Already in construction mode.")
 			_build_backups[lot_id] = lot.duplicate(true)
+			_build_history[lot_id] = {"undo":[],"redo":[]}
+			_update_history_counts(lot)
 			lot.building = true
 			lot.revision += 1
 			for other: Dictionary in state.families.values():
@@ -111,6 +117,10 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 			return _result(true, "Construction started. Your family is paused; neighbors keep living.")
 		if not lot.building:
 			return _result(false, "Enter construction mode first.")
+		if type in ["build_undo", "build_redo"]:
+			if not _integer(command.get("revision")) or int(command.revision) != int(lot.revision):
+				return _result(false, "The building draft changed. Try undo or redo again.")
+			return _history_step(lot,type == "build_redo")
 		if type == "build_cancel":
 			if _build_backups.has(lot_id):
 				_restore_build(lot)
@@ -124,9 +134,19 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 			lot.building = false
 			lot.revision += 1
 			_build_backups.erase(lot_id)
+			_clear_build_history(lot)
 			_event(str(lot.name) + " is open for visitors again.")
 			return _result(true, "Welcome home. Your family is living again.")
-		return _build(lot, command)
+		var previous := _capture_build(lot)
+		var result := _build(lot, command)
+		if result.ok:
+			var history: Dictionary = _build_history.get(lot_id,{"undo":[],"redo":[]})
+			history.undo.append(previous)
+			if history.undo.size() > MAX_BUILD_HISTORY: history.undo.pop_front()
+			history.redo.clear()
+			_build_history[lot_id] = history
+			_update_history_counts(lot)
+		return result
 	var member_id: Variant = command.get("member_id", "")
 	if not member_id is String:
 		return _result(false, "Choose a household member.")
@@ -280,7 +300,13 @@ func step(delta: float) -> void:
 		state.day_minutes -= 1440.0
 		state.day += 1
 		for family: Dictionary in state.families.values():
-			state.lots[family.home_lot].funds += 600
+			var home: Dictionary = state.lots[family.home_lot]
+			home.funds += 600
+			# The allowance belongs to the household, even if a draft is undone.
+			if _build_backups.has(home.id): _build_backups[home.id].funds += 600
+			if _build_history.has(home.id):
+				for branch: String in ["undo","redo"]:
+					for edit: Dictionary in _build_history[home.id][branch]: edit.funds += 600
 		_event("A new day. Each household received a $600 living allowance.")
 	for family: Dictionary in state.families.values():
 		if state.lots[family.home_lot].building:
@@ -439,11 +465,41 @@ func _layout_issue(lot: Dictionary) -> String:
 			return "Leave a clear path to the " + str(Catalog.ITEMS[object.kind].name) + "."
 	return ""
 
+func _capture_build(lot: Dictionary) -> Dictionary:
+	var edit := {}
+	for key: String in BUILD_FIELDS:
+		edit[key] = lot[key].duplicate(true) if lot[key] is Array else lot[key]
+	return edit
+
+func _apply_build_edit(lot: Dictionary, edit: Dictionary) -> void:
+	for key: String in BUILD_FIELDS:
+		lot[key] = edit[key].duplicate(true) if edit[key] is Array else edit[key]
+
+func _update_history_counts(lot: Dictionary) -> void:
+	var history: Dictionary = _build_history.get(lot.id,{"undo":[],"redo":[]})
+	lot.build_undo = history.undo.size()
+	lot.build_redo = history.redo.size()
+
+func _clear_build_history(lot: Dictionary) -> void:
+	_build_history.erase(lot.id)
+	lot.build_undo = 0
+	lot.build_redo = 0
+
+func _history_step(lot: Dictionary, redo: bool) -> Dictionary:
+	var history: Dictionary = _build_history.get(lot.id,{"undo":[],"redo":[]})
+	var source: String = "redo" if redo else "undo"
+	var destination: String = "undo" if redo else "redo"
+	if history[source].is_empty(): return _result(false,"Nothing to " + source + ".")
+	history[destination].append(_capture_build(lot))
+	_apply_build_edit(lot,history[source].pop_back())
+	lot.revision += 1
+	_update_history_counts(lot)
+	return _result(true,"Building edit " + ("redone." if redo else "undone. Funds restored."))
+
 func _restore_build(lot: Dictionary) -> void:
-	var original: Dictionary = _build_backups[lot.id]
-	for key: String in ["floors", "walls", "doors", "objects", "funds"]:
-		lot[key] = original[key].duplicate(true) if original[key] is Array else original[key]
+	_apply_build_edit(lot,_build_backups[lot.id])
 	_build_backups.erase(lot.id)
+	_clear_build_history(lot)
 
 func _send_home(family: Dictionary, member: Dictionary) -> void:
 	var lot: Dictionary = state.lots[family.home_lot]
@@ -589,6 +645,8 @@ func snapshot_for_save() -> Dictionary:
 			saved.lots[lot_id][key] = source[key].duplicate(true) if source[key] is Array else source[key]
 	for lot: Dictionary in saved.lots.values():
 		lot.building = false
+		lot.build_undo = 0
+		lot.build_redo = 0
 	return saved
 
 func restore(data: Dictionary, preserve_runtime: bool = false) -> bool:
@@ -598,10 +656,12 @@ func restore(data: Dictionary, preserve_runtime: bool = false) -> bool:
 	state = data.duplicate(true)
 	_normalize_numbers()
 	_build_backups.clear()
+	_build_history.clear()
 	if preserve_runtime:
 		return true
 	for lot: Dictionary in state.lots.values():
 		lot.building = false
+		_clear_build_history(lot)
 	for family: Dictionary in state.families.values():
 		family.online = false
 		for member: Dictionary in family.members:
@@ -616,6 +676,8 @@ func _normalize_numbers() -> void:
 	for key: String in ["tick", "day", "next_object"]:
 		state[key] = int(state[key])
 	for lot: Dictionary in state.lots.values():
+		lot.build_undo = int(lot.get("build_undo",0))
+		lot.build_redo = int(lot.get("build_redo",0))
 		lot.funds = int(lot.funds)
 		lot.revision = int(lot.revision)
 		for key: String in ["floors", "walls", "doors"]:
@@ -676,6 +738,8 @@ func _valid_state(data: Dictionary) -> bool:
 				if seen.has(position):
 					return false
 				seen[position] = true
+		for key: String in ["build_undo","build_redo"]:
+			if not _integer(lot.get(key,0)) or float(lot.get(key,0)) < 0 or float(lot.get(key,0)) > MAX_BUILD_HISTORY: return false
 		if float(lot.revision) < 0 or float(lot.revision) > 9007199254740991:
 			return false
 		if not lot.get("objects") is Array or lot.objects.size() > GRID_SIZE * GRID_SIZE:

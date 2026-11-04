@@ -99,6 +99,15 @@ func _client(index: String) -> void:
 	await _command({"type": "build_begin", "lot_id": host_home}, false)
 	await _command({"type": "build_begin", "lot_id": home})
 	await _command({"type": "place", "lot_id": home, "kind": "floor", "x": 0, "y": 0})
+	for _attempt in range(50):
+		if [0,0] in session.state.lots[home].floors: break
+		await create_timer(0.1).timeout
+	await _command({"type":"build_undo","lot_id":home,"revision":session.state.lots[home].revision})
+	for _attempt in range(50):
+		if not [0,0] in session.state.lots[home].floors: break
+		await create_timer(0.1).timeout
+	assert(not [0,0] in session.state.lots[home].floors,"Client undo did not restore layout")
+	await _command({"type":"build_redo","lot_id":home,"revision":session.state.lots[home].revision})
 	await _command({"type": "build_end", "lot_id": home})
 	await _command({"type":"autonomy","member_id":member_id,"enabled":false})
 	await _command({"type":"cancel","member_id":member_id})

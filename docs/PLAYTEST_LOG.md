@@ -51,3 +51,22 @@ purchase price. Next: bounded undo/redo inside construction, preserving the safe
 commit/discard boundary and ownership rules. The Linux and macOS CI jobs for the
 planning checkpoint passed; its Windows tests passed before that run was
 superseded during export. Android export remains unverified.
+
+## 2026-11-03 · Construction undo and redo
+
+Construction keeps 32 reversible edits, with exact furniture identities and
+prices. Undo/redo buttons and Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z, or Ctrl+Y stay within
+the current draft. A new accepted edit clears redo; rejected edits do not. Host
+revision checks reject stale undo requests, and only the lot owner can use them.
+Discard still restores the entire draft even after the undo history fills.
+
+Validation: ten suites, real two-client Iroh undo/redo and reconnect, dedicated
+server startup, and compact graphical construction capture all passed. Tests
+cover sale reversal, stale/foreign commands, branching and bounded history,
+published-house boundaries, committed crash saves, and midnight allowances.
+The allowance now survives undo, redo, discard, and a save during construction.
+
+Fresh assessment: experimentation is safer, but rearranging a room still requires
+selling and rebuying. Next: moving owned furniture at no cost, with rotation and
+clear valid/invalid placement previews that use the same rules as the host.
+After that, add an enjoyable purpose to daily play beyond refilling needs.
