@@ -876,3 +876,42 @@ requires fewer corrective clicks. Watching the household exposes the next visual
 weakness: residents use activity props but mostly keep the same facing. Next:
 derive their facing from accepted routes, furniture, and conversation partners,
 so movement and shared activities feel connected to the room around them.
+
+
+## 2026-11-04 · Residents face their lives
+
+Residents now turn along each accepted route leg and toward the furniture they
+use. Directional strides, arm depth, collars, hair, eyes, and held props distinguish
+front, side, and rear views without enlarging the characters. Seated residents
+face the sofa's open side in all four rotations. Reduced motion uses the same
+facing immediately; resting residents retain their last idle direction. Saved
+worlds, movement authority, and protocol fields are unchanged.
+
+Conversation partners turn toward each other using actual live activity state,
+including the idle recipient. Busy or departing partners lose the chat pose;
+stale action text cannot keep it alive. Screen review found that independently
+mirrored chat bubbles could cover a face, so each pair now shares one bubble above
+them. A separate inspection found need labels covering a rotated sleeper's head.
+Bubble and label placement now reserves every visible resident's head/body first.
+Offscreen activities do not generate bubbles at the edge of the viewport.
+
+Validation: all 40 local suites, real Iroh host/two-client checks, and server
+startup passed. Model checks cover four directions, bounded turns, sparse-snapshot
+corners, immediate reduced motion, initial client facing, all rotated furnishing
+approaches, reciprocal chats, stale/busy/remote partners, construction, travel,
+and replacement snapshots without mutating world state. The previous whole-room
+finishing checkpoint passed all four platform CI jobs.
+
+Native standard and compact/125% checks inspected the eight-facing appearance
+sheet, actual everyday activities, four rotated sleeping/seated poses, selection,
+chats, replaced snapshots, and reduced motion. The final compact check clicked a
+four-leg walking circuit, verified facing and displayed positions, and checked
+body selection. The established activity render plus compact urgent-cue and shared
+tabletop flows passed again. This is automated native evidence, not a human family
+playtest or physical-device cross-play result.
+
+Fresh assessment: residents now visibly connect to the activity and people around
+them. Directing movement still has weak feedback: a nearby nameplate may receive
+an intended ground click, and accepted walking lacks a clear destination cue.
+Next: show movement intent and accepted destinations in the world, with reachable
+previews and useful feedback that stays quiet when the player is simply watching.

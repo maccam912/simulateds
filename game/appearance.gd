@@ -22,7 +22,7 @@ static func of(member: Dictionary) -> Dictionary:
 	var value: Variant=member.get("appearance")
 	return value if valid(value) else defaults(member)
 
-static func draw_head(canvas: CanvasItem,p: Vector2,s: float,look: Dictionary) -> void:
+static func draw_head(canvas: CanvasItem,p: Vector2,s: float,look: Dictionary,facing: Vector2=Vector2.DOWN) -> void:
 	var skin: Color=SKIN[int(look.skin)]; var hair: Color=HAIR[int(look.hair)]
 	var style := int(look.style)
 	if style==1: canvas.draw_circle(p+Vector2(0,1)*s,7*s,hair)
@@ -38,4 +38,22 @@ static func draw_head(canvas: CanvasItem,p: Vector2,s: float,look: Dictionary) -
 				var angle := PI+float(index)*PI/6.0
 				canvas.draw_circle(p+Vector2(cos(angle)*5.8,sin(angle)*5.8-1)*s,2.6*s,hair)
 		3: canvas.draw_arc(p+Vector2(0,-0.5)*s,5.5*s,PI,TAU,12,hair,1*s,true)
-	for x in [-2.0,2.0]: canvas.draw_circle(p+Vector2(x,0.7)*s,0.45*s,Color("42372e"))
+	# Rear views show hair and ears; side views bring the near eye and nose forward.
+	# The default remains a front portrait for the household editor and sleep pose.
+	var rear := clampf(-facing.y*3.0,0.0,1.0)
+	var side := facing.x
+	if rear>0.0:
+		var back := hair if style!=3 else skin.darkened(0.08)
+		back.a=rear
+		canvas.draw_circle(p+Vector2(0,0.4)*s,5.8*s,back)
+		if style==1: canvas.draw_line(p+Vector2(-4,4)*s,p+Vector2(4,4)*s,back,4*s,true)
+	if absf(side)>0.3:
+		canvas.draw_circle(p+Vector2(-signf(side)*4.5,1.3)*s,1.4*s,skin.darkened(0.08))
+		if rear<1.0:
+			var nose := skin; nose.a=1.0-rear
+			canvas.draw_circle(p+Vector2(side*5.8,1.0)*s,1.4*s,nose)
+	if rear<1.0:
+		for eye in [-1.0,1.0]:
+			var ink := Color("42372e"); ink.a=1.0-rear
+			if eye*side<0: ink.a*=1.0-absf(side)*0.85
+			canvas.draw_circle(p+Vector2(side*2.8+eye*2.0*(1.0-absf(side)*0.7),0.7)*s,0.5*s,ink)

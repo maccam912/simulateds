@@ -127,6 +127,19 @@ report real work rather than holding the player for a fixed presentation beat.
 The foundation console uses a short fade and immediate safe close. Reduced
 motion also bypasses movement interpolation and freezes decorative activity
 motion. Accepted simulation positions and activity state remain authoritative.
+Facing follows each displayed route leg, then the furnishing or actual conversation
+partner. Turn briefly (up to about 150 ms for a right angle), preserving the last
+idle direction. Reduced motion sets the same direction immediately. Front, side,
+and rear silhouettes use the shared appearance palette, with directional strides,
+arm depth, collars, hair, eyes, and props. Seated residents face the sofa's open
+side in every rotation; sleeping poses remain aligned with the bed. No facing
+fields belong in saved worlds or network commands.
+
+A conversation uses one small bubble above the pair. Reserve resident heads and
+bodies before fitting bubbles and labels, keeping faces visible and clickable.
+Resolve partners from live accepted activity state; stale action text must never
+keep a departed partner in a conversation pose. Offscreen residents do not produce
+activity bubbles at the viewport edge.
 
 The shared clock drives a smooth dawn/evening palette and a cool night exterior.
 Warm automatic home lights keep the cutaway interior readable. Street lamps add

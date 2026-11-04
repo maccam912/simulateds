@@ -264,6 +264,11 @@ The hover shows occupancy, and Plan explains when the game is shared.
 Multiplayer uses protocol 2 for this new furnishing; all peers must update
 together. Existing neighborhood saves still load.
 
+Residents turn toward their accepted routes, furnishings, and conversation
+partners. Seated poses follow the sofa's rotation; reduced motion keeps the
+correct facing without animated turns. Shared chat bubbles and need labels leave
+faces clear, and existing saved households need no conversion.
+
 Click the visible furniture or resident body, and hover to see an object's use
 and occupancy. In construction, **Undo** and **Redo** restore exact purchases
 and sales within the current draft (up to 32 edits). Use Ctrl/Cmd+Z to undo,

@@ -40,7 +40,9 @@ includes durable return recaps of simulated absence, actual allowance, postcards
 and discarded construction drafts. Visible activity now has sparse positional
 footsteps and domestic sounds with bounded voices and shared audio settings.
 Resident names now stay in front of furniture, with quiet actionable thought
-cues for unplanned pressing needs.
+cues for unplanned pressing needs. Resident facing now follows accepted routes,
+furnishing rotation, and live conversation partners, with front/side/rear poses
+and labels that leave faces clear.
 The checkered game table now supports solo puzzles and voluntary shared games
 with separate places, fun/social restoration, and a tabletop pastime preference.
 People cards discover ongoing games and let a visiting resident join or wait,
@@ -74,8 +76,9 @@ understandable result. Fuzz placement and reopening around residents/visitors.
 - Object reservations, shared activities, conversations, basic relationships,
   voluntary tabletop games, and discovery/joining from People are implemented.
   Add richer recreation and shared activities.
-- Activity poses and sparse positional sounds are implemented. Improve resident
-  readability, thoughtful need cues, richer animation, and the original art pass.
+- Activity poses, directional facing, thoughtful need cues, and sparse positional
+  sounds are implemented. Improve movement intent/destination feedback, richer
+  animation, and the original art pass.
 
 Exit: two residents can use a busy home without occupying the same object;
 player-directed actions beat autonomy predictably; a visitor and resident can

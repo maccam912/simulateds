@@ -83,7 +83,7 @@ service mode was not repeated for this update.
 ## Still open
 
 The subsequent feature checks are recorded in [PLAYTEST_LOG.md](PLAYTEST_LOG.md).
-The current local suite contains thirty-eight model/application suites, plus real Iroh
+The current local suite contains forty model/application suites, plus real Iroh
 host/two-client reconnect and dedicated-server startup. The room-construction
 checkpoint passed Linux, Windows, macOS, and Android CI builds/exports. The later
 household checkpoint passed the three desktop jobs; Android built, tested,
@@ -264,3 +264,24 @@ presets/build infrastructure are inherited targets. CI exports establish package
 creation; they do not establish device playability or cross-platform multiplayer.
 
 See [ROADMAP.md](ROADMAP.md) for the next acceptance gates.
+
+
+Resident-facing checks cover accepted cardinal movement, bounded animated turns,
+retained idle direction, reconstructed corners around walls, initial client routes,
+reduced motion, every approach side of eight furnishing kinds in all rotations,
+seated rotation, reciprocal conversation attention, stale/departed/busy partners,
+construction, travel, and replacement snapshots without authoritative mutation.
+All 40 suites and real Iroh/server checks passed. These network checks exercise
+the established gameplay flows; facing snapshot continuity is a local presentation
+check, not a claim of a two-machine visual test. The room-finishing checkpoint
+passed all four platform CI jobs.
+
+Native standard/compact checks inspect an eight-facing appearance sheet, actual
+rotated sleeping/seated activities and selection, reading/tea/gardening/meals/TV,
+real chats, snapshot replacement, reduced motion, and departure. The final compact
+check also clicks a four-leg walking circuit and verifies displayed position,
+facing, and body selection while the authoritative snapshot stays unchanged
+between explicit simulation steps. Need labels no longer cover a neighbor's
+sleeping head, and shared conversation bubbles sit above both faces. The earlier
+activity render check plus compact urgent-cue and tabletop flows passed again.
+Captures are ignored `build/facing-*.png`. Human/device playtests remain open.

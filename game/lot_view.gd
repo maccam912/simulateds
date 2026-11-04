@@ -8,6 +8,7 @@ const Catalog = preload("res://game/catalog.gd")
 const BuildRules = preload("res://game/build_rules.gd")
 const RoomPlan = preload("res://game/room_plan.gd")
 const Finishes = preload("res://game/finishes.gd")
+const ResidentFacing = preload("res://game/resident_facing.gd")
 const ResidentMotion = preload("res://game/resident_motion.gd")
 const ActivityAudio = preload("res://game/activity_audio.gd")
 const Appearance = preload("res://game/appearance.gd")
@@ -600,27 +601,36 @@ func _resident(member: Dictionary, family: Dictionary,s: float) -> void:
 	var look := Appearance.of(member)
 	var shirt: Color=Appearance.SHIRT[int(look.shirt)]
 	var skin: Color=Appearance.SKIN[int(look.skin)]
-	if sitting:
-		draw_line(p+Vector2(-4,-16)*s,p+Vector2(-8,-9)*s,Color("424f54"),4*s,true)
-		draw_line(p+Vector2(4,-16)*s,p+Vector2(9,-9)*s,Color("424f54"),4*s,true)
-	else:
-		draw_line(p+Vector2(-3-stride*3,-5+stride*2)*s,p+Vector2(-4,-14)*s,Color("424f54"),4*s,true)
-		draw_line(p+Vector2(3+stride*3,-5-stride*2)*s,p+Vector2(4,-14)*s,Color("424f54"),4*s,true)
-	draw_line(p+Vector2(0,-13)*s,p+Vector2(0,-24)*s+Vector2(0,bob),shirt,12*s,true)
-	draw_line(p+Vector2(-7,-23)*s,p+Vector2(-9+stride*3,-14)*s,skin,3*s,true)
-	draw_line(p+Vector2(7,-23)*s,p+Vector2(9-stride*3,-14)*s,skin,3*s,true)
-	Appearance.draw_head(self,p+Vector2(0,-31)*s+Vector2(0,bob),s,look)
-	_activity_prop(p,str(pose.get("kind","")),s,reduced)
+	var direction: Vector2=motion.direction(member)
+	var forward := ResidentFacing.project(direction)
+	var lateral := ResidentFacing.project(Vector2(direction.y,-direction.x))
+	var facing := forward.normalized()
+	var kind := str(pose.get("kind",""))
+	var behind: bool=facing.y< -0.2 and kind not in ["chat","tv","shower"]
+	if behind: _activity_prop(p+forward*6*s,kind,s,reduced,facing,skin)
+	for side: float in [-1.0,1.0]:
+		var hip := p+(Vector2(0,-14)+lateral*side*3)*s
+		var foot := p+(Vector2(0,-4)+lateral*side*3.5+forward*stride*side*4)*s
+		if sitting: foot=p+(Vector2(0,-8)+lateral*side*3.5+forward*9)*s
+		draw_line(hip,foot,Color("424f54"),4*s,true)
+	var far_side := -1.0 if lateral.y>=0.0 else 1.0
+	_resident_arm(p,s,lateral,forward,far_side,stride,skin)
+	draw_line(p+Vector2(0,-13)*s,p+Vector2(0,-24)*s+Vector2(0,bob),shirt,lerpf(8.0,12.0,absf(lateral.x))*s,true)
+	# A quiet collar makes the body turn legible without enlarging the resident.
+	if facing.y> -0.2:
+		draw_line(p+(Vector2(0,-25)+forward*2-lateral*2)*s+Vector2(0,bob),p+(Vector2(0,-25)+forward*2+lateral*2)*s+Vector2(0,bob),shirt.lightened(0.22),1.5*s,true)
+	_resident_arm(p,s,lateral,forward,-far_side,stride,skin)
+	Appearance.draw_head(self,p+Vector2(0,-31)*s+Vector2(0,bob),s,look,facing)
+	if not behind: _activity_prop(p+forward*6*s,kind,s,reduced,facing,skin)
+
+func _resident_arm(p: Vector2,s: float,lateral: Vector2,forward: Vector2,side: float,stride: float,skin: Color) -> void:
+	var shoulder := p+(Vector2(0,-23)+lateral*side*6)*s
+	var hand := p+(Vector2(0,-14)+lateral*side*7-forward*stride*side*3)*s
+	draw_line(shoulder,hand,skin,3*s,true)
 
 func _activity_pose(member: Dictionary) -> Dictionary:
 	if motion.moving(str(member.id)): return {}
-	var task: Dictionary=member.get("task",{})
-	if task.get("type")=="interact" and task.get("path",[]).is_empty() and float(task.get("elapsed",0))>0:
-		if task.get("target_kind")=="member": return {"kind":"chat"}
-		for object: Dictionary in world.lots[lot_id].objects:
-			if object.id==task.get("target_id"): return {"kind":object.kind,"object":object}
-	if task.is_empty() and str(member.get("action","")).begins_with("Chatting"): return {"kind":"chat"}
-	return {}
+	return ResidentFacing.activity(world,member)
 
 func resident_anchor(member: Dictionary) -> Vector2:
 	var display := motion.position(member)+Vector2(0.5,0.5)
@@ -647,11 +657,13 @@ func _sleeping_resident(member: Dictionary,family: Dictionary,object: Dictionary
 	if str(member.id)==selected_member:
 		draw_arc(head,10*s,0,TAU,24,Color("fff2bd"),1.5*s,true)
 
-func _activity_prop(p: Vector2,kind: String,s: float,reduced: bool) -> void:
+func _activity_prop(p: Vector2,kind: String,s: float,reduced: bool,facing: Vector2=Vector2.DOWN,skin: Color=Color("e0bb94")) -> void:
+	draw_set_transform(p,0,Vector2(-1.0 if facing.x< -0.2 else 1.0,1))
+	p=Vector2.ZERO
 	match kind:
 		"game_table":
 			var lift := 0.0 if reduced else sin(_time*3.0)*1.5
-			draw_line(p+Vector2(7,-23)*s,p+Vector2(14,-19+lift)*s,Color("e0bb94"),3*s,true)
+			draw_line(p+Vector2(7,-23)*s,p+Vector2(14,-19+lift)*s,skin,3*s,true)
 			draw_circle(p+Vector2(15,-20+lift)*s,3*s,Color("df9c79"))
 		"bookshelf":
 			_poly([p+Vector2(-10,-20)*s,p+Vector2(0,-17)*s,p+Vector2(0,-9)*s,p+Vector2(-10,-12)*s],Color("ead9aa"),Color("8b6950"))
@@ -670,16 +682,7 @@ func _activity_prop(p: Vector2,kind: String,s: float,reduced: bool) -> void:
 			for index in range(4):
 				var fall := float(index)*5.0 if reduced else fmod(_time*22+index*9,30.0)
 				draw_line(p+Vector2(-13+index*8,-40+fall)*s,p+Vector2(-14+index*8,-35+fall)*s,Color(0.72,0.9,0.94,0.8),1.3*s,true)
-		"chat":
-			var q := p+Vector2(18,-45)*s
-			draw_style_box(preload("res://game/style.gd").box(Color("f2e7c7"),5),Rect2(q,Vector2(27,16)*s))
-			for index in range(3):
-				var rise := 0.0 if reduced else sin(_time*4.0+index)*1.2
-				draw_circle(q+Vector2(6+index*7,8+rise)*s,1.5*s,Color("57736a"))
-		"tv":
-			var q := p+Vector2(13,-43)*s
-			draw_style_box(preload("res://game/style.gd").box(Color("304b4f"),3),Rect2(q,Vector2(18,14)*s))
-			draw_line(q+Vector2(5,5)*s,q+Vector2(14,5)*s,Color("b9d69f"),2*s,true)
+	draw_set_transform(Vector2.ZERO)
 
 func _trim_label(text: String, maximum: float) -> String:
 	if _font.get_string_size(text,HORIZONTAL_ALIGNMENT_LEFT,-1,13).x<=maximum: return text
@@ -690,6 +693,44 @@ func _draw_resident_overlays(entities: Array, s: float) -> void:
 	if not show_cues or building or world.lots[lot_id].building or Session.role=="joining": return
 	var occupied: Array[Rect2]=[]
 	var bounds := Rect2(Vector2(8,8),size-Vector2(16,16))
+	# Labels must not hide another resident's face or intercept their body click.
+	for entity: Dictionary in entities:
+		if not entity.has("member"): continue
+		var member: Dictionary=entity.member
+		var pose := _activity_pose(member)
+		if pose.get("kind")=="bed":
+			var point := object_point(pose.object,Vector2(0.5,0.32))
+			var head := grid_point(point.x,point.y)+Vector2(0,-22)*s
+			occupied.append(Rect2(head-Vector2(10,10)*s,Vector2(20,20)*s))
+		else: occupied.append(Rect2(resident_anchor(member)+Vector2(-12,-40)*s,Vector2(24,42)*s))
+	# Shared chat bubbles sit above the pair, never over either face. Reserve
+	# their space before placing name/need labels, just like the residents' bodies.
+	var conversations := {}
+	for entity: Dictionary in entities:
+		if not entity.has("member"): continue
+		var member: Dictionary=entity.member
+		var pose := _activity_pose(member)
+		var kind := str(pose.get("kind",""))
+		if kind not in ["chat","tv"]: continue
+		var at := resident_anchor(member)
+		if not Rect2(Vector2.ZERO,size).has_point(at): continue
+		if kind=="chat":
+			var pair := [str(member.id),str(pose.partner.id)]; pair.sort()
+			var key := str(pair)
+			if conversations.has(key): continue
+			conversations[key]=true
+			var partner_at := resident_anchor(pose.partner)
+			if not Rect2(Vector2.ZERO,size).has_point(partner_at): continue
+			at=Vector2((at.x+partner_at.x)*0.5,minf(at.y,partner_at.y))
+		var box := ResidentCues.fit(Rect2(at+Vector2(-13.5,-61)*s,Vector2(27,16)*s),bounds,occupied)
+		if not box.has_area(): continue
+		occupied.append(box)
+		draw_style_box(preload("res://game/style.gd").box(Color("f2e7c7") if kind=="chat" else Color("304b4f"),4),box)
+		if kind=="chat":
+			for index in range(3):
+				var rise := 0.0 if Preferences.values.reduced_motion else sin(_time*4.0+index)*1.2
+				draw_circle(box.position+Vector2(6+index*7,8+rise)*s,1.5*s,Color("57736a"))
+		else: draw_line(box.position+Vector2(7,6)*s,box.position+Vector2(20,6)*s,Color("b9d69f"),2*s,true)
 	for entity: Dictionary in entities:
 		if not entity.has("member") or entity.family.id!=Session.profile_id or world.lots[entity.family.home_lot].building: continue
 		var member: Dictionary=entity.member
