@@ -45,12 +45,18 @@ func _host() -> void:
 		assert(await rooms.host(), "Could not create code")
 	else:
 		assert(session.host(), "Could not host")
+	for resident: Dictionary in session.state.families[session.profile_id].members:
+		await _command({"type":"autonomy","member_id":resident.id,"enabled":false})
+	await _command({"type":"build_begin","lot_id":session.home_lot()})
+	await _command({"type":"place","lot_id":session.home_lot(),"kind":"game_table","x":8,"y":5})
+	await _command({"type":"build_end","lot_id":session.home_lot()})
 	await create_timer(2.0).timeout
 	var file := FileAccess.open(ticket_path, FileAccess.WRITE)
 	file.store_string(rooms.code if use_codes else session.ticket())
 	file.close()
 	var home: String = session.home_lot()
 	var recalled := false
+	var game_ready := false
 	var delivered: Dictionary={}
 	for _index in range(850):
 		await create_timer(0.1).timeout
@@ -64,7 +70,13 @@ func _host() -> void:
 				delivered[family_id]=true
 			if family.online and family.members[0].lot_id == home:
 				visitors += 1
-		if visitors == 2 and not recalled:
+		if visitors==2 and not game_ready:
+			game_ready=true
+			for family_id: String in session.state.families:
+				if family_id!=session.profile_id:
+					var guest: Dictionary=session.state.families[family_id].members[0]
+					guest.needs.fun=20.0; guest.needs.social=20.0
+		if visitors == 2 and not recalled and FileAccess.file_exists(ticket_path+".1.played") and FileAccess.file_exists(ticket_path+".2.played"):
 			await _command({"type": "build_begin", "lot_id": home})
 			recalled = true
 		for postcard: Dictionary in session.state.families[session.profile_id].mailbox.items:
@@ -232,6 +244,27 @@ func _client(index: String) -> void:
 		await create_timer(0.1).timeout
 	assert(int(session.state.families[identity].mailbox.next_sent)==2,"Postcard delivery did not replicate")
 	await _command({"type": "visit", "lot_id": host_home, "member_id": member_id})
+	for _attempt in range(200):
+		var visitors := 0
+		for family: Dictionary in session.state.families.values():
+			if family.home_lot!=host_home and family.members[0].lot_id==host_home: visitors+=1
+		if visitors==2: break
+		await create_timer(0.1).timeout
+	var game_table_id := ""
+	for object: Dictionary in session.state.lots[host_home].objects:
+		if object.kind=="game_table": game_table_id=str(object.id)
+	assert(not game_table_id.is_empty())
+	await _command({"type":"interact","member_id":member_id,"lot_id":host_home,"target_id":game_table_id})
+	var shared := false
+	for _attempt in range(150):
+		var guest: Dictionary=session.state.families[identity].members[0]
+		var players: Array=preload("res://game/tabletop.gd").players(session.state,host_home,game_table_id)
+		if players.size()==2 and guest.action=="Playing together" and guest.needs.social>22.0:
+			assert(preload("res://game/tabletop.gd").place(players[0])!=preload("res://game/tabletop.gd").place(players[1]))
+			shared=true; break
+		await create_timer(0.1).timeout
+	assert(shared,"Both actual clients must observe shared play, social restoration, and separate places")
+	var played := FileAccess.open(ticket_path+"."+index+".played",FileAccess.WRITE); played.store_string("shared"); played.close()
 	var recalled := false
 	for _attempt in range(300):
 		await create_timer(0.1).timeout

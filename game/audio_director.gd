@@ -4,7 +4,7 @@ signal world_sound_started(sound: String, position: Vector2)
 ## Original generated music and UI sounds. Mix controls live on named audio buses.
 const MUSIC_PATHS := {"menu":"res://assets/audio/menu.wav","live":"res://assets/audio/live.wav","build":"res://assets/audio/build.wav"}
 const EFFECT_PATHS := {"hover":"res://assets/audio/hover.wav","click":"res://assets/audio/click.wav","confirm":"res://assets/audio/confirm.wav","error":"res://assets/audio/error.wav","save":"res://assets/audio/save.wav","build":"res://assets/audio/place.wav"}
-const WORLD_SOUNDS := ["step_wood","step_grass","page","water","tea","meal","fabric","shower","chat","television"]
+const WORLD_SOUNDS := ["step_wood","step_grass","page","water","tea","meal","fabric","shower","chat","television","game_piece"]
 var context := "silent"
 var enabled := false
 var _music: Array[AudioStreamPlayer]=[]

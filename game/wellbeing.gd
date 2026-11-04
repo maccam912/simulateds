@@ -1,7 +1,7 @@
 extends RefCounted
 ## Presentation vocabulary derived from needs; it does not add a second stat.
 const ORDER := ["hunger","energy","hygiene","bladder","fun","social","comfort"]
-const ACTIONS := {"fridge":"Have a bite to eat","bed":"Get some sleep","shower":"Take a shower","toilet":"Use the bathroom","tv":"Watch a little TV","bookshelf":"Read a good book","table":"Have a cup of tea","sofa":"Put your feet up","plant":"Tend the plants","chat":"Have a chat"}
+const ACTIONS := {"fridge":"Have a bite to eat","bed":"Get some sleep","shower":"Take a shower","toilet":"Use the bathroom","tv":"Watch a little TV","bookshelf":"Read a good book","table":"Have a cup of tea","sofa":"Put your feet up","plant":"Tend the plants","chat":"Have a chat","game_table":"Play a tabletop game"}
 const LOW := {"hunger":"Hungry","energy":"Tired","hygiene":"Needs a wash","bladder":"Needs the bathroom","fun":"Bored","social":"Lonely","comfort":"Uncomfortable"}
 const URGENT := {"hunger":"Very hungry","energy":"Exhausted","hygiene":"Really needs a wash","bladder":"Bathroom, please!","fun":"Restless","social":"Missing company","comfort":"Needs a proper rest"}
 const FURNISHINGS := {"hunger":"fridge","energy":"bed","hygiene":"shower","bladder":"toilet","fun":"television or bookshelf","social":"tea table or another resident","comfort":"sofa or plant"}

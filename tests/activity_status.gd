@@ -16,6 +16,7 @@ func _estimate(kind: String, need_value: float, automatic: bool, rank_up: bool=f
 	if rank_up:
 		for entry: Dictionary in member.hobbies.values(): entry.sessions=14
 	var object: Dictionary={}
+	if kind=="game_table": lot.objects.append(world._new_object(kind,8,5,0))
 	for candidate: Dictionary in lot.objects:
 		if candidate.kind==kind: object=candidate; break
 	var cell: Vector2i=world._interaction_cells(lot,object)[0]
@@ -45,7 +46,7 @@ func _capture(name: String) -> void:
 	assert(root.get_texture().get_image().save_png("res://build/activity-status-"+name+suffix+".png")==OK)
 
 func _run() -> void:
-	for kind: String in ["bed","fridge","shower","toilet","sofa","tv","bookshelf","plant","table"]:
+	for kind: String in ["bed","fridge","shower","toilet","sofa","tv","bookshelf","plant","table","game_table"]:
 		for need: float in [10.0,80.0,100.0]:
 			for automatic: bool in [false,true]: _estimate(kind,need,automatic)
 	for kind: String in ["bookshelf","plant","fridge"]: _estimate(kind,70.0,false,true)

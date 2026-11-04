@@ -12,7 +12,8 @@ const ITEMS: Dictionary = {
 	"tv": {"name":"Little television", "cost":250, "size":[1,1], "color":"697480", "need":"fun", "rate":7.0, "duration":12.0, "description":"Watch something wonderfully silly."},
 	"bookshelf": {"name":"Story shelf", "cost":160, "size":[1,1], "color":"a7845e", "need":"fun", "rate":6.0, "duration":12.0, "description":"Get lost in a good book."},
 	"plant": {"name":"Leafy friend", "cost":45, "size":[1,1], "color":"6c9b64", "need":"comfort", "rate":4.0, "duration":8.0, "description":"Tend a little green corner."},
-	"table": {"name":"Tea table", "cost":140, "size":[2,1], "color":"bb9364", "need":"social", "rate":6.5, "duration":12.0, "description":"Share tea and a conversation."}
+	"table": {"name":"Tea table", "cost":140, "size":[2,1], "color":"bb9364", "need":"social", "rate":6.5, "duration":12.0, "description":"Share tea and a conversation."},
+	"game_table": {"name":"Checkered game table", "cost":340, "size":[2,2], "color":"a88161", "need":"fun", "rate":6.0, "duration":16.0, "description":"A tabletop puzzle for one, or a game for up to four. Restores fun; playing together also restores social. Each resident joins through their own plan."}
 }
 
 static func footprint(kind: String, rotation: int = 0) -> Vector2i:

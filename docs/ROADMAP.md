@@ -41,6 +41,8 @@ and discarded construction drafts. Visible activity now has sparse positional
 footsteps and domestic sounds with bounded voices and shared audio settings.
 Resident names now stay in front of furniture, with quiet actionable thought
 cues for unplanned pressing needs.
+The checkered game table now supports solo puzzles and voluntary shared games
+with separate places, fun/social restoration, and a tabletop pastime preference.
 See [the playtest log](PLAYTEST_LOG.md) for evidence
 and current usability priorities.
 
@@ -65,8 +67,9 @@ understandable result. Fuzz placement and reopening around residents/visitors.
 - Visible plans with queued activity reordering, interruption rules, autonomy
   controls, actionable need thoughts, and resident camera focus are implemented.
   Travel/waiting feedback and estimated activity progress are implemented.
-- Object reservations, shared activities, conversations, and basic relationships
-  are implemented. Add a voluntary shared tabletop game and richer recreation.
+- Object reservations, shared activities, conversations, basic relationships,
+  and voluntary tabletop games are implemented. Make ongoing games easier to
+  discover when visiting and add richer recreation.
 - Activity poses and sparse positional sounds are implemented. Improve resident
   readability, thoughtful need cues, richer animation, and the original art pass.
 

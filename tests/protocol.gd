@@ -12,6 +12,8 @@ func _run() -> void:
 	session.role = "host"
 	session.players = {1: session.profile_id, 2: session.profile_id}
 	var original: String = JSON.stringify(session.state)
+	session._accept_hello(3,{"version":1,"credential":"a".repeat(64),"name":"Old client"})
+	assert(JSON.stringify(session.state)==original and not session.players.has(3),"Old clients cannot join a neighborhood with unknown game-table content")
 	session._receive(999, {"type": "command", "id": 1, "intent": {"type": "build_begin", "lot_id": home}})
 	assert(JSON.stringify(session.state) == original, "Unknown sender changed the world")
 	session._receive(2, {"type": "command", "id": 1, "intent": {"type": "build_begin", "lot_id": home}})

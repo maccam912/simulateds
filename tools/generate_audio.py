@@ -119,7 +119,7 @@ def household():
     """Quiet domestic textures: filtered noise, small resonances, and water drops."""
     definitions = {"step_wood": .15, "step_grass": .18, "page": .44, "water": .72,
                    "tea": .56, "meal": .65, "fabric": .30, "shower": .85,
-                   "chat": .62, "television": .65}
+                   "chat": .62, "television": .65, "game_piece": .20}
     for number, (name, duration) in enumerate(definitions.items()):
         rng = random.Random(4200 + number)
         channel = array("f", [0]) * round(duration * RATE)
@@ -149,6 +149,8 @@ def household():
                     if age >= 0:
                         frequency = 1340 if name == "tea" else 710
                         signal += (math.sin(TAU * frequency * age) + .3 * math.sin(TAU * frequency * 1.63 * age)) * math.exp(-age * 24) * .24
+            elif name == "game_piece":
+                signal = (math.sin(TAU * 340 * t) + .35 * math.sin(TAU * 680 * t) + low * .4) * math.exp(-t * 38) * .25
             elif name == "chat":
                 # Abstract soft syllables, not a sample or imitation of a voice.
                 envelope = math.sin(math.pi * u * 2) ** 4
@@ -174,7 +176,7 @@ def main():
     ui("save", [(0, 67), (.10, 72), (.20, 76)], .58, .15)
     ui("place", [(0, 60), (.055, 67)], .24, .17)
     household()
-    print("Generated original music, garden ambience, six UI sounds, and ten household textures in", DEST)
+    print("Generated original music, garden ambience, six UI sounds, and eleven household textures in", DEST)
 
 
 if __name__ == "__main__":

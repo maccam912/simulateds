@@ -182,12 +182,20 @@ chatting rather than free. Keep all of this inside the optional Plan tray.
 ## Everyday personality
 
 A favorite pastime is a preference, not a level or a reward multiplier. Reading,
-television, gardening, and tea influence choices only among useful reachable
+television, gardening, tea, and tabletop games influence choices only among useful reachable
 activities. Urgent needs and deliberate plans take priority; “A little of
 everything” keeps neutral choices. Edit the preference alongside names and looks.
 Show it in the daily plan and explain autonomous favorite activities there, rather
 than adding another persistent HUD panel. Existing saves remain neutral until
 edited, and residents do not lose progress or earn unattended wish/hobby rewards.
+
+The checkered game table is a recognizable wood surface with cream/teal squares
+and warm wooden pieces. A small hand motion and sparse wooden click suggest play;
+reduced motion holds the pose still. Hover gives the number of reserved places,
+and the existing Plan row describes solo or shared enjoyment. A participant's
+social thought quiets while they are actually playing with someone. Every player
+chooses their own resident's participation, and leaving never cancels a companion.
+Keep the shared activity in the house rather than opening a separate minigame.
 
 ## Coming home
 
@@ -243,7 +251,7 @@ the authoritative host; a client must not silently edit its local replica.
 - Button hover/click, command confirmation/error, saves, and authoritative
   furnishing placement have sound hooks. Visible walking and activities now add
   sparse positional accents: wood/grass footsteps, pages, water, tea/cutlery,
-  fabric, and abstract conversation/television textures. A four-voice pool keeps
+  fabric, game pieces, and abstract conversation/television textures. A four-voice pool keeps
   them separate from UI cues. They follow accepted task progress and displayed
   movement, stop offscreen or behind menus, and respect Effects/Master mute.
   Reduced motion retains audio. Actual room acoustics, continuous appliances,

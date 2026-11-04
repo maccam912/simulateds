@@ -13,6 +13,7 @@ const Wellbeing = preload("res://game/wellbeing.gd")
 const Finishes = preload("res://game/finishes.gd")
 const Pastimes = preload("res://game/pastimes.gd")
 const Appearance = preload("res://game/appearance.gd")
+const Tabletop = preload("res://game/tabletop.gd")
 const HouseholdProfile = preload("res://game/household_profile.gd")
 const GRID_SIZE := 16
 const SCHEMA := 1
@@ -24,7 +25,7 @@ const MIN_ACTIVITY_TIME := 4.0
 const BUILD_FIELDS := ["floors", "walls", "doors", "objects", "funds", "finishes"]
 const NEEDS := ["hunger", "energy", "hygiene", "bladder", "fun", "social", "comfort"]
 const DECAY := {"hunger":0.13, "energy":0.08, "hygiene":0.10, "bladder":0.15, "fun":0.12, "social":0.09, "comfort":0.07}
-const ACTION_NAMES := {"bed":"Sleeping", "fridge":"Making a meal", "shower":"Showering", "toilet":"Using the bathroom", "sofa":"Relaxing", "tv":"Watching television", "bookshelf":"Reading", "plant":"Tending plants", "table":"Having tea"}
+const ACTION_NAMES := {"bed":"Sleeping", "fridge":"Making a meal", "shower":"Showering", "toilet":"Using the bathroom", "sofa":"Relaxing", "tv":"Watching television", "bookshelf":"Reading", "plant":"Tending plants", "table":"Having tea", "game_table":"Playing a tabletop puzzle"}
 const DIRECTIONS := [Vector2i(1,0), Vector2i(0,1), Vector2i(-1,0), Vector2i(0,-1)]
 var state: Dictionary = {}
 var _build_backups: Dictionary = {}
@@ -475,6 +476,9 @@ func _tick_member(member: Dictionary, lot: Dictionary, delta: float) -> void:
 	var rates := personal_activity_rates(member,str(object.kind))
 	for restored: String in rates:
 		member.needs[restored]=minf(100.0,float(member.needs[restored])+float(rates[restored])*delta)
+	if object.kind=="game_table" and Tabletop.players(state,str(lot.id),str(object.id)).size()>1:
+		member.needs.social=minf(100.0,float(member.needs.social)+Tabletop.SOCIAL_RATE*delta)
+		member.action="Playing together"
 	if object.kind == "table":
 		for family: Dictionary in state.families.values():
 			for companion: Dictionary in family.members:
@@ -508,6 +512,7 @@ static func personal_activity_rates(member: Dictionary, kind: String) -> Diction
 	return rates
 
 func care_status(member: Dictionary, need: String) -> String:
+	if need=="social" and Tabletop.is_shared(state,member): return "In progress"
 	if Wellbeing.restores(task_activity(member.task,str(member.lot_id)),need): return "In progress"
 	for task: Dictionary in member.queue:
 		if Wellbeing.restores(task_activity(task,str(member.lot_id)),need): return "In your plan"
@@ -527,10 +532,13 @@ func care_option(member: Dictionary, need: String) -> Dictionary:
 		var path := _path(lot,_position(member),goals)
 		if path.is_empty() and not goals.has(_position(member)): continue
 		var busy := not _object_user(str(lot.id),object,str(member.id)).is_empty()
+		if object.kind=="game_table":
+			var places := _game_places(member,lot,object)
+			busy=places.is_empty() or (not places.has(_position(member)) and _path(lot,_position(member),places).is_empty())
 		var score := float(path.size())+(1000.0 if busy else 0.0)
 		if score<best_score:
 			best_score=score
-			best={"available":true,"status":"","label":Wellbeing.ACTIONS[object.kind],"detail":str(Catalog.ITEMS[object.kind].name)+(" · In use, wait your turn" if busy else " · Here on this lot"),"target_id":object.id,"busy":busy}
+			best={"available":true,"status":"","label":Wellbeing.ACTIONS.get(object.kind,str(Catalog.ITEMS[object.kind].name)),"detail":str(Catalog.ITEMS[object.kind].name)+(" · In use, wait your turn" if busy else " · Here on this lot"),"target_id":object.id,"busy":busy}
 	if need=="social":
 		for family: Dictionary in state.families.values():
 			for other: Dictionary in family.members:
@@ -612,6 +620,9 @@ func _choose_autonomy(member: Dictionary, lot: Dictionary) -> void:
 	var urgent := false
 	for object: Dictionary in lot.objects:
 		if not _object_user(str(lot.id),object,str(member.id)).is_empty(): continue
+		if object.kind=="game_table":
+			var places := _game_places(member,lot,object)
+			if places.is_empty() or (not places.has(_position(member)) and _path(lot,_position(member),places).is_empty()): continue
 		var need: String = Catalog.ITEMS[object.kind].need
 		var value := float(member.needs[need])
 		if value >= 78.0 or not _can_reach_object(lot, _position(member), object):
@@ -641,12 +652,18 @@ func _start_next(member: Dictionary, lot: Dictionary) -> void:
 	if member.queue.is_empty():
 		return
 	var pending: Dictionary = member.queue[0]
+	var game_places: Array=[]
 	if pending.type == "interact" and pending.get("target_kind", "object") == "object":
 		var furnishing := _object(lot,str(pending.target_id))
 		var user := _object_user(str(lot.id),furnishing,str(member.id))
 		if not user.is_empty():
 			member.action = "Waiting for " + str(user.name) + " · " + str(Catalog.ITEMS[furnishing.kind].name)
 			return
+		if furnishing.get("kind")=="game_table":
+			game_places=_game_places(member,lot,furnishing)
+			if game_places.is_empty() or (not game_places.has(_position(member)) and _path(lot,_position(member),game_places).is_empty()):
+				member.action="Waiting for a place · Game table"
+				return
 	if pending.type=="interact" and pending.get("target_kind")=="member":
 		var companion := _find_member(str(pending.target_id))
 		if not companion.is_empty() and companion.lot_id==member.lot_id and _chat_busy(companion,member):
@@ -667,7 +684,7 @@ func _start_next(member: Dictionary, lot: Dictionary) -> void:
 		var object := _object(lot, str(task.target_id))
 		if object.is_empty():
 			return
-		goals = _interaction_cells(lot, object)
+		goals = game_places if object.kind=="game_table" else _interaction_cells(lot, object)
 		task.remaining = float(Catalog.ITEMS[object.kind].duration)
 		task.label = str(Catalog.ITEMS[object.kind].name)
 	var route := _path(lot, _position(member), goals)
@@ -679,6 +696,20 @@ func _start_next(member: Dictionary, lot: Dictionary) -> void:
 	member.task = task
 	member.walk_clock = 0.0
 	member.action = "Walking" + (" · " + str(task.get("label", "")) if task.type == "interact" else "") if not route.is_empty() else "Starting activity"
+
+func _game_places(member: Dictionary, lot: Dictionary, object: Dictionary) -> Array:
+	var players := Tabletop.players(state,str(lot.id),str(object.id),false)
+	var reserved: Array=[]
+	for player: Dictionary in players:
+		if player.id!=member.id: reserved.append(Tabletop.place(player))
+	if reserved.size()>=Tabletop.CAPACITY: return []
+	for family: Dictionary in state.families.values():
+		for other: Dictionary in family.members:
+			if other.lot_id==member.lot_id and other.id!=member.id: reserved.append(_position(other))
+	var available: Array=[]
+	for cell: Vector2i in _interaction_cells(lot,object):
+		if not cell in reserved: available.append(cell)
+	return available
 
 func _object_user(lot_id: String, object: Dictionary, except_member: String = "") -> Dictionary:
 	# Ownership is derived from accepted active tasks, so there are no stale locks

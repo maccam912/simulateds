@@ -124,7 +124,7 @@ or shell expressions.
   lasting ranks and useful activity bonuses. Wishes never expire; completed sets can renew on a later day.
 - **Edit** beside Household (or **Household** in the game menu) changes the
   household name, both resident names, clothing/skin/hair colors, hair style, and
-  favorite pastimes (reading, television, gardening, tea, or a little of everything).
+  favorite pastimes (reading, television, gardening, tea, tabletop games, or a little of everything).
   Preview your choices, then Apply changes; Cancel or Escape leaves them alone.
   Choices belong to this neighborhood and persist through saves and reconnects.
   Favorites gently influence autonomous choices when needs are similar; urgent
@@ -240,6 +240,15 @@ for needs filling early and hobby bonuses. Progress waits with a paused world.
 Autonomy is saved separately for each resident. Direct orders take priority over
 automatic activities. Beds and bathroom fixtures allow one user at a time;
 waiting residents keep their place in their own plan.
+
+Buy the **Checkered game table** from Living for §340 (2×2 tiles). Click it to
+enjoy a solo puzzle, or have up to four residents join through their own plans.
+Playing restores fun; two or more participants also restore social. Each gets
+a separate place, and a fifth waits in their plan. Leaving the game preserves
+everyone else's activity. Construction sends visitors safely home as usual.
+The hover shows occupancy, and Plan explains when the game is shared.
+Multiplayer uses protocol 2 for this new furnishing; all peers must update
+together. Existing neighborhood saves still load.
 
 Click the visible furniture or resident body, and hover to see an object's use
 and occupancy. In construction, **Undo** and **Redo** restore exact purchases

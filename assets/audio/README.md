@@ -22,12 +22,14 @@ servers and native smoke checks do not start audio playback. Settings persist
 separately from world saves.
 
 
-Ten short mono household textures now accompany visible accepted actions:
+Eleven short mono household textures now accompany visible accepted actions:
 `step_wood`, `step_grass`, `page`, `water`, `tea`, `meal`, `fabric`, `shower`,
-`chat`, and `television`. They are original filtered-noise/resonance sketches,
+`chat`, `television`, and `game_piece`. They are original filtered-noise/resonance sketches,
 including abstract syllables rather than a sampled or imitated voice. Quiet cloth
 settling covers beds/sofas; liquid textures cover watering and bathroom activity.
 Textures are sparse accents, not appliance loops or simulated room acoustics.
+The game table uses a short, damped wooden click for moving a piece, sampled
+from accepted activity progress every five simulation seconds.
 
 A presentation sampler follows displayed walking and actual task progress.
 Repeated snapshots produce no repeated sounds, teleports produce no footsteps,
@@ -43,3 +45,5 @@ simulation stop household playback. Reduced motion changes visuals, not hearing.
 with effects muted, bounded overlapping voices, clean shutdown, and normal live
 walking/reading/gardening/tea. These mixer measurements are not a human listening
 or device-speaker assessment; that remains part of family playtesting.
+The graphical tabletop check also records its actual positional voice in
+`build/tabletop-mix*.wav`, with nonzero output and no clipping in both window sizes.

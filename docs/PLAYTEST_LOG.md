@@ -723,3 +723,42 @@ work through a day. The next opportunity for fun is a reason to spend time with 
 visitor beyond a chat. Next: a tabletop recreation activity that can be enjoyed
 alone or together, with voluntary participation, clear shared benefits, and no
 takeover of another player's resident or existing plans.
+
+## 2026-11-04 · A game around the table
+
+The §340 checkered game table gives residents a solo puzzle and a voluntary game
+for up to four. All participants restore fun; actual company adds social. Each
+resident joins through their own ordinary plan and reserves a separate approach
+destination. A fifth keeps their queued order until a place opens. Cancellation,
+travel, disconnect, and construction release participation without a separate
+saved lock. Leaving lets companions continue their own activity.
+
+The Living catalog explains the shared benefit and footprint. The board has
+cream/teal squares, warm pieces, a small hand pose, and an original damped wooden
+click; reduced motion holds the pose still. Hover shows occupancy and Plan
+distinguishes solo/shared enjoyment. Tabletop games is an editable favorite,
+with ordinary fallback when no reachable place is available. Existing saves
+load unchanged; multiplayer protocol 2 prevents older clients reading an unknown
+furnishing kind.
+
+Validation: all 32 local suites, real Iroh host/two-client play/reconnect, and
+server startup passed. Model checks cover capacity, separate destinations,
+owned commands, replication, release, save loading, and full-table care/autonomy.
+Both actual clients observed shared social restoration and separate places
+before the host began construction and recalled them. Native graphical checks
+at 1440×900 and 1280×720/125% UI passed purchasing, undo/redo, all four rotations,
+solo/shared play, leaving, and recall. Actual positional mixer captures were
+nonzero and unclipped in both sizes; human listening remains open. The preceding
+activity-feedback checkpoint passed all four platform CI jobs.
+
+The first UI check found a missing care-action label; catalog additions now have
+a safe label fallback. The visual review caught a duplicate “missing company”
+thought during shared play. It now quiets only while a real companion is playing,
+and reappears when solo if still needed. A native fixture also needed to target
+an uncovered board square instead of clicking a thought cue overlapping its
+center. These fixes passed the final model/application and graphical checks.
+
+Fresh assessment: visiting now offers an activity beyond conversation, but its
+discovery depends on spotting and clicking the table. Next: help a visiting
+player find and join an ongoing game from People, using their selected resident
+and preserving each household's ownership and existing plans.

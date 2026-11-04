@@ -13,6 +13,7 @@ const ActivityAudio = preload("res://game/activity_audio.gd")
 const Appearance = preload("res://game/appearance.gd")
 const Daylight = preload("res://game/daylight.gd")
 const ResidentCues = preload("res://game/resident_cues.gd")
+const Tabletop = preload("res://game/tabletop.gd")
 var motion = ResidentMotion.new()
 var activity_audio = ActivityAudio.new()
 var _audio_tick := -1
@@ -381,6 +382,9 @@ func _draw_hover() -> void:
 		var item: Dictionary = Catalog.ITEMS[hover_target.kind]
 		title = str(item.name)
 		detail = str(item.need).capitalize() + " · Click to use"
+		if hover_target.kind=="game_table":
+			var count := Tabletop.players(world,lot_id,str(hover_target.id),false).size()
+			detail="%d/4 places · Fun + social together · Click to %s" % [count,"queue" if count>=Tabletop.CAPACITY else "join"]
 		if bool(item.get("exclusive",false)):
 			for family: Dictionary in world.families.values():
 				for resident: Dictionary in family.members:
@@ -504,10 +508,19 @@ func _furnishing(obj: Dictionary,s: float) -> void:
 			draw_line(p,p+Vector2(0,-20*s),Color("466f4b"),3*s)
 			for i in range(4):
 				draw_circle(p+Vector2((-1 if i%2==0 else 1)*6,-8-i*3)*s,6*s,Color("71985e"))
-		"table":
+		"table", "game_table":
 			_block(x+0.2,y+0.2,0.14,0.14,18*s,Color("806550"))
 			_block(x+w-0.34,y+d-0.34,0.14,0.14,18*s,Color("806550"))
 			_block(x+0.04,y+0.04,w-0.08,d-0.08,4*s,Color("ccaa78"),18*s)
+			if kind=="game_table":
+				for board_y in range(4):
+					for board_x in range(4):
+						_diamond(x+0.24+board_x*0.38,y+0.24+board_y*0.38,0.38,0.38,Color("4f7776") if (board_x+board_y)%2==0 else Color("eee4c5"),22.5*s)
+				for index in range(4):
+					var place: Vector2=[Vector2(0.43,0.43),Vector2(1.57,1.57),Vector2(0.81,1.19),Vector2(1.19,0.81)][index]
+					var piece := grid_point(x+place.x,y+place.y)+Vector2(0,-25*s)
+					draw_circle(piece,3.4*s,Color("dc916f") if index%2==0 else Color("20383d"))
+					draw_circle(piece+Vector2(0,-1.2*s),2.5*s,Color("efb38d") if index%2==0 else Color("527d80"))
 		_:
 			_block(x+0.1,y+0.1,w-0.2,d-0.2,16*s,color)
 
@@ -584,6 +597,10 @@ func _sleeping_resident(member: Dictionary,family: Dictionary,object: Dictionary
 
 func _activity_prop(p: Vector2,kind: String,s: float,reduced: bool) -> void:
 	match kind:
+		"game_table":
+			var lift := 0.0 if reduced else sin(_time*3.0)*1.5
+			draw_line(p+Vector2(7,-23)*s,p+Vector2(14,-19+lift)*s,Color("e0bb94"),3*s,true)
+			draw_circle(p+Vector2(15,-20+lift)*s,3*s,Color("df9c79"))
 		"bookshelf":
 			_poly([p+Vector2(-10,-20)*s,p+Vector2(0,-17)*s,p+Vector2(0,-9)*s,p+Vector2(-10,-12)*s],Color("ead9aa"),Color("8b6950"))
 			_poly([p+Vector2(0,-17)*s,p+Vector2(10,-20)*s,p+Vector2(10,-12)*s,p+Vector2(0,-9)*s],Color("faf1d6"),Color("8b6950"))
@@ -635,7 +652,7 @@ func _draw_resident_overlays(entities: Array, s: float) -> void:
 		if selected:
 			var q := head+Vector2(0,-16)*s
 			_poly([q+Vector2(0,-7)*s,q+Vector2(4,0)*s,q+Vector2(0,7)*s,q+Vector2(-4,0)*s],Color("e9d695"),Color("fff3b4"))
-		var cue := ResidentCues.need(member,world.lots[lot_id])
+		var cue := ResidentCues.need(member,world.lots[lot_id],world)
 		if cue.is_empty() and not selected: continue
 		var caption := _trim_label(str(member.name),180.0)
 		if not cue.is_empty(): caption=_trim_label(str(member.name),90.0)+" · "+str(cue.label)

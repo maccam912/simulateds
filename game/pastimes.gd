@@ -1,8 +1,8 @@
 extends RefCounted
 ## A modest autonomous preference, independent of learned hobby progress.
-const ORDER := ["variety", "reading", "television", "gardening", "tea"]
-const LABELS := {"variety":"A little of everything", "reading":"Reading", "television":"Television", "gardening":"Gardening", "tea":"Tea & company"}
-const ACTIVITIES := {"reading":"bookshelf", "television":"tv", "gardening":"plant", "tea":"table"}
+const ORDER := ["variety", "reading", "television", "gardening", "tea", "games"]
+const LABELS := {"variety":"A little of everything", "reading":"Reading", "television":"Television", "gardening":"Gardening", "tea":"Tea & company", "games":"Tabletop games"}
+const ACTIVITIES := {"reading":"bookshelf", "television":"tv", "gardening":"plant", "tea":"table", "games":"game_table"}
 const PREFERENCE := 6.0
 const URGENT := 30.0
 

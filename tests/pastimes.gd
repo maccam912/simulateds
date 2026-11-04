@@ -34,8 +34,11 @@ func _run() -> void:
 	assert(replica.state.families.a.members[0].favorite=="variety","Older saves keep neutral choices")
 	for favorite: String in Pastimes.ACTIVITIES:
 		_fresh(); member.favorite=favorite
+		if favorite=="games": lot.objects.append(world._new_object("game_table",8,5,0))
 		for need: String in member.needs: member.needs[need]=60.0
 		assert(_chosen()==Pastimes.ACTIVITIES[favorite],"Each preference changes a real near-tie choice")
+	_fresh(); member.favorite="games"; member.needs.fun=60.0
+	assert(_chosen()=="tv","A missing game table falls back to available recreation")
 	_fresh(); member.favorite="variety"; member.needs.fun=60.0
 	assert(_chosen()=="tv","Neutral preference retains the ordinary need/distance choice")
 	_fresh(); member.favorite="reading"; member.needs.hunger=29.0; member.needs.fun=30.0

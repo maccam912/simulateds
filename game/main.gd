@@ -659,7 +659,7 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 			shown[obj.kind]=true
 			var item: Dictionary=Catalog.ITEMS.get(obj.kind,{})
 			if str(item.get("need","")).is_empty(): continue
-			var text: String={"bed":"Get some sleep","fridge":"Have a bite to eat","shower":"Take a shower","toilet":"Use the bathroom","sofa":"Put your feet up","tv":"Watch a little TV","bookshelf":"Read a good book","plant":"Enjoy the greenery","table":"Take a seat"}.get(str(obj.kind),str(item.get("name",obj.kind)))
+			var text: String={"bed":"Get some sleep","fridge":"Have a bite to eat","shower":"Take a shower","toilet":"Use the bathroom","sofa":"Put your feet up","tv":"Watch a little TV","bookshelf":"Read a good book","plant":"Enjoy the greenery","table":"Take a seat","game_table":"Play a tabletop game"}.get(str(obj.kind),str(item.get("name",obj.kind)))
 			var b:=_button(text,func(): _interact(str(obj.id)))
 			b.alignment=HORIZONTAL_ALIGNMENT_LEFT; b.add_theme_font_size_override("font_size",12); tools_box.add_child(b)
 		context_box.add_child(_button("Chat with family",func(): _chat_with_family()))

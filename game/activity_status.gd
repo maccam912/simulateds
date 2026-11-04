@@ -28,6 +28,7 @@ static func sample(member: Dictionary, lot: Dictionary) -> Dictionary:
 		var minimum := 0.0 if task.get("automatic",false) else World.MIN_ACTIVITY_TIME
 		remaining=minf(remaining,maxf(until_full,maxf(0.0,minimum-elapsed)))
 		label=str(World.ACTION_NAMES.get(kind,"Enjoying home"))
+		if kind=="game_table" and action=="Playing together": label="Playing together · Fun + social"
 	var minutes := maxi(1,ceili(remaining*World.MINUTES_PER_SECOND))
 	var detail := label+" · ~%d min left" % minutes if remaining>0.1 else "Finishing up"
 	return {"phase":"activity","detail":detail,"progress":clampf(elapsed/maxf(0.001,elapsed+remaining),0.0,1.0),"remaining":remaining}
