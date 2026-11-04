@@ -105,8 +105,7 @@ jobs:
           path: |
             build/checks/*.log
             build/smoke/*.log
-            build/paintings_peer/*.log
-            build/meals_peer/*.log
+            build/*_peer/*.log
           if-no-files-found: ignore
 
   release:

@@ -70,9 +70,7 @@ func _host() -> void:
 	await _command({"type":"place","lot_id":session.home_lot(),"kind":"stereo","x":8,"y":9})
 	await _command({"type":"build_end","lot_id":session.home_lot()})
 	await create_timer(2.0).timeout
-	var file := FileAccess.open(ticket_path, FileAccess.WRITE)
-	file.store_string(rooms.code if use_codes else session.ticket())
-	file.close()
+	preload("res://tests/peer_signal.gd").publish(ticket_path,rooms.code if use_codes else session.ticket())
 	var home: String = session.home_lot()
 	var recalled := false
 	var game_ready := false
@@ -119,7 +117,7 @@ func _host() -> void:
 					assert(Vector2(finisher.x,finisher.y).distance_to(Vector2(courtesy.from[0],courtesy.from[1]))==1.0)
 					assert(finisher.task.is_empty() and finisher.activity_log[0].outcome=="done")
 					courtesy.to=[finisher.x,finisher.y]
-					var handoff := FileAccess.open(ticket_path+".courtesy",FileAccess.WRITE); handoff.store_string(JSON.stringify(courtesy)); handoff.close()
+					preload("res://tests/peer_signal.gd").publish(ticket_path+".courtesy",JSON.stringify(courtesy))
 					courtesy_written=true
 			if courtesy_written and FileAccess.file_exists(ticket_path+".1.handoff") and FileAccess.file_exists(ticket_path+".2.handoff"):
 				await _command({"type": "build_begin", "lot_id": home})
@@ -569,7 +567,7 @@ func _client(index: String) -> void:
 			shared=true; break
 		await create_timer(0.1).timeout
 	assert(shared,"Both actual clients must observe shared play, social restoration, and separate places")
-	var tabled := FileAccess.open(ticket_path+"."+index+".tabled",FileAccess.WRITE); tabled.store_string("observed"); tabled.close()
+	preload("res://tests/peer_signal.gd").publish(ticket_path+"."+index+".tabled","observed")
 	for _attempt in range(50):
 		if FileAccess.file_exists(ticket_path+".1.tabled") and FileAccess.file_exists(ticket_path+".2.tabled"): break
 		await create_timer(0.1).timeout
@@ -613,7 +611,7 @@ func _client(index: String) -> void:
 			danced=true; break
 		await create_timer(0.1).timeout
 	assert(danced,"Both clients observe separate dance spots and shared social restoration")
-	var played := FileAccess.open(ticket_path+"."+index+".played",FileAccess.WRITE); played.store_string("shared"); played.close()
+	preload("res://tests/peer_signal.gd").publish(ticket_path+"."+index+".played","shared")
 	var handoff_seen := false
 	for _attempt in range(150):
 		if FileAccess.file_exists(ticket_path+".courtesy"):
@@ -625,7 +623,7 @@ func _client(index: String) -> void:
 				handoff_seen=true; break
 		await create_timer(0.1).timeout
 	assert(handoff_seen,"Both actual clients observe a one-step departure and the same waiting plan taking its place")
-	var handoff := FileAccess.open(ticket_path+"."+index+".handoff",FileAccess.WRITE); handoff.store_string("observed"); handoff.close()
+	preload("res://tests/peer_signal.gd").publish(ticket_path+"."+index+".handoff","observed")
 	var recalled := false
 	for _attempt in range(300):
 		await create_timer(0.1).timeout
@@ -683,8 +681,6 @@ func _client(index: String) -> void:
 	assert(session.state.lots[host_home].building, "Construction lease was hidden by replication")
 	session.leave()
 	await create_timer(0.5).timeout
-	var file := FileAccess.open(ticket_path + "." + index + ".done", FileAccess.WRITE)
-	file.store_string("done")
-	file.close()
+	preload("res://tests/peer_signal.gd").publish(ticket_path + "." + index + ".done","done")
 	print("CLIENT_PASS")
 	quit()

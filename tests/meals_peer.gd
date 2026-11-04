@@ -49,8 +49,7 @@ func _command(intent: Dictionary, accepted := true) -> void:
 
 func _host() -> void:
 	assert(await rooms.host() if use_codes else session.host())
-	var file := FileAccess.open(ticket_path,FileAccess.WRITE)
-	file.store_string(rooms.code if use_codes else session.ticket()); file.close()
+	preload("res://tests/peer_signal.gd").publish(ticket_path,rooms.code if use_codes else session.ticket())
 	for attempt in range(850):
 		if FileAccess.file_exists(ticket_path+".autonomy-requested") and not FileAccess.file_exists(ticket_path+".autonomy-primed"):
 			# Set appetite on the authoritative host; the clients still use real controls.
@@ -67,7 +66,7 @@ func _host() -> void:
 	assert(false,"Both dining households must finish")
 
 func _flag(name: String,data: Dictionary={}) -> void:
-	var file:=FileAccess.open(ticket_path+name,FileAccess.WRITE); file.store_string(JSON.stringify(data)); file.close()
+	preload("res://tests/peer_signal.gd").publish(ticket_path+name,JSON.stringify(data))
 func _wait_flag(name: String) -> Dictionary:
 	for attempt in range(350):
 		if FileAccess.file_exists(ticket_path+name): return JSON.parse_string(FileAccess.get_file_as_string(ticket_path+name))

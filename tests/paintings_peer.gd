@@ -49,8 +49,7 @@ func _command(intent: Dictionary, accepted := true) -> void:
 
 func _host() -> void:
 	assert(await rooms.host() if use_codes else session.host())
-	var file := FileAccess.open(ticket_path,FileAccess.WRITE)
-	file.store_string(rooms.code if use_codes else session.ticket()); file.close()
+	preload("res://tests/peer_signal.gd").publish(ticket_path,rooms.code if use_codes else session.ticket())
 	for attempt in range(850):
 		if FileAccess.file_exists(ticket_path+".done1") and FileAccess.file_exists(ticket_path+".done2"):
 			assert(session.state.families.size()==3)
@@ -77,7 +76,7 @@ func _construction(home: String,building: bool) -> void:
 	assert(false,"The accepted construction mode must reach the client")
 
 func _flag(name: String) -> void:
-	var file:=FileAccess.open(ticket_path+name,FileAccess.WRITE); file.store_string("ready"); file.close()
+	preload("res://tests/peer_signal.gd").publish(ticket_path+name,"ready")
 
 func _wait_flag(name: String) -> void:
 	for attempt in range(250):
@@ -229,6 +228,6 @@ func _client(index: String) -> void:
 	assert(_easel(home,id).painting.subject=="" and session.state.lots[home].funds==funds+60)
 	for resident: Dictionary in session.state.families[identity].members: assert(resident.hobbies.painting.sessions==1,"Arranging and selling cannot earn practice again")
 	await _command(sale,false)
-	var done := FileAccess.open(ticket_path+".done"+index,FileAccess.WRITE); done.store_string("done"); done.close()
+	preload("res://tests/peer_signal.gd").publish(ticket_path+".done"+index,"done")
 	print("CLIENT_PASS"); session.leave(); await root.get_node("Soundscape").shutdown_and_wait(); quit()
 
