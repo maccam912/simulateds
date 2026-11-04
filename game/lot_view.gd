@@ -6,6 +6,8 @@ signal entity_clicked(target: Dictionary)
 
 const Catalog = preload("res://game/catalog.gd")
 const BuildRules = preload("res://game/build_rules.gd")
+const ResidentMotion = preload("res://game/resident_motion.gd")
+var motion = ResidentMotion.new()
 var world: Dictionary = {}
 var lot_id := "lot_1"
 var selected_member := ""
@@ -25,6 +27,7 @@ var _font: Font
 var _time := 0.0
 var _hit_regions: Array = []
 var _drawing_target: Dictionary = {}
+var _art_object: Dictionary = {}
 var hover_target: Dictionary = {}
 var _pointer := Vector2(-10000,-10000)
 
@@ -35,7 +38,8 @@ func _ready() -> void:
 	mouse_exited.connect(func(): hover_cell = Vector2i(-1, -1); hover_target = {}; _pointer = Vector2(-10000,-10000); queue_redraw())
 
 func _process(delta: float) -> void:
-	_time += delta
+	if not Session.menu_paused: _time += delta
+	motion.update(world,lot_id,delta,bool(Preferences.values.get("reduced_motion",false)),0.42 if Session.role=="client" else 0.22)
 	queue_redraw()
 
 func _layout() -> void:
@@ -46,7 +50,19 @@ func _layout() -> void:
 	var focus := Vector2(size.x * 0.5, play_height * 0.53)
 	_origin = focus - Vector2(_cell.x * 0.25, _cell.y * 7.75) + pan
 
+func object_point(object: Dictionary, local: Vector2) -> Vector2:
+	var dimensions: Array=Catalog.ITEMS[object.kind].size
+	var w := float(dimensions[0]); var d := float(dimensions[1])
+	match int(object.get("rotation",0)):
+		1: local=Vector2(d-local.y,local.x)
+		2: local=Vector2(w-local.x,d-local.y)
+		3: local=Vector2(local.y,w-local.x)
+	return Vector2(float(object.x),float(object.y))+local
+
 func grid_point(x: float, y: float) -> Vector2:
+	if not _art_object.is_empty():
+		var rotated := object_point(_art_object,Vector2(x-float(_art_object.x),y-float(_art_object.y)))
+		x=rotated.x; y=rotated.y
 	return _origin + Vector2((x - y) * _cell.x * 0.5, (x + y) * _cell.y * 0.5)
 
 func cell_at(point: Vector2) -> Vector2i:
@@ -118,8 +134,14 @@ func _block(x: float, y: float, w: float, d: float, height: float, color: Color,
 	var b := grid_point(x+w,y)
 	var c := grid_point(x+w,y+d)
 	var e := grid_point(x,y+d)
-	_poly([e+top,c+top,c+base,e+base], color.darkened(0.23))
-	_poly([c+top,b+top,b+base,c+base], color.darkened(0.38))
+	var corners := [a,b,c,e]
+	var middle_y := (a.y+b.y+c.y+e.y)*0.25
+	for index in range(4):
+		var left: Vector2=corners[index]
+		var right: Vector2=corners[(index+1)%4]
+		if (left.y+right.y)*0.5>middle_y:
+			var edge := right-left
+			_poly([left+top,right+top,right+base,left+base],color.darkened(0.23 if edge.x*edge.y>0 else 0.38))
 	_poly([a+top,b+top,c+top,e+top], color.lightened(0.12), color.darkened(0.12))
 
 func _draw() -> void:
@@ -186,7 +208,11 @@ func _draw() -> void:
 	for family in world.get("families", {}).values():
 		for member in family.get("members", []):
 			if member.lot_id == lot_id:
-				entities.append({"depth":float(member.x)+float(member.y)+0.8,"member":member,"family":family})
+				var display := motion.position(member)
+				var pose := _activity_pose(member)
+				var depth := display.x+display.y+0.8
+				if pose.get("kind","") in ["bed","sofa"]: depth=float(pose.object.x)+float(pose.object.y)+0.95
+				entities.append({"depth":depth,"member":member,"family":family})
 	entities.sort_custom(func(a,b): return a.depth < b.depth)
 	for entity in entities:
 		if entity.has("object"):
@@ -321,8 +347,7 @@ func _furnishing(obj: Dictionary,s: float) -> void:
 	var item: Dictionary = Catalog.ITEMS.get(kind,{})
 	var dimensions: Array = item.get("size",[1,1])
 	var w := float(dimensions[0]); var d := float(dimensions[1])
-	if int(obj.get("rotation",0))%2==1:
-		var swap := w; w=d; d=swap
+	_art_object=obj
 	var x := float(obj.x); var y := float(obj.y)
 	var color := Color(str(item.get("color","bd9878")))
 	_diamond(x+0.12,y+0.2,w,d,Color(0.18,0.17,0.13,0.13))
@@ -383,29 +408,111 @@ func _furnishing(obj: Dictionary,s: float) -> void:
 			_block(x+0.1,y+0.1,w-0.2,d-0.2,16*s,color)
 
 	_drawing_target = {}
+	_art_object = {}
 
 func _resident(member: Dictionary, family: Dictionary,s: float) -> void:
-	var p := grid_point(float(member.x)+0.5,float(member.y)+0.5)
+	var pose := _activity_pose(member)
+	var p := resident_anchor(member)
+	if pose.get("kind")=="bed":
+		_sleeping_resident(member,family,pose.object,s)
+		return
+	var sitting: bool=pose.get("kind")=="sofa"
 	var body := PackedVector2Array([p+Vector2(-11,-38)*s,p+Vector2(11,-38)*s,p+Vector2(11,1)*s,p+Vector2(-11,1)*s])
 	_hit_regions.append({"polygon":body,"target":{"type":"member","id":member.id,"name":member.name,"owner":family.id}})
 	var selected := str(member.id)==selected_member
-	var bob := 0.0 if bool(Preferences.values.get("reduced_motion",false)) else sin(_time*4.0+float(str(member.id).hash()%10))*0.5*s
+	var reduced := bool(Preferences.values.get("reduced_motion",false))
+	var walking: bool=motion.moving(str(member.id)) and not reduced
+	var stride: float=motion.stride(str(member.id)) if walking else 0.0
+	var bob := absf(stride)*1.2*s if walking else 0.0 if reduced else sin(_time*3.0+float(str(member.id).hash()%10))*0.35*s
 	draw_set_transform(p,0,Vector2(1,0.45))
 	draw_circle(Vector2.ZERO,9*s,Color(0.12,0.20,0.15,0.22))
 	if selected: draw_arc(Vector2.ZERO,12*s,0,TAU,32,Color("fff2bd"),2*s,true)
 	draw_set_transform(Vector2.ZERO)
 	var shirt := Color("557e8b") if str(family.id)==str(Session.profile_id) else Color("be795b")
 	if str(member.name).hash()%2==0: shirt=Color("ad9975")
-	draw_line(p+Vector2(-3,-5)*s,p+Vector2(-4,-14)*s,Color("424f54"),4*s,true)
-	draw_line(p+Vector2(3,-5)*s,p+Vector2(4,-14)*s,Color("424f54"),4*s,true)
+	if sitting:
+		draw_line(p+Vector2(-4,-16)*s,p+Vector2(-8,-9)*s,Color("424f54"),4*s,true)
+		draw_line(p+Vector2(4,-16)*s,p+Vector2(9,-9)*s,Color("424f54"),4*s,true)
+	else:
+		draw_line(p+Vector2(-3-stride*3,-5+stride*2)*s,p+Vector2(-4,-14)*s,Color("424f54"),4*s,true)
+		draw_line(p+Vector2(3+stride*3,-5-stride*2)*s,p+Vector2(4,-14)*s,Color("424f54"),4*s,true)
 	draw_line(p+Vector2(0,-13)*s,p+Vector2(0,-24)*s+Vector2(0,bob),shirt,12*s,true)
-	draw_line(p+Vector2(-7,-23)*s,p+Vector2(-9,-14)*s,Color("d3a27e"),3*s,true)
-	draw_line(p+Vector2(7,-23)*s,p+Vector2(9,-14)*s,Color("d3a27e"),3*s,true)
+	draw_line(p+Vector2(-7,-23)*s,p+Vector2(-9+stride*3,-14)*s,Color("d3a27e"),3*s,true)
+	draw_line(p+Vector2(7,-23)*s,p+Vector2(9-stride*3,-14)*s,Color("d3a27e"),3*s,true)
 	draw_circle(p+Vector2(0,-31)*s+Vector2(0,bob),6*s,Color("e1b58a"))
 	draw_arc(p+Vector2(0,-32)*s,5.5*s,PI,TAU+0.4,12,Color("625346"),3*s,true)
+	_activity_prop(p,str(pose.get("kind","")),s,reduced)
 	if selected:
 		var q := p+Vector2(0,-47)*s
 		_poly([q+Vector2(0,-7)*s,q+Vector2(4,0)*s,q+Vector2(0,7)*s,q+Vector2(-4,0)*s],Color("e9d695"),Color("fff3b4"))
 		var text := str(member.name)
 		var text_width := _font.get_string_size(text,HORIZONTAL_ALIGNMENT_LEFT,-1,13).x
 		draw_string(_font,p+Vector2(-text_width*0.5,18*s),text,HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("263f36"))
+
+func _activity_pose(member: Dictionary) -> Dictionary:
+	if motion.moving(str(member.id)): return {}
+	var task: Dictionary=member.get("task",{})
+	if task.get("type")=="interact" and task.get("path",[]).is_empty() and float(task.get("elapsed",0))>0:
+		if task.get("target_kind")=="member": return {"kind":"chat"}
+		for object: Dictionary in world.lots[lot_id].objects:
+			if object.id==task.get("target_id"): return {"kind":object.kind,"object":object}
+	if task.is_empty() and str(member.get("action","")).begins_with("Chatting"): return {"kind":"chat"}
+	return {}
+
+func resident_anchor(member: Dictionary) -> Vector2:
+	var display := motion.position(member)+Vector2(0.5,0.5)
+	var pose := _activity_pose(member)
+	if pose.get("kind","") in ["bed","sofa"]:
+		var object: Dictionary=pose.object
+		var size: Array=Catalog.ITEMS[object.kind].size
+		display=object_point(object,Vector2(float(size[0])*0.5,float(size[1])*(0.75 if object.kind=="sofa" else 0.5)))
+	return grid_point(display.x,display.y)
+
+func _sleeping_resident(member: Dictionary,family: Dictionary,object: Dictionary,s: float) -> void:
+	var head_cell := object_point(object,Vector2(0.5,0.32))
+	var feet_cell := object_point(object,Vector2(0.5,1.6))
+	var head := grid_point(head_cell.x,head_cell.y)+Vector2(0,-22)*s
+	var feet := grid_point(feet_cell.x,feet_cell.y)+Vector2(0,-20)*s
+	var torso := head.lerp(feet,0.28)
+	draw_line(torso,feet,Color("97b8b1"),14*s,true)
+	draw_circle(head,6*s,Color("e1b58a"))
+	draw_arc(head+Vector2(0,-1)*s,5.5*s,PI,TAU,12,Color("625346"),3*s,true)
+	var target := {"type":"member","id":member.id,"name":member.name,"owner":family.id}
+	var box := Rect2(head,Vector2.ZERO).expand(feet).grow(9*s)
+	_hit_regions.append({"polygon":PackedVector2Array([box.position,Vector2(box.end.x,box.position.y),box.end,Vector2(box.position.x,box.end.y)]),"target":target})
+	var float_y := 0.0 if Preferences.values.reduced_motion else sin(_time*1.5)*2.0
+	draw_string(_font,head+Vector2(8,-15+float_y)*s,"z z",HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("f5efd8"))
+	if str(member.id)==selected_member:
+		draw_arc(head,10*s,0,TAU,24,Color("fff2bd"),1.5*s,true)
+		var width := _font.get_string_size(str(member.name),HORIZONTAL_ALIGNMENT_LEFT,-1,13).x
+		draw_string(_font,feet+Vector2(-width*0.5,20*s),str(member.name),HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("263f36"))
+
+func _activity_prop(p: Vector2,kind: String,s: float,reduced: bool) -> void:
+	match kind:
+		"bookshelf":
+			_poly([p+Vector2(-10,-20)*s,p+Vector2(0,-17)*s,p+Vector2(0,-9)*s,p+Vector2(-10,-12)*s],Color("ead9aa"),Color("8b6950"))
+			_poly([p+Vector2(0,-17)*s,p+Vector2(10,-20)*s,p+Vector2(10,-12)*s,p+Vector2(0,-9)*s],Color("faf1d6"),Color("8b6950"))
+		"table", "fridge":
+			draw_rect(Rect2(p+Vector2(4,-20)*s,Vector2(7,7)*s),Color("f4e5cb"))
+			draw_arc(p+Vector2(12,-17)*s,3*s,-PI*0.5,PI*0.5,10,Color("f4e5cb"),1.5*s,true)
+			if kind=="table": draw_line(p+Vector2(7,-24)*s,p+Vector2(8,-29)*s,Color(1,0.98,0.86,0.7),1*s,true)
+		"plant":
+			draw_circle(p+Vector2(9,-17)*s,5*s,Color("719b91"))
+			draw_line(p+Vector2(12,-18)*s,p+Vector2(19,-13)*s,Color("719b91"),3*s,true)
+			for index in range(3):
+				var fall := float(index)*4.0 if reduced else fmod(_time*14+float(index)*5,15.0)
+				draw_circle(p+Vector2(18+index*2,-12+fall)*s,1*s,Color("cee6dd"))
+		"shower":
+			for index in range(4):
+				var fall := float(index)*5.0 if reduced else fmod(_time*22+index*9,30.0)
+				draw_line(p+Vector2(-13+index*8,-40+fall)*s,p+Vector2(-14+index*8,-35+fall)*s,Color(0.72,0.9,0.94,0.8),1.3*s,true)
+		"chat":
+			var q := p+Vector2(18,-45)*s
+			draw_style_box(preload("res://game/style.gd").box(Color("f2e7c7"),5),Rect2(q,Vector2(27,16)*s))
+			for index in range(3):
+				var rise := 0.0 if reduced else sin(_time*4.0+index)*1.2
+				draw_circle(q+Vector2(6+index*7,8+rise)*s,1.5*s,Color("57736a"))
+		"tv":
+			var q := p+Vector2(13,-43)*s
+			draw_style_box(preload("res://game/style.gd").box(Color("304b4f"),3),Rect2(q,Vector2(18,14)*s))
+			draw_line(q+Vector2(5,5)*s,q+Vector2(14,5)*s,Color("b9d69f"),2*s,true)

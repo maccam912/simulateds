@@ -122,3 +122,23 @@ and exports finished. Push workflows now let an active run finish while retainin
 the newest pending run; pull-request revisions still cancel superseded work.
 This follows [GitHub's documented concurrency behavior](https://docs.github.com/en/actions/concepts/workflows-and-actions/concurrency).
 The change also gives completed builds a chance to save their native caches.
+
+## 2026-11-03 · Residents look busy
+
+Residents interpolate along walkable routes between accepted positions, including
+corners omitted by sparse network snapshots. Walking has a small stride, sofas
+and beds have resting poses, and reading, tea, gardening, showers, television,
+and conversations have distinct props. Reduced motion makes these effects still.
+Furnishing details now rotate with their footprints; sleeping residents remain
+clickable at the visible head and blanket in all four orientations.
+
+Validation: twelve local suites passed, including interpolation around a wall,
+teleports, lot changes, and preservation of authoritative state. Graphical activity
+captures passed for every bed rotation, conversations, other activity props, and
+reduced motion. The earlier furniture-moving checkpoint also completed all four
+CI build/export jobs: Linux, macOS, Windows, and Android. These are build results,
+not device playtests.
+
+Fresh assessment: residents communicate what they are doing more clearly, but
+the neighborhood still looks identical at midnight and noon. Next: restrained
+day/night lighting with warm home lights and a readable construction workspace.
