@@ -9,6 +9,7 @@ const Style = preload("res://game/style.gd")
 const Catalog = preload("res://game/catalog.gd")
 const WallArt = preload("res://game/wall_art.gd")
 const MealPanel = preload("res://game/meal_panel.gd")
+const TravelPanel = preload("res://game/travel_panel.gd")
 const Meals = preload("res://game/meals.gd")
 const WallArtPanel = preload("res://game/wall_art_panel.gd")
 const Paintings = preload("res://game/paintings.gd")
@@ -48,6 +49,8 @@ var lot_subtitle: Label
 var mode_button: Button
 var visit_button: Button
 var home_button: Button
+var together_button: Button
+var travel_panel: VBoxContainer
 var family_box: VBoxContainer
 var household_button: Button
 var mail_button: Button
@@ -366,6 +369,12 @@ func _build_ui() -> void:
 	var travel_row := HBoxContainer.new(); actions.add_child(travel_row)
 	visit_button = _button("Visit lot",_visit); visit_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; travel_row.add_child(visit_button)
 	home_button = _button("Go home",_go_home); home_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; travel_row.add_child(home_button)
+	together_button=_button("Together…",func(): _context_page="travel"; _refresh(); _show_tray(context_panel,true)); together_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; travel_row.add_child(together_button)
+	together_button.tooltip_text="Choose household residents to visit this lot together, or bring them home."
+	travel_row.add_theme_constant_override("separation",4)
+	for button: Button in [visit_button,home_button,together_button]:
+		button.add_theme_font_size_override("font_size",12); _compact_control(button); button.custom_minimum_size.y=36
+
 	var social_row := HBoxContainer.new(); actions.add_child(social_row)
 	people_button=_button("People",_open_people); people_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; social_row.add_child(people_button)
 	var cancel := _button("Cancel actions",func(): _send({"type":"cancel","member_id":selected_member})); cancel.add_theme_font_size_override("font_size",12); social_row.add_child(cancel)
@@ -533,8 +542,9 @@ func _refresh() -> void:
 	funds_label.text="§ %s" % _money(int(state.get("lots",{}).get(family.get("home_lot",""),{}).get("funds",0)))
 	mode_button.disabled=not mine or Session.role=="joining"
 	mode_button.text="Finish building" if building else "Build & buy"
-	visit_button.disabled=mine or building or member.is_empty() or str(lot.get("owner","")).is_empty()
+	visit_button.disabled=mine or building or member.is_empty() or str(lot.get("owner","")).is_empty() or member.get("lot_id")==viewed_lot
 	home_button.disabled=member.is_empty() or str(member.get("lot_id",""))==str(family.get("home_lot",""))
+	together_button.disabled=family.is_empty() or Session.role=="joining" or bool(state.lots.get(family.get("home_lot",""),{}).get("building",false))
 	var minutes := int(float(state.get("day_minutes",480)))
 	var day := int(state.get("day",1))
 	clock_label.text="DAY %02d  ·  %02d:%02d" % [day,int(minutes%1440/60),minutes%60]
@@ -638,6 +648,7 @@ func _refresh() -> void:
 		painting_panel.display_pending=not _art_entry.is_empty()
 		painting_panel.refresh(viewed_lot,_selected_object,selected_member)
 	if _context_page=="meal" and not build_mode and is_instance_valid(meal_panel): meal_panel.refresh(viewed_lot,_selected_object,selected_member)
+	if _context_page=="travel" and not build_mode and is_instance_valid(travel_panel): travel_panel.refresh(viewed_lot,selected_member)
 	if _context_page=="garden" and not build_mode and is_instance_valid(garden_panel): garden_panel.refresh(viewed_lot,_selected_object,selected_member)
 	help_label.text="Click to place · " + Preferences.action_label("rotate") + " rotates · Ctrl/Cmd+Z undoes" if building and mine else "Click a need to care for it · Click the ground to walk"
 	if building and mine and selected_tool=="room": help_label.text="Click two opposite corners · " + Preferences.action_label("rotate") + " changes door side · Escape cancels"
@@ -848,6 +859,10 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 		activity_label.text="At the easel"
 		painting_panel=PaintingPanel.new(); tools_box.add_child(painting_panel); painting_panel.command_requested.connect(_send); painting_panel.display_requested.connect(_open_art)
 		painting_panel.hobbies_requested.connect(func(): _open_hobbies("painting"))
+		context_box.add_child(_button("‹ Activities",func(): _context_page="activities"; _refresh()))
+	elif _context_page=="travel":
+		activity_label.text="Travel together"
+		travel_panel=TravelPanel.new(); tools_box.add_child(travel_panel); travel_panel.command_requested.connect(_send)
 		context_box.add_child(_button("‹ Activities",func(): _context_page="activities"; _refresh()))
 	elif _context_page=="meal":
 		activity_label.text="At the dining table"

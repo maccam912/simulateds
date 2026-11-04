@@ -107,6 +107,11 @@ keeping existing plans, reusing current automatic portions, skipping absent
 residents, and reserving food atomically. It works on visits without directing
 another player's family.
 
+Households can now travel together through an explicit resident roster. The
+preview shows locations and planned counts, cancels only chosen travellers' work,
+keeps residents already at the destination untouched, and uses separate entrance
+spaces. Changed plans or a closed destination reject the complete group.
+
 ## 1. Make homebuilding dependable
 
 - Edge-based walls, room detection, door orientation, and roofs. Wall-mounted

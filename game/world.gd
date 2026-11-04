@@ -24,6 +24,7 @@ const ArtAdmiration = preload("res://game/art_admiration.gd")
 const WallArt = preload("res://game/wall_art.gd")
 const Paintings = preload("res://game/paintings.gd")
 const Meals = preload("res://game/meals.gd")
+const HouseholdTravel = preload("res://game/household_travel.gd")
 const Gardens = preload("res://game/gardens.gd")
 const ActivityLog = preload("res://game/activity_log.gd")
 const HouseholdProfile = preload("res://game/household_profile.gd")
@@ -202,6 +203,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 	if member.is_empty():
 		return _result(false, "You can only direct your own family.")
 	if type=="meal_call": return _call_meal(profile_id,command)
+	if type=="travel_household": return _travel_household(profile_id,command)
 	if type == "renew_wishes":
 		if not Wishes.can_renew(member.wishes,int(state.day)):
 			return _result(false,"Finish these wishes first. A fresh set is available on the following day.")
@@ -310,9 +312,11 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 			return _result(false, "This home is under construction. Visit again soon.")
 		if type == "visit" and str(destination.owner).is_empty():
 			return _result(false, "Nobody lives here yet.")
+		if member.lot_id==destination.id: return _result(true,"Already at "+str(destination.name)+". Your plan continues.")
 		_clear_member(member,"Taking it easy","Travelled to "+str(destination.name)+".")
 		member.lot_id = destination.id
-		var entry := _free_entry(destination)
+		member.next_action+=1
+		var entry := _free_entry(destination,str(member.id))
 		member.x = entry.x
 		member.y = entry.y
 		_event(str(member.name) + " arrived at " + str(destination.name) + ".")
@@ -407,6 +411,56 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 	if member.task.is_empty():
 		_start_next(member, lot)
 	return _result(true, "Action queued.")
+
+func travel_option(profile_id: String,lot_id: String,travelers: Variant) -> Dictionary:
+	var result := {"ok":false,"message":"Choose household residents to travel.","orders":[],"places":[]}
+	var family: Dictionary=state.families.get(profile_id,{})
+	var lot: Dictionary=state.lots.get(lot_id,{})
+	if family.is_empty() or lot.is_empty(): return result
+	if lot.building or state.lots[family.home_lot].building:
+		result.message="Finish construction before travelling."; return result
+	if str(lot.owner).is_empty(): result.message="Nobody lives here yet."; return result
+	if not travelers is Array or travelers.is_empty() or travelers.size()>family.members.size(): return result
+	var seen := {}
+	for id: Variant in travelers:
+		if not id is String or seen.has(id) or _member(family,id).is_empty(): return result
+		seen[id]=true
+	for member: Dictionary in family.members:
+		if not seen.has(member.id): continue
+		if member.lot_id==lot_id: result.message=str(member.name)+" is already here. Review who is leaving."; return result
+		if int(member.next_action)>=9007199254740000: result.message="This resident's action counter is exhausted."; return result
+		result.orders.append(HouseholdTravel.stamp(member))
+	result.places=_arrival_places(lot,result.orders.size())
+	if result.places.size()!=result.orders.size(): result.message="Not enough clear arrival space by the entrance."; return result
+	result.ok=true; result.message="Travel stops their current actions and clears their plans."
+	return result
+
+func _travel_household(profile_id: String,command: Dictionary) -> Dictionary:
+	if not command.get("lot_id") is String: return _result(false,"Choose a destination for this household.")
+	var option := travel_option(profile_id,str(command.lot_id),command.get("travelers"))
+	if not option.ok: return _result(false,str(option.message))
+	if not HouseholdTravel.matches(command.get("orders"),option.orders): return _result(false,"Someone's location or plan changed. Review who is leaving and try again.")
+	# All ownership, plans and distinct arrival places are checked before anyone moves.
+	var lot: Dictionary=state.lots[command.lot_id]; var names: PackedStringArray=[]
+	for index in range(option.orders.size()):
+		var member := _member(state.families[profile_id],str(option.orders[index].member_id))
+		_clear_member(member,"Taking it easy","Travelled to "+str(lot.name)+".")
+		member.lot_id=lot.id; member.x=option.places[index].x; member.y=option.places[index].y; member.next_action+=1
+		names.append(str(member.name))
+	_event(", ".join(names)+" arrived at "+str(lot.name)+".")
+	return _result(true,"Arrived together at "+str(lot.name)+"." if names.size()>1 else str(names[0])+" arrived at "+str(lot.name)+".")
+
+func _arrival_places(lot: Dictionary,count: int,ignore_member: String="") -> Array[Vector2i]:
+	var occupied := {}; var result: Array[Vector2i]=[]
+	for family: Dictionary in state.families.values():
+		for member: Dictionary in family.members:
+			if member.lot_id==lot.id and member.id!=ignore_member: occupied[_position(member)]=true
+	# The entrance flood is ordered nearest-first and never puts someone in a sealed room.
+	for cell: Vector2i in BuildAccess.reachable_from(BuildAccess.obstacles(lot),BuildAccess.GATE):
+		if occupied.has(cell): continue
+		result.append(cell)
+		if result.size()==count: break
+	return result
 
 func meal_call_option(profile_id: String,member_id: String,lot_id: String,table_id: Variant) -> Dictionary:
 	var result := {"ok":false,"message":"Choose a dining table.","orders":[],"rows":[],"batch":0}
@@ -1419,18 +1473,20 @@ func _send_home(family: Dictionary, member: Dictionary, reason: String = "Househ
 	var lot: Dictionary = state.lots[family.home_lot]
 	_clear_member(member,"Taking it easy",reason)
 	member.lot_id = family.home_lot
-	var entry := _free_entry(lot)
+	member.next_action+=1
+	var entry := _free_entry(lot,str(member.id))
 	member.x = entry.x
 	member.y = entry.y
 
-func _free_entry(lot: Dictionary) -> Vector2i:
-	if _walkable(lot, Vector2i(8,14)):
-		return Vector2i(8,14)
-	for y in range(GRID_SIZE - 1, -1, -1):
+func _free_entry(lot: Dictionary,ignore_member: String="") -> Vector2i:
+	var places := _arrival_places(lot,1,ignore_member)
+	if not places.is_empty(): return places[0]
+	# Forced returns must also recover legacy homes with a blocked entrance.
+	for y in range(GRID_SIZE-1,-1,-1):
 		for x in range(GRID_SIZE):
-			if _walkable(lot, Vector2i(x,y)):
-				return Vector2i(x,y)
-	return Vector2i(8,14)
+			var cell:=Vector2i(x,y)
+			if _walkable(lot,cell) and not _resident_at(str(lot.id),cell): return cell
+	return BuildAccess.GATE
 
 func _activity_title(member: Dictionary, task: Dictionary) -> String:
 	if task.has("title"): return str(task.title)

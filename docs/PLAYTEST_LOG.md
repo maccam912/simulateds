@@ -1875,3 +1875,46 @@ continuation. The headless run exposed pointer-exit events clearing a keyboard-
 focused roster; focus now independently keeps the preview visible. Both native
 meal-call layouts, the compact meal-wish playthrough, and editor import passed
 after that correction.
+
+
+## Visiting with the household
+
+The meal-call review identified another repetitive action: taking both residents
+to a neighbor required two selections and visits. Together… now opens a roster
+for the viewed lot. It defaults to household residents who are elsewhere, allows
+a subset, and shows location and planned activity counts before the explicit
+Visit/Go home action. The cancellation rule is visible beside the button. People
+already there keep their plans and are shown as unavailable to travel again.
+
+Implementation review found that older arrivals all used the same entrance tile,
+which could hide one resident behind another. Group travel now reserves distinct
+entrance-connected spaces before moving anyone. Single visits and construction/
+disconnection recalls use the same nearest-first placement. Repeating an ordinary
+visit to one's current lot now leaves the plan intact, and its HUD button is
+disabled. The group binds to displayed origins and plans and rejects atomically
+when those change; a return trip does not revive an old request.
+
+Both native layouts passed at 1440×900 and 1280×720 / 125% UI scale. Injected input
+sent a busy pair to Willow House, returned only Alex while Robin kept a planned
+walk, and rejoined Robin without altering that walk. Violet entering construction
+recalled both visitors to separate spaces. Long names and early/unrelated
+acknowledgements passed. Reviewed captures include `build/travel-preview-compact.png`,
+`build/travel-arrived-compact.png`, and `build/travel-return-one-compact.png`.
+The arrival review led to an Everyone is here state instead of Visit · 0, with
+readable disabled names and the now-irrelevant cancellation rule hidden.
+
+Fresh assessment: meals and travel now support household-level choices without
+taking control of a neighbor's residents. Choosing where to visit still gives
+little information: Neighborhood labels a lot Neighbor without showing who is
+actually there or whether its player is present. Live presence information in
+that existing tray is a useful next discovery improvement, especially for the
+mix of synchronous visits and absent households. This is proposed next work.
+
+Final regression passed all 88 local suites, the original Iroh scenario, painting/
+gifting Iroh scenario, meal Iroh scenario, and dedicated-server startup. The meal
+scenario now sends both guests through one acknowledged household-travel command,
+rejects its duplicate, and verifies distinct arrival positions before shared
+dining. Final focused checks reject a missing destination without mutation.
+Native and headless input checks directly select both arriving residents by their
+bodies, confirming the entrance-spacing improvement is usable. The hosted Intel
+macOS CI result remains pending; no platform export success is inferred here.

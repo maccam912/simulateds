@@ -114,7 +114,16 @@ func _client(index: String) -> void:
 	else:
 		var info: Dictionary=await _wait_flag(".meal-ready"); home=str(info.home); id=str(info.table)
 		await _wait_servings(home,id,4)
-		for resident: String in [member,housemate]: await _command({"type":"visit","lot_id":home,"member_id":resident})
+		var option: Dictionary=session.world.travel_option(identity,home,[member,housemate])
+		assert(option.ok and option.orders.size()==2)
+		var trip := {"type":"travel_household","lot_id":home,"member_id":member,"travelers":[member,housemate],"orders":option.orders.duplicate(true)}
+		await _command(trip); await _command(trip,false)
+		for attempt in range(60):
+			if session.state.families[identity].members.all(func(resident): return resident.lot_id==home): break
+			await create_timer(0.1).timeout
+		var arrived: Array=session.state.families[identity].members
+		assert(arrived.all(func(resident): return resident.lot_id==home) and Vector2i(arrived[0].x,arrived[0].y)!=Vector2i(arrived[1].x,arrived[1].y))
+
 		await _meal(home,id,member,"prepare","sandwiches",false)
 		await _meal(home,id,member,"clear","",false)
 		_flag(".guests-arrived")

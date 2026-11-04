@@ -999,3 +999,29 @@ caches. Universal ARM64/Intel compilation and export verification remain enabled
 local native playtests exercise Apple Silicon. `actionlint` and diff checks pass.
 The new hosted job and export result are pending at this checkpoint. Test-log
 artifacts now include the local suites and painting/meal Iroh scenarios.
+
+
+## Household travel and separate arrivals
+
+Focused `household_travel` checks pass ownership, malformed/missing destinations,
+selection subsets, duplicate/stale calls, JSON numeric normalization, exact plan
+cancellation/history, construction, occupied entrances, insufficient group space,
+return-trip invalidation, ordinary visits, forced recalls, and runtime snapshots.
+The initial focused world, integration, access, meals, and meal-call checks pass.
+
+Native `household_travel_ui` passes at 1440×900 and 1280×720 / 125% UI scale. It
+reviews/cancels a pair's work, visits together, returns one resident, rejoins a
+busy housemate without changing their plan, and observes construction recall.
+It checks long names, visible cancellation/button bounds, exact acknowledgements,
+and accepted state before ending pending feedback. Final captures were reviewed
+after polishing the everyone-here state. Human-family and physical-device checks
+remain separate from this injected-input evidence.
+
+Final regression passed all 88 local suites, the original Iroh scenario, painting/
+gifting Iroh scenario, meal Iroh scenario, and dedicated-server startup. The meal
+scenario now sends both guests through one acknowledged household-travel command,
+rejects its duplicate, and verifies distinct arrival positions before shared
+dining. Final focused checks reject a missing destination without mutation.
+Native and headless input checks directly select both arriving residents by their
+bodies, confirming the entrance-spacing improvement is usable. The hosted Intel
+macOS CI result remains pending; no platform export success is inferred here.

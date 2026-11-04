@@ -107,6 +107,13 @@ or shell expressions.
   suggestions, planned activities, and explanations for unavailable furnishings.
 - Open **Neighborhood** to choose a lot. **Visit lot** sends the
   selected resident there; **Go home** returns them to their own lot.
+  **Together…** opens a travel roster for the viewed lot. Choose one or both
+  household residents, review their current locations and planned activity
+  counts, then **Visit** or **Go home** together. Travel stops the chosen
+  residents' current actions and clears their plans. Anyone already there keeps
+  their plan, and unchecked housemates stay put. Arrivals use separate clear
+  spaces near the entrance; stale plans or a closed destination reject the group
+  before anyone moves.
 - On your home lot, choose **Build & buy**, choose a tool or furnishing, then click a
   tile. **Sell** removes something; **R** rotates placement. **Move** rearranges
   furniture for free. Choose

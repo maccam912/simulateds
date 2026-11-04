@@ -117,3 +117,14 @@ dictionaries. `Meals.matches_call` tolerates JSON integer representation without
 accepting fractional counters. The UI waits for the exact acknowledgement and
 accepted counters for every participant, including when the selected resident
 was skipped. No new persisted group or meal schema is needed.
+
+
+`HouseholdTravel.stamp/matches` binds a travel choice to each owned resident's
+origin, current action, queued IDs, and next action counter. `World.travel_option`
+validates the complete selected group and allocates distinct entrance-connected
+arrival cells before cancellation or movement. The `travel_household` command
+publishes all arrivals and records normal activity cancellations. Travel and
+forced returns advance the existing action counter so an old choice cannot be
+revived by a return trip. No new save fields are required. Ordinary arrivals and
+construction recalls use the same nearest-first entrance flood; forced returns
+retain a fallback for legacy homes with blocked entrances.
