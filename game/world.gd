@@ -5,6 +5,8 @@ const Catalog = preload("res://game/catalog.gd")
 const BuildRules = preload("res://game/build_rules.gd")
 const RoomPlan = preload("res://game/room_plan.gd")
 const Wishes = preload("res://game/wishes.gd")
+const Appearance = preload("res://game/appearance.gd")
+const HouseholdProfile = preload("res://game/household_profile.gd")
 const GRID_SIZE := 16
 const SCHEMA := 1
 const MAX_FAMILIES := 4
@@ -58,8 +60,10 @@ func ensure_family(profile_id: String, display_name: String) -> String:
 			for need: String in NEEDS:
 				needs[need] = 70.0 + index * 8.0
 			members.append({"id":profile_id + "_" + str(index + 1), "name":clean_name if index == 0 else "Robin", "lot_id":lot_id, "x":7 + index, "y":7, "needs":needs, "action":"Taking it easy", "queue":[], "task":{}, "walk_clock":0.0, "idle_clock":float(index) * 2.0, "autonomy":true, "next_action":1})
-		for member: Dictionary in members: member.wishes=Wishes.create(str(member.id),int(state.day))
-		state.families[profile_id] = {"id":profile_id, "name":clean_name + " household", "home_lot":lot_id, "online":false, "members":members}
+		for member: Dictionary in members:
+			member.wishes=Wishes.create(str(member.id),int(state.day))
+			member.appearance=Appearance.defaults(member)
+		state.families[profile_id] = {"id":profile_id, "name":clean_name + " household", "home_lot":lot_id, "online":false, "identity_revision":0, "members":members}
 		_event(clean_name + " moved into " + str(lot.name) + ".")
 		return lot_id
 	return ""
@@ -87,12 +91,14 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 	if not type is String:
 		return _result(false, "Unknown action.")
 	var family: Dictionary = state.families[profile_id]
+	if type == "household_edit": return HouseholdProfile.edit(family,command)
 	if type == "rename_family":
 		var value: Variant = command.get("name")
 		if not value is String or value.strip_edges().is_empty() or value.length() > 24:
 			return _result(false, "Choose a name between 1 and 24 characters.")
 		var clean_name: String = value.strip_edges()
-		family.name = clean_name + " household"
+		if family.name==str(family.members[0].name)+" household": family.name = clean_name + " household"
+		family.identity_revision=int(family.get("identity_revision",0))+1
 		family.members[0].name = clean_name
 		return _result(true, "Welcome home, " + clean_name + ".")
 	var lot_id: Variant = command.get("lot_id", family.home_lot)
@@ -758,7 +764,10 @@ func _normalize_numbers() -> void:
 			for key: String in ["x", "y", "rotation"]:
 				object[key] = int(object[key])
 	for family: Dictionary in state.families.values():
+		family.identity_revision=int(family.get("identity_revision",0))
 		for member: Dictionary in family.members:
+			if not member.has("appearance"): member.appearance=Appearance.defaults(member)
+			for key: String in member.appearance: member.appearance[key]=int(member.appearance[key])
 			if not member.has("wishes"): member.wishes=Wishes.create(str(member.id),int(state.day))
 			Wishes.normalize(member.wishes)
 			member.autonomy = member.get("autonomy", true)
@@ -844,11 +853,13 @@ func _valid_state(data: Dictionary) -> bool:
 		var family: Dictionary = data.families[profile_id]
 		if family.get("id") != profile_id or not family.get("name") is String or str(family.name).length() > 64 or not data.lots.has(family.get("home_lot")) or data.lots[family.home_lot].owner != profile_id or not family.get("online") is bool or not family.get("members") is Array or family.members.size() != 2:
 			return false
+		if not _integer(family.get("identity_revision",0)) or float(family.get("identity_revision",0))<0 or float(family.get("identity_revision",0))>9007199254740000: return false
 		for member: Variant in family.members:
 			if not member is Dictionary or not member.get("id") is String or str(member.id).length() > 160 or members_seen.has(member.id) or not member.get("name") is String or str(member.name).length() > 32 or not data.lots.has(member.get("lot_id")) or not _valid_coord(member.get("x")) or not _valid_coord(member.get("y")) or not member.get("needs") is Dictionary:
 				return false
 			if not member.get("autonomy", true) is bool or not _integer(member.get("next_action", 1)) or float(member.get("next_action", 1)) < 1 or float(member.get("next_action", 1)) > 9007199254740000:
 				return false
+			if member.has("appearance") and not Appearance.valid(member.appearance): return false
 			if member.has("wishes") and not Wishes.valid(member.wishes,int(data.day)): return false
 			members_seen[member.id] = true
 			if not member.get("action") is String or str(member.action).length() > 100 or not member.get("queue") is Array or member.queue.size() > MAX_QUEUE or not member.get("task") is Dictionary or not _number(member.get("walk_clock")) or not _number(member.get("idle_clock")):

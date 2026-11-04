@@ -17,6 +17,27 @@ func _run() -> void:
 	assert(app.page=="main" and session.menu_paused,"Startup opens main menu with solo simulation paused")
 	app.show_game()
 	assert(app.page=="game" and not session.menu_paused,"Continue resumes simulation")
+	app.game.household_requested.emit()
+	assert(app.page=="household" and session.menu_paused,"Household editor opens over the world and pauses solo life")
+	var family: Dictionary=session.state.families[session.profile_id]
+	var before: Dictionary=family.duplicate(true)
+	app.household_editor.family_name.text="The Gardeners"
+	app.household_editor.member_names[1].text="Violet"
+	app.household_editor._choose(1,"shirt",3)
+	assert(family==before,"Editor previews do not mutate the household")
+	await _key(KEY_ESCAPE)
+	assert(app.page=="game","Escape closes the household editor")
+	assert(family.name==before.name and family.members[1].name==before.members[1].name and family.members[1].appearance==before.members[1].appearance,"Cancel discards identity preview changes while simulation resumes")
+	app.open_household()
+	app.household_editor.family_name.text="The Gardeners"
+	app.household_editor.member_names[1].text="Violet"
+	app.household_editor._choose(1,"shirt",3)
+	app._apply_household()
+	assert(app.page=="game" and family.name=="The Gardeners" and family.members[1].name=="Violet" and family.members[1].appearance.shirt==3,"Apply updates both identity and appearance through the command path")
+	app.open_household(); app.household_editor.member_names[0].text=""
+	app._apply_household()
+	assert(app.page=="household" and not app.household_apply.disabled and not app.message_label.text.is_empty(),"Invalid names leave an editable form with feedback")
+	app._back()
 	await _key(KEY_ESCAPE)
 	assert(app.page=="pause" and session.menu_paused,"Escape opens pause")
 	app.open_settings()

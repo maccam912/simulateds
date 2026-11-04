@@ -95,6 +95,16 @@ func _client(index: String) -> void:
 		if family.name == "Host family household":
 			host_home = family.home_lot
 	assert(not host_home.is_empty(), "Host family missing")
+	var identity_members: Array=[]
+	for resident: Dictionary in session.state.families[identity].members:
+		identity_members.append({"id":resident.id,"name":"Resident "+index+" "+str(identity_members.size()+1),"appearance":{"skin":4,"hair":2,"shirt":3,"style":1}})
+	var identity_command := {"type":"household_edit","name":"Gardeners "+index,"revision":session.state.families[identity].get("identity_revision",0),"members":identity_members}
+	await _command(identity_command)
+	for _attempt in range(50):
+		if session.state.families[identity].name=="Gardeners "+index: break
+		await create_timer(0.1).timeout
+	assert(session.state.families[identity].members[1].appearance.shirt==3,"Appearance was not replicated")
+	await _command(identity_command,false)
 	# Ownership is enforced on the host, even for syntactically valid commands.
 	await _command({"type": "build_begin", "lot_id": host_home}, false)
 	await _command({"type": "build_begin", "lot_id": home})
@@ -170,6 +180,7 @@ func _client(index: String) -> void:
 	await create_timer(0.7).timeout
 	await _connect()
 	assert(session.home_lot() == home, "Reconnect changed lot ownership")
+	assert(session.state.families[identity].name=="Gardeners "+index and session.state.families[identity].members[1].appearance.style==1,"Reconnect lost household identity")
 	assert([14,1] in session.state.lots[home].floors and [14,2] in session.state.lots[home].doors,"Reconnect lost the new room")
 	assert(int(session.world._object(session.state.lots[home],moved_id).x)==9, "Reconnect lost furnishing move")
 	assert(session.state.families[identity].members[0].wishes.journal.size()==1,"Reconnect lost wish journal")

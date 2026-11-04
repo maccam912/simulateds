@@ -92,7 +92,7 @@ if __name__ == "__main__":
     run(binary, ["--editor", "--quit-after", "180", "--max-fps", "60"], timeout=180)
     work = ROOT / "build" / "checks"
     work.mkdir(parents=True, exist_ok=True)
-    for script, marker in [("world", "WORLD_PASS"), ("build_history", "BUILD_HISTORY_PASS"), ("rooms", "ROOMS_PASS"), ("wishes", "WISHES_PASS"), ("presentation", "PRESENTATION_PASS"), ("integration_world", "INTEGRATION_WORLD_PASS"), ("protocol", "PROTOCOL_PASS"), ("persistence", "PERSISTENCE_PASS"), ("ui_flow", "UI_FLOW_PASS"), ("preferences", "PREFERENCES_PASS"), ("save_debug", "SAVE_DEBUG_PASS"), ("console", "CONSOLE_PASS"), ("app_flow", "APP_FLOW_PASS")]:
+    for script, marker in [("world", "WORLD_PASS"), ("build_history", "BUILD_HISTORY_PASS"), ("rooms", "ROOMS_PASS"), ("household", "HOUSEHOLD_PASS"), ("wishes", "WISHES_PASS"), ("presentation", "PRESENTATION_PASS"), ("integration_world", "INTEGRATION_WORLD_PASS"), ("protocol", "PROTOCOL_PASS"), ("persistence", "PERSISTENCE_PASS"), ("ui_flow", "UI_FLOW_PASS"), ("preferences", "PREFERENCES_PASS"), ("save_debug", "SAVE_DEBUG_PASS"), ("console", "CONSOLE_PASS"), ("app_flow", "APP_FLOW_PASS")]:
         if not (ROOT / "tests" / f"{script}.gd").is_file():
             raise RuntimeError(f"Required test script missing: tests/{script}.gd")
         output = run(binary, ["--script", f"res://tests/{script}.gd", "--log-file", str(work / f"{script}-engine.log"),

@@ -2,6 +2,7 @@ extends Control
 
 signal pause_requested
 signal save_menu_requested
+signal household_requested
 
 const Style = preload("res://game/style.gd")
 const Catalog = preload("res://game/catalog.gd")
@@ -22,6 +23,7 @@ var mode_button: Button
 var visit_button: Button
 var home_button: Button
 var family_box: VBoxContainer
+var household_button: Button
 var lots_box: VBoxContainer
 var tools_box: VBoxContainer
 var context_box: VBoxContainer
@@ -160,6 +162,7 @@ func _build_ui() -> void:
 	lot_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	location_row.add_child(lot_title)
 	lot_subtitle = _label("Your household",12,Style.MUTED)
+	lot_subtitle.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; lot_subtitle.clip_text=true
 	location_box.add_child(lot_subtitle)
 	var location_actions := HBoxContainer.new(); location_box.add_child(location_actions)
 	location_actions.add_child(_button("Neighborhood",func(): _show_tray(neighborhood_panel,not neighborhood_panel.visible)))
@@ -187,7 +190,13 @@ func _build_ui() -> void:
 	# Compact control islands float over the world, rather than enclosing it.
 	var family_panel := _hud_panel(Rect2(16,-164,200,148),Vector2(0,1))
 	var family_column := _vbox(family_panel,7)
-	family_column.add_child(_label("HOUSEHOLD",11,Style.MUTED))
+	var family_head := HBoxContainer.new(); family_column.add_child(family_head)
+	var family_label := _label("HOUSEHOLD",11,Style.MUTED); family_label.size_flags_horizontal=Control.SIZE_EXPAND_FILL; family_head.add_child(family_label)
+	household_button=_button("Edit",func(): household_requested.emit())
+	household_button.add_theme_font_size_override("font_size",11)
+	var edit_style := Style.box(Style.PANEL,3,Style.EDGE); edit_style.content_margin_top=2; edit_style.content_margin_bottom=2; edit_style.content_margin_left=8; edit_style.content_margin_right=8
+	household_button.add_theme_stylebox_override("normal",edit_style)
+	household_button.tooltip_text="Household names and appearance"; family_head.add_child(household_button)
 	family_box = _vbox(family_column,5)
 
 	var needs_panel := _hud_panel(Rect2(228,-164,600,148),Vector2(0,1))
@@ -289,6 +298,7 @@ func _refresh() -> void:
 	if member.is_empty() and not family.get("members",[]).is_empty():
 		selected_member=str(family.members[0].id); member=_member()
 	var lot: Dictionary = state.get("lots",{}).get(viewed_lot,{})
+	household_button.disabled=family.is_empty() or Session.role=="joining"
 	var mine := str(lot.get("owner",""))==str(Session.profile_id)
 	var building := bool(lot.get("building",false))
 	if not building:
@@ -307,7 +317,9 @@ func _refresh() -> void:
 	lot_view.build_object_id=_moving_object
 	lot_view.building=building and mine; lot_view.build_kind=selected_tool; lot_view.build_rotation=build_rotation
 	lot_title.text=str(lot.get("name","Linden Grove"))
-	lot_subtitle.text="Your household" if mine else ("Under construction" if building else "Neighbor’s home")
+	lot_subtitle.text=str(state.get("families",{}).get(str(lot.get("owner","")),{}).get("name","Neighbor’s home"))
+	if building: lot_subtitle.text="Under construction · "+lot_subtitle.text
+	lot_subtitle.tooltip_text=lot_subtitle.text
 	if str(lot.get("owner","")).is_empty():
 		lot_subtitle.text="Available for a new household"
 	funds_label.text="§ %s" % _money(int(state.get("lots",{}).get(family.get("home_lot",""),{}).get("funds",0)))
@@ -336,12 +348,12 @@ func _refresh() -> void:
 			if str(id)==viewed_lot:
 				b.add_theme_stylebox_override("normal",Style.box(Color("3b514b"),9,Style.GREEN))
 			lots_box.add_child(b)
-	var family_signature := selected_member+str(family.get("name",""))+str(family.get("members",[]).size())
+	var family_signature := selected_member+str(family.get("name",""))+str(family.get("identity_revision",0))+str(family.get("members",[]).size())
 	if family_signature!=_family_signature:
 		_family_signature=family_signature; _clear(family_box)
 		for resident in family.get("members",[]):
 			var b := _button(("●  " if str(resident.id)==selected_member else "○  ")+str(resident.name),func(): selected_member=str(resident.id); viewed_lot=str(resident.lot_id); _refresh())
-			b.alignment=HORIZONTAL_ALIGNMENT_LEFT; family_box.add_child(b)
+			b.alignment=HORIZONTAL_ALIGNMENT_LEFT; b.clip_text=true; b.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; b.tooltip_text=str(resident.name); family_box.add_child(b)
 	if not member.is_empty():
 		needs_title.text=str(member.name)+"  /  "+str(member.get("action","Enjoying the day"))
 		queue_label.text="Plan · %d" % (member.get("queue",[]).size() + (0 if member.get("task",{}).is_empty() else 1))

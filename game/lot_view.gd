@@ -8,6 +8,7 @@ const Catalog = preload("res://game/catalog.gd")
 const BuildRules = preload("res://game/build_rules.gd")
 const RoomPlan = preload("res://game/room_plan.gd")
 const ResidentMotion = preload("res://game/resident_motion.gd")
+const Appearance = preload("res://game/appearance.gd")
 const Daylight = preload("res://game/daylight.gd")
 var motion = ResidentMotion.new()
 var light: Dictionary = Daylight.sample(480)
@@ -440,8 +441,9 @@ func _resident(member: Dictionary, family: Dictionary,s: float) -> void:
 	draw_circle(Vector2.ZERO,9*s,Color(0.12,0.20,0.15,0.22))
 	if selected: draw_arc(Vector2.ZERO,12*s,0,TAU,32,Color("fff2bd"),2*s,true)
 	draw_set_transform(Vector2.ZERO)
-	var shirt := Color("557e8b") if str(family.id)==str(Session.profile_id) else Color("be795b")
-	if str(member.name).hash()%2==0: shirt=Color("ad9975")
+	var look := Appearance.of(member)
+	var shirt: Color=Appearance.SHIRT[int(look.shirt)]
+	var skin: Color=Appearance.SKIN[int(look.skin)]
 	if sitting:
 		draw_line(p+Vector2(-4,-16)*s,p+Vector2(-8,-9)*s,Color("424f54"),4*s,true)
 		draw_line(p+Vector2(4,-16)*s,p+Vector2(9,-9)*s,Color("424f54"),4*s,true)
@@ -449,10 +451,9 @@ func _resident(member: Dictionary, family: Dictionary,s: float) -> void:
 		draw_line(p+Vector2(-3-stride*3,-5+stride*2)*s,p+Vector2(-4,-14)*s,Color("424f54"),4*s,true)
 		draw_line(p+Vector2(3+stride*3,-5-stride*2)*s,p+Vector2(4,-14)*s,Color("424f54"),4*s,true)
 	draw_line(p+Vector2(0,-13)*s,p+Vector2(0,-24)*s+Vector2(0,bob),shirt,12*s,true)
-	draw_line(p+Vector2(-7,-23)*s,p+Vector2(-9+stride*3,-14)*s,Color("d3a27e"),3*s,true)
-	draw_line(p+Vector2(7,-23)*s,p+Vector2(9-stride*3,-14)*s,Color("d3a27e"),3*s,true)
-	draw_circle(p+Vector2(0,-31)*s+Vector2(0,bob),6*s,Color("e1b58a"))
-	draw_arc(p+Vector2(0,-32)*s,5.5*s,PI,TAU+0.4,12,Color("625346"),3*s,true)
+	draw_line(p+Vector2(-7,-23)*s,p+Vector2(-9+stride*3,-14)*s,skin,3*s,true)
+	draw_line(p+Vector2(7,-23)*s,p+Vector2(9-stride*3,-14)*s,skin,3*s,true)
+	Appearance.draw_head(self,p+Vector2(0,-31)*s+Vector2(0,bob),s,look)
 	_activity_prop(p,str(pose.get("kind","")),s,reduced)
 	if selected:
 		var q := p+Vector2(0,-47)*s
@@ -487,8 +488,7 @@ func _sleeping_resident(member: Dictionary,family: Dictionary,object: Dictionary
 	var feet := grid_point(feet_cell.x,feet_cell.y)+Vector2(0,-20)*s
 	var torso := head.lerp(feet,0.28)
 	draw_line(torso,feet,Color("97b8b1"),14*s,true)
-	draw_circle(head,6*s,Color("e1b58a"))
-	draw_arc(head+Vector2(0,-1)*s,5.5*s,PI,TAU,12,Color("625346"),3*s,true)
+	Appearance.draw_head(self,head,s,Appearance.of(member))
 	var target := {"type":"member","id":member.id,"name":member.name,"owner":family.id}
 	var box := Rect2(head,Vector2.ZERO).expand(feet).grow(9*s)
 	_hit_regions.append({"polygon":PackedVector2Array([box.position,Vector2(box.end.x,box.position.y),box.end,Vector2(box.position.x,box.end.y)]),"target":target})

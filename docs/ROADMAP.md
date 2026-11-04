@@ -43,7 +43,8 @@ understandable result. Fuzz placement and reopening around residents/visitors.
 
 ## 2. Make families expressive
 
-- Household creation, names and appearance, traits, and preferences.
+- Household creation, traits, and preferences. Names and a palette-based
+  appearance editor are implemented for both existing residents.
 - Visible action queues, interruption rules, autonomy controls, and thought icons.
 - Object reservations, shared activities, conversations, and basic relationships.
 - Sound and animation for each important action; original art pass.

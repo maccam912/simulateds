@@ -186,3 +186,27 @@ Fresh assessment: building an extra usable bedroom is now quick and affordable.
 The household itself still feels generic: the second resident is always Robin,
 and there are no appearance choices. Next: an in-game household editor for names
 and a small set of visible appearance choices, saved and synchronized normally.
+
+## 2026-11-03 · Make the household your own
+
+A household editor changes the household name, both resident names, and a small
+palette of skin, hair, clothing, and hair styles. Portraits share their head art
+with world residents. Preview changes stay local until Apply; Cancel and Escape
+discard them. Names remain readable in the compact HUD through truncation and
+tooltips. Existing saves receive appearance defaults, and changing a profile name
+no longer overwrites a custom household name.
+
+Validation: fourteen local suites and the real Iroh host/two-client checks passed.
+Tests cover atomic rejection of malformed/foreign/duplicate residents, stale
+editor revisions, palette bounds, old-save defaults, JSON round-trips, maximum
+request size, and reconnect preservation. App-flow tests cover preview, cancel,
+apply, and invalid input. They exposed LineEdit consuming Escape; the editor now
+handles that recovery key before field input. Graphical tests clicked Edit, color
+swatches, and Apply at standard size and 1280×720/125% scale, checking all palette
+choices and Apply remain on screen. The room-building checkpoint's Linux, macOS,
+Windows, and Android CI jobs also passed.
+
+Fresh assessment: the house and its residents can now feel personally chosen.
+Social play still has little memory: a visit mostly refills a bar. Next: simple
+friendships and a readable social panel so conversations and return visits build
+something lasting without penalizing absent players.

@@ -3,6 +3,7 @@ extends Control
 const Style = preload("res://game/style.gd")
 const GameScene = preload("res://game/main.tscn")
 const Console = preload("res://game/debug_console.gd")
+const HouseholdEditor = preload("res://game/household_editor.gd")
 var game: Control
 var console: Control
 var menu_root: Control
@@ -21,6 +22,9 @@ var binding_hint: Label
 var _transition: Tween
 var _confirm_action: Callable
 var _booted := false
+var household_editor: Control
+var household_apply: Button
+var _pending_household: Dictionary = {}
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -34,6 +38,9 @@ func _ready() -> void:
 	add_child(game)
 	game.pause_requested.connect(open_pause)
 	game.save_menu_requested.connect(func(): open_saves("save"))
+	game.household_requested.connect(open_household)
+	Session.action_result.connect(_household_result)
+	Session.world_changed.connect(_household_changed)
 	menu_root = Control.new()
 	add_child(menu_root)
 	menu_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -89,8 +96,8 @@ func _show_page(value: String, title: String = "", subtitle: String = "") -> voi
 	menu_root.add_child(menu_panel)
 	menu_panel.anchor_left=0.5; menu_panel.anchor_right=0.5
 	menu_panel.anchor_top=0.5; menu_panel.anchor_bottom=0.5
-	var width := 720.0 if value in ["settings","save","load"] else 440.0
-	var height := 600.0 if value in ["settings","save","load"] else 490.0
+	var width := 720.0 if value in ["settings","save","load","household"] else 440.0
+	var height := 600.0 if value in ["settings","save","load","household"] else 490.0
 	if value=="splash": height=230
 	menu_panel.offset_left=-width/2; menu_panel.offset_right=width/2
 	menu_panel.offset_top=-height/2; menu_panel.offset_bottom=height/2
@@ -148,6 +155,7 @@ func open_pause() -> void:
 	var shared:=Session.role in ["host","client","joining"]
 	_show_page("pause","Game menu" if shared else "Paused","The shared neighborhood keeps running." if shared else "Your household can wait a moment.")
 	menu_content.add_child(_button("Resume",show_game,true))
+	menu_content.add_child(_button("Household",open_household))
 	menu_content.add_child(_button("Save neighborhood",func(): open_saves("save")))
 	menu_content.add_child(_button("Load neighborhood",func(): open_saves("load")))
 	menu_content.add_child(_button("Settings",func(): open_settings()))
@@ -324,6 +332,10 @@ func _option_setting(parent: Node,key: String,title: String,values: Array,labels
 			_feedback(Preferences.last_error,false))
 
 func _input(event: InputEvent) -> void:
+	# LineEdit consumes its cancel key before unhandled input. Household Escape
+	# closes the preview even while a name field has keyboard focus.
+	if page=="household" and event is InputEventKey and event.pressed and event.keycode==KEY_ESCAPE and (console==null or not console.is_open()):
+		_back(); get_viewport().set_input_as_handled(); return
 	if page=="splash" and _booted and event is InputEventMouseButton and event.pressed:
 		show_main(); get_viewport().set_input_as_handled(); return
 	if not binding_action.is_empty() and event is InputEventKey and event.pressed and not event.echo:
@@ -418,3 +430,53 @@ func _focus_menu() -> void:
 		if child is Button and not child.disabled:
 			child.grab_focus()
 			return
+
+func _household_context() -> String:
+	return str(Session.role)+":"+str(Session.profile_id)+":"+str(game._family().get("home_lot",""))
+
+func open_household() -> void:
+	var family: Dictionary=game._family()
+	if family.is_empty() or Session.role=="joining": return
+	previous_page="pause" if page=="pause" else "game"
+	_pending_household.clear()
+	_show_page("household","Your household","Give your residents a name and a look of their own.")
+	household_editor=HouseholdEditor.new(); menu_content.add_child(household_editor)
+	household_editor.setup(family,_household_context())
+	var space := Control.new(); space.size_flags_vertical=Control.SIZE_EXPAND_FILL; menu_content.add_child(space)
+	var actions := HBoxContainer.new(); menu_content.add_child(actions)
+	household_apply=_button("Apply changes",_apply_household,true); actions.add_child(household_apply)
+	actions.add_child(_button("Cancel",_back))
+	_message_area()
+	household_editor.family_name.grab_focus()
+
+func _apply_household() -> void:
+	if page!="household" or not _pending_household.is_empty(): return
+	if household_editor.context_key!=_household_context():
+		_feedback("The session changed. Reopen the household editor.",false); return
+	_pending_household=household_editor.payload()
+	household_editor.set_pending(true); household_apply.disabled=true
+	message_label.text="Applying changes…"
+	Session.command(_pending_household.duplicate(true))
+	_household_changed()
+
+func _household_result(message: String) -> void:
+	if page!="household" or _pending_household.is_empty(): return
+	if not Session.last_action_ok:
+		_pending_household.clear(); household_editor.set_pending(false); household_apply.disabled=false
+		_feedback(message,false)
+
+func _household_changed() -> void:
+	if page!="household" or _pending_household.is_empty(): return
+	var family: Dictionary=game._family()
+	if household_editor.context_key!=_household_context(): return
+	if int(family.get("identity_revision",0))<=int(_pending_household.revision) or str(family.get("name",""))!=str(_pending_household.name).strip_edges(): return
+	for expected: Dictionary in _pending_household.members:
+		var found := false
+		for member: Dictionary in family.get("members",[]):
+			if member.id==expected.id and member.name==str(expected.name).strip_edges() and member.get("appearance",{})==expected.appearance: found=true
+		if not found: return
+	_pending_household.clear()
+	Soundscape.play_ui("confirm")
+	_back()
+	game._refresh()
+	game._notice("Household updated.")

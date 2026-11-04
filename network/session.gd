@@ -490,7 +490,7 @@ func command(intent: Dictionary) -> void:
 		_emit_action(bool(result.get("ok", false)), str(result.get("message", "")))
 		if result.get("ok", false):
 			world_changed.emit()
-			if intent.get("type") in ["build_begin", "build_end", "build_cancel", "place", "erase", "rename_family"]:
+			if intent.get("type") in ["build_begin", "build_end", "build_cancel", "place", "erase", "rename_family", "household_edit"]:
 				save_world()
 	elif role == "client" and _welcomed:
 		if _requests.size() >= 16:
@@ -538,7 +538,7 @@ func _accept_command(sender: int, message: Dictionary) -> void:
 	_send(sender, response)
 	if result.get("ok", false):
 		world_changed.emit()
-		if message.intent.get("type") in ["build_begin", "build_end", "build_cancel", "place", "erase", "rename_family"]:
+		if message.intent.get("type") in ["build_begin", "build_end", "build_cancel", "place", "erase", "rename_family", "household_edit"]:
 			save_world()
 
 func _emit_action(ok: bool, message: String) -> void:

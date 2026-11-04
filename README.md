@@ -100,6 +100,10 @@ or shell expressions.
 - **Plan** shows the selected resident's actions, individual cancel buttons, and
   autonomy switch. **Wishes** gives optional activities, rewards, and a saved
   personal journal. Wishes never expire; completed sets can renew on a later day.
+- **Edit** beside Household (or **Household** in the game menu) changes the
+  household name, both resident names, clothing/skin/hair colors, and hair style.
+  Preview your choices, then Apply changes; Cancel or Escape leaves them alone.
+  Choices belong to this neighborhood and persist through saves and reconnects.
 - The world fills the window behind the HUD. **Activities** opens the optional
   action tray; construction opens the catalog. **Escape** closes either tray.
 - Scroll to zoom and middle-drag to pan. **F11** toggles fullscreen.
