@@ -7,6 +7,7 @@ var suffix := ""
 func _initialize() -> void: call_deferred("_run")
 
 func _click(control: Button) -> void:
+	await preload("res://tests/hud_navigation.gd").reveal(control)
 	if game.tools_box.is_ancestor_of(control): game.tools_box.get_parent().ensure_control_visible(control)
 	await process_frame; await process_frame
 	var point := control.get_global_rect().get_center()

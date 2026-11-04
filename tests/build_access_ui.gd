@@ -14,6 +14,7 @@ func _click(point: Vector2) -> void:
 	await process_frame
 
 func _button(control: Button) -> void:
+	await preload("res://tests/hud_navigation.gd").reveal(control)
 	if game.tools_box.is_ancestor_of(control): game.tools_box.get_parent().ensure_control_visible(control)
 	await process_frame; await process_frame
 	assert(root.get_visible_rect().encloses(control.get_global_rect()))

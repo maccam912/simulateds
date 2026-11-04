@@ -17,6 +17,7 @@ func _mouse(point: Vector2, click: bool=false) -> void:
 	await process_frame; await process_frame
 
 func _button(control: Button) -> void:
+	await preload("res://tests/hud_navigation.gd").reveal(control)
 	await process_frame; await process_frame
 	assert(control.is_visible_in_tree(),"Open the tray before clicking "+control.text)
 	if game.tools_box.is_ancestor_of(control): game.tools_box.get_parent().ensure_control_visible(control)

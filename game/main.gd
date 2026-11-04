@@ -41,6 +41,19 @@ const Finishes = preload("res://game/finishes.gd")
 const Windows = preload("res://game/windows.gd")
 const RoutinePanel = preload("res://game/routine_panel.gd")
 const LotView = preload("res://game/lot_view.gd")
+const RadialMenu = preload("res://game/radial_menu.gd")
+const ContextActions = preload("res://game/context_actions.gd")
+var radial_menu: Control
+var more_panel: PanelContainer
+var more_button: Button
+var needs_panel: PanelContainer
+var needs_details: Control
+var needs_toggle: Button
+var _radial_target: Dictionary = {}
+var _radial_entries: Dictionary = {}
+var _radial_lot := ""
+var _radial_member := ""
+var _radial_session := ""
 var viewed_lot := ""
 var selected_member := ""
 var selected_tool := "floor"
@@ -278,39 +291,38 @@ func _build_ui() -> void:
 	lot_view.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	lot_view.tile_clicked.connect(_tile_clicked)
 	lot_view.entity_clicked.connect(_entity_clicked)
+	lot_view.context_requested.connect(_open_context_menu)
 	hud = Control.new()
 	hud.name = "HUD"
 	add_child(hud)
 	hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-	var location := _hud_panel(Rect2(16,16,340,114))
-	var location_box := _vbox(location,3)
-	var location_row := HBoxContainer.new(); location_box.add_child(location_row)
-	lot_title = _label("Clover Cottage",22)
+	var location := _hud_panel(Rect2(16,16,290,58))
+	var location_row := HBoxContainer.new(); location.add_child(location_row)
+	lot_title = _label("Clover Cottage",15)
 	lot_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	lot_title.clip_text=true; lot_title.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS
 	location_row.add_child(lot_title)
+	neighborhood_button=_button("⌂",func(): _show_tray(neighborhood_panel,not neighborhood_panel.visible))
+	neighborhood_button.tooltip_text="Neighborhood · "+Preferences.action_label("neighborhood")
+	_compact_control(neighborhood_button); neighborhood_button.custom_minimum_size=Vector2(44,38); location_row.add_child(neighborhood_button)
 	lot_subtitle = _label("Your household",12,Style.MUTED)
 	lot_subtitle.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; lot_subtitle.clip_text=true
-	location_box.add_child(lot_subtitle)
-	var location_actions := HBoxContainer.new(); location_box.add_child(location_actions)
-	neighborhood_button=_button("Neighborhood",func(): _show_tray(neighborhood_panel,not neighborhood_panel.visible)); location_actions.add_child(neighborhood_button)
-	var center := _button("Center",func(): lot_view.center_lot()); center.tooltip_text="Center view · Reset pan and zoom"; location_actions.add_child(center)
-	mail_button=_button("Mail",func(): mail_requested.emit()); location_actions.add_child(mail_button)
-
-	neighborhood_panel = _hud_panel(Rect2(16,146,260,394))
+	neighborhood_panel = _hud_panel(Rect2(16,86,260,394))
 	neighborhood_panel.visible = false
 	var neighborhood := _vbox(neighborhood_panel,8)
 	var neighborhood_head := HBoxContainer.new(); neighborhood.add_child(neighborhood_head)
 	neighborhood_title = _label("Linden Grove",18); neighborhood_title.size_flags_horizontal=Control.SIZE_EXPAND_FILL; neighborhood_head.add_child(neighborhood_title)
 	neighborhood_head.add_child(_button("×",func(): neighborhood_panel.hide()))
+	neighborhood.add_child(lot_subtitle)
 	lots_box = _vbox(neighborhood,6)
 
-	clock_panel = _hud_panel(Rect2(-448,16,432,114),Vector2(1,0))
+	clock_panel = _hud_panel(Rect2(-344,16,328,94),Vector2(1,0))
 	var clock_box := _vbox(clock_panel,4)
 	var clock_row := HBoxContainer.new(); clock_box.add_child(clock_row)
 	clock_label = _label("DAY 01 · 08:00",14); clock_label.size_flags_horizontal=Control.SIZE_EXPAND_FILL; clock_row.add_child(clock_label)
-	funds_label = _label("§ 12,000",20,Style.GOLD); clock_row.add_child(funds_label)
+	funds_label = _label("§ 12,000",15,Style.GOLD); clock_row.add_child(funds_label)
 	var session_row := HBoxContainer.new(); session_row.add_theme_constant_override("separation",5); clock_box.add_child(session_row)
 	var time_row := HBoxContainer.new(); time_row.add_theme_constant_override("separation",3); session_row.add_child(time_row)
 	for rate: int in [0,1,2,4]:
@@ -318,34 +330,30 @@ func _build_ui() -> void:
 		button.add_theme_font_size_override("font_size",12); button.custom_minimum_size=Vector2(29,30); _compact_control(button)
 		time_row.add_child(button); time_buttons[rate]=button
 
-	var together := _button("Play together",_open_connection); together.size_flags_horizontal=Control.SIZE_EXPAND_FILL; session_row.add_child(together)
-	var save_button := _button("Save",_request_save_menu); session_row.add_child(save_button)
-	var fullscreen_button := _button("☰",_request_pause); fullscreen_button.tooltip_text="Game menu · " + Preferences.action_label("pause"); session_row.add_child(fullscreen_button)
-	connection_label = _label("Local neighborhood",11,Style.MUTED); clock_box.add_child(connection_label)
+	var menu_button := _button("☰",_request_pause); menu_button.tooltip_text="Game menu · " + Preferences.action_label("pause")
+	var clock_space := Control.new(); clock_space.size_flags_horizontal=Control.SIZE_EXPAND_FILL; clock_space.mouse_filter=Control.MOUSE_FILTER_IGNORE; session_row.add_child(clock_space)
+	_compact_control(menu_button); menu_button.custom_minimum_size=Vector2(44,36); session_row.add_child(menu_button)
+	connection_label = _label("Local neighborhood",11,Style.MUTED)
 
 	# Compact control islands float over the world, rather than enclosing it.
-	var family_panel := _hud_panel(Rect2(16,-164,200,148),Vector2(0,1))
+	var family_panel := _hud_panel(Rect2(16,-108,190,92),Vector2(0,1))
 	var family_column := _vbox(family_panel,7)
-	var family_head := HBoxContainer.new(); family_column.add_child(family_head)
-	var family_label := _label("HOUSEHOLD",11,Style.MUTED); family_label.size_flags_horizontal=Control.SIZE_EXPAND_FILL; family_head.add_child(family_label)
-	household_button=_button("Edit",func(): household_requested.emit())
-	household_button.add_theme_font_size_override("font_size",11)
-	var edit_style := Style.box(Style.PANEL,3,Style.EDGE); edit_style.content_margin_top=2; edit_style.content_margin_bottom=2; edit_style.content_margin_left=8; edit_style.content_margin_right=8
-	household_button.add_theme_stylebox_override("normal",edit_style)
-	household_button.tooltip_text="Household names, appearance, and favorite pastimes"; family_head.add_child(household_button)
+	household_button=_button("Edit household",func(): household_requested.emit())
+	household_button.tooltip_text="Household names, appearance, and favorite pastimes"
 	family_box = _vbox(family_column,5)
 
-	var needs_panel := _hud_panel(Rect2(228,-164,600,148),Vector2(0,1))
-	needs_panel.anchor_right = 1.0
-	needs_panel.offset_right = -300
-	var needs := _vbox(needs_panel,9)
+	needs_panel = _hud_panel(Rect2(218,-108,600,92),Vector2(0,1))
+	needs_panel.anchor_right=0.0; needs_panel.offset_right=minf(818,size.x-260)
+	resized.connect(func(): needs_panel.offset_right=minf(818,size.x-260))
+	var needs := _vbox(needs_panel,5)
 	var needs_head := HBoxContainer.new(); needs.add_child(needs_head)
-	needs_title = _label("Alex · Taking it easy",15); needs_title.size_flags_horizontal=Control.SIZE_EXPAND_FILL; needs_title.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; needs_head.add_child(needs_title)
-	wishes_button = _button("Wishes",_open_wishes); wishes_button.add_theme_font_size_override("font_size",12); needs_head.add_child(wishes_button)
-	hobbies_button = _button("Hobbies",_open_hobbies); hobbies_button.add_theme_font_size_override("font_size",12); needs_head.add_child(hobbies_button)
+	needs_title = _label("Alex · Taking it easy",14); needs_title.size_flags_horizontal=Control.SIZE_EXPAND_FILL; needs_title.clip_text=true; needs_title.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; needs_head.add_child(needs_title)
+	wishes_button = _button("Wishes",_open_wishes)
+	hobbies_button = _button("Hobbies",_open_hobbies)
+	needs_toggle=_button("Needs",_toggle_needs); _compact_control(needs_toggle); needs_toggle.custom_minimum_size.y=36; needs_head.add_child(needs_toggle)
 	queue_label = _button("Plan",func(): _show_tray(plan_panel,not plan_panel.visible))
 	queue_label.add_theme_font_size_override("font_size",12); needs_head.add_child(queue_label)
-	plan_panel = _hud_panel(Rect2(16,-480,408,300),Vector2(0,1))
+	plan_panel = _hud_panel(Rect2(16,-484,408,300),Vector2(0,1))
 	plan_panel.hide()
 	var plan := _vbox(plan_panel,8)
 	var plan_head := HBoxContainer.new(); plan.add_child(plan_head)
@@ -367,7 +375,8 @@ func _build_ui() -> void:
 	pastime_label.tooltip_text="Change this in Household. A favorite nudges free-time choices; urgent needs and your orders come first."
 	plan_scroll = ScrollContainer.new(); plan_scroll.size_flags_vertical=Control.SIZE_EXPAND_FILL; plan_scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED; plan.add_child(plan_scroll)
 	plan_box = _vbox(plan_scroll,5); plan_box.size_flags_horizontal=Control.SIZE_EXPAND_FILL
-	var bars := HBoxContainer.new(); bars.add_theme_constant_override("separation",12); needs.add_child(bars)
+	var bars := HBoxContainer.new(); bars.add_theme_constant_override("separation",8); needs.add_child(bars)
+	needs_details=bars; needs_details.hide()
 	for need: String in Wellbeing.ORDER:
 		var button := _button("",func(): _care_need(need)); button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; button.custom_minimum_size=Vector2(54,42); bars.add_child(button); need_buttons[need]=button
 		for state_name: String in ["normal","disabled","hover","focus"]:
@@ -385,16 +394,23 @@ func _build_ui() -> void:
 	for state_name: String in ["normal","hover","pressed","disabled"]:
 		var surface := Style.box(Style.PANEL if state_name!="hover" else Style.EDGE,3,Style.EDGE); surface.content_margin_top=2; surface.content_margin_bottom=2; surface.content_margin_left=6; surface.content_margin_right=6
 		mood_button.add_theme_stylebox_override(state_name,surface)
-	help_label = _label("Click to walk or use furniture · Scroll to zoom · Middle-drag to pan",11,Style.MUTED)
+	help_label = _label("Right-click / hold for actions",11,Style.MUTED)
 	help_label.size_flags_horizontal=Control.SIZE_EXPAND_FILL; help_label.clip_text=true; help_label.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; wellbeing_row.add_child(help_label)
 
-	var actions_panel := _hud_panel(Rect2(-288,-164,272,148),Vector2(1,1))
-	var actions := _vbox(actions_panel,7)
-	var mode_row := HBoxContainer.new(); actions.add_child(mode_row)
-	mode_button = _button("Build & furnish",_toggle_build,true); mode_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; mode_row.add_child(mode_button)
+	var dock := _hud_panel(Rect2(-248,-76,232,60),Vector2(1,1))
+	var mode_row := HBoxContainer.new(); dock.add_child(mode_row)
+	more_button=_button("More",func(): _show_tray(more_panel,not more_panel.visible)); _compact_control(more_button); more_button.custom_minimum_size=Vector2(60,40)
+	more_button.tooltip_text="Household, activities, travel, mail and play together"
+	more_panel = _hud_panel(Rect2(-288,122,272,400),Vector2(1,0)); more_panel.hide()
+	var actions := _vbox(more_panel,7)
+	var more_head := HBoxContainer.new(); actions.add_child(more_head)
+	var more_title := _label("Household & world",16); more_title.size_flags_horizontal=Control.SIZE_EXPAND_FILL; more_head.add_child(more_title)
+	more_head.add_child(_button("×",func(): more_panel.hide()))
+	mode_button = _button("Build & furnish",_toggle_build); mode_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; mode_row.add_child(mode_button); _compact_control(mode_button); mode_button.custom_minimum_size.y=40
+	mode_row.add_child(more_button)
 	palette_button = _button("Activities",func():
 		var was_activities := _context_page=="activities"
-		_context_page="activities"; _refresh(); _show_tray(context_panel,not context_panel.visible if was_activities else true)); mode_row.add_child(palette_button)
+		_context_page="activities"; _refresh(); _show_tray(context_panel,not context_panel.visible if was_activities else true)); actions.add_child(palette_button)
 	var travel_row := HBoxContainer.new(); actions.add_child(travel_row)
 	visit_button = _button("Visit lot",_visit); visit_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; travel_row.add_child(visit_button)
 	home_button = _button("Go home",_go_home); home_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; travel_row.add_child(home_button)
@@ -408,9 +424,22 @@ func _build_ui() -> void:
 	people_button=_button("People",_open_people); people_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; social_row.add_child(people_button)
 	var cancel := _button("Cancel actions",func(): _send({"type":"cancel","member_id":selected_member})); cancel.add_theme_font_size_override("font_size",12); social_row.add_child(cancel)
 	cancel.tooltip_text="Clear the selected resident’s current action and plan."
+	var interests := HBoxContainer.new(); actions.add_child(interests)
+	for control: Button in [wishes_button,hobbies_button]: control.size_flags_horizontal=Control.SIZE_EXPAND_FILL; interests.add_child(control)
+	var home_actions := HBoxContainer.new(); actions.add_child(home_actions)
+	household_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; home_actions.add_child(household_button)
+	mail_button=_button("Mail",func(): mail_requested.emit()); home_actions.add_child(mail_button)
+	actions.add_child(_button("Play together",_open_connection))
+	var view_actions := HBoxContainer.new(); actions.add_child(view_actions)
+	view_actions.add_child(_button("Center view",func(): lot_view.center_lot()))
+	view_actions.add_child(_button("Save",_request_save_menu))
+	actions.add_child(connection_label)
+	for control: Button in actions.find_children("*","Button",true,false):
+		_compact_control(control); control.add_theme_font_size_override("font_size",12); control.custom_minimum_size.y=38
+		control.pressed.connect(func(): more_panel.hide())
 
 	# Only the requested catalog/activity tray is visible; it never resizes the world.
-	context_panel = _hud_panel(Rect2(-288,146,272,400),Vector2(1,0))
+	context_panel = _hud_panel(Rect2(-288,122,272,400),Vector2(1,0))
 	context_panel.anchor_bottom = 1.0
 	context_panel.offset_bottom = -180
 	context_panel.visible = false
@@ -453,20 +482,85 @@ func _build_ui() -> void:
 	routine_editor=RoutinePanel.new(); routine_panel.add_child(routine_editor)
 	routine_editor.command_requested.connect(_send)
 	routine_editor.closed.connect(func(): routine_panel.hide(); _show_tray(plan_panel,true); routines_button.grab_focus())
+	radial_menu=RadialMenu.new(); hud.add_child(radial_menu)
+	radial_menu.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	radial_menu.action_selected.connect(_choose_context_action)
+	radial_menu.closed.connect(func(): _radial_target={})
+
 
 func _process(delta: float) -> void:
 	if lot_view == null: return
-	lot_view.show_cues=hud.is_visible_in_tree() and not routine_panel.visible
+	if radial_menu.visible and (not hud.is_visible_in_tree() or _radial_lot!=viewed_lot or _radial_member!=selected_member or _radial_session!=_session_context() or Session.role=="joining" or lot_view.building): radial_menu.dismiss()
+	lot_view.show_cues=hud.is_visible_in_tree() and not routine_panel.visible and not radial_menu.visible
 	lot_view.show_plan_routes=plan_panel.visible and hud.is_visible_in_tree()
-	lot_view.mouse_filter=Control.MOUSE_FILTER_IGNORE if routine_panel.visible else Control.MOUSE_FILTER_STOP
+	lot_view.mouse_filter=Control.MOUSE_FILTER_IGNORE if routine_panel.visible or radial_menu.visible else Control.MOUSE_FILTER_STOP
 	lot_view.overlay_rects.clear()
 	for panel: Control in hud.get_children():
-		if panel.is_visible_in_tree(): lot_view.overlay_rects.append(Rect2(panel.get_global_rect().position-lot_view.global_position,panel.get_global_rect().size))
+		if panel!=radial_menu and panel.is_visible_in_tree(): lot_view.overlay_rects.append(Rect2(panel.get_global_rect().position-lot_view.global_position,panel.get_global_rect().size))
 	_refresh_clock += delta
 	_notice_time = maxf(0,_notice_time-delta)
 	if _refresh_clock>=0.2:
 		_refresh_clock=0
 		_refresh()
+
+func _toggle_needs() -> void:
+	needs_details.visible=not needs_details.visible
+	needs_panel.offset_top=-164 if needs_details.visible else -108
+	needs_toggle.text="Less" if needs_details.visible else "Needs"
+	needs_toggle.tooltip_text="Hide the need bars" if needs_details.visible else "Show all seven needs · Click a bar to plan care"
+
+func _session_context() -> String:
+	return str([Session.world_generation,Session.profile_id,Session.role])
+
+func _open_context_menu(target: Dictionary, at: Vector2) -> void:
+	if not hud.is_visible_in_tree() or routine_panel.visible or lot_view.building or Session.role=="joining": return
+	var choices := ContextActions.options(Session.world,Session.profile_id,selected_member,viewed_lot,target)
+	if choices.entries.is_empty(): return
+	context_panel.hide(); neighborhood_panel.hide(); plan_panel.hide(); more_panel.hide()
+	_radial_target=target.duplicate(true); _radial_lot=viewed_lot; _radial_member=selected_member; _radial_session=_session_context()
+	_radial_entries.clear()
+	var entries: Array[Dictionary]=[]
+	for entry: Dictionary in choices.entries:
+		entries.append(entry); _radial_entries[str(entry.id)]=entry.duplicate(true)
+	lot_view.stop_camera_motion()
+	radial_menu.open_menu(str(choices.title),str(choices.subtitle),entries,at+lot_view.global_position)
+
+func _choose_context_action(id: String) -> void:
+	if not _radial_entries.has(id): return
+	var entry: Dictionary=_radial_entries[id]
+	var target := _radial_target.duplicate(true)
+	if _radial_lot!=viewed_lot or _radial_member!=selected_member or _radial_session!=_session_context() or Session.role=="joining":
+		radial_menu.dismiss(); return
+	# Resolve again at activation, but never silently replace a reviewed command
+	# with a different meal, artwork, recreation group, or resident activity.
+	var current := ContextActions.options(Session.world,Session.profile_id,selected_member,viewed_lot,target)
+	var match_entry: Dictionary={}
+	for candidate: Dictionary in current.entries:
+		if candidate.id==id: match_entry=candidate; break
+	if match_entry.is_empty() or match_entry.get("disabled",false) or match_entry.get("command",{})!=entry.get("command",{}):
+		var reason := str(match_entry.get("tooltip","")) if match_entry.get("disabled",false) else ""
+		_notice(reason if not reason.is_empty() else "This choice changed. Open the menu again."); return
+	if entry.has("command"):
+		_send(entry.command.duplicate(true)); return
+	radial_menu.dismiss()
+	if entry.has("member_id"): selected_member=str(entry.member_id)
+	match str(entry.get("navigate","")):
+		"select": _refresh()
+		"inspect":
+			if target.type=="wall_art": _entity_clicked(target)
+			else:
+				var object: Dictionary=Session.world._object(Session.state.lots[viewed_lot],str(target.id))
+				if object.get("kind") in ["easel","garden_bed","dining_table","game_table","stereo"]: _interact(str(target.id))
+				else:
+					_selected_object=str(target.id); _context_page="object"; _refresh(); _show_tray(context_panel,true)
+		"needs": _context_page="care"; _refresh(); _show_tray(context_panel,true)
+		"plan": _refresh(); _show_tray(plan_panel,true)
+		"wishes": _open_wishes()
+		"hobbies": _open_hobbies()
+		"people": _open_people()
+		"person":
+			_social_focus=str(entry.target_id); _open_people(); call_deferred("_follow_social",_social_focus)
+		"hang": _open_art(str(entry.source))
 
 func _family() -> Dictionary:
 	return Session.state.get("families",{}).get(Session.profile_id,{})
@@ -495,6 +589,7 @@ func _refresh() -> void:
 	if selected_member.is_empty() and not family.get("members",[]).is_empty():
 		selected_member = str(family.members[0].id)
 	var member := _member()
+	if radial_menu.visible and ContextActions.options(Session.world,Session.profile_id,selected_member,viewed_lot,_radial_target).entries.is_empty(): radial_menu.dismiss()
 	if member.is_empty() and not family.get("members",[]).is_empty():
 		selected_member=str(family.members[0].id); member=_member()
 	if routine_panel.visible: routine_editor.refresh(selected_member)
@@ -579,7 +674,7 @@ func _refresh() -> void:
 	lot_view.building=building and mine; lot_view.build_kind=selected_tool; lot_view.build_rotation=build_rotation
 	lot_view.access_report=_access_report; lot_view.access_visible=_access_visible
 	lot_view.access_inspecting=_access_visible and _context_page=="access"; lot_view.access_focus=_access_focus
-	lot_title.text=str(lot.get("name","Linden Grove"))
+	lot_title.text=str(lot.get("name","Linden Grove")); lot_title.tooltip_text=lot_title.text
 	lot_subtitle.text=str(state.get("families",{}).get(str(lot.get("owner","")),{}).get("name","Neighbor’s home"))
 	if building: lot_subtitle.text="Under construction · "+lot_subtitle.text
 	lot_subtitle.tooltip_text=lot_subtitle.text
@@ -617,9 +712,11 @@ func _refresh() -> void:
 		_family_signature=family_signature; _clear(family_box)
 		for resident in family.get("members",[]):
 			var b := _button(("●  " if str(resident.id)==selected_member else "○  ")+str(resident.name),func(): _select_resident(str(resident.id)))
+			_compact_control(b); b.custom_minimum_size.y=34
 			b.alignment=HORIZONTAL_ALIGNMENT_LEFT; b.clip_text=true; b.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; b.tooltip_text=str(resident.name)+" · Unwinds with: "+Pastimes.label(resident)+" · Click again to find this resident"; family_box.add_child(b)
 	if not member.is_empty():
-		needs_title.text=str(member.name)+"  /  "+str(member.get("action","Enjoying the day"))
+		needs_title.text=str(member.name)+"  ·  "+str(member.get("action","Enjoying the day"))
+		needs_title.tooltip_text=needs_title.text
 		queue_label.text="Plan · %d" % (member.get("queue",[]).size() + (0 if member.get("task",{}).is_empty() else 1))
 		_refresh_plan(member)
 		wishes_button.text="Wishes · %d/3" % Wishes.completed(member.get("wishes",{}))
@@ -656,6 +753,7 @@ func _refresh() -> void:
 	var art_ready: bool=not _commission_status.get("ready",[]).is_empty() and Session.role!="joining"
 	palette_button.text = "Catalog" if build_mode else "Activities •" if art_ready else "Activities"
 	palette_button.add_theme_color_override("font_color",Style.GOLD if art_ready and not build_mode else Style.TEXT)
+	more_button.text="More •" if art_ready or unread>0 or news_pending else "More"
 	palette_button.tooltip_text="Art commission · %d %s ready to review\nOpen Activities → Art commissions." % [_commission_status.ready.size(),"original" if _commission_status.ready.size()==1 else "originals"] if art_ready and not build_mode else "Building tools and furnishings" if build_mode else "Things to do and optional art commissions"
 	var tools_signature := _art_source+str(_art_request.is_empty())+str(building and mine)+selected_tool+_moving_object+str(_move_request.is_empty())+_selected_object+str(build_rotation)+viewed_lot+str(lot.get("revision",0))+_context_page+selected_member+str(_room_anchor)+str(_room_request.is_empty())
 	if build_mode: tools_signature+=_catalog_category+":"+_catalog_query+":"+str(lot.get("funds",0))+str(_access_visible)+str(_access_report.get("issues",[]))
@@ -715,7 +813,7 @@ func _refresh() -> void:
 		space_button.tooltip_text=str(space.message)+"\nResidents visiting another lot stay there."
 	if _context_page=="travel" and not build_mode and is_instance_valid(travel_panel): travel_panel.refresh(viewed_lot,selected_member)
 	if _context_page=="garden" and not build_mode and is_instance_valid(garden_panel): garden_panel.refresh(viewed_lot,_selected_object,selected_member)
-	help_label.text="Click to place · " + Preferences.action_label("rotate") + " rotates · Ctrl/Cmd+Z undoes" if building and mine else "Click a need to care for it · Click the ground to walk"
+	help_label.text="Click to place · " + Preferences.action_label("rotate") + " rotates · Ctrl/Cmd+Z undoes" if building and mine else "Right-click / hold for actions"
 	if building and mine and selected_tool=="room": help_label.text="Click two opposite corners · " + Preferences.action_label("rotate") + " changes door side · Escape cancels"
 	if building and mine and not _paint_surface().is_empty(): help_label.text="Click to finish a room · Walls and doorways mark its edges" if _paint_selection()=="room" else "Click two corners to decorate · Same tile twice for one · Escape cancels"
 	if building and mine and selected_tool=="copy_room": help_label.text="Choose a room to copy" if _copy_source.x<0 and _blueprint_id.is_empty() else "Choose clear space · "+Preferences.action_label("rotate")+" rotates the copy · Escape cancels"
@@ -737,7 +835,7 @@ func _layout_notice() -> void:
 	if plan_panel.visible: left=maxf(left,plan_panel.get_rect().end.x+16.0-size.x*0.5)
 	notice_panel.offset_left=left
 	notice_panel.offset_right=minf(340.0,size.x*0.5-16.0)
-	notice_panel.offset_top=-222.0; notice_panel.offset_bottom=-180.0
+	notice_panel.offset_top=-222.0 if needs_details.visible else -166.0; notice_panel.offset_bottom=-180.0 if needs_details.visible else -124.0
 
 func _refresh_plan(member: Dictionary) -> void:
 	plan_title.text = str(member.name) + "’s day"
@@ -927,6 +1025,13 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 		_rebuild_people()
 		if follow_social: call_deferred("_follow_social",_social_focus)
 		if not people_focus.is_empty(): call_deferred("_restore_people_focus",people_focus)
+	elif _context_page=="object":
+		var object: Dictionary=Session.world._object(lot,_selected_object)
+		var item: Dictionary=Catalog.ITEMS.get(object.get("kind",""),{})
+		activity_label.text=str(item.get("name","Furnishing"))
+		var description := _label(str(item.get("description","This furnishing is no longer here.")),14)
+		description.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; description.custom_minimum_size.x=200; tools_box.add_child(description)
+		context_box.add_child(_button("‹ Activities",func(): _context_page="activities"; _refresh()))
 	elif _context_page=="care": _rebuild_care()
 	elif _context_page=="hobbies": _rebuild_hobbies()
 	elif _context_page=="wall_art_inspect": _build_art_panel()
@@ -1361,6 +1466,9 @@ func _request_save_menu() -> void:
 	else: save_menu_requested.emit()
 
 func _show_tray(panel: Control,show_panel: bool) -> void:
+	if show_panel and radial_menu!=null: radial_menu.dismiss()
+	if show_panel and more_panel!=null and panel!=more_panel: more_panel.hide()
+	if show_panel and panel==more_panel: context_panel.hide(); plan_panel.hide(); neighborhood_panel.hide()
 	if show_panel and panel!=routine_panel and routine_panel!=null: routine_panel.hide()
 	panel.visible=show_panel
 	_layout_notice()
@@ -1370,11 +1478,14 @@ func _show_tray(panel: Control,show_panel: bool) -> void:
 	else: panel.modulate.a=1
 
 func _unhandled_key_input(event: InputEvent) -> void:
-	if hud==null or not hud.visible or routine_panel.visible: return
+	if hud==null or not hud.visible or routine_panel.visible or radial_menu.visible: return
 	var focused := get_viewport().gui_get_focus_owner()
 	if focused is LineEdit or focused is TextEdit: return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if _clear_busy(): get_viewport().set_input_as_handled(); return
+		if not lot_view.building and (event.keycode==KEY_MENU or (event.shift_pressed and event.keycode==KEY_F10)):
+			if not _member().is_empty() and _member().lot_id!=viewed_lot: _select_lot(str(_member().lot_id))
+			_open_context_menu({"type":"member","id":selected_member,"owner":Session.profile_id},needs_panel.get_global_rect().get_center()); get_viewport().set_input_as_handled(); return
 		if lot_view.building and (event.ctrl_pressed or event.meta_pressed) and event.keycode==KEY_F:
 			if not _paint_surface().is_empty() or selected_tool in ["window","furniture_color","wall_art","clear_lot"]: _select_build_tool("floor")
 			_context_page="activities"; _refresh()
@@ -1395,8 +1506,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 				_room_anchor=Vector2i(-1,-1); _refresh()
 			elif not _moving_object.is_empty() and _move_request.is_empty():
 				_moving_object=""; _refresh()
-			elif neighborhood_panel.visible or context_panel.visible or plan_panel.visible:
-				neighborhood_panel.hide(); context_panel.hide(); plan_panel.hide()
+			elif neighborhood_panel.visible or context_panel.visible or plan_panel.visible or more_panel.visible or needs_details.visible:
+				neighborhood_panel.hide(); context_panel.hide(); plan_panel.hide(); more_panel.hide()
+				if needs_details.visible: _toggle_needs()
 			else: _request_pause()
 		elif event.is_action_pressed("play_pause") and not event.ctrl_pressed and not event.meta_pressed and not event.alt_pressed:
 			var result := Session.toggle_play_pause()

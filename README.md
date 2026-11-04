@@ -22,6 +22,15 @@ Read [DESIGN.md](DESIGN.md) for the game plan,
 
 ## Run
 
+Each push to `main` builds the tip commit and publishes a development
+prerelease if all builds and tests pass. Packages include Windows, macOS,
+Linux, Android, and the Linux dedicated server, with a SHA-256 checksum for
+each download. Push a `v*` tag to publish a stable release.
+[GitHub Releases](https://github.com/maccam912/simulateds/releases)
+
+CI caches the Android development signing key. If the key changes, installing
+the new APK requires uninstalling the old one, which clears its local saves.
+
 Install Git LFS (`git lfs install` and `git lfs pull` in this checkout),
 Python 3.11+, Rust via rustup, and your platform's compiler (Xcode Command
 Line Tools on macOS, Visual Studio C++ tools on Windows, or the usual C/C++ build

@@ -30,7 +30,9 @@ The foundation prioritizes four things:
 1. Enter the neighborhood and receive a lot, starter funds, a furnished starter
    home, and two residents.
 2. Select a resident. Inspect their needs and current intention.
-3. Click the ground to walk, or furniture to use it. A resident travels to a
+3. Right-click (or touch and hold) furniture or a resident for contextual choices.
+   Left-click remains a quick way to walk, select someone, or use furniture.
+   The quiet HUD expands needs and secondary controls only on request. A resident travels to a
    reachable interaction position before receiving an object's benefit.
 4. Let autonomy handle ordinary needs or give a more interesting instruction.
 5. Enter construction, add floors and walls, make doorways, buy furnishings, and

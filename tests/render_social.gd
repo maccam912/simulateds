@@ -9,6 +9,7 @@ func _initialize() -> void:
 	call_deferred("_run")
 
 func _click(button: Button) -> void:
+	await preload("res://tests/hud_navigation.gd").reveal(button)
 	await process_frame
 	if game.tools_box.is_ancestor_of(button):
 		game.tools_box.get_parent().ensure_control_visible(button)

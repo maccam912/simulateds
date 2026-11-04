@@ -13,6 +13,7 @@ func _mouse(point: Vector2,click: bool=false) -> void:
 			var event:=InputEventMouseButton.new(); event.position=point; event.button_index=MOUSE_BUTTON_LEFT; event.pressed=pressed; root.push_input(event,true); await process_frame
 	await process_frame; await process_frame
 func _click(control: Button) -> void:
+	await preload("res://tests/hud_navigation.gd").reveal(control)
 	await process_frame; await process_frame
 	var parent: Node=control.get_parent()
 	while parent!=null:

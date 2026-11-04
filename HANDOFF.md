@@ -1,4 +1,37 @@
-# 3D renderer checkpoint — November 4, 2026
+# Contextual UI checkpoint — November 4, 2026
+
+- Live HUD now keeps compact location/clock, household selection, current action,
+  mood, Plan, Needs toggle, and Build/More controls. More contains secondary
+  household/world controls; care bars expand only on request.
+- Right-click or hold touch for 0.5 seconds on furniture, residents, wall art or
+  ground opens the contextual action wheel. Shift+F10/Menu opens the selected
+  resident's choices. Actions use existing host commands, revalidate on selection,
+  and retain the reviewed target/revision/batch. Opening/dismissing is read-only.
+- `game/context_actions.gd` owns read-only choices; `game/radial_menu.gd` owns the
+  wheel; `game/lot_view.gd` owns pointer gestures; `game/main.gd` connects them.
+- New focused tests cover gestures, choice validity and actual HUD input. Existing
+  UI tests now open More/Needs through actual mouse navigation using
+  `tests/hud_navigation.gd`.
+- Shower entry, couch seating while watching TV, and related physical interaction
+  animation are **deferred**, recorded in `docs/ROADMAP.md` and
+  `docs/DESIGN_LANGUAGE.md`. No model, animation, save or protocol change here.
+- Local validation: all 114 registered gameplay/UI suites, six real Iroh peer
+  scenarios and dedicated-server smoke passed. Required `tools/check.py` runs
+  exposed two old test navigation/timing assumptions; these were corrected and
+  the failed/remaining checks resumed successfully. Evidence:
+  `build/radial-final-regression.log`, `build/radial-remaining-regression.log`,
+  `build/context-validation.json`. Final session-lifetime changes separately pass
+  `build/context_input-final.log` and `build/context_menu_ui-final.log`.
+- Native macOS Godot 4.7.2 day/night renders at 1440×900 and compact 1280×720
+  were inspected. Both native context-menu runs pass; images/logs are in
+  `build/context-*`. Mouse, keyboard and simulated touch are covered.
+- Asset-storage validation and `git diff --check` pass; no binary assets changed.
+- Concurrent release-workflow and README edits appeared during validation; they
+  were left untouched and are outside this UI checkpoint.
+- Hosted CI, new exports and physical mobile testing were not run for this UI
+  change. The prior export and renderer evidence below predates this checkpoint.
+
+## Previous 3D renderer checkpoint — November 4, 2026
 
 The default game now uses a real 3D scene with an orthographic isometric-style
 camera. The tile simulation, command protocol, saves and gameplay rules were

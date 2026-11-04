@@ -1,4 +1,4 @@
-name: Build and test
+name: Build, test, and publish releases
 
 on:
   push:
@@ -9,9 +9,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: build-${{ github.workflow }}-${{ github.ref }}
-  # Let expensive push builds finish and populate native caches. The newest
-  # pending push supersedes older pending work; PR revisions still cancel.
+  # Keep each main commit's build queued even when a newer commit is pushed.
+  group: build-${{ github.ref }}-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.sha || 'shared' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -113,23 +112,43 @@ jobs:
           if-no-files-found: ignore
 
   release:
-    name: Publish tagged release
-    if: startsWith(github.ref, 'refs/tags/v') && github.event_name == 'push'
+    name: Publish release
+    if: github.event_name == 'push' && !github.event.deleted && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     needs: build
     runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
-        with:
-          lfs: true
       - uses: actions/download-artifact@v4
         with:
           pattern: game-*
           merge-multiple: true
           path: release
       - name: Publish release assets
+        working-directory: release
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.ref_name }}
-        run: gh release create "$RELEASE_TAG" release/* --verify-tag --generate-notes --title "$RELEASE_TAG"
+        run: |
+          sha256sum --check --strict simulateds-{android.apk,linux.zip,macos.zip,server.zip,windows.zip}.sha256
+
+          tag="$GITHUB_REF_NAME"
+          title="$tag"
+          flags=()
+          if [[ "$GITHUB_REF" == refs/heads/main ]]; then
+            tag="dev-$GITHUB_SHA"
+            title="Development Build $GITHUB_RUN_NUMBER"
+            flags+=(--prerelease)
+            git push origin "$GITHUB_SHA:refs/tags/$tag"
+
+            # A rerun can finish an interrupted draft or skip a published release.
+            if draft=$(gh release view "$tag" --json isDraft --jq .isDraft 2>/dev/null); then
+              if [[ "$draft" == true ]]; then
+                gh release upload "$tag" simulateds-* --clobber
+                gh release edit "$tag" --draft=false --prerelease
+              fi
+              exit 0
+            fi
+          fi
+
+          gh release create "$tag" simulateds-* --verify-tag --generate-notes --title "$title" "${flags[@]}"

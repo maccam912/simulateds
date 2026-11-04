@@ -7,6 +7,7 @@ func _initialize() -> void:
 	call_deferred("_run")
 
 func _click(control: Control) -> void:
+	await preload("res://tests/hud_navigation.gd").reveal(control)
 	await process_frame; await process_frame
 	var parent: Node=control.get_parent()
 	while parent!=null:
@@ -91,6 +92,7 @@ func _run() -> void:
 	assert(app.game.mail_button.text=="Mail · news")
 	await _capture("quiet-badge")
 	session.command({"type":"build_begin","lot_id":family.home_lot})
+	app.game._refresh()
 	assert(app.page=="game" and session.state.lots[family.home_lot].building,"Pending news never interrupts construction")
 	await _click(app.game.mail_button)
 	assert(app.mail_panel.view=="news")

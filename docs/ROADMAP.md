@@ -173,6 +173,11 @@ understandable result. Fuzz placement and reopening around residents/visitors.
   sounds are implemented, along with movement previews and accepted destination
   feedback. Reusable household routines are implemented. Add richer animation
   and the original art pass.
+- Requested physical interaction polish (deferred from the contextual UI pass):
+  enter the shower when showering; sit on an available couch while watching TV;
+  align similar activities with the furnishing, including entry/exit transitions
+  and sensible occupied/missing-seat fallbacks. Presentation cannot move saved
+  residents or bypass routing/reservations. Review each in the actual game camera.
 
 Exit: two residents can use a busy home without occupying the same object;
 player-directed actions beat autonomy predictably; a visitor and resident can

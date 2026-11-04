@@ -122,6 +122,8 @@ func _run() -> void:
 	game._build_history(false)
 	_check(int(session.world._object(session.state.lots.lot_1,str(fridge.id)).x)==10,"Move participates in undo")
 	game._send({"type":"build_cancel","lot_id":"lot_1"})
+	await _click(game.more_button.get_global_rect().get_center())
+	await process_frame; await process_frame
 	await _click(game.wishes_button.get_global_rect().get_center())
 	_check(game.context_panel.visible and game._context_page=="wishes","Wishes opens its overlay")
 	for resident: Dictionary in game._family().members: resident.autonomy=false
@@ -156,6 +158,8 @@ func _run() -> void:
 	_check(not session.state.lots.lot_1.floors.has([1,1]) and session.state.lots.lot_1.funds==room_funds,"One HUD undo reverses the room")
 	game._send({"type":"build_cancel","lot_id":"lot_1"})
 	game.context_panel.hide()
+	await _click(game.more_button.get_global_rect().get_center())
+	await process_frame; await process_frame
 	await _click(game.people_button.get_global_rect().get_center())
 	_check(game.context_panel.visible and game._context_page=="people","People opens the social overlay")
 	var neighbor: Dictionary=session.state.families[neighbor_id].members[0]

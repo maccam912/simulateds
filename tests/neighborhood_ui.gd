@@ -12,6 +12,7 @@ func _mouse(point: Vector2,click: bool=true) -> void:
 			var event:=InputEventMouseButton.new(); event.position=point; event.button_index=MOUSE_BUTTON_LEFT; event.pressed=pressed; root.push_input(event,true); await process_frame
 	await process_frame; await process_frame
 func _button(button: Button) -> void:
+	await preload("res://tests/hud_navigation.gd").reveal(button)
 	await process_frame; await process_frame
 	assert(not button.disabled and root.get_visible_rect().encloses(button.get_global_rect()))
 	var pressed: Array=[false]; button.pressed.connect(func(): pressed[0]=true,CONNECT_ONE_SHOT)

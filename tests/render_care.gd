@@ -7,6 +7,7 @@ func _initialize() -> void:
 	call_deferred("_run")
 
 func _click(control: Control) -> void:
+	await preload("res://tests/hud_navigation.gd").reveal(control)
 	await process_frame
 	var rect := control.get_global_rect()
 	assert(root.get_visible_rect().encloses(rect),"Care control must be fully on screen")

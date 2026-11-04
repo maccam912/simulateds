@@ -7,6 +7,7 @@ func _initialize() -> void:
 	call_deferred("_run")
 
 func _click(control: Control, scroll: bool = false) -> void:
+	await preload("res://tests/hud_navigation.gd").reveal(control)
 	if scroll:
 		game.tools_box.get_parent().ensure_control_visible(control)
 		await process_frame

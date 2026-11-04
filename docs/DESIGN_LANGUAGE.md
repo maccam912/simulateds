@@ -18,7 +18,7 @@ controls help the player inhabit it.
 The game world fills the viewport edge to edge, including wide displays. HUD
 controls float over it. A menu, catalog, or conversation must not shrink the world
 into a dashboard panel. Keep the ordinary play view quiet: household, current
-activity, needs, time, money, and a few actions. Open neighborhood navigation and
+activity, mood, time, money, and a few actions. Needs expand on request. Open neighborhood navigation and
 the catalog only when requested. Menu copy names an action or explains a state;
 avoid promotional taglines inside the game.
 
@@ -878,3 +878,42 @@ returns keyboard focus to Activities. Selecting a bed centers and inspects it;
 only its existing activity controls issue orders. Explicit priced build buttons
 enter construction; the overview itself never places a bed or orders tending.
 Use ordinary interface sounds and existing transitions.
+
+
+## Contextual actions and a quieter HUD
+
+Ordinary play keeps compact location/clock controls and a lower household/status
+strip. Needs expands the seven care bars; More holds activities, wishes, hobbies,
+People, household editing, travel, Mail, saving, camera centering and shared play.
+The More mark carries unread mail/news and ready art commissions without adding
+a separate permanent badge. Mood and the selected resident's current action stay
+visible, so hiding the bars does not hide a pressing care problem.
+
+Right-click furniture, a resident, artwork or ground to open a radial menu. Touch
+and hold for half a second offers the same choices; moving the finger cancels the
+hold and pans. Releasing the opening hold does not choose an action. A quick tap
+keeps the existing primary action. Shift+F10 or the Menu key opens the selected
+resident's choices; Tab/arrows navigate and Enter/Space chooses. Escape, Cancel,
+right-click or an outside click closes the wheel without issuing a world order.
+
+Use native text buttons around a quiet ring, clamped within the viewport, with
+44px or larger touch targets. Long menus use explicit More/Back pages. Keep the
+target name and acting resident in the center. Disabled choices explain their
+reason in the tooltip; Details opens the existing richer activity tray. Menus
+do not pause shared life or mutate simulation state. Revalidate choices at
+activation without replacing a reviewed meal, original painting, activity or
+household batch. Changing sessions or replacing a world cancels open wheels and
+pending touch gestures, even when target IDs are reused. The host remains the
+authority. Construction retains its tools.
+
+### Deferred physical activity polish
+
+Requested November 4: residents should visibly enter the shower while showering
+and sit on the couch when watching television, with similar placement/contact
+polish for other furniture use. This UI pass records the direction only. Follow
+up with furniture interaction anchors, entry/exit transitions, appropriate poses
+and animation, and a clear fallback when seating is absent or occupied. Keep
+rendered poses separate from authoritative positions, routing and reservations;
+any actual gameplay change to seating must use the command/simulation layer.
+Review in the real camera, daylight, night and a compact window before claiming
+that physical interaction polish is complete.

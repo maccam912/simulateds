@@ -28,6 +28,8 @@ func _run() -> void:
 	DirAccess.make_dir_recursive_absolute("res://build")
 	app.show_game(); session.menu_paused=true
 	await process_frame
+	await _click(app.game.more_button.get_global_rect().get_center())
+	await process_frame; await process_frame
 	await _click(app.game.household_button.get_global_rect().get_center())
 	assert(app.page=="household")
 	await _capture("editor")

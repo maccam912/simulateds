@@ -18,6 +18,7 @@ func _mouse(point: Vector2, click: bool=false) -> void:
 	await process_frame; await process_frame
 
 func _button(control: Button) -> void:
+	await preload("res://tests/hud_navigation.gd").reveal(control)
 	await process_frame; await process_frame
 	assert(control.is_visible_in_tree(),"Open the tray before clicking "+control.text)
 	if game.tools_box.is_ancestor_of(control): game.tools_box.get_parent().ensure_control_visible(control)
@@ -85,7 +86,7 @@ func _run() -> void:
 	await _button(game.commission_panel.confirm); await _button(game.painting_panel.buttons[terms.subject])
 	assert(first.task.has("paint_action"))
 	game.context_panel.hide(); await _button(game.family_box.get_child(1))
-	await _button(_named(game.hud,"Neighborhood")); await _button(game.lot_buttons.lot_2); await _button(game.visit_button)
+	await _button(game.neighborhood_button); await _button(game.lot_buttons.lot_2); await _button(game.visit_button)
 	await _button(game.queue_label)
 	assert(game.selected_member==second.id and second.lot_id=="lot_2" and game.viewed_lot=="lot_2" and game.plan_panel.visible)
 	game._show_notice("Your other resident's plan is unchanged.")

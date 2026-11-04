@@ -11,8 +11,8 @@ func _ready() -> void:
 	size_flags_vertical=Control.SIZE_EXPAND_FILL
 	tabs=TabContainer.new(); tabs.size_flags_vertical=Control.SIZE_EXPAND_FILL; add_child(tabs)
 	var first := _page("First day")
-	_card(first,"01 · Meet your household","Select a resident at the lower left; click their name again to find them in the world. Edit gives each resident a name, a look, and a favorite pastime.",[["household","Meet your household"]])
-	_card(first,"02 · A little care","Click a need bar or a resident’s thought cue to plan a useful activity. Plan's arrows reorder upcoming activities; the current activity continues. Your orders take priority over autonomy. Plan → Routines saves care and leisure sequences for either resident.",[["care","Open care suggestions"]])
+	_card(first,"01 · Meet your household","Select a resident at the lower left; click their name again to find them in the world. More → Edit household gives each resident a name, a look, and a favorite pastime.",[["household","Meet your household"]])
+	_card(first,"02 · A little care","Open Needs, then click a need bar, or click a resident’s thought cue to plan a useful activity. Plan's arrows reorder upcoming activities; the current activity continues. Your orders take priority over autonomy. Plan → Routines saves care and leisure sequences for either resident.",[["care","Open care suggestions"]])
 	_card(first,"03 · Something to enjoy","Wishes offer small goals and a journal. Reading, gardening, cooking, and painting develop lasting hobbies. Nothing expires while you are away.",[["wishes","See wishes"],["hobbies","Find a hobby"]])
 	_card(first,"04 · Make it home","Move furniture for free, decorate a room, or build an addition. Your household waits safely while you build.",[["build","Open build mode"]])
 	_card(first,"Set your pace","The clock controls pause solo life or play at 1×, 2×, and 4×. While paused, you can still queue activities and build. Pause again resumes your chosen pace. Shared neighborhoods keep one running clock; hosting or joining returns it to normal speed.",[])
@@ -30,7 +30,7 @@ func _ready() -> void:
 	_card(building,"Change your mind","Undo restores an edit and its exact cost; Redo reapplies it. Discard draft restores the whole house. Finish building checks that the home remains usable.",[])
 	_card(building,"Keep a neighborhood","The host owns shared saves. Saved games keep the last finished house; an unfinished construction draft is discarded when you leave.",[["save","Save neighborhood"]])
 	var neighbors := _page("Neighbors")
-	_card(neighbors,"Together, at your own pace","Host or join from Play together. Each household has its own lot. One person can build while another cares for their family.",[["connect","Play together"]])
+	_card(neighbors,"Together, at your own pace","Host or join from More → Play together. Each household has its own lot. One person can build while another cares for their family.",[["connect","Play together"]])
 	_card(neighbors,"Drop in for a catch-up","Visit an open lot from Neighborhood or People. Chats build friendships. If an owner starts construction, visitors return home safely.",[["people","Find your neighbors"]])
 	_card(neighbors,"Leave a little kindness","Mail carries a postcard with money or a finished painting for someone to find later. A gifted painting leaves your home and keeps its artist credit. Collect it, then choose Hang this painting. Finish construction before sending or collecting artwork. Home news shows gifts still waiting.",[["mail","Open the mailbox"]])
 	_card(neighbors,"The neighborhood clock","The host must stay running for life to continue. Away households get forgiving care and keep their wishes, hobbies, and friendships. If the entire host stops, the world waits. Shared menus never pause everyone else.",[])
@@ -41,7 +41,7 @@ func _ready() -> void:
 		var label := _text(str(Preferences.ACTION_NAMES[action]),14); label.size_flags_horizontal=Control.SIZE_EXPAND_FILL; grid.add_child(label)
 		var key := _text("",14,Style.GREEN); grid.add_child(key); binding_values[action]=key
 	_action_row(controls,[["bindings","Edit key bindings"]])
-	_card(controls,"Mouse & building shortcuts","Click: walk, use furniture, or place the selected item. Hover ground to preview a route or queued walk; Plan shows numbered destinations. Scroll: zoom. Middle-drag: pan. Click a selected household name again to find them, or use Find resident in Plan. Center resets the lot view. Ctrl/Cmd+F: search the catalog; Enter: select its first result. Ctrl/Cmd+Z: undo. Ctrl/Cmd+Shift+Z or Ctrl+Y: redo.",[])
+	_card(controls,"Mouse & building shortcuts","Right-click furniture or residents for an action wheel; on touch, hold briefly. Shift+F10 opens the selected resident’s wheel; Tab/arrows and Enter choose. Escape or an outside click dismisses it. More holds household, travel and activity tools; Needs expands care bars. Left-click: walk, use furniture, or place the selected item. Hover ground to preview a route or queued walk; Plan shows numbered destinations. Scroll: zoom. Middle-drag: pan. Click a selected household name again to find them, or use Find resident in Plan. More → Center view resets the lot view. Ctrl/Cmd+F: search the catalog; Enter: select its first result. Ctrl/Cmd+Z: undo. Ctrl/Cmd+Shift+Z or Ctrl+Y: redo.",[])
 	_card(controls,"Always a way back","Escape clears a search or unfinished placement before closing a tray, then opens the game menu. F1 always opens the developer console; try help or rosebud. Gameplay shortcuts wait while you type.",[])
 	context_hint=_text("",12,Style.GOLD); context_hint.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; add_child(context_hint)
 	refresh_bindings()

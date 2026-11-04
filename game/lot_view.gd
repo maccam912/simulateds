@@ -4,6 +4,7 @@ extends Control
 signal tile_clicked(cell: Vector2i)
 signal hovered(cell: Vector2i)
 signal entity_clicked(target: Dictionary)
+signal context_requested(target: Dictionary, position: Vector2)
 
 const Catalog = preload("res://game/catalog.gd")
 const Meals = preload("res://game/meals.gd")
@@ -106,6 +107,19 @@ var _drawing_target: Dictionary = {}
 var _art_object: Dictionary = {}
 var hover_target: Dictionary = {}
 var _pointer := Vector2(-10000,-10000)
+const CONTEXT_HOLD_SECONDS := 0.5
+const CONTEXT_DRAG_DISTANCE := 14.0
+var _touch_index := -1
+var _touch_origin := Vector2.ZERO
+var _touch_elapsed := 0.0
+var _touch_cancelled := false
+var _touch_fired := false
+var _touch_lot := ""
+var _touch_building := false
+var _touch_target: Dictionary={}
+var _touch_generation := -1
+var _touch_profile := ""
+var _touch_role := ""
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
@@ -116,6 +130,7 @@ func _ready() -> void:
 	mouse_exited.connect(func(): hover_cell = Vector2i(-1, -1); hover_target = {}; _pointer = Vector2(-10000,-10000); queue_redraw())
 
 func _process(delta: float) -> void:
+	_update_context_touch(delta)
 	var simulation_delta := delta*Session.effective_speed()
 	_time+=simulation_delta
 	motion.update(world,lot_id,simulation_delta,bool(Preferences.values.get("reduced_motion",false)),0.42 if Session.role=="client" else 0.22)
@@ -238,10 +253,103 @@ func _input(event: InputEvent) -> void:
 	# An overlay can receive the release even when the drag began on the lawn.
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_MIDDLE and not event.pressed:
 		_dragging = false
+	if _touch_index<0: return
+	if event is InputEventKey and event.pressed:
+		_touch_cancelled=true
+	elif event is InputEventScreenTouch:
+		if event.index!=_touch_index:
+			# A second finger is never a second command or a context hold.
+			_touch_cancelled=true
+			get_viewport().set_input_as_handled()
+		elif not event.pressed:
+			var local := make_input_local(event) as InputEventScreenTouch
+			var activate: bool=not event.canceled and not _touch_cancelled and not _touch_fired and _touch_origin.distance_to(local.position)<=CONTEXT_DRAG_DISTANCE and _touch_context_unchanged() and _point_available(local.position)
+			_touch_index=-1
+			if activate: _primary_click(local.position)
+			get_viewport().set_input_as_handled()
+	elif event is InputEventScreenDrag and event.index==_touch_index:
+		var local := make_input_local(event) as InputEventScreenDrag
+		if _touch_origin.distance_to(local.position)>CONTEXT_DRAG_DISTANCE: _touch_cancelled=true
+		# Dragging pans, while a completed hold owns the remainder of its gesture.
+		if _touch_cancelled and not _touch_fired and _touch_context_unchanged() and _point_available(local.position):
+			stop_camera_motion(); pan+=local.relative
+		get_viewport().set_input_as_handled()
+
+func _touch_context_unchanged() -> bool:
+	return _touch_lot==lot_id and _touch_building==building and _touch_generation==Session.world_generation and _touch_profile==Session.profile_id and _touch_role==Session.role
+
+func _point_available(point: Vector2) -> bool:
+	if not is_visible_in_tree() or not show_cues or mouse_filter==Control.MOUSE_FILTER_IGNORE or not Rect2(Vector2.ZERO,size).has_point(point): return false
+	for rect: Rect2 in overlay_rects:
+		if rect.has_point(point): return false
+	return true
+
+func _update_context_touch(delta: float) -> void:
+	if _touch_index<0 or _touch_cancelled or _touch_fired: return
+	if not _touch_context_unchanged() or not _point_available(_touch_origin):
+		_touch_cancelled=true; return
+	_touch_elapsed+=delta
+	if not building and _touch_elapsed>=CONTEXT_HOLD_SECONDS:
+		_touch_fired=true
+		# The menu takes ownership of the release. Do not retain a finger whose
+		# remaining events are now consumed by that overlay.
+		_touch_index=-1
+		if not _touch_target.is_empty(): _request_context(_touch_origin,_touch_target)
+
+func _context_target(point: Vector2) -> Dictionary:
+	var target := hit_target(point).duplicate(true)
+	if target.get("type")=="care":
+		# A care bubble belongs to its resident, not to a separate world object.
+		target["type"]="member"
+	if target.is_empty():
+		var cell := cell_at(point)
+		if not _in_bounds(cell): return {}
+		target={"type":"ground","x":cell.x,"y":cell.y}
+	return target
+
+func _request_context(point: Vector2, original_target: Dictionary={}) -> void:
+	if building or not _point_available(point): return
+	stop_camera_motion()
+	# Preserve the resident/object first touched even if it moves during a hold.
+	# The menu resolves that identity again against the current snapshot.
+	var target := original_target if not original_target.is_empty() else _context_target(point)
+	if target.is_empty(): return
+	context_requested.emit(target,point)
+
+func _primary_click(point: Vector2, double_click: bool=false) -> void:
+	if double_click and Time.get_ticks_msec()-_last_care_click<500 and not building: return
+	var target := hit_target(point)
+	var cell := cell_at(point)
+	if building and access_inspecting:
+		if target.get("type")=="access": entity_clicked.emit(target)
+		return
+	if building and build_kind in ["finish_wall","door","erase","window","wall_art"] and target.get("type") in ["wall","wall_art"]: cell=Vector2i(int(target.x),int(target.y))
+	if building and build_kind=="wall_art" and art_source.is_empty() and target.get("type")=="wall_art":
+		entity_clicked.emit(target)
+	elif building and build_kind=="move" and build_object_id.is_empty() and target.get("type")=="object":
+		entity_clicked.emit(target)
+	elif building and build_kind=="furniture_color" and target.get("type")=="object": entity_clicked.emit(target)
+	elif not building and not target.is_empty():
+		if target.get("type")=="care": _last_care_click=Time.get_ticks_msec()
+		entity_clicked.emit(target)
+	elif building and build_kind=="erase" and target.get("type")=="object":
+		tile_clicked.emit(Vector2i(int(target.x),int(target.y)))
+	elif _in_bounds(cell): tile_clicked.emit(cell)
 
 func _gui_input(event: InputEvent) -> void:
 	_layout()
+	if event is InputEventScreenTouch:
+		if event.pressed and _touch_index<0 and _point_available(event.position):
+			_touch_index=event.index; _touch_origin=event.position; _touch_elapsed=0.0
+			_touch_cancelled=false; _touch_fired=false; _touch_lot=lot_id; _touch_building=building
+			_touch_target=_context_target(event.position)
+			_touch_generation=Session.world_generation; _touch_profile=Session.profile_id; _touch_role=Session.role
+		accept_event(); return
 	if event is InputEventMouseButton:
+		# Handle touch explicitly so emulated mouse-down cannot walk/use furniture
+		# before the player has had time to hold for the radial menu.
+		if event.device==InputEvent.DEVICE_ID_EMULATION:
+			accept_event(); return
 		if event.button_index == MOUSE_BUTTON_MIDDLE:
 			if event.pressed: stop_camera_motion()
 			_dragging = event.pressed
@@ -253,26 +361,9 @@ func _gui_input(event: InputEvent) -> void:
 				stop_camera_motion()
 				zoom = maxf(0.65, zoom - 0.1)
 			elif event.button_index == MOUSE_BUTTON_LEFT:
-				if event.double_click and Time.get_ticks_msec()-_last_care_click<500 and not building:
-					accept_event(); return
-				var target := hit_target(event.position)
-				var cell := cell_at(event.position)
-				if building and access_inspecting:
-					if target.get("type")=="access": entity_clicked.emit(target)
-					accept_event(); return
-				if building and build_kind in ["finish_wall","door","erase","window","wall_art"] and target.get("type") in ["wall","wall_art"]: cell=Vector2i(int(target.x),int(target.y))
-				if building and build_kind=="wall_art" and art_source.is_empty() and target.get("type")=="wall_art":
-					entity_clicked.emit(target)
-				elif building and build_kind=="move" and build_object_id.is_empty() and target.get("type")=="object":
-					entity_clicked.emit(target)
-				elif building and build_kind=="furniture_color" and target.get("type")=="object": entity_clicked.emit(target)
-				elif not building and not target.is_empty():
-					if target.get("type")=="care": _last_care_click=Time.get_ticks_msec()
-					entity_clicked.emit(target)
-				elif building and build_kind == "erase" and target.get("type") == "object":
-					tile_clicked.emit(Vector2i(int(target.x),int(target.y)))
-				elif _in_bounds(cell):
-					tile_clicked.emit(cell)
+				_primary_click(event.position,event.double_click)
+			elif event.button_index==MOUSE_BUTTON_RIGHT:
+				_request_context(event.position)
 			accept_event()
 	elif event is InputEventMouseMotion:
 		if _dragging:
