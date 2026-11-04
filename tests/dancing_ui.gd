@@ -13,6 +13,8 @@ var suffix := ""
 func _initialize() -> void: call_deferred("_run")
 
 func _mouse(point: Vector2) -> void:
+	if DisplayServer.get_name()!="headless":
+		root.grab_focus(); Input.warp_mouse(point); await process_frame; await process_frame
 	var motion := InputEventMouseMotion.new(); motion.position=point; root.push_input(motion,true); await process_frame
 	for pressed in [true,false]:
 		var event := InputEventMouseButton.new(); event.button_index=MOUSE_BUTTON_LEFT; event.pressed=pressed; event.position=point
@@ -88,7 +90,7 @@ func _run() -> void:
 			session.command({"type":"move_object","lot_id":"lot_1","object_id":stereo.id,"x":8,"y":5,"rotation":rotation}); assert(session.last_action_ok)
 		await _capture("rotation-%d" % rotation); assert(view.hit_target(_point()).id==stereo.id)
 	await _button(game.mode_button); game.context_panel.hide()
-	await _mouse(_point()); assert(first.task.target_id==stereo.id)
+	await _mouse(_point()); assert(first.task.is_empty()); await _button(game.recreation_panel.single_button); assert(first.task.target_id==stereo.id)
 	await _arrive(1); await _capture("solo")
 	assert(first.action=="Dancing" and view._activity_pose(first).kind=="stereo")
 	if sound.enabled: assert(sound._dance_music.playing and sound._dance_music.bus=="Music")

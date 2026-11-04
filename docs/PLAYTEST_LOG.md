@@ -2112,3 +2112,63 @@ on Apple Silicon (`EXPORTED_NATIVE_RUNTIME_PASS`). This is an ad-hoc-signed loca
 build; physical Intel execution, notarization, and hosted platform checks remain
 separate gaps. The existing GitHub account billing/spending-limit block was not
 changed.
+
+## Calling the household to games and dancing
+
+Game tables and stereos now open a recreation tray before issuing an order. The
+tray offers Play/Dance for the selected resident and Call household for eligible
+own residents already on the lot. It shows people who are already chosen/planned,
+away, unreachable, or full up; existing deliberate plans stay first. Each target
+also appears separately in Activities. The host checks exact plan stamps and
+stages the batch before publishing only the affected own members. Calling while
+visiting never directs the host's family.
+
+Current automatic play can be chosen without restarting it. The accepted task
+keeps its place, path, elapsed time, and remaining time, gets a new action ID, and
+records the newly chosen boundary. Friendship and completion feedback exclude
+earlier automatic time. A near-finished activity still ends naturally. This adds
+one validated optional active-task field, with no required older-save defaults.
+
+Native input passes at 1440×900 and 1280×720 / 125% UI scale cover inspection
+without commands, household play, independent cancellation, ongoing automatic
+dancing, existing-plan preservation, an away selected resident, exact pending
+acknowledgements/snapshots, Activities navigation, and long names. The first
+review showed the explanation below the compact fold; shorter copy and removal
+of a redundant heading keep it visible. Four participants use a clipped one-line
+company list with full names on hover. Already-planned households receive a clear
+disabled label instead of a zero-count call. Final compact headless/native passes
+include these cases and assert the entire timing note remains visible.
+
+A native fixture initially put the stereo beside an enclosed pocket, leaving
+only one reachable place. The shared-play fixture now uses a reachable room; a
+separate model case verifies that a single usable place queues the second person
+without stealing the first's reservation. Existing compact tabletop and dancing
+native scenarios also pass, including positional game sounds, dance music, mute,
+pause, and independent participant control. Reviewed captures include
+`build/recreation-choice-compact.png`, `build/recreation-automatic-compact.png`,
+and `build/recreation-four-players-compact.png`.
+
+Full regression passed all 98 local suites, the main, painting, and meal Iroh
+scenarios, the new `RECREATION_IROH_PASS`, and dedicated-server startup. The new
+host/two-client scenario gives each player a separate household game, then calls
+a visiting household at a neighbor's table while leaving the owner idle. Both
+clients observe automatic dancing becoming chosen without restarting its timer;
+friendship and funds survive reconnect. Model checks cover malformed/foreign/stale
+orders, exact budgets and unaffected neighbors, action limits, plan preservation,
+partial eligibility, newly chosen friendship timing, snapshot validation, and
+natural completion without extending a short remaining timer.
+
+Fresh assessment: the default-content fixture (fun 70) earns a shared catch-up,
+with about 4.6–4.7 seconds of overlapping play. With fun already 95 and social 30,
+the same two household calls end after roughly four individual seconds, producing
+only 3.6–3.7 seconds together and no catch-up because of different arrival times.
+The next useful gameplay change is to let deliberately shared recreation finish
+its brief social moment before ending solely because fun is full, while keeping
+the natural activity timer, voluntary leaving, and existing plans authoritative.
+This timing improvement is proposed next work, not part of this checkpoint.
+
+The refreshed local universal macOS export passes plist validation, strict
+all-architecture signature verification, and `EXPORTED_NATIVE_RUNTIME_PASS` on
+Apple Silicon. This remains an ad-hoc-signed local package, not notarization or
+physical Intel/Android/cross-device evidence. Hosted checks remain subject to the
+previously reported GitHub account billing/spending-limit rejection.

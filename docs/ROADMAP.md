@@ -153,7 +153,9 @@ understandable result. Fuzz placement and reopening around residents/visitors.
   controls, actionable need thoughts, and resident camera focus are implemented.
   Travel/waiting feedback and estimated activity progress are implemented.
 - Object reservations, shared activities, conversations, basic relationships,
-  voluntary tabletop games, and discovery/joining from People are implemented.
+  voluntary tabletop games, and discovery/joining from People are implemented. Game/music
+  inspection now also offers explicit one-resident and household choices, with
+  plan preservation and adoption of ongoing automatic play.
   Add richer recreation and shared activities.
 - Activity poses, directional facing, thoughtful need cues, and sparse positional
   sounds are implemented, along with movement previews and accepted destination

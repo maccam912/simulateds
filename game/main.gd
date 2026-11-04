@@ -9,6 +9,7 @@ const Style = preload("res://game/style.gd")
 const Catalog = preload("res://game/catalog.gd")
 const WallArt = preload("res://game/wall_art.gd")
 const MealPanel = preload("res://game/meal_panel.gd")
+const RecreationPanel = preload("res://game/recreation_panel.gd")
 const TravelPanel = preload("res://game/travel_panel.gd")
 const Neighborhood = preload("res://game/neighborhood.gd")
 const NeighborhoodCard = preload("res://game/neighborhood_card.gd")
@@ -131,6 +132,7 @@ var _lots_signature := ""
 var _tools_signature := ""
 var _notice_time := 0.0
 var _selected_object := ""
+var recreation_panel: VBoxContainer
 var meal_panel: VBoxContainer
 var wall_art_panel: VBoxContainer
 var _art_source := ""
@@ -669,6 +671,7 @@ func _refresh() -> void:
 	if _context_page=="painting" and not build_mode and is_instance_valid(painting_panel):
 		painting_panel.display_pending=not _art_entry.is_empty()
 		painting_panel.refresh(viewed_lot,_selected_object,selected_member)
+	if _context_page=="recreation" and not build_mode and is_instance_valid(recreation_panel): recreation_panel.refresh(viewed_lot,_selected_object,selected_member)
 	if _context_page=="meal" and not build_mode and is_instance_valid(meal_panel): meal_panel.refresh(viewed_lot,_selected_object,selected_member)
 	if build_mode and _context_page=="blueprints" and is_instance_valid(library_panel):
 		library_panel.refresh(viewed_lot,_copy_source,_blueprint_id)
@@ -908,6 +911,10 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 		activity_label.text="Travel together"
 		travel_panel=TravelPanel.new(); tools_box.add_child(travel_panel); travel_panel.command_requested.connect(_send)
 		context_box.add_child(_button("‹ Activities",func(): _context_page="activities"; _refresh()))
+	elif _context_page=="recreation":
+		activity_label.text="Recreation"
+		recreation_panel=RecreationPanel.new(); tools_box.add_child(recreation_panel); recreation_panel.command_requested.connect(_send)
+		context_box.add_child(_button("‹ Activities",func(): _context_page="activities"; _refresh()))
 	elif _context_page=="meal":
 		activity_label.text="At the dining table"
 		meal_panel=MealPanel.new(); tools_box.add_child(meal_panel); meal_panel.command_requested.connect(_send)
@@ -920,12 +927,13 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 		activity_label.text="Activities"
 		var shown: Dictionary={}
 		for obj in lot.get("objects",[]):
-			if shown.has(obj.kind) and not obj.kind in ["garden_bed","easel","dining_table"]: continue
+			if shown.has(obj.kind) and not obj.kind in ["garden_bed","easel","dining_table","game_table","stereo"]: continue
 			shown[obj.kind]=true
 			var item: Dictionary=Catalog.ITEMS.get(obj.kind,{})
 			if str(item.get("need","")).is_empty(): continue
 			var text: String={"bed":"Get some sleep","fridge":"Have a bite to eat","shower":"Take a shower","toilet":"Use the bathroom","sofa":"Put your feet up","tv":"Watch a little TV","bookshelf":"Read a good book","plant":"Enjoy the greenery","table":"Take a seat","game_table":"Play a tabletop game","stereo":"Dance to some music"}.get(str(obj.kind),str(item.get("name",obj.kind)))
 			var b:=_button(text,func(): _interact(str(obj.id)))
+			if obj.kind in ["game_table","stereo"]: b.text=("Game table" if obj.kind=="game_table" else "Music & dancing")+" · %d, %d" % [obj.x,obj.y]; b.tooltip_text="Choose this resident or call your household here."
 			if obj.kind=="dining_table": b.text="Meals · %d, %d" % [obj.x,obj.y]; b.tooltip_text=Meals.summary(obj.meal)
 			if obj.kind=="easel": b.text="Easel · %d, %d" % [obj.x,obj.y]; b.tooltip_text=Paintings.summary(obj.painting)
 			if obj.kind=="garden_bed": b.text="Garden bed · %d, %d" % [obj.x,obj.y]; b.tooltip_text=Gardens.summary(obj.garden)
@@ -1166,6 +1174,8 @@ func _tile_clicked(cell: Vector2i) -> void:
 
 func _interact(object_id: String) -> void:
 	var object: Dictionary=Session.world._object(Session.state.lots[viewed_lot],object_id)
+	if object.get("kind") in ["game_table","stereo"]:
+		_selected_object=object_id; _context_page="recreation"; _refresh(); _show_tray(context_panel,true); call_deferred("_reset_catalog_scroll"); return
 	if object.get("kind")=="dining_table":
 		_selected_object=object_id; _context_page="meal"; _refresh(); _show_tray(context_panel,true); call_deferred("_reset_catalog_scroll"); return
 	if object.get("kind")=="easel":

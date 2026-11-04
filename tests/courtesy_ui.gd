@@ -12,6 +12,8 @@ var suffix := ""
 func _initialize() -> void: call_deferred("_run")
 
 func _mouse(point: Vector2, click: bool=true) -> void:
+	if DisplayServer.get_name()!="headless":
+		root.grab_focus(); Input.warp_mouse(point); await process_frame; await process_frame
 	var motion := InputEventMouseMotion.new(); motion.position=point; root.push_input(motion,true); await process_frame
 	if not click: return
 	for pressed in [true,false]:
@@ -67,7 +69,7 @@ func _run() -> void:
 	await _button(game.catalog_buttons.stereo); await _mouse(view.grid_point(7.5,6.5))
 	stereo=session.state.lots.lot_1.objects[-1]
 	await _button(game.mode_button); assert(not session.state.lots.lot_1.building); game.context_panel.hide()
-	await _mouse(_point()); await _arrive(1)
+	await _mouse(_point()); await _button(game.recreation_panel.single_button); await _arrive(1)
 	await _button(game.family_box.get_child(1)); await _button(game.people_button)
 	assert(game.leisure_buttons[first.id].text=="Queue dance")
 	await _button(game.leisure_buttons[first.id]); var waiting: String=second.queue[0].id

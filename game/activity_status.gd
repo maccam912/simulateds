@@ -2,6 +2,7 @@ extends RefCounted
 ## Read-only feedback from accepted simulation state. No presentation clock.
 const World = preload("res://game/world.gd")
 const Catalog = preload("res://game/catalog.gd")
+const Leisure = preload("res://game/shared_leisure.gd")
 
 static func sample(member: Dictionary, lot: Dictionary) -> Dictionary:
 	var task: Dictionary=member.get("task",{})
@@ -29,7 +30,7 @@ static func sample(member: Dictionary, lot: Dictionary) -> Dictionary:
 		var rate := float(World.personal_activity_rates(member,kind).get(need,0.0))-float(World.DECAY.get(need,0.0))
 		var until_full := maxf(0.0,99.0-float(member.get("needs",{}).get(need,0.0)))/maxf(0.01,rate)
 		var minimum := 0.0 if task.get("automatic",false) else World.MIN_ACTIVITY_TIME
-		if not kind in ["garden_bed","easel"]: remaining=minf(remaining,maxf(until_full,maxf(0.0,minimum-elapsed)))
+		if not kind in ["garden_bed","easel"]: remaining=minf(remaining,maxf(until_full,maxf(0.0,minimum-Leisure.chosen_time(task))))
 		label=str(World.ACTION_NAMES.get(kind,"Enjoying home"))
 		if kind in ["garden_bed","easel"]: label=str(task.get("label","Making something"))
 		if kind=="game_table" and action=="Playing together": label="Playing together · Fun + social"

@@ -1163,3 +1163,43 @@ on Apple Silicon (`EXPORTED_NATIVE_RUNTIME_PASS`). This is an ad-hoc-signed loca
 build; physical Intel execution, notarization, and hosted platform checks remain
 separate gaps. The existing GitHub account billing/spending-limit block was not
 changed.
+
+## Household games and dancing
+
+Full regression passes 98 local suites, `IROH_SMOKE_PASS`,
+`PAINTINGS_IROH_PASS`, `MEALS_IROH_PASS`, the new `RECREATION_IROH_PASS`, and
+`SERVER_SMOKE_PASS`. `recreation` verifies exact whole-call plan stamps, owned
+partial eligibility, visited-lot behavior, unchanged budgets/other families,
+full queues, blocked paths, action limits, one-place waiting, and atomic rejection
+of stale/malformed/foreign requests. Current automatic activities keep their
+timers and positions when chosen. New overlap is required for friendship;
+short remaining timers finish without earning instant credit. JSON snapshots
+accept valid optional chosen-time metadata and reject impossible offsets or
+metadata attached to the wrong activity.
+
+`recreation_ui` passes with native injected input at 1440×900 and 1280×720 / 125%
+UI scale. Inspecting does not direct residents; individual and household choices
+use the actual buttons. Existing plans, visiting housemates, exact pending ACK
+handling, long names, Activities navigation, and independently leaving an activity
+are exercised. Final compact headless/native passes additionally verify four
+participants and that the complete timing explanation stays visible. Updated
+`tabletop_ui` and `dancing_ui` compact native passes preserve their sound, music,
+reservation, and individual-control assertions through the new choice tray.
+
+The new separate-process Iroh scenario exercises both independent households,
+stale/foreign call rejection, visiting household-only control, distinct places,
+newly chosen automatic play visible to both clients, and friendship/fund retention
+on reconnect. It is local-machine network evidence, not physical cross-device or
+human-family testing.
+
+A separate simulation assessment records an open timing issue for the next cycle:
+fun-70 households share 4.6–4.7 seconds and earn a catch-up; fun-95/social-30
+households share only 3.6–3.7 seconds before need-based completion and miss it.
+Natural duration, arriving separately, and full-fun companionship need a gameplay
+pass; the current Call household copy explicitly allows separate arrival times.
+
+The refreshed local universal macOS export passes plist validation, strict
+all-architecture signature verification, and `EXPORTED_NATIVE_RUNTIME_PASS` on
+Apple Silicon. This remains an ad-hoc-signed local package, not notarization or
+physical Intel/Android/cross-device evidence. Hosted checks remain subject to the
+previously reported GitHub account billing/spending-limit rejection.

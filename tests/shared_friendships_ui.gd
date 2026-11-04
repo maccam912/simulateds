@@ -12,6 +12,8 @@ var suffix := ""
 func _initialize() -> void: call_deferred("_run")
 
 func _mouse(point: Vector2, click: bool=true) -> void:
+	if DisplayServer.get_name()!="headless":
+		root.grab_focus(); Input.warp_mouse(point); await process_frame; await process_frame
 	var motion := InputEventMouseMotion.new(); motion.position=point; root.push_input(motion,true); await process_frame
 	if not click: return
 	for pressed in [true,false]:
@@ -79,7 +81,7 @@ func _run() -> void:
 	await _button(game.mode_button); await _button(game.catalog_buttons.stereo); await _mouse(view.grid_point(8.5,5.5))
 	stereo=session.state.lots.lot_1.objects[-1]
 	await _button(game.mode_button); game.context_panel.hide()
-	await _mouse(_point()); await _arrive(1)
+	await _mouse(_point()); await _button(game.recreation_panel.single_button); await _arrive(1)
 	# Seed Robin's accepted autonomous choice, then choose deliberate participation through People.
 	session.world._queue_action(second,{"type":"interact","target_id":stereo.id,"automatic":true})
 	session.world._start_next(second,session.state.lots.lot_1); await _arrive(2)

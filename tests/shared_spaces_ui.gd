@@ -13,6 +13,8 @@ var suffix := ""
 func _initialize() -> void: call_deferred("_run")
 
 func _mouse(point: Vector2, click: bool=true) -> void:
+	if DisplayServer.get_name()!="headless":
+		root.grab_focus(); Input.warp_mouse(point); await process_frame; await process_frame
 	var motion := InputEventMouseMotion.new(); motion.position=point; root.push_input(motion,true); await process_frame
 	if not click: return
 	for pressed in [true,false]:
@@ -80,7 +82,7 @@ func _run() -> void:
 	for occupied: Rect2 in view.overlay_rects: assert(not occupied.intersects(view.preview_label_rect))
 	await _mouse(view.grid_point(7.5,6.5)); stereo=session.state.lots.lot_1.objects[-1]; assert(stereo.kind=="stereo")
 	await _button(game.mode_button); assert(not session.state.lots.lot_1.building,str(session.world.build_access(session.state.lots.lot_1))); game.context_panel.hide()
-	await _mouse(_point()); assert(not first.task.is_empty() or not second.task.is_empty(),str([session.last_action_ok,first.action,second.action])); await _arrive(1)
+	await _mouse(_point()); await _button(game.recreation_panel.single_button); assert(not first.task.is_empty() or not second.task.is_empty(),str([session.last_action_ok,first.action,second.action])); await _arrive(1)
 	await _button(game.family_box.get_child(1)); await _button(game.people_button)
 	assert(game.leisure_buttons[first.id].text=="Queue dance" and game.leisure_buttons[first.id].tooltip_text.contains("Only one usable place"))
 	await _button(game.leisure_buttons[first.id]); await _capture("waiting")
@@ -98,7 +100,7 @@ func _run() -> void:
 	assert(view.preview_result.ok and view.leisure_report.capacity==4 and session.world.snapshot()==before,str([view.preview_result,view.leisure_report,view.hover_cell,session.world.snapshot()==before]))
 	await _mouse(view.grid_point(9.5,9.5)); assert(stereo.x==9 and stereo.y==9)
 	await _button(game.mode_button); game.context_panel.hide()
-	await _mouse(_point()); await _arrive(1)
+	await _mouse(_point()); await _button(game.recreation_panel.single_button); await _arrive(1)
 	await _button(game.family_box.get_child(0)); await _button(game.people_button)
 	assert(game.leisure_buttons[second.id].text=="Join dance")
 	await _button(game.leisure_buttons[second.id]); await _arrive(2)

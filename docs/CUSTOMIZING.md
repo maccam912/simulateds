@@ -25,6 +25,8 @@ household or an absent player.
 | `game/art_gifts.gd` | Validated original-art transfers through mail, collection capacity, and unique custody across canvases, collections, and unclaimed gifts |
 | `game/mailbox.gd` | Bounded postcard delivery, money/art gift escrow, collection, receipts, and save validation |
 | `game/mail_panel.gd` | Local postcard drafts, gift previews, fixed action footer, and exact command acknowledgements |
+| `game/recreation.gd` | Exact household plan stamps, supported game/music furnishings, and optional chosen-time validation |
+| `game/recreation_panel.gd` | Read-only game/music inspection, household eligibility, correlated choices, and compact controls |
 | `game/meals.gd` | Recipes, portions, accepted-plan reservations, meal/task validation, and cross-resident serving consistency |
 | `game/meal_panel.gd` | Recipe previews, preparation, free/reserved portions, eating, clearing leftovers, and exact command acknowledgements |
 | `game/meal_art.gd` | Shared original salad/sandwich platter art for tables and previews; meal poses/audio remain presentation only |
@@ -195,3 +197,23 @@ and makes repeated stale requests harmless. The UI correlates the exact command
 acknowledgement and then waits for the new member counters in a snapshot. New
 building edits must continue rejecting occupied tiles; Undo and Discard must not
 put an obstacle back on a staged resident. No new save metadata is required.
+
+## Household recreation
+
+`recreation` takes an owned selected member, an explicit `household` boolean,
+lot revision, target furnishing, and exact server-derived plan stamps. One-resident
+and household choices share the same command. Eligibility is recomputed on the
+host: leave away, already-chosen/planned, full, unreachable, or exhausted members
+alone, and never include another player's family. Stage ordinary interactions in
+a copied world, then publish only eligible own member dictionaries after every
+order succeeds. Normal place reservations and waiting rules still apply; a call
+is not a promise of simultaneous arrival.
+
+Choosing a current automatic game/dance keeps its path, elapsed time, remaining
+time, and place. Remove `automatic` and the old social-start marker, allocate a
+new accepted action ID, and store optional `leisure_chosen_at=elapsed`. Validate
+this only on active, deliberate game-table/stereo tasks, with a finite offset
+between zero and elapsed. No older save needs a default. Shared leisure's
+`chosen_time` handles this offset and the existing meal offset consistently;
+friendship requires newly chosen overlap. Need-completion estimates and rewards
+also exclude earlier automatic time, and the natural timer is never extended.

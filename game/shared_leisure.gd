@@ -92,3 +92,7 @@ static func waiting_reason(report: Dictionary) -> String:
 		return "Only one usable place; it is reserved." if int(report.capacity)==1 else "All %d usable places are reserved." % int(report.capacity)
 	if report.cells.any(func(cell): return cell.status=="reserved"): return "Places are occupied or reserved nearby."
 	return "Someone is standing in the available places."
+
+## Newly chosen participation excludes time spent in an autonomous activity.
+static func chosen_time(task: Dictionary) -> float:
+	return maxf(0.0,float(task.get("elapsed",0.0))-float(task.get("leisure_chosen_at",task.get("meal_chosen_at",0.0))))

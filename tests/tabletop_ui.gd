@@ -8,6 +8,8 @@ var suffix := ""
 func _initialize() -> void: call_deferred("_run")
 
 func _click(point: Vector2) -> void:
+	if DisplayServer.get_name()!="headless":
+		root.grab_focus(); Input.warp_mouse(point); await process_frame; await process_frame
 	var motion := InputEventMouseMotion.new(); motion.position=point
 	root.push_input(motion,true); await process_frame
 	for pressed in [true,false]:
@@ -76,6 +78,8 @@ func _run() -> void:
 	await _button(game.mode_button)
 	game.context_panel.hide(); await _capture("ready")
 	await _click(_visible_board_point(object_id))
+	assert(first.task.is_empty(),"Inspecting the table does not direct a resident")
+	await _button(game.recreation_panel.single_button)
 	assert(first.task.get("target_id")==object_id,"Clicking the uncovered board queues a game for the selected resident")
 	await _button(game.queue_label)
 	for tick in range(100):

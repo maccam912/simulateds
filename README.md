@@ -410,7 +410,8 @@ automatic activities. Beds and bathroom fixtures allow one user at a time;
 waiting residents keep their place in their own plan.
 
 Buy the **Checkered game table** from Living for §340 (2×2 tiles). Click it to
-enjoy a solo puzzle, or have up to four residents join through their own plans.
+inspect recreation, then **Play** for the selected resident or **Call household**
+for eligible housemates on this lot. Up to four residents can join through their own plans.
 Playing restores fun; two or more participants also restore social. Each gets
 a separate place, and a fifth waits in their plan. Leaving the game preserves
 everyone else's activity. Construction sends visitors safely home as usual.
@@ -468,12 +469,26 @@ gardening hobby/wish rewards; autonomy never buys seeds or harvests crops.
 
 ## Music and dancing
 
-Build a **Little hi-fi** (§260, Living) and click it to dance. Up to four residents
+Build a **Little hi-fi** (§260, Living), click it, then choose **Dance** or
+**Call household**. Up to four residents
 reserve distinct walkable spots beside it when the layout has room. Solo dancing restores fun; actual
 participants also restore social while dancing together. A fifth resident waits
 for a place. Each resident keeps their own plan, so cancellation, travel, or a
 visitor leaving does not stop the others. **People → Join dance** discovers a
 resident's current activity and adds it after your existing plans.
+
+Both recreation trays show the household members who can join, who are already
+playing or planned, and who are away, unreachable, or have a full plan. Calls only
+affect your own household here, even when visiting a neighbor. Existing deliberate
+plans stay first; different arrival times can mean playing separately. Inspecting
+a furnishing does not issue an order. The Activities list offers each game table
+and stereo separately so you can choose which gathering to use.
+
+**Choose current game/dance**, or a household call, can turn automatic participation
+into chosen recreation while keeping the same place and remaining time. Earlier
+automatic time earns no friendship, and the activity is not extended past its
+natural finish. Other players continue to direct their own residents. A changed
+household plan rejects the call before anyone is affected.
 
 Dancing can be a favorite pastime and a step in household routines. The hi-fi
 has a visible playing note and residents use a raised-arm dance pose; Reduced

@@ -20,6 +20,7 @@ const Windows = preload("res://game/windows.gd")
 const Pastimes = preload("res://game/pastimes.gd")
 const Appearance = preload("res://game/appearance.gd")
 const Leisure = preload("res://game/shared_leisure.gd")
+const Recreation = preload("res://game/recreation.gd")
 const Courtesy = preload("res://game/courtesy.gd")
 const BuildAccess = preload("res://game/build_access.gd")
 const Routines = preload("res://game/routines.gd")
@@ -218,6 +219,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 	if member.is_empty():
 		return _result(false, "You can only direct your own family.")
 	if type=="meal_call": return _call_meal(profile_id,command)
+	if type=="recreation": return _recreation(profile_id,command,lot)
 	if type=="travel_household": return _travel_household(profile_id,command)
 	if type == "renew_wishes":
 		if not Wishes.can_renew(member.wishes,int(state.day)):
@@ -498,6 +500,68 @@ func _arrival_places(lot: Dictionary,count: int,ignore_member: String="") -> Arr
 		result.append(cell)
 		if result.size()==count: break
 	return result
+
+func recreation_option(profile_id: String,member_id: String,lot_id: String,target_id: Variant,household: bool=false) -> Dictionary:
+	var result := {"ok":false,"message":"Choose a game table or stereo.","orders":[],"rows":[],"kind":"","revision":0}
+	var family: Dictionary=state.families.get(profile_id,{})
+	var selected:=_member(family,member_id) if not family.is_empty() else {}
+	if selected.is_empty(): result.message="Choose one of your household's residents."; return result
+	var lot: Dictionary=state.lots.get(lot_id,{})
+	if lot.is_empty() or not target_id is String: return result
+	var object:=_object(lot,target_id)
+	if not object.get("kind") in Recreation.KINDS: return result
+	result.kind=str(object.kind); result.revision=int(lot.revision)
+	if lot.building or state.lots[family.home_lot].building: result.message="Finish construction before planning recreation."; return result
+	var residents: Array=[selected]
+	if household:
+		for resident: Dictionary in family.members:
+			if resident.id!=selected.id: residents.append(resident)
+	for resident: Dictionary in residents:
+		var row := {"id":str(resident.id),"name":str(resident.name),"action":"","detail":""}
+		var own:=Leisure.activity(state,resident)
+		var current: bool=not own.is_empty() and own.id==target_id
+		var planned: bool=resident.queue.any(func(task): return task.get("type")=="interact" and task.get("target_kind","object")=="object" and task.get("target_id")==target_id)
+		if resident.lot_id!=lot_id: row.detail="Away · Visit this lot first"
+		elif (current and not resident.task.get("automatic",false)) or planned: row.detail="Already chosen here" if current else "Already in their plan"
+		elif int(resident.next_action)>=9007199254740000: row.detail="Action limit reached"
+		elif current: row.action="choose"; row.detail="Choose current play · Keep place and time"
+		elif resident.queue.size()>=MAX_QUEUE: row.detail="Plan full · Make space in Plan"
+		elif not _can_reach_object(lot,_position(resident),object): row.detail="No path · Clear a route first"
+		else:
+			row.action="start"
+			row.detail="After their plan" if not resident.queue.is_empty() or (not resident.task.is_empty() and not resident.task.get("automatic",false)) else "Join now"
+			if Leisure.spaces(state,lot,object,resident).available.is_empty(): row.detail+=" · Wait for a place"
+		if not str(row.action).is_empty(): result.orders.append(Recreation.stamp(resident,str(row.action)))
+		result.rows.append(row)
+	result.ok=not result.orders.is_empty()
+	var lines: PackedStringArray=[]
+	for row: Dictionary in result.rows: lines.append(str(row.name)+": "+str(row.detail))
+	result.message="\n".join(lines)+"\nOnly your household here. Existing plans stay first; different arrival times may mean playing separately."
+	return result
+
+func _recreation(profile_id: String,command: Dictionary,lot: Dictionary) -> Dictionary:
+	if not command.get("household") is bool: return _result(false,"Choose this resident or the household.")
+	var option:=recreation_option(profile_id,str(command.member_id),str(lot.id),command.get("target_id"),command.household)
+	if not option.ok: return _result(false,str(option.message))
+	if not _integer(command.get("revision")) or int(command.revision)!=int(option.revision): return _result(false,"The furnishing changed. Choose from its current activities.")
+	if not Recreation.matches(command.get("orders"),option.orders): return _result(false,"Household plans changed. Review who can join and choose again.")
+	# Resolve ordinary individual actions in one staged world, then publish only
+	# the requested household members. Visitors remain under their own control.
+	var staged: RefCounted=get_script().new(); staged.state=state.duplicate(true)
+	for order: Dictionary in option.orders:
+		var resident: Dictionary=staged._member(staged.state.families[profile_id],str(order.member_id))
+		if order.action=="choose":
+			var chosen: Dictionary=resident.task.duplicate(true)
+			chosen.erase("automatic"); chosen.erase("social_started"); chosen.leisure_chosen_at=float(chosen.elapsed)
+			staged._queue_action(resident,chosen); resident.task=resident.queue.pop_back()
+		else:
+			var accepted: Dictionary=staged.apply_command(profile_id,{"type":"interact","member_id":order.member_id,"lot_id":lot.id,"target_id":command.target_id})
+			if not accepted.ok: return _result(false,"Recreation changed: "+str(accepted.message))
+	var names: PackedStringArray=[]
+	for order: Dictionary in option.orders:
+		var resident:=_member(state.families[profile_id],str(order.member_id))
+		resident.merge(staged._member(staged.state.families[profile_id],str(order.member_id)),true); names.append(str(resident.name))
+	return _result(true,("Music & dancing" if option.kind=="stereo" else "Tabletop game")+" chosen · "+", ".join(names)+". Existing plans stay first.")
 
 func meal_call_option(profile_id: String,member_id: String,lot_id: String,table_id: Variant) -> Dictionary:
 	var result := {"ok":false,"message":"Choose a dining table.","orders":[],"rows":[],"batch":0}
@@ -1048,7 +1112,7 @@ func _tick_member(member: Dictionary, lot: Dictionary, delta: float) -> void:
 					companion.needs.social = minf(100.0, float(companion.needs.social) + 2.0 * delta)
 	task.remaining -= delta
 	var minimum_time := 0.0 if task.get("automatic",false) else MIN_ACTIVITY_TIME
-	if task.remaining <= 0.0 or (float(member.needs[need]) >= 99.0 and float(task.elapsed)>=minimum_time):
+	if task.remaining <= 0.0 or (float(member.needs[need]) >= 99.0 and Leisure.chosen_time(task)>=minimum_time):
 		_finish_wish(member,task,str(object.kind))
 		_finish_hobby(member,task,str(object.kind))
 		_end_task(member,"done",str(need).capitalize()+" fulfilled." if float(task.remaining)>0.0 else "Activity finished.")
@@ -1299,7 +1363,7 @@ func _painting_hobby_option(member: Dictionary) -> Dictionary:
 	return best
 
 func _finish_hobby(member: Dictionary, task: Dictionary, activity: String) -> void:
-	if bool(task.get("automatic",false)) or float(task.get("elapsed",0.0))<4.0: return
+	if bool(task.get("automatic",false)) or Leisure.chosen_time(task)<4.0: return
 	_record_hobby(member,activity)
 
 func _record_hobby(member: Dictionary,activity: String) -> void:
@@ -1322,6 +1386,7 @@ func _conversation_partner(member: Dictionary) -> Dictionary:
 
 func _finish_wish(member: Dictionary, task: Dictionary, activity: String, qualifying_delta: float=0.0) -> void:
 	if bool(task.get("automatic",false)): return
+	if task.has("leisure_chosen_at") and Leisure.chosen_time(task)+qualifying_delta+0.000001<MIN_ACTIVITY_TIME: return
 	if task.has("meal_chosen_at") and Meals.chosen_time(task)+qualifying_delta+0.000001<MIN_ACTIVITY_TIME: return
 	for family: Dictionary in state.families.values():
 		if not family.online: continue
@@ -1884,6 +1949,7 @@ func _valid_state(data: Dictionary) -> bool:
 					return false
 			if not member.task.is_empty() and not _valid_task(member.task, true):
 				return false
+			if member.task.has("leisure_chosen_at") and not _object(data.lots[member.lot_id],str(member.task.target_id)).get("kind") in Recreation.KINDS: return false
 			for need: String in NEEDS:
 				if not _number(member.needs.get(need)) or float(member.needs[need]) < 0 or float(member.needs[need]) > 100:
 					return false
@@ -1914,6 +1980,7 @@ func _adjust_funds(lot_id: String, amount: int) -> bool:
 func _valid_task(value: Variant, active: bool) -> bool:
 	if not value is Dictionary or not value.get("type") in ["move", "interact"]:
 		return false
+	if not Recreation.valid_choice(value,active): return false
 	if value.has("meal_action") or value.has("meal_table") or value.has("meal_recipe") or value.has("meal_batch") or value.has("meal_taken") or value.has("meal_phase") or value.has("meal_chosen_at"):
 		if not Meals.valid_task(value,active): return false
 	if value.get("target_kind")=="art":
@@ -2007,7 +2074,7 @@ func _tick_shared_friendships(delta: float) -> void:
 			var second: Dictionary=participants[next]
 			if first.member.lot_id!=second.member.lot_id or first.object.id!=second.object.id: continue
 			var a: Dictionary=first.member.task; var b: Dictionary=second.member.task
-			var together := minf(Meals.chosen_time(a),Meals.chosen_time(b))+minf(delta,minf(float(a.remaining),float(b.remaining)))
+			var together := minf(Leisure.chosen_time(a),Leisure.chosen_time(b))+minf(delta,minf(float(a.remaining),float(b.remaining)))
 			if together+0.0000001<Friendships.SHARED_TIME: continue
 			var started := maxi(int(a.social_started),int(b.social_started))
 			var result := Friendships.record(state,str(first.member.id),str(second.member.id),started,str(first.object.kind))

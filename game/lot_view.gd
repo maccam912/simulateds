@@ -709,7 +709,7 @@ func _draw_hover() -> void:
 		if Leisure.KINDS.has(hover_target.kind):
 			var report := _leisure_spaces(world.lots[lot_id],hover_target)
 			_draw_leisure_places(report)
-			detail=Leisure.summary(report)+" · Click to "+("queue" if report.available.is_empty() or report.reserved>=report.capacity else "join")
+			detail=Leisure.summary(report)+" · Click to choose recreation"
 			if report.available.is_empty(): detail+="\n"+Leisure.waiting_reason(report)
 			detail+="\n○ Open  ● Reserved  — Occupied  × Blocked / no path"
 		if bool(item.get("exclusive",false)) and not hover_target.kind in ["garden_bed","easel"]:

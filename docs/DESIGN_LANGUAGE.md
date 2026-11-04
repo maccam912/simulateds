@@ -746,3 +746,20 @@ beside the entrance and the normal notice explains that building can continue.
 Moving… disables only the pending button until the accepted state arrives. When
 everyone is visiting, disable it with an explicit explanation instead of recalling
 the family. Do not add a confirmation modal or another permanent HUD panel.
+
+
+## Choosing household recreation
+
+Game tables and stereos open a quiet activity tray before directing a resident.
+Show the furnishing name, actual reserved places, and each own housemate's
+eligibility. Keep the selected-resident choice and Call household together, with
+brief visible copy explaining that plans stay first and arrival times may differ.
+Current automatic players can choose the activity without restarting it; explain
+that their place/time stay and only newly chosen company builds friendship.
+
+Keep the tray stable while tasks, reservations, and names update. Use the same
+native controls, sounds, and floating placement as other activity trays. Clip the
+one-line participant list with full names on hover so four long names cannot
+push the action/timing explanation below the compact viewport. Inspection itself
+never queues an action, while the Activities list offers each furnishing at its
+own location. Other players remain responsible for their own participants.
