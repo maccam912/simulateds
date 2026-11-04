@@ -603,3 +603,24 @@ of contribution and a finished picture. Interruptions preserve measured work,
 while sales and arranging earn no practice. Improve fun and comfort as skill
 grows; keep painting duration and sale value stable. Use the existing quiet
 rank notice and journal entry instead of a modal reward screen.
+
+
+### A picture in the post
+
+Postcards can carry one finished painting from an easel, a wall, or the household
+collection. The gift selector names its subject and current location. Show the
+same miniature and artist credit before sending, plus a fixed explanation that
+the original leaves the sender's home. If the selected canvas changes, require a
+new choice; never substitute another picture or silently switch to a plain card.
+
+Keep Send, Collect, Hang, and Archive outside the scrolling content. A received
+painting sits beside its title and artist credit on the warm postcard paper,
+ahead of the personal note. Collection is explicit; the next action takes the
+player directly to wall arrangement in their own home. The receipt keeps a
+preview after collection, but it is not another copy of the artwork. Home news
+counts pictures waiting now without pretending they are money gifts.
+
+Use the existing soft confirmation cue. Construction and full collections explain
+why the original will wait safely; they do not discard it. Pending controls wait
+for the exact reply and accepted state. Repeated collection never creates another
+picture, and giving it onward preserves its creators.

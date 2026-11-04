@@ -1,30 +1,43 @@
 extends VBoxContainer
 ## A local draft over replicated mail. Success is established by accepted state.
+signal arrange_requested(source: String)
 const HomeNews = preload("res://game/home_news.gd")
 const Mailbox = preload("res://game/mailbox.gd")
+const Art = preload("res://game/wall_art.gd")
+const ArtGifts = preload("res://game/art_gifts.gd")
+const Paintings = preload("res://game/paintings.gd")
 const Style = preload("res://game/style.gd")
 var view := "inbox"
 var selected := ""
 var draft := ""
 var recipient := ""
 var gift := 0
+var art_source := ""
+var art_id := ""
 var pending: Dictionary = {}
+var _acknowledged := false
 var inbox_button: Button
 var write_button: Button
 var news_button: Button
 var news_read_button: Button
 var news_inbox_button: Button
-var news_actions: HBoxContainer
+var action_row: HBoxContainer
 var recipient_input: OptionButton
 var note_input: LineEdit
 var gift_input: OptionButton
 var send_button: Button
 var claim_button: Button
 var archive_button: Button
+var arrange_button: Button
+var gift_hint: Label
+var art_preview: Control
+var art_credit: Label
+var art_row: HBoxContainer
 var open_buttons: Dictionary = {}
 var body: VBoxContainer
 var feedback: Label
 var compose_hint: Label
+var action_hint: Label
 var _signature := ""
 var _context := ""
 var _blocked := false
@@ -40,11 +53,12 @@ func _ready() -> void:
 	news_button=_button("Home news",func(): view="news"; _build()); navigation.add_child(news_button)
 	var scroll := ScrollContainer.new(); scroll.size_flags_vertical=Control.SIZE_EXPAND_FILL; scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED; add_child(scroll)
 	body=VBoxContainer.new(); body.size_flags_horizontal=Control.SIZE_EXPAND_FILL; body.add_theme_constant_override("separation",10); scroll.add_child(body)
-	news_actions=HBoxContainer.new(); add_child(news_actions); news_actions.hide()
+	action_hint=_label("",13,Style.MUTED); add_child(action_hint); action_hint.hide()
+	action_row=HBoxContainer.new(); add_child(action_row); action_row.hide()
 	feedback=_label("",13,Style.GOLD); add_child(feedback)
 	Session.world_changed.connect(refresh)
 	Session.status_changed.connect(func(_status): refresh())
-	Session.action_result.connect(_result)
+	Session.command_completed.connect(_completed)
 	_build(); refresh()
 
 func _context_key() -> String:
@@ -68,9 +82,11 @@ func _button(text: String, action: Callable) -> Button:
 
 func _build() -> void:
 	for child in body.get_children(): body.remove_child(child); child.queue_free()
-	for child in news_actions.get_children(): news_actions.remove_child(child); child.queue_free()
-	news_actions.hide()
+	for child in action_row.get_children(): action_row.remove_child(child); child.queue_free()
+	action_row.hide()
+	action_hint.hide(); action_hint.text=""; compose_hint=null
 	open_buttons.clear(); note_input=null; recipient_input=null; gift_input=null; send_button=null; claim_button=null; archive_button=null; news_read_button=null; news_inbox_button=null
+	arrange_button=null; gift_hint=null; art_preview=null; art_credit=null; art_row=null
 	if view=="news": _news()
 	elif view=="compose": _compose()
 	elif view=="read": _read()
@@ -91,26 +107,53 @@ func _inbox() -> void:
 			var row := HBoxContainer.new(); row.add_theme_constant_override("separation",12); card.add_child(row)
 			var info := VBoxContainer.new(); info.size_flags_horizontal=Control.SIZE_EXPAND_FILL; row.add_child(info)
 			info.add_child(_label(("NEW · " if not entry.read else "")+str(Session.state.families[entry.from].name),15,Style.GOLD if not entry.read else Style.TEXT))
-			info.add_child(_label("Day %d%s" % [int(entry.day)," · §%d gift waiting" % int(entry.gift) if not entry.claimed else ""],12,Style.MUTED))
+			var waiting := " · Painting waiting" if entry.has("art") else " · §%d gift waiting" % int(entry.gift)
+			info.add_child(_label("Day %d%s" % [int(entry.day),waiting if not entry.claimed else ""],12,Style.MUTED))
 			var open := _button("Open",func(): selected=str(entry.id); view="read"; _build(); _request({"type":"mail_read","id":selected}))
 			open_buttons[entry.id]=open; row.add_child(open)
 
 func _compose() -> void:
-	body.add_child(_label("To a neighbor",16))
-	recipient_input=OptionButton.new(); body.add_child(recipient_input)
+	var fields:=HBoxContainer.new(); fields.add_theme_constant_override("separation",12); body.add_child(fields)
+	var to:=VBoxContainer.new(); to.size_flags_horizontal=Control.SIZE_EXPAND_FILL; to.add_theme_constant_override("separation",6); fields.add_child(to)
+	var gifts:=VBoxContainer.new(); gifts.size_flags_horizontal=Control.SIZE_EXPAND_FILL; gifts.add_theme_constant_override("separation",6); fields.add_child(gifts)
+	to.add_child(_label("To a neighbor",16))
+	recipient_input=OptionButton.new(); recipient_input.fit_to_longest_item=false; to.add_child(recipient_input)
 	recipient_input.item_selected.connect(func(index): recipient=str(recipient_input.get_item_metadata(index)); _update_controls())
 	body.add_child(_label("Your note",16))
 	note_input=LineEdit.new(); note_input.max_length=Mailbox.NOTE_LIMIT; note_input.placeholder_text="Lovely seeing your house take shape. Tea soon?"; note_input.text=draft; body.add_child(note_input)
 	note_input.text_changed.connect(func(value): draft=value; _update_controls())
-	body.add_child(_label("A little something",16))
-	gift_input=OptionButton.new()
-	for amount: int in Mailbox.GIFTS: gift_input.add_item("Just the postcard · Free" if amount==0 else "§%d household gift" % amount,amount)
-	gift_input.select(Mailbox.GIFTS.find(gift)); body.add_child(gift_input)
-	gift_input.item_selected.connect(func(index): gift=gift_input.get_item_id(index); _update_controls())
-	compose_hint=_label("",13,Style.MUTED); body.add_child(compose_hint)
-	send_button=_button("Send postcard",_send); body.add_child(send_button)
+	gifts.add_child(_label("A little something",16))
+	gift_input=OptionButton.new(); gift_input.fit_to_longest_item=false; gifts.add_child(gift_input)
+	gift_input.item_selected.connect(func(index):
+		var choice: Dictionary=gift_input.get_item_metadata(index)
+		if choice.is_empty(): return
+		gift=int(choice.get("gift",0)); art_source=str(choice.get("source","")); art_id=str(choice.get("art_id","")); _update_controls())
+	art_row=HBoxContainer.new(); art_row.add_theme_constant_override("separation",16); body.add_child(art_row)
+	art_preview=preload("res://game/painting_preview.gd").new(); art_preview.custom_minimum_size=Vector2(140,86); art_preview.mouse_filter=Control.MOUSE_FILTER_IGNORE; art_row.add_child(art_preview)
+	art_credit=_label("",13,Style.MUTED); art_credit.size_flags_horizontal=Control.SIZE_EXPAND_FILL; art_credit.size_flags_vertical=Control.SIZE_SHRINK_CENTER; art_row.add_child(art_credit)
+	_refresh_gifts()
+	compose_hint=action_hint; compose_hint.show()
+	send_button=_button("Send postcard",_send); send_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; action_row.add_child(send_button); action_row.show()
 	write_button.tooltip_text="One postcard to each household per day. Recipients can read it and collect a gift whenever they return."
 	_refresh_recipients()
+
+func _refresh_gifts() -> void:
+	if not is_instance_valid(gift_input): return
+	gift_input.clear()
+	for amount: int in Mailbox.GIFTS:
+		gift_input.add_item("Just the postcard · Free" if amount==0 else "§%d household gift" % amount,amount)
+		gift_input.set_item_metadata(gift_input.item_count-1,{"gift":amount})
+	var home: Dictionary=Session.state.lots.get(_family().get("home_lot",""),{})
+	var entries := Art.sources(home) if not home.is_empty() else {}
+	var selected_index := Mailbox.GIFTS.find(gift) if art_source.is_empty() else -1
+	for key: String in entries:
+		var chosen: Dictionary=entries[key]; var index := gift_input.item_count
+		gift_input.add_item(str(Paintings.SUBJECTS[chosen.picture.subject])+" · "+str(chosen.location))
+		gift_input.set_item_metadata(index,{"gift":0,"source":key,"art_id":str(chosen.art_id)})
+		if key==art_source and chosen.art_id==art_id: selected_index=index
+	if selected_index<0:
+		selected_index=gift_input.item_count; gift_input.add_item("Selected painting changed · Choose again"); gift_input.set_item_metadata(selected_index,{})
+	gift_input.select(selected_index)
 
 func _refresh_recipients() -> void:
 	if not is_instance_valid(recipient_input): return
@@ -134,34 +177,53 @@ func _read() -> void:
 	var lines := VBoxContainer.new(); lines.add_theme_constant_override("separation",16); paper.add_child(lines)
 	lines.add_child(_label("LINDEN GROVE  /  NEIGHBORHOOD POST",11,Color("64735b")))
 	lines.add_child(_label("From "+str(Session.state.families[entry.from].name),20,Style.INK))
+	if entry.has("art"):
+		lines.add_theme_constant_override("separation",10)
+		var artwork := HBoxContainer.new(); artwork.add_theme_constant_override("separation",16); lines.add_child(artwork)
+		var preview := preload("res://game/painting_preview.gd").new(); preview.picture=entry.art.picture; preview.custom_minimum_size=Vector2(140,82); preview.mouse_filter=Control.MOUSE_FILTER_IGNORE; artwork.add_child(preview)
+		var caption := VBoxContainer.new(); caption.size_flags_horizontal=Control.SIZE_EXPAND_FILL; caption.size_flags_vertical=Control.SIZE_SHRINK_CENTER; artwork.add_child(caption)
+		caption.add_child(_label(str(Paintings.SUBJECTS[entry.art.picture.subject]),17,Style.INK))
+		caption.add_child(_label(Paintings.credit(entry.art.picture),13,Color("64735b")))
 	lines.add_child(_label(str(entry.note),22,Color("3c4940")))
 	lines.add_child(_label("Day %d" % int(entry.day),12,Color("64735b")))
-	if int(entry.gift)>0:
+	if entry.has("art"):
+		if entry.claimed:
+			action_hint.text="Painting collected · Yours to keep, hang, or give onward."; action_hint.show()
+			var home: Dictionary=Session.state.lots[_family().home_lot]
+			if home.get("artworks",{}).has(entry.art.id):
+				arrange_button=_button("Hang this painting · Build mode",func(): arrange_requested.emit("art:"+str(entry.art.id))); action_row.add_child(arrange_button)
+		else:
+			gift_hint=action_hint; gift_hint.show()
+			claim_button=_button("Collect painting",func(): _request({"type":"mail_claim","id":selected})); action_row.add_child(claim_button)
+	elif int(entry.gift)>0:
 		if entry.claimed: body.add_child(_label("§%d gift collected. Thank you, neighbor." % int(entry.gift),14,Style.GREEN))
 		else:
-			claim_button=_button("Collect §%d gift" % int(entry.gift),func(): _request({"type":"mail_claim","id":selected})); body.add_child(claim_button)
-	archive_button=_button("Archive postcard",func(): _request({"type":"mail_archive","id":selected})); body.add_child(archive_button)
+			claim_button=_button("Collect §%d gift" % int(entry.gift),func(): _request({"type":"mail_claim","id":selected})); action_row.add_child(claim_button)
+	archive_button=_button("Archive postcard",func(): _request({"type":"mail_archive","id":selected})); action_row.add_child(archive_button); action_row.show()
 	archive_button.tooltip_text="Read the postcard and collect its gift first. Archived postcards are removed."
 
 func _send() -> void:
 	if not pending.is_empty() or _blocked: return
-	_request({"type":"mail_send","recipient":recipient,"note":draft,"gift":gift,"sequence":int(_box().get("next_sent",1))})
+	var intent := {"type":"mail_send","recipient":recipient,"note":draft,"gift":gift,"sequence":int(_box().get("next_sent",1))}
+	if not art_source.is_empty(): intent.art_source=art_source; intent.art_id=art_id; intent.revision=Session.state.lots[_family().home_lot].revision
+	_request(intent)
 
 func _request(command: Dictionary) -> void:
 	if not pending.is_empty() or _blocked: return
-	pending=command.duplicate(true); feedback.text="Waiting for the neighborhood…"; _update_controls()
+	pending=command.duplicate(true); _acknowledged=false; feedback.text="Waiting for the neighborhood…"; _update_controls()
 	Session.command(command)
 	refresh()
 
-func _result(message: String) -> void:
-	if pending.is_empty(): return
+func _completed(intent: Dictionary,ok: bool,message: String) -> void:
+	if pending.is_empty() or pending!=intent: return
 	feedback.text=message
-	if not Session.last_action_ok: pending.clear(); _update_controls()
+	if not ok: pending.clear(); _acknowledged=false; _update_controls()
+	else: _acknowledged=true; refresh()
 
 func refresh() -> void:
 	if _context_key()!=_context:
 		_blocked=true; feedback.text="The session changed. Close and reopen Mail."; _update_controls(); return
-	if not pending.is_empty():
+	if not pending.is_empty() and _acknowledged:
 		var entry := Mailbox.item(_box(),str(pending.get("id","")))
 		var done := false
 		match pending.type:
@@ -171,18 +233,20 @@ func refresh() -> void:
 			"mail_archive": done=entry.is_empty()
 			"news_read": done=int(_family().home_news.report.get("id",0))==int(pending.revision) and not HomeNews.pending(_family())
 		if done:
-			if pending.type=="mail_send": draft=""; gift=0; view="inbox"; feedback.text="Postcard delivered. It will be waiting when they return."
+			if pending.type=="mail_send": draft=""; gift=0; art_source=""; art_id=""; view="inbox"; feedback.text="Postcard delivered. It will be waiting when they return."
 			if pending.type=="mail_read": feedback.text="Postcard opened."
-			if pending.type=="mail_claim": feedback.text="Collected §%d. Thank you, neighbor." % int(entry.get("gift",0))
+			if pending.type=="mail_claim": feedback.text="Painting added to your collection. Thank you, neighbor." if entry.has("art") else "Collected §%d. Thank you, neighbor." % int(entry.get("gift",0))
 			if pending.type=="news_read": feedback.text="Home news marked as read. The recap stays here."
 			if pending.type=="mail_archive": view="inbox"; feedback.text="Postcard archived."
-			pending.clear(); _signature=""; Soundscape.play_ui("confirm")
+			pending.clear(); _acknowledged=false; _signature=""; Soundscape.play_ui("confirm")
 	var signature := str(_box())+str(Session.state.day)+str(_family().get("home_news",{}).get("report",{}))
 	for family: Dictionary in Session.state.families.values():
 		signature+=str([family.id,family.name,family.mailbox.items.size(),Session.state.lots[family.home_lot].funds,Session.state.lots[family.home_lot].building])
+	var home: Dictionary=Session.state.lots.get(_family().get("home_lot",""),{})
+	if not home.is_empty(): signature+=str(Art.sources(home))+str(home.revision)
 	if signature!=_signature:
 		_signature=signature
-		if view=="compose": _refresh_recipients()
+		if view=="compose": _refresh_recipients(); _refresh_gifts()
 		else: _build()
 	_update_controls()
 
@@ -194,7 +258,12 @@ func _update_controls() -> void:
 	if is_instance_valid(news_inbox_button): news_inbox_button.disabled=busy
 	if is_instance_valid(news_read_button): news_read_button.disabled=busy or not HomeNews.pending(_family())
 	for button: Button in open_buttons.values(): button.disabled=busy
+	if is_instance_valid(arrange_button): arrange_button.disabled=busy or Session.role=="joining"
 	if is_instance_valid(claim_button): claim_button.disabled=busy or not Mailbox.item(_box(),selected).get("read",false)
+	if is_instance_valid(gift_hint):
+		var option := ArtGifts.claim_option(Session.state,Session.profile_id,Mailbox.item(_box(),selected).art)
+		gift_hint.text=str(option.message)
+		claim_button.disabled=claim_button.disabled or not option.ok
 	if is_instance_valid(archive_button):
 		var entry := Mailbox.item(_box(),selected)
 		archive_button.disabled=busy or not entry.get("read",false) or not entry.get("claimed",false)
@@ -202,13 +271,21 @@ func _update_controls() -> void:
 	note_input.editable=not busy; recipient_input.disabled=busy or recipient_input.item_count==0; gift_input.disabled=busy
 	var reason := ""
 	var home: Dictionary=Session.state.lots.get(_family().get("home_lot",""),{})
+	var art_option := ArtGifts.send_option(Session.state,Session.profile_id,{"art_source":art_source,"art_id":art_id,"revision":home.get("revision",0)}) if not art_source.is_empty() else {}
+	var chosen := Art.source(home,art_source) if not art_source.is_empty() else {}
+	art_preview.visible=not chosen.is_empty() and chosen.art_id==art_id; art_credit.visible=art_preview.visible; art_row.visible=art_preview.visible
+	if art_preview.visible:
+		art_preview.picture=chosen.picture; art_preview.queue_redraw()
+		art_credit.text=str(Paintings.SUBJECTS[chosen.picture.subject])+"\n"+Paintings.credit(chosen.picture)+"\n"+str(chosen.location)
 	if recipient.is_empty(): reason="Another household needs to join before you can send mail."
 	elif Mailbox.sent_today(_box(),recipient,int(Session.state.day)): reason="A postcard is already waiting from you today. More tomorrow."
 	elif Session.state.families[recipient].mailbox.items.size()>=Mailbox.CAPACITY: reason="Their mailbox is full. Wait for them to archive a read postcard."
 	elif gift>0 and home.get("building",false): reason="Finish construction before sending a gift. A plain postcard is free."
 	elif gift>int(home.get("funds",0)): reason="Choose a gift your household can afford."
+	elif not art_source.is_empty() and not art_option.ok: reason=str(art_option.message)
 	elif not Mailbox.valid_note(draft): reason="Write a short note to send."
 	compose_hint.text=reason if not reason.is_empty() else "%d / %d characters · Gift charged when sent" % [draft.length(),Mailbox.NOTE_LIMIT] if gift>0 else "%d / %d characters · Free delivery" % [draft.length(),Mailbox.NOTE_LIMIT]
+	if reason.is_empty() and not art_source.is_empty(): compose_hint.text="%d / %d characters · The original painting leaves your home when sent." % [draft.length(),Mailbox.NOTE_LIMIT]
 	send_button.disabled=busy or not reason.is_empty()
 
 func _news() -> void:
@@ -231,9 +308,12 @@ func _news() -> void:
 	body.add_child(_label("Your household used caretaker rules. Wishes, learned hobbies, and friendships were kept.",14,Style.MUTED))
 	var waiting := Mailbox.unread(_box())
 	var gifts := 0
+	var paintings := 0
 	for entry: Dictionary in _box().get("items",[]):
 		if not entry.claimed: gifts+=int(entry.gift)
+		if not entry.claimed and entry.has("art"): paintings+=1
 	body.add_child(_label("Waiting now: %d unread postcard%s · §%d uncollected gifts" % [waiting,"" if waiting==1 else "s",gifts],14))
-	news_actions.show()
-	news_inbox_button=_button("Open Inbox",func(): view="inbox"; _build()); news_actions.add_child(news_inbox_button)
-	news_read_button=_button("Mark recap as read",func(): _request({"type":"news_read","revision":int(report.id)})); news_actions.add_child(news_read_button)
+	if paintings>0: body.add_child(_label("%d painting%s waiting to collect" % [paintings,"" if paintings==1 else "s"],14,Style.GREEN))
+	action_row.show()
+	news_inbox_button=_button("Open Inbox",func(): view="inbox"; _build()); action_row.add_child(news_inbox_button)
+	news_read_button=_button("Mark recap as read",func(): _request({"type":"news_read","revision":int(report.id)})); action_row.add_child(news_read_button)

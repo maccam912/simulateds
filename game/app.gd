@@ -460,6 +460,8 @@ func open_mail() -> void:
 	previous_page="game"
 	_show_page("mail","Mailbox","Little things to come home to.")
 	mail_panel=MailPanel.new(); menu_content.add_child(mail_panel)
+	mail_panel.arrange_requested.connect(func(source: String):
+		show_game(); game._select_lot(Session.home_lot()); game._open_art(source))
 	menu_content.add_child(_button("Back to neighborhood",_back))
 
 func open_household() -> void:

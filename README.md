@@ -225,8 +225,13 @@ or shell expressions.
   game** to wait at a full table. The card distinguishes planned and active
   participation. A changed or finished game gets a clear response to stale clicks.
 - **Mail** leaves a postcard for another household, even while they are away.
-  Send one per household per game day, with an optional §100 or §250 gift. Gifts
-  are charged on delivery and collected once by the recipient. The inbox holds
+  Send one per household per game day, with an optional §100, §250, or finished
+  painting. Money is charged on delivery; a painting leaves its easel, wall, or
+  collection and waits safely in the postcard. Preview its subject and artist
+  before sending. Recipients collect the original once, then **Hang this painting**
+  opens build mode with it selected. Full collections and construction keep art
+  gifts waiting safely; finish a draft before sending or collecting one. You can
+  give a collected picture onward without changing its artist credit. The inbox holds
   24 postcards; read them and collect gifts before archiving to make room. The
   host saves mail with the shared neighborhood. Postcards are shared world data,
   not private messages outside the game.

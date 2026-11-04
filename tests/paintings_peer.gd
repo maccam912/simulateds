@@ -76,6 +76,54 @@ func _construction(home: String,building: bool) -> void:
 		await create_timer(0.1).timeout
 	assert(false,"The accepted construction mode must reach the client")
 
+func _flag(name: String) -> void:
+	var file:=FileAccess.open(ticket_path+name,FileAccess.WRITE); file.store_string("ready"); file.close()
+
+func _wait_flag(name: String) -> void:
+	for attempt in range(250):
+		if FileAccess.file_exists(ticket_path+name): return
+		await create_timer(0.1).timeout
+	assert(false,"The other painting household must reach the gift exchange")
+
+func _exchange(index: String,home: String,id: String,completed: Dictionary) -> Dictionary:
+	var other := ""
+	for identity: String in session.state.families:
+		if identity!=session.profile_id and session.state.families[identity].home_lot!="lot_1": other=identity
+	assert(not other.is_empty())
+	if index=="1":
+		session.leave(); _flag(".gift-away1"); await _wait_flag(".gift-sent2"); await _connect()
+	else:
+		await _wait_flag(".gift-away1")
+		for attempt in range(100):
+			if not session.state.families[other].online: break
+			await create_timer(0.1).timeout
+		assert(not session.state.families[other].online,"The first household is away when the gift is sent")
+	var intent := {"type":"mail_send","recipient":other,"note":"A picture for your wall.","gift":0,"sequence":session.state.families[session.profile_id].mailbox.next_sent,"art_source":"easel:"+id,"art_id":"art_"+id+"_"+str(int(completed.revision)),"revision":session.state.lots[home].revision}
+	await _command(intent); await _command(intent,false)
+	for attempt in range(60):
+		if _easel(home,id).painting.subject=="": break
+		await create_timer(0.1).timeout
+	assert(_easel(home,id).painting.subject==""); _flag(".gift-sent"+index)
+	await _wait_flag(".gift-sent"+("2" if index=="1" else "1"))
+	var card := {}
+	for attempt in range(60):
+		for entry: Dictionary in session.state.families[session.profile_id].mailbox.items:
+			if entry.from==other: card=entry
+		if not card.is_empty(): break
+		await create_timer(0.1).timeout
+	assert(not card.is_empty() and not card.claimed and card.art.picture.subject==("harbor" if index=="1" else "meadow"))
+	var picture: Dictionary=card.art.picture.duplicate(true); var gift_id: String=card.art.id; var card_id: String=card.id
+	session.leave(); await create_timer(1.0).timeout; await _connect()
+	assert(session.state.families[session.profile_id].mailbox.items[0].art.picture==picture,"Unclaimed original survives reconnect in escrow")
+	await _command({"type":"mail_read","id":card_id}); await _command({"type":"mail_claim","id":card_id}); await _command({"type":"mail_claim","id":card_id})
+	for attempt in range(60):
+		if session.state.lots[home].artworks.has(gift_id): break
+		await create_timer(0.1).timeout
+	assert(session.state.lots[home].artworks.size()==1 and session.state.lots[home].artworks[gift_id].picture==picture)
+	await _construction(home,true); await _art_edit(home,{"type":"art_return","source":"art:"+gift_id,"target_id":id}); await _construction(home,false)
+	assert(_easel(home,id).painting.artists==picture.artists)
+	return _easel(home,id).painting.duplicate(true)
+
 func _client(index: String) -> void:
 	await _connect()
 	var identity: String=session.profile_id; var home: String=session.home_lot()
@@ -123,6 +171,7 @@ func _client(index: String) -> void:
 	session.leave(); await create_timer(1.0).timeout; await _connect()
 	assert(_easel(home,id).painting==completed)
 	for resident: Dictionary in session.state.families[identity].members: assert(resident.hobbies.painting.sessions==1)
+	completed=await _exchange(index,home,id,completed)
 	await _construction(home,true)
 	var art_id := "art_"+id+"_"+str(int(completed.revision))
 	await _art_edit(home,{"type":"art_hang","source":"easel:"+id,"x":8,"y":3})

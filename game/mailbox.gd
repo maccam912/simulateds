@@ -1,6 +1,8 @@
 extends RefCounted
 ## Bounded household postcards. Gifts remain in escrow until explicitly collected.
 const HomeNews = preload("res://game/home_news.gd")
+const ArtGifts = preload("res://game/art_gifts.gd")
+const Paintings = preload("res://game/paintings.gd")
 const CAPACITY := 24
 const NOTE_LIMIT := 120
 const GIFTS := [0,100,250]
@@ -42,12 +44,20 @@ static func apply(world: Dictionary, owner: String, command: Dictionary, adjust_
 		var inbox: Dictionary=world.families[recipient].mailbox
 		if inbox.items.size()>=CAPACITY: return _result(false,"Their mailbox is full. They need to archive a read postcard first.")
 		var gift := int(command.gift)
+		var art_plan := {}
+		if command.has("art_source") or command.has("art_id"):
+			if gift!=0: return _result(false,"Choose a money gift or one painting for this postcard.")
+			art_plan=ArtGifts.send_option(world,owner,command)
+			if not art_plan.ok: return art_plan
 		if gift>0 and world.lots[family.home_lot].building: return _result(false,"Finish construction before sending a money gift. A postcard on its own is free.")
 		if gift>0 and not adjust_funds.call(str(family.home_lot),-gift): return _result(false,"Your household cannot afford that gift.")
+		if not art_plan.is_empty(): ArtGifts.detach(world,art_plan)
 		if int(box.sent_day)!=int(world.day): box.sent_day=int(world.day); box.sent_to.clear()
 		box.sent_to.append(recipient)
 		var sequence := int(box.next_sent); box.next_sent+=1
-		inbox.items.push_front({"id":owner+":"+str(sequence),"from":owner,"sequence":sequence,"day":int(world.day),"note":str(command.note).strip_edges(),"gift":gift,"read":false,"claimed":gift==0})
+		var postcard := {"id":owner+":"+str(sequence),"from":owner,"sequence":sequence,"day":int(world.day),"note":str(command.note).strip_edges(),"gift":gift,"read":false,"claimed":gift==0 and art_plan.is_empty()}
+		if not art_plan.is_empty(): postcard.art=art_plan.art
+		inbox.items.push_front(postcard)
 		var recipient_family: Dictionary=world.families[recipient]
 		if HomeNews.away(recipient_family):
 			recipient_family.home_news.postcards+=1; recipient_family.home_news.gifts+=gift
@@ -63,6 +73,11 @@ static func apply(world: Dictionary, owner: String, command: Dictionary, adjust_
 		"mail_claim":
 			if not entry.read: return _result(false,"Open the postcard before collecting its gift.")
 			if entry.claimed: return _result(true,"This gift was already collected.")
+			if entry.has("art"):
+				var option := ArtGifts.claim_option(world,owner,entry.art)
+				if not option.ok: return option
+				ArtGifts.collect(world,owner,entry.art); entry.claimed=true
+				return _result(true,"Painting collected. Find it in Build & buy → Wall art.")
 			if not adjust_funds.call(str(family.home_lot),int(entry.gift)): return _result(false,"Your household has reached the funds limit. The gift will keep waiting.")
 			entry.claimed=true
 			return _result(true,"Collected §%d. A little something from your neighbor." % int(entry.gift))
@@ -93,9 +108,10 @@ static func valid(world: Dictionary) -> bool:
 			if not _integer(entry.get("sequence"),1,MAX_SEQUENCE-1) or int(entry.sequence)>=int(sender.get("next_sent",1)) or entry.id!=str(entry.from)+":"+str(int(entry.sequence)): return false
 			if not _integer(entry.get("day"),1,int(world.day)) or not valid_note(entry.get("note")) or not _integer(entry.get("gift"),0,250) or not GIFTS.has(int(entry.gift)): return false
 			if not entry.get("read") is bool or not entry.get("claimed") is bool: return false
-			if (int(entry.gift)==0 and not entry.claimed) or (int(entry.gift)>0 and entry.claimed and not entry.read): return false
+			if entry.has("art") and (int(entry.gift)!=0 or not ArtGifts.valid_payload(entry.art,int(entry.day))): return false
+			if (int(entry.gift)==0 and not entry.has("art") and not entry.claimed) or ((int(entry.gift)>0 or entry.has("art")) and entry.claimed and not entry.read): return false
 			seen[entry.id]=true
-	return true
+	return ArtGifts.valid_custody(world)
 
 static func normalize(world: Dictionary) -> void:
 	for family: Dictionary in world.families.values():
@@ -104,6 +120,7 @@ static func normalize(world: Dictionary) -> void:
 		box.next_sent=int(box.next_sent); box.sent_day=int(box.sent_day)
 		for entry: Dictionary in box.items:
 			for field: String in ["sequence","day","gift"]: entry[field]=int(entry[field])
+			if entry.has("art"): Paintings.normalize(entry.art.picture)
 
 static func _integer(value: Variant, low: int, high: int) -> bool:
 	return (value is int or value is float) and is_finite(float(value)) and float(value)==floorf(float(value)) and float(value)>=low and float(value)<=high

@@ -103,9 +103,7 @@ static func valid(lot: Dictionary,day: int) -> bool:
 	var occupied := {}; var walls := {}
 	for cell: Array in lot.walls: walls["%d,%d" % [int(cell[0]),int(cell[1])]]=true
 	for id: Variant in lot.artworks:
-		if not id is String or id.length()>64 or not id.begins_with("art_object_"): return false
-		var parts: PackedStringArray=str(id).trim_prefix("art_object_").split("_")
-		if parts.size()!=2 or not parts[0].is_valid_int() or not parts[1].is_valid_int() or int(parts[0])<1 or int(parts[1])<1 or str(int(parts[0]))!=parts[0] or str(int(parts[1]))!=parts[1]: return false
+		if not valid_id(id): return false
 		var entry: Variant=lot.artworks[id]
 		if not entry is Dictionary or entry.size()!=3 or not Paintings.valid(entry.get("picture"),day) or not Paintings.finished(entry.picture): return false
 		if _integer(entry.get("x")) and _integer(entry.get("y")) and int(entry.x)==-1 and int(entry.y)==-1: continue
@@ -114,6 +112,11 @@ static func valid(lot: Dictionary,day: int) -> bool:
 		if occupied.has(key) or not walls.has(key) or lot.get("windows",{}).has(key): return false
 		occupied[key]=true
 	return true
+
+static func valid_id(id: Variant) -> bool:
+	if not id is String or id.length()>64 or not id.begins_with("art_object_"): return false
+	var parts: PackedStringArray=str(id).trim_prefix("art_object_").split("_")
+	return parts.size()==2 and parts[0].is_valid_int() and parts[1].is_valid_int() and int(parts[0])>0 and int(parts[1])>0 and str(int(parts[0]))==parts[0] and str(int(parts[1]))==parts[1]
 
 static func _integer(value: Variant) -> bool: return (value is int or value is float) and is_finite(float(value)) and float(value)==floorf(float(value))
 static func _coordinate(value: Variant) -> bool: return _integer(value) and float(value)>=0 and float(value)<16

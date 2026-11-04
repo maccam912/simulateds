@@ -1563,3 +1563,44 @@ let a household send a finished painting with a postcard, then let the recipient
 collect and hang it later with its original credit intact. That should transfer
 one original, handle full mailboxes/collections without losing art, and respect
 construction drafts. It is proposed next work, not implemented behavior here.
+
+
+## A painting for a neighbor
+
+Postcards can now carry a finished painting from an easel, wall, or collection.
+The sender previews the exact subject and artists before the original leaves
+home. An absent neighbor can find it in Mail, collect it, and use Hang this
+painting to enter their own construction view with the picture selected. A
+collected original can be given onward; receipt previews do not create copies.
+
+The rules keep the transfer understandable: choose money or one painting, finish
+construction before sending or collecting artwork, and leave an uncollectable
+gift safely in the mailbox. A full inbox does not consume the sender's painting
+or daily postcard allowance. A full collection waits. A sale already in a
+resident's plan must be canceled before gifting that canvas. A replaced canvas
+requires a new selection rather than silently substituting a different picture.
+Save validation rejects duplicated custody across homes and unclaimed gifts.
+
+The mailbox now correlates replies to exact commands. Unrelated failed actions
+cannot dismiss a pending postcard; an early success still waits for accepted
+state. The initial standard and compact native flows passed functionally, but
+screenshots showed Send and Collect below the fold. A fixed action footer solved
+that. The compact composer still obscured the preview, so recipient and gift
+choices now share a row; the preview and original credit remain visible before
+Send. Received cards place the picture beside its title and credit, ahead of the
+note. Both final native layouts passed those visibility checks.
+
+The expanded separate-process Iroh scenario passed reciprocal painting gifts,
+including a recipient disconnected during delivery, unclaimed-gift reconnect,
+collection, wall display, another reconnect, and a single eventual sale. Artist
+credit survives and neither household earns duplicate hobby practice. All 76
+local suites, both Iroh scenarios, and dedicated-server startup passed. The prior
+painting-hobby checkpoint passed all four CI jobs. These remain automated tests,
+not human playtesting or physical-device certification.
+
+Fresh assessment: making, keeping, and sharing art now connect solo creativity
+to asynchronous neighborhood life. The next useful step is for residents to
+actually enjoy the pictures in their homes and on visits: a clear, queued admire
+activity with visible feedback and appropriate need recovery. That should use
+real reachable wall positions, preserve household ownership, and stop safely
+when construction begins. It is proposed next work, not implemented behavior.

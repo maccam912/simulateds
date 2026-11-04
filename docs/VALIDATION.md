@@ -771,3 +771,42 @@ both practice entries survive finished-work reconnects, wall transfers, and sale
 The complete regression also passed the original Iroh scenario, this expanded
 painting scenario, and dedicated-server startup. The preceding wall-art checkpoint passed all four platform CI jobs. Physical
 devices, human-family playtesting, and overnight hosting remain unverified.
+
+
+## Original paintings through the mailbox
+
+All 76 local suites passed. The new model suite checks delivery from a finished
+easel, onward gifts from a
+mounted collection entry, original creator/content retention, exact once-only
+collection, and save/load at both escrow and collected stages. Full mailboxes,
+full collections, construction, stale canvas identities, stale lot revisions,
+foreign sources, malformed choices, queued sales, and duplicate sends all reject
+without consuming art or postcard allowance. Collection waits safely during
+construction. Existing money-gift behavior remains covered separately.
+
+Save validation now checks physical artwork custody across finished easels,
+collections, and unclaimed gifts. A picture cannot occupy two places. Collected
+postcards retain a receipt preview that cannot be claimed again, including after
+onward gifts. Invalid payloads and duplicated custody reject the whole candidate
+save. The longest bounded postcard plus painting references fits the existing
+1024-byte command limit; clients never submit an authoritative picture payload.
+
+Native injected-input flows passed at 1440×900 and 1280×720 / 125% UI scale.
+They preview a gift, reject a stale selection, deliver to an absent household,
+read home news, defer collection through construction, collect, hang through
+the receipt's direct action, and send the original onward. Exact acknowledgements
+ignore unrelated failures and wait for accepted state after an early success.
+Screenshot review moved Send/Collect/Hang/Archive into a fixed footer, then put
+recipient and gift choices side by side so the compact composer shows its
+preview and credit before sending. Native assertions check these visible bounds.
+Captures are in ignored `build/art-gifts-*.png`.
+
+The expanded actual Iroh scenario passes two households exchanging finished
+pictures, with the first disconnected when delivery occurs. Unclaimed art
+survives another reconnect, both clients collect once, retain the other family's
+artist credit, arrange the gift, reconnect with mounted art, and eventually sell
+it once. Hobby practice is unchanged by the exchange. The complete regression
+also passed the original Iroh scenario, the expanded painting scenario, and
+dedicated-server startup. The preceding painting-hobby
+checkpoint passed all four platform CI jobs. Human-family, physical-device, and
+overnight-hosting checks remain open.

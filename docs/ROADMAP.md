@@ -136,8 +136,10 @@ complete a shared activity without either player controlling the other's family.
 - Simple employment/activity income, bills, and affordable upgrades.
 - Host-approved invitations and household guest/privacy settings.
 - Profile backup/recovery and world administration.
-- Durable household postcards and escrowed money gifts are implemented. Extend
-  the asynchronous loop with meaningful household activities and return summaries.
+- Durable household postcards, money gifts, and original painting gifts are
+  implemented. A picture can wait for an absent household, retain its creators,
+  then become part of the recipient’s home. Extend the asynchronous loop with
+  meaningful household activities and return summaries.
 
 Exit: a household can remain absent for several real days without irreversible
 harm; returning players get a concise accurate summary; no absent family earns
