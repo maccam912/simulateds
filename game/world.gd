@@ -7,6 +7,7 @@ const RoomPlan = preload("res://game/room_plan.gd")
 const Wishes = preload("res://game/wishes.gd")
 const Hobbies = preload("res://game/hobbies.gd")
 const Friendships = preload("res://game/friendships.gd")
+const HomeNews = preload("res://game/home_news.gd")
 const Mailbox = preload("res://game/mailbox.gd")
 const Wellbeing = preload("res://game/wellbeing.gd")
 const Finishes = preload("res://game/finishes.gd")
@@ -75,6 +76,7 @@ func ensure_family(profile_id: String, display_name: String) -> String:
 		state.families[profile_id] = {"id":profile_id, "name":clean_name + " household", "home_lot":lot_id, "online":false, "identity_revision":0, "members":members}
 		Friendships.ensure_housemates(state,state.families[profile_id])
 		state.families[profile_id].mailbox=Mailbox.create(int(state.day))
+		state.families[profile_id].home_news=HomeNews.create()
 		_event(clean_name + " moved into " + str(lot.name) + ".")
 		return lot_id
 	return ""
@@ -83,6 +85,8 @@ func set_online(profile_id: String, online: bool) -> void:
 	if not state.families.has(profile_id):
 		return
 	var family: Dictionary = state.families[profile_id]
+	if online: HomeNews.arrival(family)
+	else: HomeNews.departure(family,bool(state.lots[family.home_lot].building))
 	family.online = online
 	if not online:
 		var lot: Dictionary = state.lots[family.home_lot]
@@ -102,6 +106,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 	if not type is String:
 		return _result(false, "Unknown action.")
 	var family: Dictionary = state.families[profile_id]
+	if type == "news_read": return HomeNews.read(family,command.get("revision"))
 	if type == "household_edit": return HouseholdProfile.edit(family,command)
 	if type in ["mail_send","mail_read","mail_claim","mail_archive"]:
 		return Mailbox.apply(state,profile_id,command,_adjust_funds)
@@ -371,14 +376,13 @@ func step(delta: float) -> void:
 		state.day += 1
 		for family: Dictionary in state.families.values():
 			var home: Dictionary = state.lots[family.home_lot]
-			home.funds += 600
-			# The allowance belongs to the household, even if a draft is undone.
-			if _build_backups.has(home.id): _build_backups[home.id].funds += 600
-			if _build_history.has(home.id):
-				for branch: String in ["undo","redo"]:
-					for edit: Dictionary in _build_history[home.id][branch]: edit.funds += 600
-		_event("A new day. Each household received a $600 living allowance.")
+			var allowance := 600
+			for balance: Dictionary in _fund_balances(str(home.id)): allowance=mini(allowance,1000000000-int(balance.funds))
+			_adjust_funds(str(home.id),allowance)
+			if HomeNews.away(family): family.home_news.allowance+=allowance
+		_event("A new day. Households received their living allowance.")
 	for family: Dictionary in state.families.values():
+		if HomeNews.away(family): family.home_news.minutes+=delta*3.0
 		if state.lots[family.home_lot].building:
 			continue
 		for member: Dictionary in family.members:
@@ -872,6 +876,7 @@ func restore(data: Dictionary, preserve_runtime: bool = false) -> bool:
 		lot.building = false
 		_clear_build_history(lot)
 	for family: Dictionary in state.families.values():
+		HomeNews.departure(family,false)
 		family.online = false
 		for member: Dictionary in family.members:
 			_clear_member(member)
@@ -898,6 +903,7 @@ func _normalize_numbers() -> void:
 			for key: String in ["x", "y", "rotation"]:
 				object[key] = int(object[key])
 	for family: Dictionary in state.families.values():
+		HomeNews.normalize(family)
 		family.identity_revision=int(family.get("identity_revision",0))
 		for member: Dictionary in family.members:
 			if not member.has("favorite"): member.favorite="variety"
@@ -993,6 +999,7 @@ func _valid_state(data: Dictionary) -> bool:
 		var family: Dictionary = data.families[profile_id]
 		if family.get("id") != profile_id or not family.get("name") is String or str(family.name).length() > 64 or not data.lots.has(family.get("home_lot")) or data.lots[family.home_lot].owner != profile_id or not family.get("online") is bool or not family.get("members") is Array or family.members.size() != 2:
 			return false
+		if family.has("home_news") and not HomeNews.valid(family.home_news): return false
 		if not _integer(family.get("identity_revision",0)) or float(family.get("identity_revision",0))<0 or float(family.get("identity_revision",0))>9007199254740000: return false
 		for member: Variant in family.members:
 			if not member is Dictionary or not member.get("id") is String or str(member.id).length() > 160 or members_seen.has(member.id) or not member.get("name") is String or str(member.name).length() > 32 or not data.lots.has(member.get("lot_id")) or not _valid_coord(member.get("x")) or not _valid_coord(member.get("y")) or not member.get("needs") is Dictionary:
@@ -1023,13 +1030,17 @@ func _valid_state(data: Dictionary) -> bool:
 			return false
 	return true
 
-func _adjust_funds(lot_id: String, amount: int) -> bool:
-	# External income belongs to the household, not its construction draft.
-	# Check every reversible balance before changing any of them.
+func _fund_balances(lot_id: String) -> Array:
 	var balances: Array=[state.lots[lot_id]]
 	if _build_backups.has(lot_id): balances.append(_build_backups[lot_id])
 	if _build_history.has(lot_id):
 		for branch: String in ["undo","redo"]: balances.append_array(_build_history[lot_id][branch])
+	return balances
+
+func _adjust_funds(lot_id: String, amount: int) -> bool:
+	# External income belongs to the household, not its construction draft.
+	# Check every reversible balance before changing any of them.
+	var balances := _fund_balances(lot_id)
 	for balance: Dictionary in balances:
 		if int(balance.funds)+amount<0 or int(balance.funds)+amount>1000000000: return false
 	for balance: Dictionary in balances: balance.funds=int(balance.funds)+amount

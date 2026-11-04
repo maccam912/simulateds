@@ -13,6 +13,7 @@ const Wishes = preload("res://game/wishes.gd")
 const Hobbies = preload("res://game/hobbies.gd")
 const Friendships = preload("res://game/friendships.gd")
 const Portrait = preload("res://game/resident_portrait.gd")
+const HomeNews = preload("res://game/home_news.gd")
 const Pastimes = preload("res://game/pastimes.gd")
 const Appearance = preload("res://game/appearance.gd")
 const Wellbeing = preload("res://game/wellbeing.gd")
@@ -367,8 +368,10 @@ func _refresh() -> void:
 	household_button.disabled=family.is_empty() or Session.role=="joining"
 	mail_button.disabled=family.is_empty() or Session.role=="joining"
 	var unread := preload("res://game/mailbox.gd").unread(family.get("mailbox",{}))
-	mail_button.text="Mail · %d" % unread if unread>0 else "Mail"
-	mail_button.add_theme_color_override("font_color",Style.GOLD if unread>0 else Style.TEXT)
+	var news_pending := HomeNews.pending(family)
+	mail_button.text="Mail · %d" % unread if unread>0 else "Mail · news" if news_pending else "Mail"
+	mail_button.tooltip_text="Postcards and gifts"+(" · A return recap is waiting in Home news" if news_pending else " · Home news keeps your return recap")
+	mail_button.add_theme_color_override("font_color",Style.GOLD if unread>0 or news_pending else Style.TEXT)
 	var mine := str(lot.get("owner",""))==str(Session.profile_id)
 	var building := bool(lot.get("building",false))
 	if not building:

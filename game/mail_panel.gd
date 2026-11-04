@@ -1,5 +1,6 @@
 extends VBoxContainer
 ## A local draft over replicated mail. Success is established by accepted state.
+const HomeNews = preload("res://game/home_news.gd")
 const Mailbox = preload("res://game/mailbox.gd")
 const Style = preload("res://game/style.gd")
 var view := "inbox"
@@ -10,6 +11,10 @@ var gift := 0
 var pending: Dictionary = {}
 var inbox_button: Button
 var write_button: Button
+var news_button: Button
+var news_read_button: Button
+var news_inbox_button: Button
+var news_actions: HBoxContainer
 var recipient_input: OptionButton
 var note_input: LineEdit
 var gift_input: OptionButton
@@ -28,11 +33,14 @@ func _ready() -> void:
 	size_flags_vertical=Control.SIZE_EXPAND_FILL
 	add_theme_constant_override("separation",10)
 	_context=_context_key()
+	if HomeNews.pending(_family()): view="news"
 	var navigation := HBoxContainer.new(); add_child(navigation)
 	inbox_button=_button("Inbox",func(): view="inbox"; _build()); navigation.add_child(inbox_button)
 	write_button=_button("Write a postcard",func(): view="compose"; _build()); navigation.add_child(write_button)
+	news_button=_button("Home news",func(): view="news"; _build()); navigation.add_child(news_button)
 	var scroll := ScrollContainer.new(); scroll.size_flags_vertical=Control.SIZE_EXPAND_FILL; scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED; add_child(scroll)
 	body=VBoxContainer.new(); body.size_flags_horizontal=Control.SIZE_EXPAND_FILL; body.add_theme_constant_override("separation",10); scroll.add_child(body)
+	news_actions=HBoxContainer.new(); add_child(news_actions); news_actions.hide()
 	feedback=_label("",13,Style.GOLD); add_child(feedback)
 	Session.world_changed.connect(refresh)
 	Session.status_changed.connect(func(_status): refresh())
@@ -60,8 +68,11 @@ func _button(text: String, action: Callable) -> Button:
 
 func _build() -> void:
 	for child in body.get_children(): body.remove_child(child); child.queue_free()
-	open_buttons.clear(); note_input=null; recipient_input=null; gift_input=null; send_button=null; claim_button=null; archive_button=null
-	if view=="compose": _compose()
+	for child in news_actions.get_children(): news_actions.remove_child(child); child.queue_free()
+	news_actions.hide()
+	open_buttons.clear(); note_input=null; recipient_input=null; gift_input=null; send_button=null; claim_button=null; archive_button=null; news_read_button=null; news_inbox_button=null
+	if view=="news": _news()
+	elif view=="compose": _compose()
 	elif view=="read": _read()
 	else: _inbox()
 	_update_controls()
@@ -158,13 +169,15 @@ func refresh() -> void:
 			"mail_read": done=not entry.is_empty() and entry.read
 			"mail_claim": done=not entry.is_empty() and entry.claimed
 			"mail_archive": done=entry.is_empty()
+			"news_read": done=int(_family().home_news.report.get("id",0))==int(pending.revision) and not HomeNews.pending(_family())
 		if done:
 			if pending.type=="mail_send": draft=""; gift=0; view="inbox"; feedback.text="Postcard delivered. It will be waiting when they return."
 			if pending.type=="mail_read": feedback.text="Postcard opened."
 			if pending.type=="mail_claim": feedback.text="Collected §%d. Thank you, neighbor." % int(entry.get("gift",0))
+			if pending.type=="news_read": feedback.text="Home news marked as read. The recap stays here."
 			if pending.type=="mail_archive": view="inbox"; feedback.text="Postcard archived."
 			pending.clear(); _signature=""; Soundscape.play_ui("confirm")
-	var signature := str(_box())+str(Session.state.day)
+	var signature := str(_box())+str(Session.state.day)+str(_family().get("home_news",{}).get("report",{}))
 	for family: Dictionary in Session.state.families.values():
 		signature+=str([family.id,family.name,family.mailbox.items.size(),Session.state.lots[family.home_lot].funds,Session.state.lots[family.home_lot].building])
 	if signature!=_signature:
@@ -176,7 +189,10 @@ func refresh() -> void:
 func _update_controls() -> void:
 	var busy := _blocked or not pending.is_empty()
 	inbox_button.text="Inbox · %d" % Mailbox.unread(_box())
-	inbox_button.disabled=busy; write_button.disabled=busy
+	inbox_button.disabled=busy; write_button.disabled=busy; news_button.disabled=busy
+	news_button.text="Home news · new" if HomeNews.pending(_family()) else "Home news"
+	if is_instance_valid(news_inbox_button): news_inbox_button.disabled=busy
+	if is_instance_valid(news_read_button): news_read_button.disabled=busy or not HomeNews.pending(_family())
 	for button: Button in open_buttons.values(): button.disabled=busy
 	if is_instance_valid(claim_button): claim_button.disabled=busy or not Mailbox.item(_box(),selected).get("read",false)
 	if is_instance_valid(archive_button):
@@ -194,3 +210,30 @@ func _update_controls() -> void:
 	elif not Mailbox.valid_note(draft): reason="Write a short note to send."
 	compose_hint.text=reason if not reason.is_empty() else "%d / %d characters · Gift charged when sent" % [draft.length(),Mailbox.NOTE_LIMIT] if gift>0 else "%d / %d characters · Free delivery" % [draft.length(),Mailbox.NOTE_LIMIT]
 	send_button.disabled=busy or not reason.is_empty()
+
+func _news() -> void:
+	var report: Dictionary=_family().get("home_news",{}).get("report",{})
+	if report.is_empty():
+		body.add_child(_label("A place to catch up",24,Style.GOLD))
+		body.add_child(_label("After time away, your household’s recap will wait here. It records neighborhood time, allowance received, and postcards delivered."))
+		body.add_child(_label("The host needs to stay running for time to pass. If the whole neighborhood stops, it waits for you.",14,Style.MUTED))
+		return
+	body.add_child(_label("While you were away",24,Style.GOLD))
+	body.add_child(_label(HomeNews.elapsed(int(report.minutes)),17))
+	body.add_child(_label("Recorded while your household was away." if report.pending else "Your most recent recap · already read",12,Style.MUTED))
+	body.add_child(_label("§%d allowance received" % int(report.allowance),19,Style.GREEN))
+	body.add_child(_label("Already included in your household funds. Gifts are separate.",13,Style.MUTED))
+	if int(report.postcards)>0:
+		body.add_child(_label("%d postcard%s delivered during your time away" % [int(report.postcards),"" if int(report.postcards)==1 else "s"],16))
+		if int(report.gifts)>0: body.add_child(_label("Those postcards included §%d in gifts. Collect unclaimed gifts in the Inbox." % int(report.gifts),13,Style.MUTED))
+	else: body.add_child(_label("No postcards arrived during this time away.",14,Style.MUTED))
+	if report.construction: body.add_child(_label("An unfinished building draft was discarded when you left. Your last committed home was kept.",14,Style.GOLD))
+	body.add_child(_label("Your household used caretaker rules. Wishes, learned hobbies, and friendships were kept.",14,Style.MUTED))
+	var waiting := Mailbox.unread(_box())
+	var gifts := 0
+	for entry: Dictionary in _box().get("items",[]):
+		if not entry.claimed: gifts+=int(entry.gift)
+	body.add_child(_label("Waiting now: %d unread postcard%s · §%d uncollected gifts" % [waiting,"" if waiting==1 else "s",gifts],14))
+	news_actions.show()
+	news_inbox_button=_button("Open Inbox",func(): view="inbox"; _build()); news_actions.add_child(news_inbox_button)
+	news_read_button=_button("Mark recap as read",func(): _request({"type":"news_read","revision":int(report.id)})); news_actions.add_child(news_read_button)

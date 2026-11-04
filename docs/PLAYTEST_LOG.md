@@ -499,3 +499,49 @@ next useful improvement is an accurate, dismissible return recap for asynchronou
 play: how much neighborhood time passed, what allowance arrived, and which
 postcards await. Record actual host simulation facts, avoid invented events or
 wall-clock catch-up, and keep the recap from interrupting an active visit or build.
+
+
+## 2026-11-04 · Something to come home to
+
+Mail now includes Home news: an optional recap of actual neighborhood time spent
+away, allowance credited, postcards delivered, gifts included in those postcards,
+and unfinished building drafts discarded on departure. The existing Mail control
+shows a badge; no popup interrupts startup, visits, or construction. Opening news
+does not mark it read. An explicit read action clears its new badge and keeps the
+history. Unread reports accumulate across meaningful absences so reconnecting
+cannot erase earlier news. A quiet reconnect under thirty neighborhood minutes
+creates no new report. The current unread-postcard and uncollected-gift counts are
+separate from historical delivery totals.
+
+The host records simulation steps and actual successful deliveries, never wall
+clock time. Host downtime creates no elapsed time, income, or invented activity.
+An ongoing absence survives save/restart. Old saves begin tracking prospectively.
+Reviewing daily income exposed a pre-existing funds-cap overflow: allowance now
+fits the most constrained live/draft/undo balance, and recaps record that exact
+credit. Normal households still receive §600 per game day.
+
+Validation: all twenty-four local model/application suites passed, followed by
+real Iroh host/two-client reconnect and dedicated-server checks. Both clients
+received a recap of a real postcard delivered while disconnected, acknowledged
+it through the host, and retained the read state in the host's saved world after
+disconnecting again. Focused checks cover ownership/revision guards, duplicate
+acknowledgements, merged unread and replaced read reports, gift separation,
+first arrival, short reconnects, repeated cleanup, restart continuity, corrupt and
+legacy saves, and allowance limits including construction discard balances.
+
+Graphical input playtests passed at 1440×900 and 1280×720/125% UI scale. The initial
+compact review showed recap actions below the fold; they now remain in a fixed
+footer. Corrected runs verified immediate persistence without an extra manual
+save, inbox navigation and gift collection, current versus historical totals,
+Escape, and reading during construction without discarding it. The initial model
+run found a misplaced legacy normalization hook; it was corrected before the full
+passing checks. The preceding pastime checkpoint passed all four platform CI
+jobs. These remain agent playtests, not physical Android or human family testing.
+
+Fresh assessment: returning players can now understand why their funds changed
+and discover waiting mail without losing control of the game. The household
+loop is functional, but ordinary life is still visually and aurally quiet between
+menu clicks. Next: subtle spatial footsteps and furnishing/activity sounds that
+follow visible accepted actions, respect audio settings and pause/menu state,
+and stay bounded when several residents are active. Reassess the mix in the
+running game so it adds life without turning into repetitive noise.

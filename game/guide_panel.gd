@@ -24,7 +24,7 @@ func _ready() -> void:
 	var neighbors := _page("Neighbors")
 	_card(neighbors,"Together, at your own pace","Host or join from Play together. Each household has its own lot. One person can build while another cares for their family.",[["connect","Play together"]])
 	_card(neighbors,"Drop in for a catch-up","Visit an open lot from Neighborhood or People. Chats build friendships. If an owner starts construction, visitors return home safely.",[["people","Find your neighbors"]])
-	_card(neighbors,"Leave a little kindness","Mail can hold a postcard and an optional gift for someone to find later. Delivery stays in the neighborhood until they return.",[["mail","Open the mailbox"]])
+	_card(neighbors,"Leave a little kindness","Mail can hold a postcard and an optional gift for someone to find later. Home news also keeps a recap of time away, allowance, and waiting postcards.",[["mail","Open the mailbox"]])
 	_card(neighbors,"The neighborhood clock","The host must stay running for life to continue. Away households get forgiving care and keep their wishes, hobbies, and friendships. If the entire host stops, the world waits. Shared menus never pause everyone else.",[])
 	var controls := _page("Controls")
 	controls.add_child(_text("YOUR KEY BINDINGS",12,Style.GOLD))

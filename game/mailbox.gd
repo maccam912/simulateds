@@ -1,5 +1,6 @@
 extends RefCounted
 ## Bounded household postcards. Gifts remain in escrow until explicitly collected.
+const HomeNews = preload("res://game/home_news.gd")
 const CAPACITY := 24
 const NOTE_LIMIT := 120
 const GIFTS := [0,100,250]
@@ -47,6 +48,9 @@ static func apply(world: Dictionary, owner: String, command: Dictionary, adjust_
 		box.sent_to.append(recipient)
 		var sequence := int(box.next_sent); box.next_sent+=1
 		inbox.items.push_front({"id":owner+":"+str(sequence),"from":owner,"sequence":sequence,"day":int(world.day),"note":str(command.note).strip_edges(),"gift":gift,"read":false,"claimed":gift==0})
+		var recipient_family: Dictionary=world.families[recipient]
+		if HomeNews.away(recipient_family):
+			recipient_family.home_news.postcards+=1; recipient_family.home_news.gifts+=gift
 		return _result(true,"Postcard delivered. It will be waiting when they return.")
 	var id: Variant=command.get("id")
 	if not id is String: return _result(false,"Choose a postcard from your mailbox.")

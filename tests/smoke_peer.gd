@@ -77,6 +77,7 @@ func _host() -> void:
 			for family_id in session.state.families:
 				if family_id != session.profile_id:
 					assert(not session.state.families[family_id].online, "Disconnect did not enable caretaker")
+					assert(not session.state.families[family_id].home_news.report.pending,"Client recap acknowledgement did not survive disconnect")
 			assert(session.save_world(), "Host persistence failed")
 			var old_code: String = rooms.code
 			session.leave()
@@ -231,6 +232,13 @@ func _client(index: String) -> void:
 	await create_timer(0.7).timeout
 	await _connect()
 	assert(session.state.families[identity].mailbox.items.size()==1 and not session.state.families[identity].mailbox.items[0].read,"A postcard delivered while disconnected is waiting on reconnect")
+	var recap: Dictionary=session.state.families[identity].home_news.report
+	assert(recap.pending and recap.postcards==1 and recap.gifts==0 and recap.allowance==0,"The host's absence recap did not replicate the actual offline postcard")
+	await _command({"type":"news_read","revision":recap.id})
+	for _attempt in range(50):
+		if not session.state.families[identity].home_news.report.pending: break
+		await create_timer(0.1).timeout
+	assert(not session.state.families[identity].home_news.report.pending,"Acknowledged recap did not replicate")
 	await _command(postcard,false)
 	assert(session.home_lot() == home, "Reconnect changed lot ownership")
 	assert(int(preload("res://game/friendships.gd").bond(session.state,member_id,companion_id).get("score",0))==32,"Reconnect lost the friendship")

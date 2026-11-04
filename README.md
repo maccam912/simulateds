@@ -133,6 +133,11 @@ or shell expressions.
   24 postcards; read them and collect gifts before archiving to make room. The
   host saves mail with the shared neighborhood. Postcards are shared world data,
   not private messages outside the game.
+- **Mail → Home news** keeps a return recap: actual neighborhood time spent away,
+  allowance already credited, postcards delivered, and any discarded building
+  draft. Unread recaps combine across absences. Mark one as read when ready; its
+  history remains available, and uncollected gifts stay in the Inbox. A badge
+  appears on Mail without interrupting play. Host downtime creates no catch-up.
 - The world fills the window behind the HUD. **Activities** opens the optional
   action tray; construction opens the catalog. **Escape** closes either tray.
 - Scroll to zoom and middle-drag to pan. **F11** toggles fullscreen.

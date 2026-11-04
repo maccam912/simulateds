@@ -35,7 +35,9 @@ Hobbies panel. The build catalog now offers categories, search by name/use,
 selected-item details, and compact editing controls. An optional first-day guide
 and live controls reference now lead into the existing systems without adding
 permanent HUD clutter. Resident favorites now gently influence autonomous leisure
-choices, with editable preferences and a visible daily-plan explanation.
+choices, with editable preferences and a visible daily-plan explanation. Mail now
+includes durable return recaps of simulated absence, actual allowance, postcards,
+and discarded construction drafts.
 See [the playtest log](PLAYTEST_LOG.md) for evidence
 and current usability priorities.
 
@@ -68,8 +70,8 @@ complete a shared activity without either player controlling the other's family.
 
 ## 3. Make asynchronous life rewarding
 
-- An accurate return recap, player-selected caretaker schedules, and a bounded
-  activity journal.
+- Accurate return recaps are implemented. Add player-selected caretaker schedules
+  and extend the bounded activity journal.
 - Simple employment/activity income, bills, and affordable upgrades.
 - Host-approved invitations and household guest/privacy settings.
 - Profile backup/recovery and world administration.

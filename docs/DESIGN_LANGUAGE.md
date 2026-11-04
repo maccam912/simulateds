@@ -152,6 +152,16 @@ Show it in the daily plan and explain autonomous favorite activities there, rath
 than adding another persistent HUD panel. Existing saves remain neutral until
 edited, and residents do not lose progress or earn unattended wish/hobby rewards.
 
+## Coming home
+
+Return news belongs with postcards in Mail. A small badge offers an invitation;
+no forced popup interrupts a visit, building draft, or startup. Recaps describe
+recorded simulation time and actual credited allowance, separating gifts delivered
+then from gifts still waiting now. Unread recaps combine; an explicit read action
+clears the badge but keeps the history. Keep Open Inbox and Mark recap as read in
+a fixed footer, with longer details scrolling above them. The host stopping means
+the world waits, not an excuse to invent events or grant offline catch-up rewards.
+
 ## Screen and state grammar
 
 | Screen | Purpose and behavior |

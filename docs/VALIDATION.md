@@ -83,7 +83,7 @@ service mode was not repeated for this update.
 ## Still open
 
 The subsequent feature checks are recorded in [PLAYTEST_LOG.md](PLAYTEST_LOG.md).
-The current local suite contains twenty-two model/application suites, plus real Iroh
+The current local suite contains twenty-four model/application suites, plus real Iroh
 host/two-client reconnect and dedicated-server startup. The room-construction
 checkpoint passed Linux, Windows, macOS, and Android CI builds/exports. The later
 household checkpoint passed the three desktop jobs; Android built, tested,
@@ -125,6 +125,17 @@ preferences when older clients omit them; the maximum Unicode editor request
 still fits one transport packet. Graphical household input checks passed at
 1440×900 and 1280×720/125% UI scale, including selector bounds and visible favorite
 activities. Real Iroh identity replication and reconnect retain both preferences.
+
+The favorite-pastime checkpoint passed all four CI platform jobs. Home-news checks
+cover actual simulated absence, first visits and quick reconnects, accumulating
+unread reports, exact credited allowance, separate gift escrow, stale/foreign read
+commands, host restarts, legacy saves, malformed data, and discarded drafts. Daily
+allowance now respects the funds limit across all reversible build balances.
+The real Iroh test replicated offline postcard recaps and read acknowledgements;
+the host's saved world retained both clients' read states after disconnect.
+Graphical input checks passed at standard and compact desktop sizes. They cover
+optional entry, fixed action footer, current-versus-historical gift totals, Escape,
+construction continuity, and immediately persisted read state without a manual save.
 
 Physical Android operation, cross-OS multiplayer, exported game packages,
 production authentication, public matchmaking abuse resistance, long-term
