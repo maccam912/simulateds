@@ -10,6 +10,7 @@ const ITEMS: Dictionary = {
 	"toilet": {"exclusive":true, "name":"Porcelain toilet", "cost":180, "size":[1,1], "color":"f1eee2", "need":"bladder", "rate":14.0, "duration":6.0, "description":"A small but essential comfort."},
 	"sofa": {"name":"Sunday sofa", "cost":280, "size":[2,1], "color":"d2866e", "need":"comfort", "rate":8.0, "duration":10.0, "description":"Put your feet up and take a breather."},
 	"tv": {"name":"Little television", "cost":250, "size":[1,1], "color":"697480", "need":"fun", "rate":7.0, "duration":12.0, "description":"Watch something wonderfully silly."},
+	"stereo": {"name":"Little hi-fi", "cost":260, "size":[1,1], "color":"967450", "need":"fun", "rate":6.0, "duration":18.0, "description":"Make a music corner. Up to four residents can dance in separate places around it; dancing together also restores social."},
 	"bookshelf": {"name":"Story shelf", "cost":160, "size":[1,1], "color":"a7845e", "need":"fun", "rate":6.0, "duration":12.0, "description":"Get lost in a good book."},
 	"garden_bed": {"exclusive":true, "name":"Kitchen garden bed", "cost":180, "size":[2,1], "color":"89654d", "need":"comfort", "rate":4.0, "duration":8.0, "description":"Grow radishes or tomatoes. Place on grass or floor, then choose seeds in live mode. Dry crops wait safely; harvest when ripe."},
 	"plant": {"name":"Leafy friend", "cost":45, "size":[1,1], "color":"6c9b64", "need":"comfort", "rate":4.0, "duration":8.0, "description":"Tend a little green corner."},

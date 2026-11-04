@@ -17,7 +17,8 @@ const ActivityAudio = preload("res://game/activity_audio.gd")
 const Appearance = preload("res://game/appearance.gd")
 const Daylight = preload("res://game/daylight.gd")
 const ResidentCues = preload("res://game/resident_cues.gd")
-const Tabletop = preload("res://game/tabletop.gd")
+const Leisure = preload("res://game/shared_leisure.gd")
+const StereoMusic = preload("res://game/stereo_music.gd")
 var motion = ResidentMotion.new()
 var walking = WalkFeedback.new()
 var show_plan_routes := false
@@ -96,10 +97,20 @@ func _update_activity_audio(delta: float) -> void:
 	var lot: Dictionary=world.get("lots",{}).get(lot_id,{})
 	var key := Session.role+":"+lot_id+":"+str(lot.get("revision",0))
 	var active: bool=Soundscape.enabled and is_visible_in_tree() and Soundscape.context=="live" and not Session.menu_paused and not lot.is_empty() and not lot.get("building",false)
-	active=active and (Session.role=="client" or Session.debug_speed>0.0) and float(Preferences.values.effects_volume)>0.0 and float(Preferences.values.master_volume)>0.0
+	active=active and (Session.role=="client" or Session.debug_speed>0.0) and float(Preferences.values.master_volume)>0.0
 	if int(world.get("tick",0))<_audio_tick: activity_audio.reset(); Soundscape.stop_world()
 	_audio_tick=int(world.get("tick",0))
 	Soundscape.sync_world(active,key)
+	var stereo_positions := {}
+	if active:
+		_layout()
+		for object: Dictionary in lot.get("objects",[]):
+			if object.kind!="stereo": continue
+			var point := grid_point(float(object.x)+0.5,float(object.y)+0.5)
+			if Rect2(Vector2.ZERO,size).has_point(point): stereo_positions[str(object.id)]=get_global_transform_with_canvas()*point
+	var stereo := StereoMusic.source(world,lot_id,selected_member,stereo_positions) if active else {}
+	Soundscape.sync_dance(key+":"+str(stereo.id) if not stereo.is_empty() else "",stereo.get("position",Vector2.ZERO))
+	active=active and float(Preferences.values.effects_volume)>0.0
 	var residents: Array[Dictionary]=[]
 	var sources := {}
 	if active:
@@ -536,9 +547,10 @@ func _draw_hover() -> void:
 		var item: Dictionary = Catalog.ITEMS[hover_target.kind]
 		title = str(item.name)
 		detail = str(item.need).capitalize() + " · Click to use"
-		if hover_target.kind=="game_table":
-			var count := Tabletop.players(world,lot_id,str(hover_target.id),false).size()
-			detail="%d/4 places · Fun + social together · Click to %s" % [count,"queue" if count>=Tabletop.CAPACITY else "join"]
+		if Leisure.KINDS.has(hover_target.kind):
+			var definition: Dictionary=Leisure.KINDS[hover_target.kind]
+			var count := Leisure.players(world,lot_id,str(hover_target.id),false).size()
+			detail="%d/%d places · Fun + social together · Click to %s" % [count,int(definition.capacity),"queue" if count>=int(definition.capacity) else "join"]
 		if bool(item.get("exclusive",false)) and hover_target.kind!="garden_bed":
 			for family: Dictionary in world.families.values():
 				for resident: Dictionary in family.members:
@@ -653,6 +665,17 @@ func _furnishing(obj: Dictionary,s: float) -> void:
 			_block(x+0.14,y+0.18,w-0.28,d-0.36,23*s,Color("34494d"),9*s)
 			var p := grid_point(x+0.55,y+d-0.17)+Vector2(0,-20*s)
 			draw_circle(p,6*s,Color("9bc9b0"))
+		"stereo":
+			_block(x+0.08,y+0.16,w-0.16,d-0.32,9*s,Color("967450"))
+			_block(x+0.12,y+0.20,w-0.24,d-0.40,13*s,Color("35484a"),9*s)
+			for offset: float in [0.27,0.73]:
+				var speaker := grid_point(x+offset,y+d-0.18)+Vector2(0,-16*s)
+				draw_circle(speaker,5.3*s,Color("192c30")); draw_circle(speaker,2.8*s,Color("677d78"))
+			var display := grid_point(x+0.5,y+d-0.18)+Vector2(0,-20*s)
+			draw_line(display-Vector2(3,0)*s,display+Vector2(3,0)*s,Color("b9dc8e"),2*s,true)
+			if not building and not Leisure.players(world,lot_id,str(obj.get("id",""))).is_empty():
+				var pulse := 0.0 if Preferences.values.reduced_motion else sin(_time*TAU/0.6)*1.5
+				draw_string(_font,display+Vector2(12,-12+pulse)*s,"♪",HORIZONTAL_ALIGNMENT_LEFT,-1,maxi(12,roundi(17*s)),Color("edc98b"))
 		"bookshelf":
 			_block(x+0.08,y+0.1,w-0.16,d-0.2,35*s,Color("987256"))
 			for i in range(5):
@@ -724,7 +747,10 @@ func _resident(member: Dictionary, family: Dictionary,s: float) -> void:
 	var reduced := bool(Preferences.values.get("reduced_motion",false))
 	var walking: bool=motion.moving(str(member.id)) and not reduced
 	var stride: float=motion.stride(str(member.id)) if walking else 0.0
-	var bob := absf(stride)*1.2*s if walking else 0.0 if reduced else sin(_time*3.0+float(str(member.id).hash()%10))*0.35*s
+	var dancing: bool=pose.get("kind")=="stereo"
+	var dance_phase := _time*TAU/0.6+float(posmod(str(member.id).hash(),7))*0.4
+	if dancing and not reduced: stride=sin(dance_phase)
+	var bob := absf(stride)*1.2*s if walking else 0.0 if reduced else absf(cos(dance_phase))*1.4*s if dancing else sin(_time*3.0+float(str(member.id).hash()%10))*0.35*s
 	draw_set_transform(p,0,Vector2(1,0.45))
 	draw_circle(Vector2.ZERO,9*s,Color(0.12,0.20,0.15,0.22))
 	if selected: draw_arc(Vector2.ZERO,12*s,0,TAU,32,Color("fff2bd"),2*s,true)
@@ -746,19 +772,23 @@ func _resident(member: Dictionary, family: Dictionary,s: float) -> void:
 		if sitting: foot=p+(Vector2(0,-8)+lateral*side*3.5+forward*9)*s
 		draw_line(hip,foot,Color("424f54"),4*s,true)
 	var far_side := -1.0 if lateral.y>=0.0 else 1.0
-	_resident_arm(p,s,lateral,forward,far_side,stride,skin)
+	_resident_arm(p,s,lateral,forward,far_side,stride,skin,dancing)
 	draw_line(p+Vector2(0,-13)*s,p+Vector2(0,-24)*s+Vector2(0,bob),shirt,lerpf(8.0,12.0,absf(lateral.x))*s,true)
 	# A quiet collar makes the body turn legible without enlarging the resident.
 	if facing.y> -0.2:
 		draw_line(p+(Vector2(0,-25)+forward*2-lateral*2)*s+Vector2(0,bob),p+(Vector2(0,-25)+forward*2+lateral*2)*s+Vector2(0,bob),shirt.lightened(0.22),1.5*s,true)
-	_resident_arm(p,s,lateral,forward,-far_side,stride,skin)
+	_resident_arm(p,s,lateral,forward,-far_side,stride,skin,dancing)
 	Appearance.draw_head(self,p+Vector2(0,-31)*s+Vector2(0,bob),s,look,facing)
 	if not behind: _activity_prop(p+forward*6*s,kind,s,reduced,facing,skin)
 
-func _resident_arm(p: Vector2,s: float,lateral: Vector2,forward: Vector2,side: float,stride: float,skin: Color) -> void:
+func _resident_arm(p: Vector2,s: float,lateral: Vector2,forward: Vector2,side: float,stride: float,skin: Color,dancing: bool=false) -> void:
 	var shoulder := p+(Vector2(0,-23)+lateral*side*6)*s
 	var hand := p+(Vector2(0,-14)+lateral*side*7-forward*stride*side*3)*s
-	draw_line(shoulder,hand,skin,3*s,true)
+	if dancing:
+		var elbow := p+(Vector2(0,-22)+lateral*side*9+forward*stride*side*2)*s
+		hand=p+(Vector2(0,-29-absf(stride)*3)+lateral*side*8)*s
+		draw_line(shoulder,elbow,skin,3*s,true); draw_line(elbow,hand,skin,3*s,true)
+	else: draw_line(shoulder,hand,skin,3*s,true)
 
 func _activity_pose(member: Dictionary) -> Dictionary:
 	if motion.moving(str(member.id)): return {}

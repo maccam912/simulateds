@@ -467,3 +467,38 @@ family or physical-device testing.
 
 The preceding activity-history checkpoint passed macOS, Linux, Windows, and
 Android CI. This checkpoint's platform build result is tracked after push.
+
+## Music corners and shared dancing
+
+All 56 local suites passed, followed by actual Iroh host/two-client/reconnect and
+dedicated startup checks. `tests/dancing.gd` covers stereo purchasing, solo fun,
+participant-only social restoration, People discovery, ownership, stale/repeated
+joins, distinct approach destinations, four places plus a waiting fifth,
+construction recall, cancellation/disconnect, routine capture, runtime/disk
+restore, visible music-source choice, and reservations across adjacent shared
+furnishings. Existing tabletop/join tests pass against the extracted shared
+leisure behavior. Both real clients first share a tabletop game, then join one
+another's dance, observe separate spots and social restoration, and get recalled
+when the host enters construction.
+
+Native injected-input dancing playtests passed at 1440×900 and at 1280×720 with
+125% UI scale. They purchase the hi-fi, inspect all four rotations and click
+surfaces, start solo dancing, join a visitor through People, verify three separate
+places and Plan feedback, and inspect the reduced-motion pose. Actual mixer
+recordings prove audible unclipped stereo output with Effects muted, silent
+output with Music muted, score ducking, no restart on repeated snapshots, and
+stopping on solo pause, menus, offscreen camera movement, and construction.
+Ignored captures/recordings are `build/dancing-*.png` and `build/dancing-*.wav`.
+The generated 19.2-second mono asset was regenerated independently and matched
+byte for byte.
+
+The broader native household-audio check exposed an onset lost inside the short
+mix gap after a footstep. Added a regression and a single still-active onset
+retry, discarded on cancellation/context change. Both model audio/dancing checks
+and the actual household mixer recording passed afterward, followed by a final
+compact dancing run. This preserves sparse bounded textures without replaying
+old activity sounds. The final settings label explicitly says Music & stereos.
+These are automated native and mixer checks; human listening, family play,
+physical Android/cross-OS play, and overnight hosting are still open.
+
+The preceding routine-capture checkpoint passed all four platform CI jobs.

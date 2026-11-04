@@ -50,3 +50,24 @@ walking/reading/gardening/tea. These mixer measurements are not a human listenin
 or device-speaker assessment; that remains part of family playtesting.
 The graphical tabletop check also records its actual positional voice in
 `build/tabletop-mix*.wav`, with nonzero output and no clipping in both window sizes.
+
+`dance.wav` is a separate original 19.2-second, 100-BPM mono groove: eight bars
+of soft bass, offbeat wooden keys, and synthesized drums. It comes from the same
+standard-library generator. One visible stereo with an arrived dancer plays at a
+time, preferring the selected resident's source and otherwise using stable object
+order. Camera changes update its position; identical snapshots and additional
+dancers do not restart or stack it. The Music slider controls both stereo and
+background score. An internal Score bus lowers the background by 18 dB while the
+stereo plays, independently of context crossfades. Effects mute affects household
+textures and UI, while Music mute stops the stereo. Pause, menus, construction,
+source departure, and offscreen speakers stop it; shutdown releases its stream.
+
+A short household activity now retains one onset cue through the 180-ms mix gap
+following a footstep. It is discarded immediately if that exact activity stops,
+changes, leaves view, or is paused; this is not a queue of past sounds. Repeated
+snapshots still cannot replay an already-emitted onset.
+
+The native dancing playtest records `build/dancing-music*.wav` and
+`build/dancing-muted*.wav`, verifying audible unclipped output and music mute in
+standard and compact windows. Mixer measurements do not replace listening on
+family devices.

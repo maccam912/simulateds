@@ -26,7 +26,7 @@ func sample(context: String, residents: Array[Dictionary], delta: float, active:
 		var id: String=resident.id
 		seen[id]=true
 		if not tracks.has(id):
-			tracks[id]={"cell":resident.cell,"task":resident.task,"kind":resident.kind,"elapsed":resident.elapsed,"walked":0.0,"cooldown":0.0,"count":0}
+			tracks[id]={"cell":resident.cell,"task":resident.task,"kind":resident.kind,"elapsed":resident.elapsed,"walked":0.0,"cooldown":0.0,"count":0,"onset":false}
 			continue # Opening a lot or resuming is silent; no catch-up chorus.
 		var track: Dictionary=tracks[id]
 		track.cooldown=maxf(0.0,float(track.cooldown)-maxf(0.0,delta))
@@ -39,11 +39,15 @@ func sample(context: String, residents: Array[Dictionary], delta: float, active:
 		elif not resident.walking: track.walked=0.0
 		var kind: String=resident.kind
 		var elapsed: float=resident.elapsed
+		if track.task!=resident.task or track.kind!=kind or resident.walking or elapsed<=0.0: track.onset=false
 		if ACTIVITIES.has(kind) and elapsed>0.0 and not resident.walking:
 			var interval: float=ACTIVITIES[kind][1]
 			var started: bool=track.task!=resident.task or track.kind!=kind or float(track.elapsed)<=0.0
 			var progressed: bool=interval>0.0 and floorf(elapsed/interval)>floorf(float(track.elapsed)/interval)
-			if started or progressed: activities.append(_event(resident,str(ACTIVITIES[kind][0]),track))
+			if started: track.onset=true
+			# Keep one onset through the short mix gap, only while this exact task
+			# remains active. Short activities otherwise lose their only texture.
+			if track.onset or progressed: activities.append(_event(resident,str(ACTIVITIES[kind][0]),track))
 		track.cell=resident.cell; track.task=resident.task; track.kind=kind; track.elapsed=elapsed
 	for id: String in tracks.keys():
 		if not seen.has(id): tracks.erase(id)
@@ -53,7 +57,7 @@ func sample(context: String, residents: Array[Dictionary], delta: float, active:
 	candidates.sort_custom(func(a: Dictionary,b: Dictionary): return int(tracks[a.member].count)<int(tracks[b.member].count))
 	var event: Dictionary=candidates[0]
 	var track: Dictionary=tracks[event.member]
-	track.count+=1; track.cooldown=0.42; track.walked=0.0
+	track.count+=1; track.cooldown=0.42; track.walked=0.0; track.onset=false
 	_gap=0.18
 	return [event] # Sparse mix, bounded across all residents; never queue old cues.
 

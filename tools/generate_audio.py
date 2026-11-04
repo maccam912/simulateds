@@ -81,6 +81,34 @@ def music(name, style):
     write(name, track, normalize=True)
 
 
+def dance():
+    """Original 100-BPM living-room groove: bass, offbeat keys, and soft drums."""
+    duration = 19.2  # Eight 4/4 bars at 100 BPM, including wrapped note tails.
+    track = [array("f", [0]) * round(duration * RATE) for _ in range(2)]
+    chords = [[60, 64, 67, 69], [57, 60, 64, 67], [53, 57, 60, 64], [55, 59, 62, 67]]
+    melody = [72, 76, 74, 69, 72, 67, 71, 74]
+    for bar in range(8):
+        base = bar * 2.4
+        chord = chords[bar % len(chords)]
+        for beat in range(4):
+            note(track, base + beat * .6, .52, chord[0] - 12 + (7 if beat == 3 else 0), .20, kind="bass")
+            for pitch in chord:
+                note(track, base + beat * .6 + .3, .25, pitch, .06, kind="wood")
+        note(track, base + .6, .65, melody[bar], .12)
+        note(track, base + 1.5, .5, melody[(bar + 2) % 8], .085)
+    rng = random.Random(20261104)
+    for beat in range(32):
+        start = round(beat * .6 * RATE)
+        for i in range(round(.16 * RATE)):
+            t = i / RATE
+            fade = min(1.0, t / .004, (.16 - t) / .025)
+            kick = math.sin(TAU * (72 * t - 85 * t * t)) * math.exp(-t * 25) * .25
+            snare = rng.uniform(-1, 1) * math.exp(-t * 45) * (.09 if beat % 2 else .025)
+            for channel in track: channel[(start + i) % len(channel)] += (kick + snare) * fade
+    mono = array("f", ((left + right) * .5 for left, right in zip(*track)))
+    write("dance.wav", [mono], .60, normalize=True)
+
+
 def ambience():
     rng = random.Random(7319)
     length = 24 * RATE
@@ -168,6 +196,7 @@ def main():
     DEST.mkdir(parents=True, exist_ok=True)
     for style in ["menu", "live", "build"]:
         music(style + ".wav", style)
+    dance()
     ambience()
     ui("hover", [(0, 79)], .09, .06)
     ui("click", [(0, 64)], .13, .15)
@@ -176,7 +205,7 @@ def main():
     ui("save", [(0, 67), (.10, 72), (.20, 76)], .58, .15)
     ui("place", [(0, 60), (.055, 67)], .24, .17)
     household()
-    print("Generated original music, garden ambience, six UI sounds, and eleven household textures in", DEST)
+    print("Generated original music, garden ambience, a dance loop, six UI sounds, and eleven household textures in", DEST)
 
 
 if __name__ == "__main__":

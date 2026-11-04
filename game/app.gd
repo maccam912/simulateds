@@ -278,7 +278,7 @@ func open_settings(selected_tab: String = "") -> void:
 	_show_page("settings","Settings","Changes apply immediately and are saved on this device.")
 	var tabs:=TabContainer.new(); tabs.size_flags_vertical=Control.SIZE_EXPAND_FILL; menu_content.add_child(tabs)
 	var audio_page:=_settings_tab(tabs,"Audio")
-	for entry in [["master_volume","Master"],["music_volume","Music"],["effects_volume","Effects"],["ambience_volume","Ambience"]]:
+	for entry in [["master_volume","Master"],["music_volume","Music & stereos"],["effects_volume","Effects"],["ambience_volume","Ambience"]]:
 		_volume_row(audio_page,str(entry[0]),str(entry[1]))
 	audio_page.add_child(_button("Preview sound",func(): Soundscape.play_ui("confirm")))
 	var display:=_settings_tab(tabs,"Display")

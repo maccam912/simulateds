@@ -170,7 +170,7 @@ or shell expressions.
   Review, name, and save the recipe; the current plan keeps running unchanged.
 - **Edit** beside Household (or **Household** in the game menu) changes the
   household name, both resident names, clothing/skin/hair colors, hair style, and
-  favorite pastimes (reading, television, gardening, tea, tabletop games, or a little of everything).
+  favorite pastimes (reading, television, gardening, tea, tabletop games, music and dancing, or a little of everything).
   Preview your choices, then Apply changes; Cancel or Escape leaves them alone.
   Choices belong to this neighborhood and persist through saves and reconnects.
   Favorites gently influence autonomous choices when needs are similar; urgent
@@ -347,3 +347,19 @@ Construction freezes the crop, and moving, undoing, discarding, saving, and
 reconnecting preserve it. Visitors can help water, but only the lot's household
 can plant or harvest. Completed work restores comfort and uses the existing
 gardening hobby/wish rewards; autonomy never buys seeds or harvests crops.
+
+## Music and dancing
+
+Build a **Little hi-fi** (§260, Living) and click it to dance. Up to four residents
+reserve distinct walkable spots beside it. Solo dancing restores fun; actual
+participants also restore social while dancing together. A fifth resident waits
+for a place. Each resident keeps their own plan, so cancellation, travel, or a
+visitor leaving does not stop the others. **People → Join dance** discovers a
+resident's current activity and adds it after your existing plans.
+
+Dancing can be a favorite pastime and a step in household routines. The hi-fi
+has a visible playing note and residents use a raised-arm dance pose; Reduced
+motion keeps a still, recognizable pose. One visible stereo plays an original
+music loop at a time, favoring the selected dancer's stereo. It lowers the
+background score, follows the Music slider, and stops with pause/menus,
+construction, or when offscreen. Effects mute still leaves music audible.

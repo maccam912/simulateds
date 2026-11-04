@@ -1,10 +1,10 @@
 extends RefCounted
 const Wellbeing = preload("res://game/wellbeing.gd")
-const Tabletop = preload("res://game/tabletop.gd")
+const Leisure = preload("res://game/shared_leisure.gd")
 
 static func need(member: Dictionary, lot: Dictionary, world: Dictionary={}) -> Dictionary:
 	var covered := {}
-	if Tabletop.is_shared(world,member): covered.social=true
+	if Leisure.is_shared(world,member): covered.social=true
 	var tasks: Array=member.get("queue",[]).duplicate()
 	if not member.get("task",{}).is_empty(): tasks.append(member.task)
 	for task: Dictionary in tasks:

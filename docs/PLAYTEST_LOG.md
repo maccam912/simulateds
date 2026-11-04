@@ -1196,3 +1196,41 @@ so residents can enjoy the house alone or alongside willing visitors. Keep
 participation in each resident's own plan, use distinct available floor positions,
 and make sound obey the established mixer and reduced-motion settings. This is
 the next proposed increment, not an implemented feature of this checkpoint.
+
+## A little hi-fi and dancing together
+
+Added a §260 stereo with a low wooden cabinet, two visible speakers, a sage
+display, and a small playing note. Clicking it starts a deliberate dance. Residents
+use separate adjacent walkable places and a small raised-arm/alternating-step pose;
+Reduced motion preserves the pose without rhythmic motion. Solo dancing restores
+fun. Actual participants receive social restoration while dancing together; each
+keeps their own queue and can leave independently. People discovers a current
+dance and offers Join dance. Dancing is also a favorite pastime and routine step.
+Shared reservation logic now serves both tabletop games and music corners, with
+future places protected across adjacent shared furnishings.
+
+The native playtest bought and rotated the stereo, clicked it for solo dancing,
+and had Robin join Violet through People while Alex kept dancing. Three residents
+occupied visibly distinct spots; Plan described fun and social together. The music
+is an original 100-BPM, eight-bar procedural groove. One visible stereo plays at a
+time, favoring the selected dancer, while the background score becomes quieter.
+Music & stereos controls its volume independently of Effects. Actual mix captures
+were audible without clipping and silent when muted. Repeated snapshots did not
+restart the track. Pause, menus, construction, and offscreen speakers stopped it.
+
+The wider native audio pass caught a short-activity onset being discarded after
+a footstep. Retaining one cue only while its exact activity remains current fixed
+reading/tea playback; cancelling the task discards the pending cue. Both its new
+regression and the original household mixer flow passed after the fix. The final
+compact dancing rerun also passed. All 56 local suites, actual host/two-client/
+reconnect, and dedicated startup passed. Both clients shared the table and then
+danced together before construction recalled them. The preceding routine-copy
+checkpoint passed all four platform jobs. Human listening/family sessions,
+physical devices, and an overnight host soak remain unverified.
+
+Fresh assessment: dancing adds visible, social recreation to the house, and the
+separate spots make participation understandable. The remaining weak point is
+space feedback: a stereo can be usable by one resident while nearby furniture
+leaves too little room for company, yet the UI mostly advertises the four-person
+maximum. Next: show usable/reserved shared-activity places and explain waiting,
+so players can arrange a music corner or game area that fits their plans.

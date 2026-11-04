@@ -65,6 +65,7 @@ func _host() -> void:
 		await _command({"type":"autonomy","member_id":resident.id,"enabled":false})
 	await _command({"type":"build_begin","lot_id":session.home_lot()})
 	await _command({"type":"place","lot_id":session.home_lot(),"kind":"game_table","x":8,"y":5})
+	await _command({"type":"place","lot_id":session.home_lot(),"kind":"stereo","x":8,"y":9})
 	await _command({"type":"build_end","lot_id":session.home_lot()})
 	await create_timer(2.0).timeout
 	var file := FileAccess.open(ticket_path, FileAccess.WRITE)
@@ -423,6 +424,42 @@ func _client(index: String) -> void:
 			shared=true; break
 		await create_timer(0.1).timeout
 	assert(shared,"Both actual clients must observe shared play, social restoration, and separate places")
+	var tabled := FileAccess.open(ticket_path+"."+index+".tabled",FileAccess.WRITE); tabled.store_string("observed"); tabled.close()
+	for _attempt in range(50):
+		if FileAccess.file_exists(ticket_path+".1.tabled") and FileAccess.file_exists(ticket_path+".2.tabled"): break
+		await create_timer(0.1).timeout
+	assert(FileAccess.file_exists(ticket_path+".1.tabled") and FileAccess.file_exists(ticket_path+".2.tabled"))
+	await _command({"type":"cancel","member_id":member_id})
+	var stereo_id := ""
+	for object: Dictionary in session.state.lots[host_home].objects:
+		if object.kind=="stereo": stereo_id=str(object.id)
+	assert(not stereo_id.is_empty())
+	var dance_social: float=session.state.families[identity].members[0].needs.social
+	if index=="1":
+		await _command({"type":"interact","member_id":member_id,"lot_id":host_home,"target_id":stereo_id})
+	else:
+		var dance_intent: Dictionary={}
+		for _attempt in range(100):
+			for family: Dictionary in session.state.families.values():
+				if family.id==identity or family.home_lot==host_home: continue
+				var companion: Dictionary=family.members[0]
+				var option: Dictionary=session.world.leisure_option(session.state.families[identity].members[0],str(companion.id),"stereo")
+				if not option.is_empty() and option.available:
+					dance_intent={"type":"join_dance","member_id":member_id,"lot_id":host_home,"companion_id":companion.id,"activity_id":option.activity_id}
+			if not dance_intent.is_empty(): break
+			await create_timer(0.1).timeout
+		assert(not dance_intent.is_empty(),"People discovers the other actual client's dance")
+		var stale_dance := dance_intent.duplicate(); stale_dance.activity_id="finished-dance"; await _command(stale_dance,false)
+		await _command(dance_intent); await _command(dance_intent,false)
+	var danced := false
+	for _attempt in range(100):
+		var guest: Dictionary=session.state.families[identity].members[0]
+		var dancers: Array=preload("res://game/shared_leisure.gd").players(session.state,host_home,stereo_id)
+		if dancers.size()==2 and guest.action=="Dancing together" and guest.needs.social>dance_social+1.0:
+			assert(preload("res://game/shared_leisure.gd").place(dancers[0])!=preload("res://game/shared_leisure.gd").place(dancers[1]))
+			danced=true; break
+		await create_timer(0.1).timeout
+	assert(danced,"Both clients observe separate dance spots and shared social restoration")
 	var played := FileAccess.open(ticket_path+"."+index+".played",FileAccess.WRITE); played.store_string("shared"); played.close()
 	var recalled := false
 	for _attempt in range(300):

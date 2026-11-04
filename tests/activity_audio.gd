@@ -46,6 +46,20 @@ func _run() -> void:
 	assert(_sample(0.2,true,"lot_2").is_empty(),"Opening another lot starts without a chorus")
 	residents.clear(); _sample()
 	assert(sampler.tracks.is_empty(),"Offscreen and departed residents do not retain sound tracks")
+	# A last footstep can briefly occupy the mix gap when a short activity starts.
+	residents=[_resident()]; member=residents[0]; sampler.reset(); _sample()
+	member.walking=true; member.cell=Vector2(1.4,0); assert(_sample().size()==1)
+	member.walking=false; member.kind="bookshelf"; member.task="short-reading"; member.elapsed=0.1
+	assert(_sample(0.05).is_empty())
+	member.elapsed=0.2; events=_sample(0.14)
+	assert(events.size()==1 and events[0].sound=="page","A still-running short activity gets its onset after the footstep gap")
+	assert(_sample().is_empty(),"The retained onset plays only once")
+	sampler.reset(); member.kind=""; member.task=""; member.elapsed=0; _sample()
+	member.walking=true; member.cell+=Vector2(1.4,0); assert(_sample().size()==1)
+	member.walking=false; member.kind="table"; member.task="cancelled-tea"; member.elapsed=0.1
+	assert(_sample(0.05).is_empty())
+	member.kind=""; member.task=""; member.elapsed=0
+	assert(_sample(0.2).is_empty(),"Cancellation discards an onset still waiting for the mix gap")
 	# Several residents starting together alternate representation, with no backlog.
 	residents=[_resident("a"),_resident("b")]; sampler.reset(); _sample()
 	for resident: Dictionary in residents: resident.kind="bookshelf"; resident.task="read"; resident.elapsed=0.1

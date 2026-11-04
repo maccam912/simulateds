@@ -35,6 +35,7 @@ func _run() -> void:
 	for favorite: String in Pastimes.ACTIVITIES:
 		_fresh(); member.favorite=favorite
 		if favorite=="games": lot.objects.append(world._new_object("game_table",8,5,0))
+		if favorite=="dancing": lot.objects.append(world._new_object("stereo",8,5,0))
 		for need: String in member.needs: member.needs[need]=60.0
 		assert(_chosen()==Pastimes.ACTIVITIES[favorite],"Each preference changes a real near-tie choice")
 	_fresh(); member.favorite="games"; member.needs.fun=60.0

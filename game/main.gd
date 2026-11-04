@@ -62,8 +62,8 @@ var _hobby_options: Dictionary = {}
 var _hobby_seen: Dictionary = {}
 var people_button: Button
 var social_buttons: Dictionary = {}
-var game_buttons: Dictionary = {}
-var _tabletop_options: Dictionary = {}
+var leisure_buttons: Dictionary = {}
+var _leisure_options: Dictionary = {}
 var _social_focus := ""
 var _friend_seen: Dictionary = {}
 var _context_page := "activities"
@@ -564,14 +564,14 @@ func _refresh() -> void:
 	if _context_page=="wishes" and not build_mode:
 		tools_signature+=str(member.get("wishes",{}))+str(day)+str(member.get("task",{}).get("id",""))+str(member.get("queue",[]))
 	if _context_page=="people" and not build_mode:
-		_tabletop_options.clear()
+		_leisure_options.clear()
 		tools_signature+=str(state.get("friendships",{}))+str(day)+str(member.get("task",{}).get("id",""))+str(member.get("queue",[]))
 		for household: Dictionary in state.families.values():
 			tools_signature+=str(household.get("identity_revision",0))+str(household.online)+str(state.lots[household.home_lot].building)
 			for resident: Dictionary in household.members:
 				tools_signature+=str([resident.id,resident.lot_id,resident.task.get("id",""),resident.action])
-				if not member.is_empty(): _tabletop_options[resident.id]=Session.world.tabletop_option(member,str(resident.id))
-		tools_signature+=str(_tabletop_options)
+				if not member.is_empty(): _leisure_options[resident.id]=Session.world.leisure_option(member,str(resident.id))
+		tools_signature+=str(_leisure_options)
 	if _context_page=="hobbies" and not build_mode:
 		_hobby_options.clear()
 		if not member.is_empty():
@@ -790,7 +790,7 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 			shown[obj.kind]=true
 			var item: Dictionary=Catalog.ITEMS.get(obj.kind,{})
 			if str(item.get("need","")).is_empty(): continue
-			var text: String={"bed":"Get some sleep","fridge":"Have a bite to eat","shower":"Take a shower","toilet":"Use the bathroom","sofa":"Put your feet up","tv":"Watch a little TV","bookshelf":"Read a good book","plant":"Enjoy the greenery","table":"Take a seat","game_table":"Play a tabletop game"}.get(str(obj.kind),str(item.get("name",obj.kind)))
+			var text: String={"bed":"Get some sleep","fridge":"Have a bite to eat","shower":"Take a shower","toilet":"Use the bathroom","sofa":"Put your feet up","tv":"Watch a little TV","bookshelf":"Read a good book","plant":"Enjoy the greenery","table":"Take a seat","game_table":"Play a tabletop game","stereo":"Dance to some music"}.get(str(obj.kind),str(item.get("name",obj.kind)))
 			var b:=_button(text,func(): _interact(str(obj.id)))
 			if obj.kind=="garden_bed": b.text="Garden bed · %d, %d" % [obj.x,obj.y]; b.tooltip_text=Gardens.summary(obj.garden)
 			b.alignment=HORIZONTAL_ALIGNMENT_LEFT; b.add_theme_font_size_override("font_size",12); tools_box.add_child(b)
@@ -1225,7 +1225,7 @@ func _rebuild_people() -> void:
 	if member.is_empty(): return
 	activity_label.text=str(member.name)+"’s people"
 	social_buttons.clear()
-	game_buttons.clear()
+	leisure_buttons.clear()
 	var rows: Array=[]
 	for family: Dictionary in Session.state.families.values():
 		for other: Dictionary in family.members:
@@ -1261,15 +1261,15 @@ func _rebuild_people() -> void:
 		var button := _button(text,func(): _social_action(str(other.id)))
 		button.set_meta("person_id",str(other.id)); button.set_meta("people_action","chat")
 		button.disabled=building or not status.is_empty(); body.add_child(button); social_buttons[other.id]=button
-		var game_option: Dictionary=_tabletop_options.get(other.id,{})
-		if not game_option.is_empty():
-			var game_summary := _label(str(game_option.summary),12,Style.GREEN)
-			game_summary.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; game_summary.custom_minimum_size.x=200; body.add_child(game_summary)
+		var leisure_option: Dictionary=_leisure_options.get(other.id,{})
+		if not leisure_option.is_empty():
+			var leisure_summary := _label(str(leisure_option.summary),12,Style.GREEN)
+			leisure_summary.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; leisure_summary.custom_minimum_size.x=200; body.add_child(leisure_summary)
 			if here:
-				var join := _button(str(game_option.label),func(): _join_game(str(other.id),str(game_option.activity_id)))
-				join.disabled=not game_option.available; join.tooltip_text=str(game_option.detail)
-				join.set_meta("person_id",str(other.id)); join.set_meta("people_action","game")
-				body.add_child(join); game_buttons[other.id]=join
+				var join := _button(str(leisure_option.label),func(): _join_leisure(str(other.id),str(leisure_option.activity_id),str(leisure_option.kind)))
+				join.disabled=not leisure_option.available; join.tooltip_text=str(leisure_option.detail)
+				join.set_meta("person_id",str(other.id)); join.set_meta("people_action","leisure")
+				body.add_child(join); leisure_buttons[other.id]=join
 			else:
 				var visit_hint := _label("Visit this home to join.",11,Style.MUTED); body.add_child(visit_hint)
 		var detail := ""
@@ -1279,7 +1279,7 @@ func _rebuild_people() -> void:
 		elif int(bond.get("last_chat_day",0))>0: detail="Last catch-up: day %d" % int(bond.last_chat_day)
 		if not detail.is_empty():
 			var hint := _label(detail,11,Style.MUTED); hint.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; hint.custom_minimum_size.x=200; body.add_child(hint)
-	var note := _label("Chat builds friendship. Join a game for fun and company; your current plans come first.",12,Style.MUTED)
+	var note := _label("Chat builds friendship. Join a game or dance for fun and company; your current plans come first.",12,Style.MUTED)
 	note.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; note.custom_minimum_size.x=200; context_box.add_child(note)
 
 func _social_action(target_id: String) -> void:
@@ -1293,17 +1293,17 @@ func _social_action(target_id: String) -> void:
 		_send({"type":"visit","member_id":member.id,"lot_id":other.lot_id})
 		viewed_lot=str(other.lot_id); _refresh()
 
-func _join_game(target_id: String, activity_id: String) -> void:
+func _join_leisure(target_id: String, activity_id: String, kind: String) -> void:
 	_social_focus=target_id
 	var member := _member()
 	if member.is_empty(): return
-	_send({"type":"join_game","member_id":member.id,"lot_id":member.lot_id,"companion_id":target_id,"activity_id":activity_id})
+	_send({"type":"join_dance" if kind=="stereo" else "join_game","member_id":member.id,"lot_id":member.lot_id,"companion_id":target_id,"activity_id":activity_id})
 
 func _restore_people_focus(previous: Dictionary) -> void:
 	await get_tree().process_frame
 	if _context_page!="people" or selected_member!=previous.member or not context_panel.visible: return
 	if get_viewport().gui_get_focus_owner()!=null: return
-	var choices: Dictionary=game_buttons if previous.action=="game" else social_buttons
+	var choices: Dictionary=leisure_buttons if previous.action=="leisure" else social_buttons
 	var button: Button=choices.get(previous.target)
 	if button==null or not is_instance_valid(button) or button.disabled: button=social_buttons.get(previous.target)
 	if button==null or not is_instance_valid(button) or button.disabled: return

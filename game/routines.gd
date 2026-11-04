@@ -3,7 +3,7 @@ extends RefCounted
 const Profile = preload("res://game/household_profile.gd")
 const MAX_ROUTINES := 4
 const MAX_STEPS := 6
-const ACTIVITIES := ["toilet","shower","fridge","bookshelf","tv","table","plant","game_table","sofa","bed"]
+const ACTIVITIES := ["toilet","shower","fridge","bookshelf","tv","table","plant","game_table","sofa","bed","stereo"]
 
 static func create() -> Dictionary:
 	return {"revision":0,"next_id":3,"entries":[

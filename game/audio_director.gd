@@ -11,6 +11,10 @@ var _music: Array[AudioStreamPlayer]=[]
 var _effects: Array[AudioStreamPlayer]=[]
 var _ambience: AudioStreamPlayer
 var _world_effects: Array[AudioStreamPlayer2D]=[]
+var _dance_music: AudioStreamPlayer2D
+var _dance_key := ""
+var dance_tracks_started := 0
+var _score_bus := -1
 var _world_active := false
 var _world_context := ""
 var world_sounds_started := 0
@@ -26,9 +30,16 @@ func _ready() -> void:
 	enabled=DisplayServer.get_name()!="headless" and not OS.has_feature("dedicated_server") and not "--server" in OS.get_cmdline_user_args() and not "--native-smoke" in OS.get_cmdline_user_args()
 	process_mode=Node.PROCESS_MODE_ALWAYS
 	if not enabled: return
+	_score_bus=AudioServer.get_bus_index("Score")
+	if _score_bus<0:
+		AudioServer.add_bus(); _score_bus=AudioServer.bus_count-1
+		AudioServer.set_bus_name(_score_bus,"Score"); AudioServer.set_bus_send(_score_bus,"Music")
+	AudioServer.set_bus_volume_db(_score_bus,0.0)
+	_dance_music=AudioStreamPlayer2D.new(); _dance_music.bus="Music"; _dance_music.panning_strength=0.65
+	_dance_music.volume_db=-60; add_child(_dance_music)
 	for index in range(2):
 		var player:=AudioStreamPlayer.new()
-		player.bus="Music"
+		player.bus="Score"
 		player.volume_db=-60
 		add_child(player)
 		_music.append(player)
@@ -42,12 +53,36 @@ func _ready() -> void:
 		player.bus="Effects"; player.panning_strength=0.65; player.attenuation=1.0
 		add_child(player); _world_effects.append(player)
 	Preferences.changed.connect(func():
-		if float(Preferences.values.master_volume)<=0.0 or float(Preferences.values.effects_volume)<=0.0: stop_world())
+		if float(Preferences.values.master_volume)<=0.0: stop_world()
+		elif float(Preferences.values.effects_volume)<=0.0:
+			for player: AudioStreamPlayer2D in _world_effects: player.stop()
+		if float(Preferences.values.music_volume)<=0.0: _stop_dance())
 	_ambience=AudioStreamPlayer.new()
 	_ambience.bus="Ambience"
 	_ambience.volume_db=-60
 	_ambience.stream=_stream("res://assets/audio/garden.wav",true)
 	add_child(_ambience)
+
+func _process(delta: float) -> void:
+	if not enabled or _score_bus<0: return
+	var playing := is_instance_valid(_dance_music) and _dance_music.playing
+	var target := -18.0 if playing else 0.0
+	AudioServer.set_bus_volume_db(_score_bus,move_toward(AudioServer.get_bus_volume_db(_score_bus),target,delta*90.0))
+	if playing: _dance_music.volume_db=move_toward(_dance_music.volume_db,-10.0,delta*200.0)
+
+func sync_dance(key: String, position: Vector2) -> void:
+	if not enabled or not _world_active or context!="live" or key.is_empty() or float(Preferences.values.master_volume)<=0.0 or float(Preferences.values.music_volume)<=0.0:
+		_stop_dance(); return
+	_dance_music.position=position
+	_dance_music.max_distance=maxf(get_viewport().get_visible_rect().size.x,get_viewport().get_visible_rect().size.y)*1.2
+	if key==_dance_key and _dance_music.playing: return
+	_stop_dance(); _dance_key=key
+	_dance_music.stream=_stream("res://assets/audio/dance.wav",true)
+	_dance_music.volume_db=-60; _dance_music.play(); dance_tracks_started+=1
+
+func _stop_dance() -> void:
+	_dance_key=""
+	if is_instance_valid(_dance_music): _dance_music.stop()
 
 func _stream(path: String,looping: bool=false) -> AudioStream:
 	if _streams.has(path): return _streams[path]
@@ -152,6 +187,7 @@ func update_world_sources(sources: Dictionary) -> void:
 
 func stop_world() -> void:
 	_world_active=false
+	_stop_dance()
 	for player: AudioStreamPlayer2D in _world_effects: player.stop()
 
 func shutdown() -> void:
@@ -162,6 +198,8 @@ func shutdown() -> void:
 	if _fade!=null and _fade.is_valid(): _fade.kill()
 	_fade=null
 	stop_world()
+	if is_instance_valid(_dance_music): _dance_music.stream=null
+	if _score_bus>=0: AudioServer.set_bus_volume_db(_score_bus,0.0)
 	for player: AudioStreamPlayer2D in _world_effects: player.stream=null
 	for player in _music+_effects:
 		if is_instance_valid(player):
@@ -198,3 +236,4 @@ func _exit_tree() -> void:
 	_effects.clear()
 	_world_effects.clear()
 	_ambience=null
+	_dance_music=null

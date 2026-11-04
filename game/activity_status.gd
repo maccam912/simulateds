@@ -30,6 +30,7 @@ static func sample(member: Dictionary, lot: Dictionary) -> Dictionary:
 		label=str(World.ACTION_NAMES.get(kind,"Enjoying home"))
 		if kind=="garden_bed": label=str(task.get("label","Gardening"))
 		if kind=="game_table" and action=="Playing together": label="Playing together · Fun + social"
+		if kind=="stereo" and action=="Dancing together": label="Dancing together · Fun + social"
 	var minutes := maxi(1,ceili(remaining*World.MINUTES_PER_SECOND))
 	var detail := label+" · ~%d min left" % minutes if remaining>0.1 else "Finishing up"
 	return {"phase":"activity","detail":detail,"progress":clampf(elapsed/maxf(0.001,elapsed+remaining),0.0,1.0),"remaining":remaining}

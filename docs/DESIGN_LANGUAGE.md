@@ -429,3 +429,20 @@ cannot partly apply. Windows do not create passages or change room filling.
 Keep the current style while waiting for a command; accepted snapshots determine
 the fitted house. Use the established construction sound, with no extra ambient
 loop or persistent HUD control.
+
+### A music corner
+
+The little hi-fi uses a low wooden cabinet, two dark speaker cones, and a small
+sage display. A gold music note identifies accepted dancing nearby. Residents
+stay in their reserved floor positions, facing the music, with bent raised arms,
+a small alternating step, and restrained body motion. Reduced motion preserves
+the raised-arm silhouette without rhythmic movement. Keep faces and the existing
+name/need overlays legible.
+
+Music is one positional source per viewed lot, not one track per dancer. Prefer
+the selected resident's playing stereo, then a stable visible source. Keep its
+original 100-BPM groove on Music, lower the background score beneath it, and keep
+household textures on Effects. Changing or replaying a state snapshot must not
+restart the song. People offers Join dance using the same voluntary, independently
+owned participation as tabletop games; its label and occupancy explain the shared
+activity without a separate social-game screen.
