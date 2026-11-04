@@ -83,7 +83,7 @@ service mode was not repeated for this update.
 ## Still open
 
 The subsequent feature checks are recorded in [PLAYTEST_LOG.md](PLAYTEST_LOG.md).
-The current local suite contains sixteen model/application suites, plus real Iroh
+The current local suite contains seventeen model/application suites, plus real Iroh
 host/two-client reconnect and dedicated-server startup. The room-construction
 checkpoint passed Linux, Windows, macOS, and Android CI builds/exports. The later
 household checkpoint passed the three desktop jobs; Android built, tested,
@@ -91,6 +91,11 @@ exported, and uploaded artifacts but failed when the runner ran out of disk duri
 cache saving. The cache-size fix and subsequent friendship checkpoint both passed
 all four platform jobs. Mailbox validation adds real delivery while clients are
 disconnected, reconnect retention, and gift collection/replay coverage.
+The mailbox checkpoint also passed all four CI platform jobs. Care validation
+adds authoritative target selection, busy/missing/blocked furnishings, duplicate
+prevention, and needs recovery through actual activities. A native mouse/keyboard
+playtest completed all seven care activities while the other resident used
+autonomy; graphical captures cover the compact layout and construction state.
 
 Physical Android operation, cross-OS multiplayer, exported game packages,
 production authentication, public matchmaking abuse resistance, long-term

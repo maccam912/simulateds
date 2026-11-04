@@ -280,3 +280,36 @@ low. Next: a readable resident mood and contextual care actions that take the
 player directly to an appropriate reachable activity, while preserving manual
 plans and respecting busy furniture. Reassess the balance through a longer live
 household playtest before expanding careers or inventory.
+
+## 2026-11-04 · A little care
+
+The needs bars are now shortcuts to actual activities. The host selects a useful,
+reachable furnishing or conversation on the resident's current lot, preferring
+free options. Care preserves manual plan order, preempts unrelated autonomy, and
+does not duplicate an activity already handling that need. A mood summary reflects
+the lowest need without adding a separate simulated stat. The Care tray shows
+suggestions, pending care, and explanations for missing or unreachable furniture.
+Construction disables the controls along with other resident orders.
+
+Validation: seventeen local suites, real Iroh host/two-client checks, and dedicated
+startup passed. Added cases cover each need, instant-mutation prevention,
+duplicate clicks, busy/free beds, blocked and missing objects, current-lot visits,
+ownership, construction, and queue round-trips. Compact graphical input checks
+at 1280×720/125% scale queued food, sleep, and hygiene, completed the plan, and
+checked unavailable/building controls. A separate native 1440×900 mouse/keyboard
+session used the developer console to start at low needs, then completed a meal,
+sleep, shower, bathroom visit, recreation, social activity, and plant tending.
+The other resident remained on autonomy. The plan cleared, needs recovered, and
+the selected activities fulfilled all three wishes. The app saved and quit
+cleanly through its menu. This was agent-operated, not a human family playtest.
+
+An isolated four-household benchmark measured the full HUD refresh, including
+care suggestions, at 0.778 ms median / 0.823 ms p95 over 200 refreshes on this Mac.
+It is not an Android or maximum-furniture performance claim. The mailbox CI
+checkpoint completed Linux, Windows, macOS, and Android successfully.
+
+Fresh assessment: caring for the household is quick enough to leave room for
+building and visits. The homes still share the same cream walls and oak floors,
+which weakens the pleasure of making each lot one's own. Next: floor and wall
+finishes with clear previews, per-tile costs, and the existing undo/save/network
+boundaries, followed by a decorating playtest in differently shaped rooms.

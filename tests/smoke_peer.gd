@@ -150,6 +150,13 @@ func _client(index: String) -> void:
 	await _command({"type": "build_end", "lot_id": home})
 	await _command({"type":"autonomy","member_id":member_id,"enabled":false})
 	await _command({"type":"cancel","member_id":member_id})
+	await _command({"type":"care","member_id":member_id,"need":"hunger"})
+	for _attempt in range(50):
+		if session.world.task_activity(session.state.families[identity].members[0].task,home)=="fridge": break
+		await create_timer(0.1).timeout
+	assert(session.world.task_activity(session.state.families[identity].members[0].task,home)=="fridge","Host-chosen care target was not replicated")
+	await _command({"type":"care","member_id":member_id,"need":"hunger"},false)
+	await _command({"type":"cancel","member_id":member_id})
 	await _command({"type":"move","member_id":member_id,"lot_id":home,"x":0,"y":0})
 	await _command({"type":"move","member_id":member_id,"lot_id":home,"x":15,"y":15})
 	var queued_id := ""

@@ -37,6 +37,11 @@ subtle depth. Translucency can preserve the landscape behind the HUD, but text
 surfaces must remain dark enough to read over pale floors. Do not place text
 straight over animated grass without a backing or a dependable shadow.
 
+Needs are also controls: hovering explains the proposed care action, clicking
+adds it to the resident's plan, and an optional Care tray explains unavailable
+activities. The mood summary comes from current needs rather than an extra hidden
+meter. Low moods use explicit text with terracotta/brass, never flashing alarms.
+
 Use the world for richer color: oak, worn painted wood, cream plaster, terracotta,
 green planting, and soft blue upholstery. Increase detail around objects that
 residents use. Avoid decorative UI noise that competes with those objects.

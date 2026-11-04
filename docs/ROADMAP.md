@@ -26,7 +26,8 @@ placement validation previews, 32-edit construction undo/redo, and persistent
 personal wishes/journals, resident movement/activity presentation, day/night
 lighting, two-corner room construction with a shared cost/obstruction preview,
 household names/appearance, persistent friendships with a People panel, and
-household postcards with optional gifts for asynchronous play.
+household postcards with optional gifts for asynchronous play. Needs now offer
+care shortcuts and a derived mood summary, backed by host-selected activities.
 See [the playtest log](PLAYTEST_LOG.md) for evidence
 and current usability priorities.
 

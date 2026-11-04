@@ -87,6 +87,10 @@ or shell expressions.
 
 - Select a resident in the household list or click their visible body. Click a floor or lawn tile to walk;
   click a furnishing to use it. Their needs and current action appear in the UI.
+- Click a **need bar** to add a suitable care activity on the resident’s current
+  lot. The host finds a reachable option, prefers free furnishings, and keeps
+  existing player orders in sequence. **Care** beside the resident’s mood shows
+  suggestions, planned activities, and explanations for unavailable furnishings.
 - Open **Neighborhood** to choose a lot. **Visit lot** sends the
   selected resident there; **Go home** returns them to their own lot.
 - On your home lot, choose **Build & buy**, choose a tool or furnishing, then click a

@@ -7,6 +7,7 @@ const RoomPlan = preload("res://game/room_plan.gd")
 const Wishes = preload("res://game/wishes.gd")
 const Friendships = preload("res://game/friendships.gd")
 const Mailbox = preload("res://game/mailbox.gd")
+const Wellbeing = preload("res://game/wellbeing.gd")
 const Appearance = preload("res://game/appearance.gd")
 const HouseholdProfile = preload("res://game/household_profile.gd")
 const GRID_SIZE := 16
@@ -229,6 +230,14 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 		return _result(true, "Action queue cleared.")
 	if bool(state.lots[family.home_lot].building):
 		return _result(false, "Finish construction before directing your family.")
+	if type=="care":
+		var need: Variant=command.get("need")
+		if not need is String or not NEEDS.has(need): return _result(false,"Choose one of this resident’s needs.")
+		var option := care_option(member,need)
+		if not option.available: return _result(false,str(option.detail))
+		var result := apply_command(profile_id,{"type":"interact","member_id":member.id,"lot_id":member.lot_id,"target_id":option.target_id})
+		if result.ok: result.message="Added to plan · "+str(option.label)+(" · Wait until it is free" if option.busy else "")
+		return result
 	if type in ["visit", "go_home"]:
 		var destination: Dictionary = state.lots[family.home_lot] if type == "go_home" else lot
 		if destination.building:
@@ -443,6 +452,45 @@ func task_activity(task: Dictionary, lot_id: String) -> String:
 	if task.get("type")!="interact": return ""
 	if task.get("target_kind")=="member": return "chat"
 	return str(_object(state.lots[lot_id],str(task.get("target_id",""))).get("kind",""))
+
+func care_status(member: Dictionary, need: String) -> String:
+	if Wellbeing.restores(task_activity(member.task,str(member.lot_id)),need): return "In progress"
+	for task: Dictionary in member.queue:
+		if Wellbeing.restores(task_activity(task,str(member.lot_id)),need): return "In your plan"
+	return ""
+
+func care_option(member: Dictionary, need: String) -> Dictionary:
+	var status := care_status(member,need)
+	if not status.is_empty(): return {"available":false,"status":status,"label":status,"detail":str(member.name)+" is already taking care of "+need+"."}
+	var lot: Dictionary=state.lots[member.lot_id]
+	var best: Dictionary={}
+	var best_score := 100000.0
+	for object: Dictionary in lot.objects:
+		# Secondary comfort from sleeping is recognized in the plan, but a care
+		# shortcut for comfort should choose a short break, not send someone to bed.
+		if Catalog.ITEMS[object.kind].need!=need: continue
+		var goals := _interaction_cells(lot,object)
+		var path := _path(lot,_position(member),goals)
+		if path.is_empty() and not goals.has(_position(member)): continue
+		var busy := not _object_user(str(lot.id),object,str(member.id)).is_empty()
+		var score := float(path.size())+(1000.0 if busy else 0.0)
+		if score<best_score:
+			best_score=score
+			best={"available":true,"status":"","label":Wellbeing.ACTIONS[object.kind],"detail":str(Catalog.ITEMS[object.kind].name)+(" · In use, wait your turn" if busy else " · Here on this lot"),"target_id":object.id,"busy":busy}
+	if need=="social":
+		for family: Dictionary in state.families.values():
+			for other: Dictionary in family.members:
+				if other.id==member.id or other.lot_id!=member.lot_id: continue
+				var goals := _social_cells(lot,other)
+				var path := _path(lot,_position(member),goals)
+				if path.is_empty() and not goals.has(_position(member)): continue
+				var busy: bool = _chat_busy(other,member) or not other.queue.is_empty()
+				var score := float(path.size())-4.0+(1000.0 if busy else 0.0)
+				if score<best_score:
+					best_score=score
+					best={"available":true,"status":"","label":"Chat with "+str(other.name),"detail":"A little company"+(" · They have a plan first" if busy else " · Here on this lot"),"target_id":other.id,"busy":busy}
+	if best.is_empty(): return {"available":false,"status":"Unavailable here","label":"No reachable activity","detail":"No reachable "+str(Wellbeing.FURNISHINGS.get(need,"activity"))+" here. Build one or visit a neighbor."}
+	return best
 
 func wish_status(member: Dictionary, activity: String) -> String:
 	if not member.task.get("automatic",false) and task_activity(member.task,str(member.lot_id))==activity: return "In progress"

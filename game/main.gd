@@ -12,6 +12,7 @@ const Wishes = preload("res://game/wishes.gd")
 const Friendships = preload("res://game/friendships.gd")
 const Portrait = preload("res://game/resident_portrait.gd")
 const Appearance = preload("res://game/appearance.gd")
+const Wellbeing = preload("res://game/wellbeing.gd")
 const LotView = preload("res://game/lot_view.gd")
 var viewed_lot := ""
 var selected_member := ""
@@ -49,6 +50,11 @@ var autonomy_button: Button
 var _plan_signature := ""
 var need_bars: Dictionary = {}
 var need_values: Dictionary = {}
+var need_buttons: Dictionary = {}
+var mood_button: Button
+var care_buttons: Dictionary = {}
+var care_values: Dictionary = {}
+var _care_options: Dictionary = {}
 var connection_label: Label
 var notice_label: Label
 var help_label: Label
@@ -230,14 +236,25 @@ func _build_ui() -> void:
 	var plan_scroll := ScrollContainer.new(); plan_scroll.size_flags_vertical=Control.SIZE_EXPAND_FILL; plan_scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED; plan.add_child(plan_scroll)
 	plan_box = _vbox(plan_scroll,5); plan_box.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	var bars := HBoxContainer.new(); bars.add_theme_constant_override("separation",12); needs.add_child(bars)
-	for need in ["hunger","energy","hygiene","bladder","fun","social","comfort"]:
-		var column := _vbox(bars,4); column.size_flags_horizontal=Control.SIZE_EXPAND_FILL
-		var row := HBoxContainer.new(); column.add_child(row)
-		var label := _label(str(need).capitalize(),11,Style.MUTED); label.size_flags_horizontal=Control.SIZE_EXPAND_FILL; row.add_child(label)
-		var value := _label("100",11); row.add_child(value); need_values[need]=value
-		var bar := ProgressBar.new(); bar.show_percentage=false; bar.custom_minimum_size.y=10; column.add_child(bar); need_bars[need]=bar
+	for need: String in Wellbeing.ORDER:
+		var button := _button("",func(): _care_need(need)); button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; button.custom_minimum_size=Vector2(54,42); bars.add_child(button); need_buttons[need]=button
+		for state_name: String in ["normal","disabled","hover","focus"]:
+			var surface := Style.box(Color.TRANSPARENT if state_name in ["normal","disabled","focus"] else Style.PANEL,3,Style.GREEN if state_name in ["hover","focus"] else Color.TRANSPARENT)
+			surface.content_margin_left=0; surface.content_margin_right=0; surface.content_margin_top=0; surface.content_margin_bottom=0
+			button.add_theme_stylebox_override(state_name,surface)
+		var column := _vbox(button,4); column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); column.mouse_filter=Control.MOUSE_FILTER_IGNORE
+		var row := HBoxContainer.new(); row.mouse_filter=Control.MOUSE_FILTER_IGNORE; column.add_child(row)
+		var label := _label(str(need).capitalize(),11,Style.MUTED); label.mouse_filter=Control.MOUSE_FILTER_IGNORE; label.size_flags_horizontal=Control.SIZE_EXPAND_FILL; row.add_child(label)
+		var value := _label("100",11); value.mouse_filter=Control.MOUSE_FILTER_IGNORE; row.add_child(value); need_values[need]=value
+		var bar := ProgressBar.new(); bar.mouse_filter=Control.MOUSE_FILTER_IGNORE; bar.show_percentage=false; bar.custom_minimum_size.y=10; column.add_child(bar); need_bars[need]=bar
+	var wellbeing_row := HBoxContainer.new(); needs.add_child(wellbeing_row)
+	mood_button=_button("Content · Care",func(): _context_page="care"; _refresh(); _show_tray(context_panel,true)); mood_button.add_theme_font_size_override("font_size",11); wellbeing_row.add_child(mood_button)
+	mood_button.add_theme_color_override("font_pressed_color",Style.TEXT)
+	for state_name: String in ["normal","hover","pressed","disabled"]:
+		var surface := Style.box(Style.PANEL if state_name!="hover" else Style.EDGE,3,Style.EDGE); surface.content_margin_top=2; surface.content_margin_bottom=2; surface.content_margin_left=6; surface.content_margin_right=6
+		mood_button.add_theme_stylebox_override(state_name,surface)
 	help_label = _label("Click to walk or use furniture · Scroll to zoom · Middle-drag to pan",11,Style.MUTED)
-	needs.add_child(help_label)
+	help_label.size_flags_horizontal=Control.SIZE_EXPAND_FILL; help_label.clip_text=true; help_label.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; wellbeing_row.add_child(help_label)
 
 	var actions_panel := _hud_panel(Rect2(-288,-164,272,148),Vector2(1,1))
 	var actions := _vbox(actions_panel,7)
@@ -378,14 +395,25 @@ func _refresh() -> void:
 		wishes_button.text="Wishes · %d/3" % Wishes.completed(member.get("wishes",{}))
 		_announce_wishes(family)
 		_announce_friendships(family)
+		var mood := Wellbeing.mood(member.needs)
+		mood_button.text=str(mood.label)+" · Care"
+		mood_button.add_theme_color_override("font_color",_mood_color(str(mood.tone)))
+		mood_button.tooltip_text="How "+str(member.name)+" feels · Open care suggestions"
+		_care_options.clear()
 		for need in need_bars:
 			var value := float(member.get("needs",{}).get(need,100))
 			need_bars[need].value=value; need_values[need].text=str(int(value))
 			var color := Style.GREEN if value>=60 else Style.GOLD if value>=30 else Color("df8d79")
 			need_bars[need].add_theme_stylebox_override("fill",Style.box(color,4))
+			var option: Dictionary=Session.world.care_option(member,need)
+			_care_options[need]=option
+			need_buttons[need].tooltip_text=str(need).capitalize()+" · "+str(int(value))+"\n"+("Click: "+str(option.label)+"\n" if option.available else "")+str(option.detail)
+			need_buttons[need].disabled=bool(state.lots[family.home_lot].building)
+			if care_values.has(need) and is_instance_valid(care_values[need]): care_values[need].text=str(need).capitalize()+" · %d" % int(value)
 	var build_mode := building and mine
 	wishes_button.disabled=build_mode or member.is_empty()
 	people_button.disabled=build_mode or member.is_empty()
+	mood_button.disabled=bool(state.lots.get(family.get("home_lot",""),{}).get("building",false)) or member.is_empty()
 	if build_mode != _last_build_mode:
 		_last_build_mode = build_mode
 		_show_tray(context_panel,build_mode)
@@ -400,11 +428,13 @@ func _refresh() -> void:
 		for household: Dictionary in state.families.values():
 			tools_signature+=str(household.get("identity_revision",0))+str(household.online)+str(state.lots[household.home_lot].building)
 			for resident: Dictionary in household.members: tools_signature+=str([resident.id,resident.lot_id,resident.task.get("id",""),resident.action])
+	if _context_page=="care" and not build_mode: tools_signature+=str(_care_options)+str(Wellbeing.mood(member.get("needs",{})))
 	if tools_signature!=_tools_signature:
 		_tools_signature=tools_signature
 		_rebuild_context(building and mine,lot)
-	help_label.text="Click to place · " + Preferences.action_label("rotate") + " rotates · Ctrl/Cmd+Z undoes" if building and mine else "Click an object to use it · Click the ground to walk · Scroll to zoom"
+	help_label.text="Click to place · " + Preferences.action_label("rotate") + " rotates · Ctrl/Cmd+Z undoes" if building and mine else "Click a need to care for it · Click the ground to walk"
 	if building and mine and selected_tool=="room": help_label.text="Click two opposite corners · " + Preferences.action_label("rotate") + " changes door side · Escape cancels"
+	help_label.tooltip_text=help_label.text
 	if room_label!=null:
 		room_label.text=Session.status+("\nRoom code: "+Rooms.code if not Rooms.code.is_empty() else "")
 		if Session.role=="host": ticket_input.text=Session.ticket()
@@ -531,6 +561,7 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 	elif _context_page=="people":
 		_rebuild_people()
 		if follow_social: call_deferred("_follow_social",_social_focus)
+	elif _context_page=="care": _rebuild_care()
 	else:
 		activity_label.text="Activities"
 		var shown: Dictionary={}
@@ -769,6 +800,36 @@ func _open_connection() -> void:
 
 func _open_people() -> void:
 	_context_page="people"; _refresh(); _show_tray(context_panel,true)
+
+func _mood_color(tone: String) -> Color:
+	return Color("df9785") if tone=="low" else Style.GOLD if tone=="warm" else Style.GREEN
+
+func _care_need(need: String) -> void:
+	var member := _member()
+	if member.is_empty(): return
+	viewed_lot=str(member.lot_id)
+	_send({"type":"care","member_id":selected_member,"need":need})
+	if not Session.last_action_ok and Session.is_authority():
+		_context_page="care"; _refresh(); _show_tray(context_panel,true)
+
+func _rebuild_care() -> void:
+	activity_label.text="A little care"
+	care_buttons.clear(); care_values.clear()
+	var member := _member()
+	if member.is_empty(): return
+	var mood := Wellbeing.mood(member.needs)
+	var summary := _label(str(member.name)+" · "+str(mood.label),14,_mood_color(str(mood.tone)))
+	summary.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; summary.custom_minimum_size.x=200; tools_box.add_child(summary)
+	for need: String in Wellbeing.ORDER:
+		var option: Dictionary=_care_options.get(need,{})
+		if option.is_empty(): continue
+		var label := _label(need.capitalize()+" · %d" % int(member.needs[need]),12,Style.MUTED); tools_box.add_child(label); care_values[need]=label
+		var button := _button(str(option.label),func(): _care_need(need)); button.disabled=not option.available; button.tooltip_text=str(option.detail); button.clip_text=true; button.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS
+		tools_box.add_child(button); care_buttons[need]=button
+		if not option.available and str(option.status)=="Unavailable here":
+			var reason := _label(str(option.detail),11,Style.GOLD); reason.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; reason.custom_minimum_size.x=200; tools_box.add_child(reason)
+	var note := _label("Choose a break for any need, or click its bar below. Your existing plan stays in order.",12,Style.MUTED)
+	note.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; note.custom_minimum_size.x=200; context_box.add_child(note)
 
 func _rebuild_people() -> void:
 	var member := _member()
