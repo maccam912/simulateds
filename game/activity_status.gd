@@ -4,7 +4,7 @@ const World = preload("res://game/world.gd")
 const Catalog = preload("res://game/catalog.gd")
 const Leisure = preload("res://game/shared_leisure.gd")
 
-static func sample(member: Dictionary, lot: Dictionary) -> Dictionary:
+static func sample(member: Dictionary, lot: Dictionary,world: Dictionary={}) -> Dictionary:
 	var task: Dictionary=member.get("task",{})
 	var action := str(member.get("action",""))
 	if bool(lot.get("building",false)): return _plain("paused","The household waits while you build.")
@@ -35,6 +35,11 @@ static func sample(member: Dictionary, lot: Dictionary) -> Dictionary:
 		if kind in ["garden_bed","easel"]: label=str(task.get("label","Making something"))
 		if kind=="game_table" and action=="Playing together": label="Playing together · Fun + social"
 		if kind=="stereo" and action=="Dancing together": label="Dancing together · Fun + social"
+		var company:=Leisure.company_window(world,member)
+		if company.hold:
+			remaining=minf(float(task.remaining),maxf(remaining,float(company.remaining)))
+			if float(member.needs[need])>=99.0 and Leisure.chosen_time(task)>=World.MIN_ACTIVITY_TIME:
+				label=("Dancing" if kind=="stereo" else "Playing")+" · Time for company"
 	var minutes := maxi(1,ceili(remaining*World.MINUTES_PER_SECOND))
 	var detail := label+" · ~%d min left" % minutes if remaining>0.1 else "Finishing up"
 	return {"phase":"activity","detail":detail,"progress":clampf(elapsed/maxf(0.001,elapsed+remaining),0.0,1.0),"remaining":remaining}

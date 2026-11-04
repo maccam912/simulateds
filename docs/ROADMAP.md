@@ -156,6 +156,8 @@ understandable result. Fuzz placement and reopening around residents/visitors.
   voluntary tabletop games, and discovery/joining from People are implemented. Game/music
   inspection now also offers explicit one-resident and household choices, with
   plan preservation and adoption of ongoing automatic play.
+  Chosen participants now finish a brief shared moment before full fun ends play,
+  with ordinary timers, voluntary leaving, and truthful Plan estimates retained.
   Add richer recreation and shared activities.
 - Activity poses, directional facing, thoughtful need cues, and sparse positional
   sounds are implemented, along with movement previews and accepted destination

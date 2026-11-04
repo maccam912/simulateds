@@ -2172,3 +2172,55 @@ all-architecture signature verification, and `EXPORTED_NATIVE_RUNTIME_PASS` on
 Apple Silicon. This remains an ad-hoc-signed local package, not notarization or
 physical Intel/Android/cross-device evidence. Hosted checks remain subject to the
 previously reported GitHub account billing/spending-limit rejection.
+
+## Making time for chosen company
+
+The high-fun starter household now completes a shared catch-up at its game table.
+A full fun bar waits for a brief chosen moment with accepted participants already
+playing or walking to that same furnishing. The authority samples all participants
+before individual ticks, so family iteration order cannot decide who leaves.
+Queued plans, automatic participation, offline players, and other furnishings do
+not prolong it. The usual activity deadline still wins, including a nearly
+finished automatic activity that has just become chosen. Cancelling, travelling,
+disconnecting, and entering construction release the hold normally.
+
+Plan now says **Time for company** when full fun is the reason for staying, and
+its estimate includes the remaining shared time or incoming walk. The recreation
+tray explains that residents may leave freely and their plans follow next. Native
+injected-input passes at 1440×900 and 1280×720 / 125% UI scale cover calling the
+household, appending a real ground-click walk, showing the timing explanation,
+resuming that exact walk, and independently cancelling a dancer. Paused rendering
+does not advance the forecast. The timing note remains visible in the compact
+tray. Reviewed captures include `build/company-time-shared-full-fun-compact.png`,
+`build/company-time-plan-continues-compact.png`, and
+`build/company-time-dance-company-compact.png`.
+
+The model verifies both game tables and stereos, a long incoming walk, three
+staggered participants, reversed family iteration, multiple step sizes, exact
+queue retention, natural duration caps, live snapshot round trips, exhausted daily
+friendship rewards, and a single usable place handing off without deadlock. No
+new persistent timer or reward state is required. These are simulation and
+native injected-input checks, not a human-family playtest.
+
+Fresh assessment: a separate compact native playthrough from the starter positions
+now finishes the fun-95/social-30 game in 4.3 seconds, with one catch-up and the
+housemates' bond moving from 20 to 32. Opening People shows **Played together** and
+one catch-up left, but the ordinary game view gives no completion feedback for
+that first improvement: its notice still describes choosing the activity, and
+Recent says **Fun fulfilled**. Only larger friendship milestones announce
+themselves. The next useful polish is quiet, bounded feedback for a completed
+catch-up, derived from accepted progress and suppressed on loading/reconnecting.
+That feedback is proposed next work, not part of this timing checkpoint.
+
+Full regression passes all 100 local suites, the main, painting, meal, and
+recreation Iroh scenarios, and dedicated-server startup. The recreation network
+fixture now gives each independent household high fun/low social and verifies
+distinct places followed by earned catch-ups, including during visits, as well
+as choosing automatic play and reconnect persistence. Current hosted workflow
+`41884611493` again failed every platform job before any steps executed; the
+existing GitHub account billing/spending-limit block remains unchanged.
+
+The refreshed local universal macOS package passes plist validation, strict
+all-architecture signature verification, and packaged native startup on Apple
+Silicon (`EXPORTED_NATIVE_RUNTIME_PASS`). It remains ad-hoc signed; physical Intel,
+Android, cross-device, human-family play, and notarization are separate gaps.

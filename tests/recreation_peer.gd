@@ -61,7 +61,7 @@ func _host() -> void:
 		for index: String in ["1","2"]:
 			if FileAccess.file_exists(ticket_path+".prime"+index) and not FileAccess.file_exists(ticket_path+".primed"+index):
 				var info: Dictionary=JSON.parse_string(FileAccess.get_file_as_string(ticket_path+".prime"+index))
-				for resident: Dictionary in session.state.families[info.owner].members: resident.needs.fun=0; resident.needs.social=0
+				for resident: Dictionary in session.state.families[info.owner].members: resident.needs.fun=95; resident.needs.social=30
 				_flag(".primed"+index)
 		if FileAccess.file_exists(ticket_path+".automatic") and not FileAccess.file_exists(ticket_path+".automatic-started"):
 			var info: Dictionary=JSON.parse_string(FileAccess.get_file_as_string(ticket_path+".automatic"))
@@ -84,13 +84,15 @@ func _call(home: String,target: String) -> void:
 func _cancel_own() -> void:
 	for resident: Dictionary in session.state.families[session.profile_id].members: await _command({"type":"cancel","member_id":resident.id})
 func _shared(home: String,target: String,owner: String,catchups: int) -> void:
+	var saw_distinct_places:=false
 	for attempt in range(140):
 		var residents: Array=session.state.families[owner].members
 		var players: Array=preload("res://game/shared_leisure.gd").players(session.state,home,target)
 		var bond: Dictionary=preload("res://game/friendships.gd").bond(session.state,str(residents[0].id),str(residents[1].id))
-		if players.size()==2 and bond.today==catchups:
+		if players.size()==2:
 			assert(players.all(func(resident): return resident.id in [residents[0].id,residents[1].id]))
-			assert(preload("res://game/shared_leisure.gd").place(players[0])!=preload("res://game/shared_leisure.gd").place(players[1])); return
+			assert(preload("res://game/shared_leisure.gd").place(players[0])!=preload("res://game/shared_leisure.gd").place(players[1])); saw_distinct_places=true
+		if saw_distinct_places and bond.today==catchups: return
 		await create_timer(0.1).timeout
 	assert(false,"The accepted household must share distinct places and chosen friendship")
 func _client(index: String) -> void:

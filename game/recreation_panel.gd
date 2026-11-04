@@ -81,6 +81,12 @@ func refresh(lot_id: String,object_id: String,member_id: String) -> void:
 	note.text="Plans first · Arrivals may differ.\nChosen company: 12 min for friendship."
 	note.tooltip_text="Only your household here. Existing plans stay first; different arrival times may mean playing separately. Both residents must choose 12 game minutes together to build friendship."
 	if choosing: note.text="Keep your place and time.\nOnly new company builds friendship."
+	if not choosing:
+		for resident: Dictionary in family.get("members",[]):
+			if resident.lot_id==lot_id and resident.task.get("target_id")==object_id and float(resident.needs.fun)>=99.0 and Leisure.chosen_time(resident.task)>=4.0 and Leisure.company_window(Session.state,resident).hold:
+				note.text="Making time for chosen company.\nLeave freely · Plans follow next."
+				note.tooltip_text="Chosen companions already playing or on their way get a brief shared moment before a full fun bar ends play. The natural activity timer still applies. You can cancel, travel, or leave at any time."
+				break
 	feedback.text="Waiting for the neighborhood…" if not pending.is_empty() else _error if not _error.is_empty() else str(_household.message) if _household.rows.is_empty() else ""
 	feedback.visible=not feedback.text.is_empty()
 func _request(household: bool) -> void:

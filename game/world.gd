@@ -1002,6 +1002,7 @@ func step(delta: float) -> void:
 		if lot.building: continue
 		for object: Dictionary in lot.objects:
 			if object.kind=="garden_bed": Gardens.grow(object.garden,delta)
+	var company_holds:=Leisure.company_windows(state,delta)
 	_tick_shared_friendships(delta)
 	for family: Dictionary in state.families.values():
 		if HomeNews.away(family): family.home_news.minutes+=delta*MINUTES_PER_SECOND
@@ -1012,9 +1013,9 @@ func step(delta: float) -> void:
 			for need: String in NEEDS:
 				var floor_value := 0.0 if family.online else 55.0
 				member.needs[need] = clampf(float(member.needs[need]) - float(DECAY[need]) * delta, floor_value, 100.0)
-			_tick_member(member, lot, delta)
+			_tick_member(member, lot, delta,bool(company_holds.get(str(member.id),{}).get("hold",false)))
 
-func _tick_member(member: Dictionary, lot: Dictionary, delta: float) -> void:
+func _tick_member(member: Dictionary, lot: Dictionary, delta: float,keep_company: bool=false) -> void:
 	if member.task.is_empty():
 		if not member.queue.is_empty():
 			_start_next(member, lot)
@@ -1112,7 +1113,7 @@ func _tick_member(member: Dictionary, lot: Dictionary, delta: float) -> void:
 					companion.needs.social = minf(100.0, float(companion.needs.social) + 2.0 * delta)
 	task.remaining -= delta
 	var minimum_time := 0.0 if task.get("automatic",false) else MIN_ACTIVITY_TIME
-	if task.remaining <= 0.0 or (float(member.needs[need]) >= 99.0 and Leisure.chosen_time(task)>=minimum_time):
+	if task.remaining <= 0.0 or (float(member.needs[need]) >= 99.0 and Leisure.chosen_time(task)>=minimum_time and not keep_company):
 		_finish_wish(member,task,str(object.kind))
 		_finish_hobby(member,task,str(object.kind))
 		_end_task(member,"done",str(need).capitalize()+" fulfilled." if float(task.remaining)>0.0 else "Activity finished.")

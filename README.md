@@ -484,6 +484,13 @@ plans stay first; different arrival times can mean playing separately. Inspectin
 a furnishing does not issue an order. The Activities list offers each game table
 and stereo separately so you can choose which gathering to use.
 
+A full fun bar no longer cuts a chosen gathering short before its brief shared
+moment. Residents already playing or walking to that same game or stereo allow
+12 game minutes together, within each activity's usual duration. **Plan** explains
+this as **Time for company** and keeps the next planned activity. You can still
+cancel or travel freely. Automatic participation, a queued activity, or an absent
+player does not keep anyone waiting.
+
 **Choose current game/dance**, or a household call, can turn automatic participation
 into chosen recreation while keeping the same place and remaining time. Earlier
 automatic time earns no friendship, and the activity is not extended past its

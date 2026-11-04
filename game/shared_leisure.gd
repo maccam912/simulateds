@@ -96,3 +96,36 @@ static func waiting_reason(report: Dictionary) -> String:
 ## Newly chosen participation excludes time spent in an autonomous activity.
 static func chosen_time(task: Dictionary) -> float:
 	return maxf(0.0,float(task.get("elapsed",0.0))-float(task.get("leisure_chosen_at",task.get("meal_chosen_at",0.0))))
+
+## Sample all chosen participants before the authority ticks any individual.
+## Only active reservations count; queued people must not deadlock a full table.
+static func company_windows(world: Dictionary,delta: float=0.0) -> Dictionary:
+	var groups := {}; var result := {}
+	for family: Dictionary in world.get("families",{}).values():
+		if not family.get("online",false) or world.lots[family.home_lot].building: continue
+		for member: Dictionary in family.members:
+			var task: Dictionary=member.task
+			if task.is_empty() or task.get("automatic",false): continue
+			var object:=activity(world,member)
+			if not object.get("kind") in ["game_table","stereo"]: continue
+			var key: String=str(member.lot_id)+":"+str(object.id)
+			if not groups.has(key): groups[key]=[]
+			groups[key].append(member)
+	for participants: Array in groups.values():
+		if participants.size()<2: continue
+		for member: Dictionary in participants:
+			var window := {"hold":false,"remaining":0.0,"waiting":false}
+			for other: Dictionary in participants:
+				if other.id==member.id: continue
+				var needed: float=preload("res://game/friendships.gd").SHARED_TIME
+				if not other.task.path.is_empty():
+					needed+=maxf(0.0,other.task.path.size()*0.22-float(other.walk_clock)); window.waiting=true
+				else:
+					needed=maxf(0.0,needed-minf(chosen_time(member.task),chosen_time(other.task)))
+					needed=maxf(0.0,needed-minf(delta,minf(float(member.task.remaining),float(other.task.remaining))))
+				if needed>0.0000001: window.hold=true; window.remaining=maxf(float(window.remaining),needed)
+			window.remaining=minf(float(member.task.remaining),float(window.remaining))
+			result[str(member.id)]=window
+	return result
+static func company_window(world: Dictionary,member: Dictionary) -> Dictionary:
+	return company_windows(world).get(str(member.get("id","")),{"hold":false,"remaining":0.0,"waiting":false})

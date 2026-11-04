@@ -1203,3 +1203,37 @@ all-architecture signature verification, and `EXPORTED_NATIVE_RUNTIME_PASS` on
 Apple Silicon. This remains an ad-hoc-signed local package, not notarization or
 physical Intel/Android/cross-device evidence. Hosted checks remain subject to the
 previously reported GitHub account billing/spending-limit rejection.
+
+## Chosen shared-play timing
+
+`company_time` verifies full-fun households still completing their brief chosen
+shared moment at both games and stereos. Coverage includes long incoming walks,
+three staggered participants, cross-owner visitors, reversed family order,
+0.1/0.25/1-second simulation steps, exact subsequent action IDs, pure forecasts,
+and live JSON snapshot round trips. Natural activity duration is never extended.
+Solo, queued, automatic, offline, and other-target participants do not hold play;
+cancellation, travel, disconnection, and construction release it. Exhausted daily
+friendship rewards stay exhausted, and a single usable place hands off normally.
+
+`company_time_ui` passes with native injected input at 1440×900 and 1280×720 /
+125% UI scale. Real buttons start chosen recreation, a ground click appends the
+next action, Plan shows a bounded time-for-company estimate, paused rendering
+leaves it unchanged, and the exact queued action resumes. Independently cancelling
+the companion releases a full-fun dancer. The complete explanation fits the
+compact tray. A separate compact native assessment confirms a starter-position
+high-fun game earns one catch-up and shows its result in People; it also identifies
+missing ordinary completion feedback as proposed next work.
+
+Full regression passes all 100 local suites, `IROH_SMOKE_PASS`,
+`PAINTINGS_IROH_PASS`, `MEALS_IROH_PASS`, `RECREATION_IROH_PASS`, and
+`SERVER_SMOKE_PASS`. The recreation scenario now starts both independent player
+households at fun 95/social 30, observes distinct live places, then accepts the
+earned catch-up even when completion occurs in the same authority tick. It also
+preserves visiting-household control, newly chosen automatic play, and friendship
+and funds through reconnect. This is local-machine multiplayer evidence.
+
+The refreshed universal macOS package passes plist validation, strict signature
+verification across ARM64 and Intel slices, and `EXPORTED_NATIVE_RUNTIME_PASS`
+on Apple Silicon. It remains a local ad-hoc-signed package, not a notarized release
+or physical Intel/Android/cross-device test. Hosted platform jobs still fail
+before execution under the existing GitHub account billing/spending-limit block.

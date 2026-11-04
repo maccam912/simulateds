@@ -738,7 +738,7 @@ func _refresh_plan(member: Dictionary) -> void:
 	plan_controls.clear()
 	plan_titles.clear(); _plan_detail=null; _plan_progress=null
 	if tasks.is_empty():
-		var empty := _label(str(ActivityStatus.sample(member,Session.state.lots[member.lot_id]).detail),13,Style.MUTED)
+		var empty := _label(str(ActivityStatus.sample(member,Session.state.lots[member.lot_id],Session.state).detail),13,Style.MUTED)
 		empty.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; empty.custom_minimum_size.x=270; plan_box.add_child(empty)
 	for task: Dictionary in tasks:
 		var row := HBoxContainer.new(); plan_box.add_child(row)
@@ -806,7 +806,7 @@ func _refresh_recent(member: Dictionary) -> void:
 
 func _update_plan_feedback(member: Dictionary) -> void:
 	if _plan_detail==null or _plan_progress==null: return
-	var status := ActivityStatus.sample(member,Session.state.lots[member.lot_id])
+	var status := ActivityStatus.sample(member,Session.state.lots[member.lot_id],Session.state)
 	_plan_detail.text=str(status.detail)
 	_plan_detail.tooltip_text=str(status.detail)
 	if status.phase=="activity": _plan_detail.tooltip_text+="\nEstimated time on the neighborhood clock. "+("Meals finish their preparation or chosen portion even when needs are full." if member.get("task",{}).has("meal_action") else "Admiring takes 18 game minutes, even when needs are full." if member.get("task",{}).get("target_kind")=="art" else "Painting finishes its work even when needs are full." if member.get("task",{}).has("paint_action") else "Gardening finishes its work even when needs are full." if member.get("task",{}).has("garden_action") else "A fulfilled need can shorten an activity.")

@@ -763,3 +763,11 @@ one-line participant list with full names on hover so four long names cannot
 push the action/timing explanation below the compact viewport. Inspection itself
 never queues an action, while the Activities list offers each furnishing at its
 own location. Other players remain responsible for their own participants.
+
+Full fun should not make a chosen companion leave just before the group shares
+its brief moment. Accepted participants already playing or on their way can keep
+one another there within the activity's usual duration. Plan says **Time for
+company** and includes that time in its estimate; the activity tray explains that
+leaving is still free and existing plans come next. Queued, automatic, or absent
+participants do not hold a place open. Keep the same poses, music and world view,
+with no extra prompt, locked controls, or separate shared-activity timer.
