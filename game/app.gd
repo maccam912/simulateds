@@ -149,21 +149,23 @@ func _show_page(value: String, title: String = "", subtitle: String = "") -> voi
 		_transition.tween_property(menu_panel,"modulate:a",1.0,0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 func _navigation_grid(choices: Array) -> void:
-	var grid := GridContainer.new(); grid.columns=3
-	grid.add_theme_constant_override("h_separation",12); grid.add_theme_constant_override("v_separation",12)
+	var grid := GridContainer.new(); grid.columns=2 if Preferences.values.navigation_labels else 3
+	grid.add_theme_constant_override("h_separation",12); grid.add_theme_constant_override("v_separation",8)
 	menu_content.add_child(grid)
 	for choice: Array in choices:
 		var button := _button(str(choice[0]),choice[1],bool(choice[2]) if choice.size()>2 else false)
-		button.custom_minimum_size=Vector2(96,72); button.add_theme_constant_override("icon_max_width",32); button.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+		Icons.navigation(button,str(choice[0]),bool(Preferences.values.navigation_labels))
+		button.add_theme_font_size_override("font_size",13)
+		button.custom_minimum_size=Vector2(180,48) if Preferences.values.navigation_labels else Vector2(96,72); button.add_theme_constant_override("icon_max_width",32); button.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 		grid.add_child(button)
 	navigation_hint=_label("",14,Style.MUTED); navigation_hint.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; menu_content.add_child(navigation_hint)
 
 func show_main() -> void:
 	_show_page("main","Simulateds",str(Session.state.get("neighborhood_name","Linden Grove")))
 	_navigation_grid([
-		["Continue",show_game,true], ["New neighborhood",_new_game_menu], ["Load neighborhood",func(): open_saves("load")],
+		["Play starter household" if Session.started_fresh else "Continue",show_game,true], ["New neighborhood",_new_game_menu], ["Load neighborhood",func(): open_saves("load")],
 		["Play together",func(): show_game(); game._open_connection()], ["Settings",func(): open_settings()], ["Guide & controls",func(): open_guide()],
-		["Create a household",open_household], ["Quit",_request_quit]
+		["Customize household" if Session.started_fresh else "Edit household",open_household], ["Quit",_request_quit]
 	])
 	if not Session.saving_enabled:
 		var warning:=_label("The current save could not be loaded. Its files are protected. Save a new copy to preserve this temporary neighborhood.",13,Style.GOLD)
@@ -171,6 +173,7 @@ func show_main() -> void:
 		menu_content.add_child(warning)
 
 func show_game() -> void:
+	Session.started_fresh=false
 	page="game"
 	menu_root.hide()
 	game.hud.show()
@@ -190,7 +193,7 @@ func open_pause() -> void:
 	_show_page("pause","Game menu" if shared else "Paused","The shared neighborhood keeps running." if shared else "Your household can wait a moment.")
 	_navigation_grid([
 		["Resume",show_game,true], ["Save neighborhood",func(): open_saves("save")], ["Load neighborhood",func(): open_saves("load")],
-		["Household",open_household], ["Settings",func(): open_settings()], ["Guide & controls",func(): open_guide()],
+		["Edit household",open_household], ["Settings",func(): open_settings()], ["Guide & controls",func(): open_guide()],
 		["Developer console",_open_console], ["Main menu",_request_main], ["Quit to desktop",_request_quit]
 	])
 
@@ -364,6 +367,7 @@ func open_settings(selected_tab: String = "") -> void:
 	_check_setting(display,"vsync","Vertical sync")
 	_option_setting(display,"fps_limit","Frame limit",[30,60,120,0],["30 FPS","60 FPS","120 FPS","Unlimited"])
 	_option_setting(display,"quality","Scenery detail",["high","low"],["High","Low"])
+	_check_setting(display,"navigation_labels","Show navigation labels")
 	_option_setting(display,"ui_scale","Interface scale",[0.9,1.0,1.1,1.25],["90%","100%","110%","125%"])
 	var access:=_settings_tab(tabs,"Comfort")
 	_check_setting(access,"reduced_motion","Reduced motion")

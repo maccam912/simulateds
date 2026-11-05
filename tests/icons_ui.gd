@@ -40,9 +40,9 @@ func _run() -> void:
 	app=load("res://game/app.tscn").instantiate(); root.add_child(app)
 	await create_timer(0.9).timeout; game=app.game; session.saving_enabled=false
 	for button: Button in app.menu_content.find_children("*","Button",true,false):
-		assert(button.icon!=null and button.text.is_empty() and not button.accessibility_name.is_empty())
+		assert(button.icon!=null and not button.text.is_empty() and not button.accessibility_name.is_empty())
 		assert(root.get_visible_rect().encloses(button.get_global_rect()))
-	assert(root.gui_get_focus_owner() is Button and root.gui_get_focus_owner().accessibility_name=="Continue","Menus focus their primary icon")
+	assert(root.gui_get_focus_owner() is Button and root.gui_get_focus_owner().accessibility_name in ["Continue","Play starter household"],"Menus focus their primary icon")
 	await _capture("main")
 	app.show_game(); session.menu_paused=true; await process_frame
 	var before: Dictionary=session.world.snapshot()

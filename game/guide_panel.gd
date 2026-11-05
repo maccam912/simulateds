@@ -1,6 +1,7 @@
 extends VBoxContainer
 ## Reopenable help that leads into ordinary controls; never mutates a world.
 signal action_requested(action: String)
+const Icons = preload("res://game/ui_icons.gd")
 const Style = preload("res://game/style.gd")
 var tabs: TabContainer
 var action_buttons: Dictionary = {}
@@ -11,8 +12,13 @@ func _ready() -> void:
 	size_flags_vertical=Control.SIZE_EXPAND_FILL
 	tabs=TabContainer.new(); tabs.size_flags_vertical=Control.SIZE_EXPAND_FILL; add_child(tabs)
 	var first := _page("First day")
+	var legend := HFlowContainer.new(); first.add_child(legend)
+	for entry: Array in [["needs","Needs"],["plan","Plan"],["more","More"],["household","Edit household"],["visit","Visit lot"]]:
+		var row := HBoxContainer.new(); legend.add_child(row)
+		var icon := TextureRect.new(); icon.texture=Icons.texture(entry[0]); icon.custom_minimum_size=Vector2(24,24); icon.expand_mode=TextureRect.EXPAND_IGNORE_SIZE; icon.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED; row.add_child(icon)
+		row.add_child(_text(entry[1]+"  ",12))
 	_card(first,"01 · Meet your household","Select a resident at the lower left; click their name again to find them in the world. More → Edit household gives each resident a name, a look, and a favorite pastime.",[["household","Meet your household"]])
-	_card(first,"02 · A little care","Open Needs, then click a need bar, or click a resident’s thought cue to plan a useful activity. Plan's arrows reorder upcoming activities; the current activity continues. Your orders take priority over autonomy. Plan → Routines saves care and leisure sequences for either resident.",[["care","Open care suggestions"]])
+	_card(first,"02 · A little care","Open Needs, then select a need bar to review the resident and proposed care. Choose the named activity to add it to Plan. A resident’s thought cue can also plan care. Plan's arrows reorder upcoming activities; the current activity continues. Your orders take priority over autonomy. Plan → Routines saves care and leisure sequences for either resident.",[["care","Open care suggestions"]])
 	_card(first,"03 · Something to enjoy","Wishes offer small goals and a journal. Reading, gardening, cooking, and painting develop lasting hobbies. Nothing expires while you are away.",[["wishes","See wishes"],["hobbies","Find a hobby"]])
 	_card(first,"04 · Make it home","Move furniture for free, decorate a room, or build an addition. Your household waits safely while you build.",[["build","Open build mode"]])
 	_card(first,"Set your pace","The clock controls pause solo life or play at 1×, 2×, and 4×. While paused, you can still queue activities and build. Pause again resumes your chosen pace. Shared neighborhoods keep one running clock; hosting or joining returns it to normal speed.",[])
@@ -31,7 +37,7 @@ func _ready() -> void:
 	_card(building,"Keep a neighborhood","The host owns shared saves. Saved games keep the last finished house; an unfinished construction draft is discarded when you leave.",[["save","Save neighborhood"]])
 	var neighbors := _page("Neighbors")
 	_card(neighbors,"Together, at your own pace","Host or join from More → Play together. Each household has its own lot. One person can build while another cares for their family.",[["connect","Play together"]])
-	_card(neighbors,"Drop in for a catch-up","Visit an open lot from Neighborhood or People. Chats build friendships. If an owner starts construction, visitors return home safely.",[["people","Find your neighbors"]])
+	_card(neighbors,"Drop in for a catch-up","Open Neighborhood to inspect an open lot, then More → Visit lot to send the selected resident. More → Together… chooses several residents; Go home returns the selected resident. People also offers visits. Chats build friendships. If an owner starts construction, visitors return home safely.",[["people","Find your neighbors"]])
 	_card(neighbors,"Leave a little kindness","Mail carries a postcard with money or a finished painting for someone to find later. A gifted painting leaves your home and keeps its artist credit. Collect it, then choose Hang this painting. Finish construction before sending or collecting artwork. Home news shows gifts still waiting.",[["mail","Open the mailbox"]])
 	_card(neighbors,"The neighborhood clock","The host must stay running for life to continue. Away households get forgiving care and keep their wishes, hobbies, and friendships. If the entire host stops, the world waits. Shared menus never pause everyone else.",[])
 	var controls := _page("Controls")

@@ -92,7 +92,7 @@ const PATHS := {
 }
 const ALIASES := {"seating":"sofa","lighting":"lamp","armchair":"chair","loveseat":"sofa","long_sofa":"sofa","wood_chair":"chair","garden_bench":"sofa","floor_lamp":"lamp","arc_lamp":"lamp","globe_lamp":"lamp","pendant_lamp":"lamp","garden_lantern":"lamp","lamp_post":"lamp","linden_tree":"tree","hedge":"tree","picket_fence":"fence","boulder":"rock","diagonal_wall":"diagonal","terrain_raise":"terrain_up","terrain_lower":"terrain_down","terrain_flatten":"terrain_flat","terrain_grass":"grass","terrain_dirt":"soil","terrain_sand":"soil","terrain_gravel":"rock","hunger":"food","energy":"bed","hygiene":"shower","bladder":"toilet","fun":"activities","social":"chat","comfort":"sofa","structure":"build","bedroom":"bed","kitchen":"food","bathroom":"shower","living":"sofa","garden":"plant","finishes":"palette","dining_table":"food","game_table":"activities","easel":"palette","wall_art":"art","furniture_color":"palette","finish_floor":"floor","finish_wall":"wall","saved_rooms":"catalog","copy_room":"copy","clear_lot":"discard"}
 const ACTIONS := {
-	"Continue":"play","Resume":"play","New neighborhood":"new_home","Load neighborhood":"load",
+	"Play starter household":"play","Customize household":"household","Continue":"play","Resume":"play","New neighborhood":"new_home","Load neighborhood":"load",
 	"Save neighborhood":"save","Settings":"settings","Guide & controls":"help","Quit":"power",
 	"Quit to desktop":"power","Main menu":"menu","Developer console":"console","Household":"household",
 	"Back":"back","Back to neighborhood":"back","Start your day":"play",
@@ -127,11 +127,13 @@ static func texture(id: String, pixels: int=28) -> Texture2D:
 
 static func apply(button: Button, id: String, label: String, badge: String="") -> void:
 	button.icon=texture(id)
-	button.text=badge
+	button.set_meta("icon_badge",badge)
+	var caption := str(button.get_meta("navigation_label",""))
+	button.text=(caption+(" · "+badge if not badge.is_empty() else "")) if not caption.is_empty() else badge
 	button.expand_icon=true
 	button.add_theme_constant_override("icon_max_width",26)
 	button.custom_minimum_size=Vector2(44 if badge.is_empty() else 68+maxi(0,badge.length()-1)*6,44)
-	button.icon_alignment=HORIZONTAL_ALIGNMENT_CENTER if badge.is_empty() else HORIZONTAL_ALIGNMENT_LEFT
+	button.icon_alignment=HORIZONTAL_ALIGNMENT_CENTER if button.text.is_empty() else HORIZONTAL_ALIGNMENT_LEFT
 	button.set_meta("icon_id",id)
 	button.accessibility_name=label
 	button.tooltip_text=label
@@ -143,3 +145,10 @@ static func apply(button: Button, id: String, label: String, badge: String="") -
 
 static func action(button: Button, label: String) -> void:
 	if ACTIONS.has(label): apply(button,str(ACTIONS[label]),str({"×":"Close","⌂":"Neighborhood","☰":"Game menu"}.get(label,label)))
+
+static func navigation(button: Button, caption: String, labeled: bool) -> void:
+	button.set_meta("navigation_label",caption if labeled else "")
+	button.text=(caption+(" · "+str(button.get_meta("icon_badge","")) if not str(button.get_meta("icon_badge","")).is_empty() else "")) if labeled else str(button.get_meta("icon_badge",""))
+	button.icon_alignment=HORIZONTAL_ALIGNMENT_LEFT if not button.text.is_empty() else HORIZONTAL_ALIGNMENT_CENTER
+	button.expand_icon=false
+	button.custom_minimum_size.x=maxf(44.0,button.get_theme_font("font").get_string_size(button.text,HORIZONTAL_ALIGNMENT_LEFT,-1,button.get_theme_font_size("font_size")).x+42.0) if labeled else 44.0

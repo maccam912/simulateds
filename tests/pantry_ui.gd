@@ -121,7 +121,7 @@ func _run() -> void:
 	await _button(game.queue_label)
 	await _button(game.plan_controls[member.task.id].cancel)
 	assert(family.pantry.radish==4 and preload("res://game/pantry.gd").stock(session.state,session.profile_id).radish.reserved==0)
-	game.plan_panel.hide(); await _button(game.meal_panel.buttons.homegrown)
+	game.plan_panel.hide(); await _mouse(_point(table.id),true); await _button(game.meal_panel.buttons.homegrown)
 	for tick in range(250):
 		await _advance(0.1)
 		if member.task.get("meal_phase")=="serve": break

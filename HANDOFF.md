@@ -1,3 +1,32 @@
+# HUD navigation — November 5, 2026 (issue #2)
+
+- Labels are on by default, with a persisted compact-icon option. More opens above
+  its dock; guide icons/terms and Edit household agree. Fresh entry offers the
+  starter household or customization; returning saves keep Continue.
+- Needs/Plan keep fixed targets. Need inspection is read-only; the care tray names
+  the actor/activity before an explicit order. Plan/activity trays are exclusive.
+  Notices avoid the roster and open tray. Clock state and construction shelter
+  have persistent text; activity trays reuse subject-specific icons.
+- Roster grows through four complete rows, with explicit overflow for eight and
+  ID-bound selection. Urgent need/current activity text updates without losing
+  focus. Portraits and bespoke activity icons are deferred because legacy portrait
+  fields do not faithfully represent the current creator. All ten dispositions:
+  `docs/HUD_QA.md`.
+- Local validation: all 123 registered gameplay/UI suites, eight real Iroh peer
+  scenarios, dedicated-server smoke and both save-continuity processes passed.
+  Required `tools/check.py` ran; shards 1/2/4 exit 0. Shard 3's old navigation
+  assumptions were fixed and its remaining checks resumed through the same runner
+  with exit 0. Logs: `build/hud-final-shard-*.log`; coverage audit:
+  `build/hud-validation.json`. Earlier failing runs are superseded by these results.
+- Native macOS Godot 4.7.2/OpenGL review passed at 1440×900/100% and
+  1280×720/125%, including actual-camera day/night, 2/3/4/8 residents, long names,
+  mouse/keyboard activation, first/returning menus, care, More and pause layouts.
+  Native care review also passed queued care, missing furniture and construction.
+  Evidence: `build/hud-native*.log`, `build/hud-care-native.log`, `build/hud-*.png`.
+- No binary assets, save schema, protocol or authoritative simulation changes.
+  Hosted CI is not yet verified; exports, physical devices, screen-reader testing
+  and human first-time-player study were not performed for this change.
+
 # Accessibility settings (QA #12) — November 4, 2026
 
 - Added settings control names, action/key descriptions, tab-bar entry focus and

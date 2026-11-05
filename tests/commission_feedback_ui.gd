@@ -73,6 +73,7 @@ func _run() -> void:
 	if compact: suffix="-compact"; prefs.set_value("ui_scale",1.25)
 	DirAccess.make_dir_recursive_absolute("res://build")
 	session=root.get_node("Session"); session.saving_enabled=true; session.set_physics_process(false)
+	session.solo_view={} # This fixture replaces the world, including saved local selection.
 	session.world.initialize(); session.world.ensure_family(session.profile_id,"Alex"); session.world.set_online(session.profile_id,true)
 	session.world.ensure_family("neighbor","Violet")
 	var family: Dictionary=session.state.families[session.profile_id]; var home: Dictionary=session.state.lots[family.home_lot]
@@ -80,7 +81,7 @@ func _run() -> void:
 	var first: Dictionary=family.members[0]; var second: Dictionary=family.members[1]
 	var easel: Dictionary=session.world._new_object("easel",9,9,0); home.objects.append(easel)
 	app=load("res://game/app.tscn").instantiate(); root.add_child(app); game=app.game
-	await create_timer(0.9).timeout; await _button(_named(app.menu_content,"Continue"))
+	await create_timer(0.9).timeout; await _button(_named(app.menu_content,"Play starter household" if session.started_fresh else "Continue"))
 	await _button(game.palette_button); await _button(game.commission_entry); await _button(game.commission_panel.confirm)
 	var terms: Dictionary=preload("res://game/art_commissions.gd").offer(session.profile_id,family.commissions)
 	await _button(game.commission_panel.confirm); await _button(game.painting_panel.buttons[terms.subject])

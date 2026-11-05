@@ -20,6 +20,7 @@ func _initialize() -> void: call_deferred("_run")
 func _run() -> void:
 	session=root.get_node("Session"); session.set_physics_process(false)
 	profile=session.profile_id; home=session.home_lot()
+	assert(session.started_fresh==("--continuity-write" in OS.get_cmdline_user_args()),"Only the first process offers starter entry; a real resumed save offers Continue")
 	review="--capture-continuity" in OS.get_cmdline_user_args()
 	compact="--compact" in OS.get_cmdline_user_args()
 	if review:
