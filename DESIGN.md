@@ -105,7 +105,10 @@ to the simulation layer, not to the renderer or network transport.
 
 Movement uses the lot's walkable grid. Walls and furniture footprints block
 travel; doors provide walkable passages. An interaction targets a reachable
-adjacent cell. Actions consume simulated time and improve relevant needs only
+adjacent cell. Television use instead prefers an available seat facing the screen,
+reserving that furnishing and a front approach cell on the host. Without suitable
+seating, choose a clear standing place in front of the screen. Each TV viewer
+reserves a whole seating furnishing; independent cushion capacity is deferred. Actions consume simulated time and improve relevant needs only
 when actually performed. A queue and explicit cancellation provide a place to
 add richer behavior later. Autonomy chooses useful reachable objects when the
 player has not supplied an action. Failed routes must finish with a clear result,
