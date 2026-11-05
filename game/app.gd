@@ -2,6 +2,7 @@ extends Control
 ## Application flow. Menus pause only offline simulation, never network polling.
 const Style = preload("res://game/style.gd")
 const Icons = preload("res://game/ui_icons.gd")
+const SaveLibrary = preload("res://game/save_library.gd")
 var navigation_hint: Label
 const GameScene = preload("res://game/main.tscn")
 const Console = preload("res://game/debug_console.gd")
@@ -20,6 +21,9 @@ var return_page := "main"
 var message_label: Label
 var slot_name: LineEdit
 var selected_slot := ""
+var _slot_rows: Dictionary = {}
+var _overwrite_return: Dictionary = {}
+var _recovery: Dictionary = {}
 var binding_action := ""
 var binding_buttons: Dictionary = {}
 var binding_hint: Label
@@ -48,6 +52,8 @@ func _ready() -> void:
 	add_child(game)
 	game.pause_requested.connect(open_pause)
 	game.save_menu_requested.connect(func(): open_saves("save"))
+	game.recovery_requested.connect(func():
+		if _has_recovery(): open_saves("load",str(_recovery.id)))
 	game.household_requested.connect(open_household)
 	game.mail_requested.connect(open_mail)
 	Session.command_completed.connect(_household_result)
@@ -110,6 +116,9 @@ func _show_page(value: String, title: String = "", subtitle: String = "") -> voi
 	menu_panel.anchor_top=0.5; menu_panel.anchor_bottom=0.5
 	var width := 720.0 if value in ["settings","save","load","household","mail","guide"] else 440.0
 	var height := 600.0 if value in ["settings","save","load","household","mail","guide"] else 490.0
+	if value in ["save","load"]:
+		width=minf(width,size.x-24.0)
+		height=minf(height,size.y-24.0)
 	if value=="splash": height=230
 	menu_panel.offset_left=-width/2; menu_panel.offset_right=width/2
 	menu_panel.offset_top=-height/2; menu_panel.offset_bottom=height/2
@@ -169,6 +178,11 @@ func show_game() -> void:
 	_update_pause()
 	Soundscape.set_context("build" if game._last_build_mode else "live")
 	get_viewport().gui_release_focus()
+	if not Session.startup_continuation.is_empty():
+		var report: Dictionary=Session.startup_continuation
+		Session.startup_continuation={}
+		if report.has("message") or int(report.interrupted)>0 or not report.relocated.is_empty():
+			_show_load_notice(str(report.get("message","Neighborhood continued.")),report)
 
 func open_pause() -> void:
 	if console.is_open(): return
@@ -191,7 +205,7 @@ func _request_quit() -> void:
 		if Session.is_authority() and not Session.save_world():
 			_feedback("Could not save. Stay in the game and check your save location.",false)
 			return
-		await Session.quit_application())
+		await Session.quit_application(Session.role=="offline"))
 
 func _confirm(title: String, detail: String, action: Callable) -> void:
 	previous_page=page
@@ -209,7 +223,7 @@ func _new_game_menu() -> void:
 	var create:=_button("Create neighborhood",func():
 		var result:Dictionary=Session.new_world(name.text)
 		if result.ok:
-			game.viewed_lot=""; game.selected_member=""; show_game(); game._notice(result.message)
+			_finish_replacement(result)
 			var guide_saved := Preferences.set_value("first_day_guide",offer_guide.button_pressed)
 			if offer_guide.button_pressed: open_guide(true)
 			if not guide_saved:
@@ -222,43 +236,60 @@ func _new_game_menu() -> void:
 	menu_content.add_child(_button("Back",_back))
 	_message_area()
 
-func open_saves(mode: String) -> void:
+func open_saves(mode: String, selection: String = "", draft: Variant = null, previous_row: Dictionary = {}) -> void:
 	if page in ["main","pause","game"]: return_page="pause" if page=="game" else page
 	var title:="Save neighborhood" if mode=="save" else "Load neighborhood"
 	_show_page(mode,title,"World saves include every household in this neighborhood.")
 	selected_slot=""
+	_slot_rows.clear()
 	if mode=="save":
 		slot_name=LineEdit.new(); slot_name.max_length=48
 		slot_name.placeholder_text="Save name"
-		slot_name.text=("%s · Day %d" % [str(Session.state.get("neighborhood_name","Linden Grove")),int(Session.state.get("day",1))]).left(48)
+		slot_name.text=("%s · Day %d" % [str(Session.state.get("neighborhood_name","Linden Grove")),int(Session.state.get("day",1))]).left(48) if draft==null else str(draft)
 		menu_content.add_child(slot_name)
+	elif _has_recovery():
+		var recovery := _button("Previous neighborhood · Select recovery save",func(): open_saves("load",str(_recovery.id)))
+		recovery.tooltip_text=str(_recovery.name)
+		menu_content.add_child(recovery)
 	var scroll:=ScrollContainer.new(); scroll.size_flags_vertical=Control.SIZE_EXPAND_FILL; scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED; menu_content.add_child(scroll)
 	var list:=VBoxContainer.new(); list.size_flags_horizontal=Control.SIZE_EXPAND_FILL; scroll.add_child(list)
 	var rows:Array=Session.list_saves()
+	if not previous_row.is_empty() and not rows.any(func(row): return row.id==selection):
+		rows.push_front({"id":selection,"name":previous_row.name,"modified":previous_row.modified,"valid":false,"message":"This save is no longer available."})
+	var group := ButtonGroup.new()
+	var offset := int(Time.get_time_zone_from_system().bias)
 	if rows.is_empty(): list.add_child(_label("No saved neighborhoods yet.",15,Style.MUTED))
 	for row in rows:
 		var minutes:=int(row.get("minutes",0))
-		var timestamp:=Time.get_datetime_string_from_unix_time(int(row.get("modified",0))).replace("T"," ")+" UTC"
-		var label:="%s\nDay %d · %02d:%02d · %s" % [str(row.get("name","Neighborhood")),int(row.get("day",1)),minutes/60,minutes%60,timestamp]
-		if not bool(row.get("valid",false)): label+="  ·  Unavailable"
+		var timestamp:=SaveLibrary.display_time(int(row.get("modified",0)),offset)
+		var identity := str(row.get("neighborhood",""))
+		if row.has("household"):
+			identity="%s · %d %s · §%d · %s" % [row.home,row.residents,"resident" if row.residents==1 else "residents",row.funds,row.household]
+		var label:="%s\nDay %d · %02d:%02d · %s\n%s" % [row.name,int(row.day),minutes/60,minutes%60,timestamp.local,identity] if row.valid else str(row.name)+"\nUnavailable"
+		_slot_rows[str(row.id)]=row
 		var button:=_button(label,func():
 			selected_slot=str(row.id)
 			if mode=="save": slot_name.text=str(row.get("name","Neighborhood"))
 			_feedback("Selected: "+str(row.get("name","Neighborhood")),true))
+		button.toggle_mode=true; button.button_group=group
+		button.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS
+		button.custom_minimum_size.y=78 if row.valid else 54
+		button.add_theme_stylebox_override("pressed",Style.box(Style.GOLD,4))
+		button.add_theme_color_override("font_pressed_color",Style.INK)
+		if not row.valid and str(row.id)==selection:
+			button.add_theme_stylebox_override("disabled",Style.box(Style.INK,4,Style.GOLD))
 		button.alignment=HORIZONTAL_ALIGNMENT_LEFT
 		button.disabled=not bool(row.get("valid",false))
-		button.tooltip_text=str(row.get("message",""))
+		button.tooltip_text="%s\n%s\nSaved %s\n%s" % [row.name,str(row.get("neighborhood",""))+" · "+identity if row.has("household") else identity,timestamp.utc,row.message]
 		list.add_child(button)
+		if str(row.id)==selection:
+			selected_slot=selection
+			button.set_pressed_no_signal(true)
+			_focus_slot.call_deferred(scroll,button)
 	var actions:=HBoxContainer.new(); menu_content.add_child(actions)
 	if mode=="save":
 		actions.add_child(_button("Save new copy",func(): _perform_save(""),true))
-		actions.add_child(_button("Overwrite selected",func():
-			if selected_slot.is_empty(): _feedback("Select a save to overwrite.",false); return
-			if selected_slot=="autosave": _feedback("Use Save new copy; the current autosave is managed automatically.",false); return
-			var id:=selected_slot; var name:=slot_name.text
-			_confirm("Overwrite this save?","Replace the selected save with the current neighborhood. Its previous version is kept as a backup.",func():
-				var result:Dictionary=Session.save_slot(name,id)
-				open_saves("save"); _feedback(result.message,result.ok))))
+		actions.add_child(_button("Overwrite selected",_confirm_overwrite))
 	else:
 		actions.add_child(_button("Load selected",_perform_load,true))
 	actions.add_child(_button("Back",_back_from_saves))
@@ -266,20 +297,59 @@ func open_saves(mode: String) -> void:
 	if (mode=="load" and Session.role!="offline") or (mode=="save" and not Session.is_authority()):
 		_feedback("The host owns shared saves. Leave the session before loading another neighborhood." if mode=="load" else "Only the host can save this shared neighborhood.",false)
 
+func _focus_slot(scroll: ScrollContainer, button: Button) -> void:
+	if not is_instance_valid(button) or not button.is_visible_in_tree(): return
+	scroll.ensure_control_visible(button)
+	if not button.disabled: button.grab_focus()
+
+func _confirm_overwrite() -> void:
+	if selected_slot.is_empty(): _feedback("Select a save to overwrite.",false); return
+	if selected_slot=="autosave": _feedback("Use Save new copy; the current autosave is managed automatically.",false); return
+	var id:=selected_slot
+	var name:=slot_name.text
+	var row: Dictionary=_slot_rows[id]
+	var target:=str(row.name)
+	_overwrite_return={"id":id,"name":name}
+	_confirm("Overwrite this save?","Replace “%s” with the current neighborhood. Its previous version is kept as a backup." % target,func():
+		_overwrite_return.clear()
+		var result: Dictionary=Session.save_slot(name,id)
+		open_saves("save",id,result.get("name",name),{} if result.ok else row)
+		if result.ok: Soundscape.play_ui("save")
+		_feedback(result.message,result.ok))
+
 func _perform_save(id: String) -> void:
 	var result:Dictionary=Session.save_slot(slot_name.text,id)
 	if result.ok:
 		Soundscape.play_ui("save")
-		open_saves("save")
+		open_saves("save",str(result.id),result.name)
 	_feedback(result.message,result.ok)
 
 func _perform_load() -> void:
 	if selected_slot.is_empty(): _feedback("Select a neighborhood first.",false); return
 	var result:Dictionary=Session.load_slot(selected_slot)
 	if result.ok:
-		game.viewed_lot=""; game.selected_member=""
-		show_game(); game._notice(result.message)
+		_finish_replacement(result)
 	else: _feedback(result.message,false)
+
+func _has_recovery() -> bool:
+	return Session.role=="offline" and _recovery.get("generation")==Session.world_generation
+
+func _finish_replacement(result: Dictionary) -> void:
+	_recovery={"id":result.recovery_id,"name":result.recovery_name,"generation":Session.world_generation}
+	show_game()
+	_show_load_notice(str(result.message),result.report)
+
+func _show_load_notice(message: String, report: Dictionary) -> void:
+	var relocated: int=report.relocated.size()
+	var interrupted: int=report.interrupted
+	if relocated==1: message+=" %s returned home because their saved spot was blocked." % report.relocated[0]
+	elif relocated>1: message+=" %d residents returned home from blocked spots." % relocated
+	if interrupted>0: message+=" %d unfinished %s stopped." % [interrupted,"activity" if interrupted==1 else "activities"]
+	game._show_notice(message)
+	game.notice_label.tooltip_text="\n".join(report.details)
+	game.notice_label.mouse_filter=Control.MOUSE_FILTER_PASS if not report.details.is_empty() else Control.MOUSE_FILTER_IGNORE
+	game.notice_recovery_button.visible=_has_recovery()
+	if _has_recovery(): game.notice_recovery_button.tooltip_text=str(_recovery.name)
 
 func open_settings(selected_tab: String = "") -> void:
 	if page!="settings": previous_page=page
@@ -418,7 +488,10 @@ func _back() -> void:
 		"game": show_game()
 		"pause": open_pause()
 		"guide": open_guide()
-		"save","load": open_saves(previous_page)
+		"save","load":
+			var draft := _overwrite_return.duplicate()
+			_overwrite_return.clear()
+			open_saves(previous_page,str(draft.get("id","")),draft.get("name"))
 		_: show_main()
 
 func _back_from_saves() -> void:

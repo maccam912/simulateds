@@ -57,9 +57,10 @@ console pause solo simulation; a hosted neighborhood keeps running for everyone.
 The clock also offers **Pause, 1×, 2×, and 4×** for solo play. **P** pauses or
 resumes your previous pace; **1 / 2 / 3** select normal, double, or quadruple speed.
 You can plan activities and build while paused. Closing a menu preserves your
-chosen pace. These shortcuts are rebindable. Hosting, joining, leaving a session,
-loading, or starting a neighborhood resets to 1×; ordinary clock controls are
-unavailable in shared play so one household cannot pause everyone else.
+chosen pace. These shortcuts are rebindable. Continuing or loading a solo save
+starts paused, and **P** resumes its saved pace. Hosting, joining, leaving a
+session, or starting a new neighborhood resets to 1×. Ordinary clock controls
+are unavailable in shared play so one household cannot pause everyone else.
 
 **Settings** persists separate Master/Music/Effects/Ambience volumes, fullscreen,
 VSync, frame cap, scenery detail, UI scale, reduced motion, and key bindings.
@@ -71,11 +72,15 @@ keep them quiet. Reduced motion preserves audio feedback;
 see [the sound palette](assets/audio/README.md).
 
 **Save neighborhood** creates named copies or explicitly overwrites a selected
-slot. **Load neighborhood** displays the current autosave and named saves, with
-simulation time and saved timestamps. Invalid saves stay visible. A valid backup
-can recover a damaged slot; loading or starting a new world preserves the current
-world in a recovery slot first. Switching worlds requires leaving multiplayer.
-The host alone saves a shared world. **F5** quick-saves the active world.
+slot. **Load neighborhood** displays the current autosave and named saves with
+their household, home, in-game time and local save date. Hover for the exact UTC
+time. Invalid saves stay visible and a valid backup can recover a damaged slot.
+Loading or starting a new world preserves the current world first; select
+**Recovery save** in the notice or find the previous neighborhood in Load.
+Solo saves restore selection, camera framing, safe resident positions and
+ordinary activities. If a plan cannot continue, the load notice says so.
+Switching worlds requires leaving multiplayer. The host alone saves a shared
+world. **F5** quick-saves the active world.
 
 Named slots default to a directory beside the active autosave. `--slots-path=`
 and `--settings-path=` can override their locations for development. Settings
@@ -102,9 +107,9 @@ browse history, Tab completes commands, and Escape closes it.
 | `save` | Save the active world |
 
 Shared-world changes require the host; clients can inspect help and statistics.
-Cheat changes to money and needs are part of the saved world. Speed returns to
-normal when changing worlds. The console accepts explicit commands, not scripts
-or shell expressions.
+Cheat changes to money and needs are part of the saved world. Solo saves
+remember the regular 1×, 2× and 4× rates. The console accepts explicit commands,
+not scripts or shell expressions.
 
 ## Play
 

@@ -104,6 +104,20 @@ func _run() -> void:
 	for row in session.list_saves():
 		if row.name=="Menu flow test" and row.valid and not previous_ids.has(str(row.id)): id=row.id
 	assert(not id.is_empty(),"Named save appears in menu library")
+	assert(app.selected_slot==id and app.slot_name.text=="Menu flow test")
+	var selected: Button
+	for button: Button in app.menu_content.find_children("*","Button",true,false):
+		if button.button_pressed and button.text.begins_with("Menu flow test"): selected=button
+	assert(is_instance_valid(selected) and selected.tooltip_text.contains(" UTC"),"New save is visibly selected, with exact UTC in details")
+	var timestamp:=Time.get_unix_time_from_datetime_string("2026-11-05T02:01:00")
+	var date:=preload("res://game/save_library.gd").display_time(timestamp,-360)
+	assert(date.local=="2026-11-04 20:01 UTC−06:00" and date.utc=="2026-11-05 02:01:00 UTC")
+	app.slot_name.text="   "
+	app._confirm_overwrite()
+	assert(app.page=="confirm" and app.menu_content.find_children("*","Label",true,false).any(func(label): return "“Menu flow test”" in label.text))
+	app._confirm_action.call()
+	assert(app.page=="save" and app.selected_slot==id and app.slot_name.text=="   ")
+	assert("Choose a save name" in app.message_label.text,"A rejected overwrite preserves the selected target and draft")
 	lot.funds+=987
 	app.open_saves("load")
 	app.selected_slot=id

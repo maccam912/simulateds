@@ -7,6 +7,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from bootstrap import ROOT, engine
 
@@ -119,6 +120,22 @@ def gameplay_checks(binary, shard):
                               "--", f"--save-path={work / f'{script}-save.json'}", f"--profile-path={work / f'{script}-profile.json'}"])
         if marker not in output:
             raise RuntimeError(script + " assertions did not finish")
+        if script == "save_debug":
+            save_continuity_checks(binary, work)
+
+
+def save_continuity_checks(binary, work):
+    # Use a fresh process with the same isolated profile and save to exercise
+    # actual startup and orderly shutdown, not just a restore in memory.
+    with tempfile.TemporaryDirectory(prefix="continuity-", dir=work) as directory:
+        paths = [f"--{kind}-path={Path(directory) / (kind + '.json')}"
+                 for kind in ("save", "profile", "settings")]
+        for phase in ("write", "read"):
+            output = run(binary, ["--script", "res://tests/save_continuity.gd",
+                                  "--log-file", str(work / f"continuity-{phase}-engine.log"),
+                                  "--", "--skip-splash", f"--continuity-{phase}", *paths])
+            if f"SAVE_CONTINUITY_{phase.upper()}_PASS" not in output:
+                raise RuntimeError(f"Save continuity {phase} assertions did not finish")
 
 
 def network_checks(binary, args):

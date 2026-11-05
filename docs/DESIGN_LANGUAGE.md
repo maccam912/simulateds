@@ -343,7 +343,16 @@ the world waits, not an excuse to invent events or grant offline catch-up reward
 | Pause / Escape | Resume, save, load, settings, return to the main menu, quit. Offline simulation may pause; shared hosting must continue and say so. |
 | Settings | Clear Audio, Display, Controls, and Accessibility groups; immediate preview where safe; persisted values, reset defaults, and key-conflict feedback. |
 | Save | Give a save a readable name, show the current world context, and report success only when the write succeeds. Overwriting is an explicit choice. |
-| Load | Show names, time/day, and saved date. Unreadable saves remain visible with a reason; they do not replace the current world. |
+| Load | Show the save name, in-game day and time, and local date and time with its UTC offset. Keep the exact UTC instant and full names in the tooltip. Unreadable saves remain visible with a reason; they do not replace the current world. |
+
+Save rows show the saved neighborhood and, when it contains this profile, its
+household name, resident count and funds. Clip long names in the row and keep
+them in its details. House thumbnails and a recent-activity preview are deferred;
+the saved identity works for older slots without any captured image. A new
+named copy stays highlighted and keeps its name in the field. An overwrite
+confirmation names the slot it will replace; rejection leaves the draft and
+selection in place. After replacing a world, the ordinary notice links to the
+previous neighborhood's recovery save, which also has a shortcut in Load.
 | Guide & controls | Optional, reopenable pages for the first day, building, neighbors, and current key bindings. Links enter real controls; reading help never grants progress or rewards. |
 | Developer console | Literal command input, help, bounded history, Tab completion, readable results. It blocks gameplay input while open. |
 

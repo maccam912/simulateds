@@ -202,11 +202,14 @@ func _exit_tree() -> void:
 func _layout() -> void:
 	# The camera frames the house, not a panel. Ground continues behind the HUD.
 	var play_height: float = maxf(360.0, size.y - 160.0)
-	var scale_factor: float = minf(size.x / 1000.0, play_height / 510.0) * zoom
-	_cell = Vector2(48, 24) * scale_factor
+	_cell = _cell_size()
 	var focus := Vector2(size.x * 0.5, play_height * 0.53)
 	_origin = focus - Vector2(_cell.x * 0.25, _cell.y * 7.75) + pan
 	projection.update_camera()
+
+func _cell_size() -> Vector2:
+	var play_height := maxf(360.0,size.y-160.0)
+	return Vector2(48,24)*minf(size.x/1000.0,play_height/510.0)*zoom
 
 func stop_camera_motion() -> void:
 	if _camera_tween!=null:
@@ -215,6 +218,19 @@ func stop_camera_motion() -> void:
 func center_lot() -> void:
 	stop_camera_motion()
 	zoom=1.0; pan=Vector2.ZERO
+	_layout(); queue_redraw()
+
+func saved_framing() -> Dictionary:
+	var cell := _cell_size()
+	var offset := pan/cell if cell.x>0.0 else Vector2.ZERO
+	return {"zoom":zoom,"pan_x":offset.x,"pan_y":offset.y}
+
+func restore_framing(view: Dictionary) -> void:
+	stop_camera_motion()
+	motion.tracks.clear()
+	zoom=float(view.get("zoom",1.0))
+	_layout()
+	pan=Vector2(float(view.get("pan_x",0.0)),float(view.get("pan_y",0.0)))*_cell
 	_layout(); queue_redraw()
 
 func camera_focus_point() -> Vector2:

@@ -1890,6 +1890,14 @@ func snapshot_for_save() -> Dictionary:
 	return saved
 
 func restore(data: Dictionary, preserve_runtime: bool = false) -> bool:
+	return _restore(data,preserve_runtime,false)
+
+func restore_saved(data: Dictionary) -> bool:
+	# Keep plans intact while browsing or validating. The session decides which
+	# household can continue before activating the candidate world.
+	return _restore(data,true,true)
+
+func _restore(data: Dictionary, preserve_runtime: bool, continuing: bool) -> bool:
 	if data.get("schema")==1:
 		data=_migrate_v1(data)
 	if data.get("schema")==2:
@@ -1899,9 +1907,10 @@ func restore(data: Dictionary, preserve_runtime: bool = false) -> bool:
 		data=data.duplicate(true); data.schema=3
 		for lot: Dictionary in data.get("lots",{}).values(): lot.storeys={}
 	# Reject foreign/future/corrupt worlds atomically; never partially adopt a save.
-	if not _valid_state(data):
+	if not _valid_state(data,continuing):
 		return false
 	state = data.duplicate(true)
+	state.erase("solo_view")
 	_normalize_numbers()
 	_build_backups.clear()
 	_build_history.clear()
@@ -1918,6 +1927,87 @@ func restore(data: Dictionary, preserve_runtime: bool = false) -> bool:
 			if not _walkable(_member_lot(member), _position(member)):
 				_send_home(family, member)
 	return true
+
+func prepare_continuation(profile_id: String) -> Dictionary:
+	# Connection lifetimes end at a disk load. Only the solo household continues
+	# its plans; absent households keep their usual caretaker/disconnect policy.
+	var report := {"relocated":[],"interrupted":0,"details":[]}
+	for lot: Dictionary in state.lots.values():
+		lot.building=false
+		_clear_build_history(lot)
+	for id: String in state.families:
+		if id==profile_id: continue
+		var absent: Dictionary=state.families[id]
+		HomeNews.departure(absent,false)
+		absent.online=false
+		for member: Dictionary in absent.members:
+			if not _recover_saved_position(report,absent,member):
+				_clear_member(member,"Taking it easy","Neighborhood loaded; household is away.")
+	if not state.families.has(profile_id): return report
+	var family: Dictionary=state.families[profile_id]
+	for member: Dictionary in family.members:
+		if _recover_saved_position(report,family,member): continue
+		var lot := _member_lot(member)
+		var queued: int=member.queue.size()
+		for index in range(queued-1,-1,-1):
+			var task: Dictionary=member.queue[index]
+			var reason := _continuation_problem(member,lot,task,false)
+			if reason.is_empty(): continue
+			_note_load_interruption(report,member,task,reason)
+			_record_activity(member,task,"cancelled",reason)
+			member.queue.remove_at(index)
+		if not member.task.is_empty():
+			var reason := _continuation_problem(member,lot,member.task,true)
+			if not reason.is_empty():
+				_note_load_interruption(report,member,member.task,reason)
+				_end_task(member,"cancelled",reason)
+				member.walk_clock=0.0
+		elif (queued>0 and member.queue.is_empty()) or str(member.action).begins_with("Chatting with "):
+			member.action="Taking it easy"
+	return report
+
+func _recover_saved_position(report: Dictionary, family: Dictionary, member: Dictionary) -> bool:
+	if _walkable(_member_lot(member),_position(member)): return false
+	var reason := "Saved spot was blocked or the floor was unavailable."
+	report.relocated.append(str(member.name))
+	report.interrupted+=member.queue.size()+(0 if member.task.is_empty() else 1)
+	report.details.append(str(member.name)+": "+reason+" Returned home.")
+	_send_home(family,member,reason+" Returned to the home entrance.")
+	return true
+
+func _note_load_interruption(report: Dictionary, member: Dictionary, task: Dictionary, reason: String) -> void:
+	report.interrupted+=1
+	report.details.append("%s · %s: %s" % [member.name,_activity_title(member,task),reason])
+
+func _continuation_problem(member: Dictionary, lot: Dictionary, task: Dictionary, active: bool) -> String:
+	# Resume only actions whose complete state is the resident's route, clock and
+	# one ordinary furnishing (whose reservation is derived from the active task).
+	if task.has("stairs_to") or task.get("courtesy",false) or task.get("target_kind","object")!="object" or task.has("meal_action") or task.has("garden_action") or task.has("paint_action"):
+		return "This activity stops when a neighborhood is loaded."
+	var goals: Array
+	if task.type=="move":
+		var goal := Vector2i(int(task.x),int(task.y))
+		if not _walkable(lot,goal): return "The saved destination is blocked."
+		goals=[goal]
+	else:
+		var furnishing := _object(lot,str(task.target_id))
+		if furnishing.is_empty(): return "The saved furnishing is no longer here."
+		if furnishing.kind in ["dining_table","easel","garden_bed"] or Leisure.KINDS.has(furnishing.kind) or task.has("leisure_chosen_at"):
+			return "This activity stops when a neighborhood is loaded."
+		if str(Catalog.ITEMS[furnishing.kind].need).is_empty():
+			return "The saved furnishing no longer offers an activity."
+		goals=_interaction_cells(lot,furnishing)
+		if active and not _object_user(str(lot.id),furnishing,str(member.id)).is_empty():
+			return "The saved furnishing already has a resident using it."
+	var at := _position(member)
+	if not active:
+		return "" if goals.has(at) or not _path(lot,at,goals).is_empty() else "There is no path to the saved destination."
+	for tile: Array in task.path:
+		var next := Vector2i(int(tile[0]),int(tile[1]))
+		if next-at not in DIRECTIONS or not _walkable(lot,next):
+			return "The saved walking route is blocked."
+		at=next
+	return "" if goals.has(at) else "The saved activity no longer ends at its destination."
 
 static func _migrate_v1(data: Dictionary) -> Dictionary:
 	# Additive creator schema. Legacy residents retain their exact looks and needs;
@@ -2033,7 +2123,7 @@ func _normalize_numbers() -> void:
 	Friendships.normalize(state)
 	Mailbox.normalize(state)
 
-func _valid_state(data: Dictionary) -> bool:
+func _valid_state(data: Dictionary, continuing: bool = false) -> bool:
 	if data.get("schema") != SCHEMA or not data.get("lots") is Dictionary or data.lots.size() != MAX_FAMILIES or not data.get("families") is Dictionary or data.families.size() > MAX_FAMILIES:
 		return false
 	if not _integer(data.get("tick")) or not _integer(data.get("day")) or not _number(data.get("day_minutes")) or float(data.day_minutes) < 0.0 or float(data.day_minutes) >= 1440.0 or not _integer(data.get("next_object")):
@@ -2101,7 +2191,7 @@ func _valid_state(data: Dictionary) -> bool:
 					return false
 			if not member.task.is_empty() and not _valid_task(member.task, true):
 				return false
-			if member.task.has("leisure_chosen_at") and not _object(data.lots[member.lot_id],str(member.task.target_id)).get("kind") in Recreation.KINDS: return false
+			if not continuing and member.task.has("leisure_chosen_at") and not _object(data.lots[member.lot_id],str(member.task.target_id)).get("kind") in Recreation.KINDS: return false
 			for need: String in NEEDS:
 				if not _number(member.needs.get(need)) or float(member.needs[need]) < 0 or float(member.needs[need]) > 100:
 					return false

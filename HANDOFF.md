@@ -1,3 +1,22 @@
+# Solo save continuity — November 4, 2026
+
+- Solo restart and named loads start paused, keep safe resident positions and
+  validated ordinary activities, and restore the saved resident, lot, floor,
+  camera and last regular pace. Unsupported activities and unsafe spots have
+  an on-screen recovery summary. Actual shared disconnects retain caretaker
+  cleanup. Unfinished construction still rolls back.
+- The save browser highlights a new named copy, identifies the overwrite
+  target, shows local time and saved household details, and links to the exact
+  recovery copy after replacing a world. House thumbnails and recent activity
+  previews are deferred in the design guide.
+- Regression coverage: `tests/save_continuity.gd` runs a real F5, normal quit
+  and restart, then a named-slot and recovery round trip. It uses isolated
+  paths and checks Reading, a bed reservation, a queued walk, both kinds of
+  visitor, an upstairs position, art, pantry, and a stale target.
+- Native review captures are under `build/save-continuity-*.png` (ignored):
+  1440×900 and 1280×720 with the UI setting at 125%, at night and in daylight.
+  Exports, physical-device and human playtests were not performed locally.
+
 # Sculpted character art — November 4, 2026
 
 - Reworked creator and world residents toward a warm illustrated cast: continuous

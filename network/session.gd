@@ -42,6 +42,11 @@ var pending: Dictionary = {}
 var snapshots_received := 0
 ## Local presentation baseline; never serialized or advanced for ordinary snapshots.
 var world_generation := 0
+## Save-local presentation metadata, never part of the authoritative snapshot.
+var solo_view: Dictionary = {}
+var solo_view_generation := 0
+var capture_solo_view: Callable
+var startup_continuation: Dictionary = {}
 var last_action_ok := true
 var last_action_message := ""
 var actions_received := 0
@@ -126,20 +131,22 @@ func _load_profile() -> void:
 
 func _load_world() -> void:
 	world.initialize()
-	var result: Dictionary = Persistence.read_json(save_path)
-	if result.ok and world.restore(result.data):
-		_previous_saved = world.snapshot()
-	elif result.get("exists", false):
-		var backup: Dictionary = Persistence.read_json(save_path + ".bak")
-		if backup.ok and world.restore(backup.data):
-			_previous_saved = world.snapshot()
-			_set_status("Recovered neighborhood from its last valid backup.")
+	solo_view={}
+	startup_continuation={}
+	var saved := _read_autosave()
+	if saved.ok and world.restore_saved(saved.world):
+		_previous_saved=saved.data
+		if _dedicated:
+			for family_id: String in state.families: world.set_online(family_id,false)
 		else:
-			world.initialize()
-			saving_enabled = false
-			_set_status("Save could not be read. Started a temporary world; existing save is protected.")
-	for family_id in world.state.get("families", {}):
-		world.set_online(str(family_id), false)
+			startup_continuation=world.prepare_continuation(profile_id)
+			solo_view=_validated_solo_view(saved.view)
+			_set_loaded_clock(true)
+			if saved.recovered: startup_continuation.message="Recovered neighborhood from its last valid backup."
+		if saved.recovered: _set_status("Recovered neighborhood from its last valid backup.")
+	elif FileAccess.file_exists(save_path) or FileAccess.file_exists(save_path+".bak"):
+		saving_enabled=false
+		_set_status("Save could not be read. Started a temporary world; existing save is protected.")
 
 func available() -> bool:
 	if not ClassDB.class_exists("IrohServer") or not ClassDB.class_exists("IrohClient"):
@@ -211,8 +218,9 @@ func leave() -> void:
 	world_generation+=1
 	var was_client := role in ["joining", "client"]
 	if is_authority() and not profile_id.is_empty():
-		for family_id in players.values():
-			world.set_online(str(family_id), false)
+		if role=="host":
+			for family_id in players.values():
+				world.set_online(str(family_id), false)
 		save_world()
 	session_closed.emit()
 	if peer != null:
@@ -247,6 +255,8 @@ func save_world() -> bool:
 	if not is_authority() or not saving_enabled or profile_id.is_empty():
 		return false
 	var data: Dictionary = world.snapshot_for_save()
+	var view := _current_solo_view()
+	if not view.is_empty(): data.solo_view=view
 	if not Persistence.write_json(save_path, data, _previous_saved):
 		_set_status("Could not save neighborhood. Check available disk space and folder permissions.")
 		return false
@@ -254,13 +264,15 @@ func save_world() -> bool:
 	return true
 
 func list_saves() -> Array:
-	var entries: Array = SaveLibrary.list_slots(slots_path)
-	if FileAccess.file_exists(save_path):
+	var entries: Array = SaveLibrary.list_slots(slots_path,profile_id)
+	if FileAccess.file_exists(save_path) or FileAccess.file_exists(save_path+".bak"):
 		var saved := _read_autosave()
 		var summary := {"id":"autosave", "name":"Current neighborhood (autosave)", "day":0, "minutes":0.0, "modified":FileAccess.get_modified_time(save_path), "valid":bool(saved.ok), "message":str(saved.message)}
 		if saved.ok:
 			summary.day=int(saved.world.day)
 			summary.minutes=float(saved.world.day_minutes)
+			summary.modified=FileAccess.get_modified_time(saved.path)
+			summary.merge(SaveLibrary.identity(saved.world,profile_id))
 		entries.push_front(summary)
 	return entries
 
@@ -269,14 +281,15 @@ func _read_autosave() -> Dictionary:
 		var saved: Dictionary = Persistence.read_json(path)
 		if saved.ok:
 			var candidate = WorldModel.new()
-			if candidate.restore(saved.data):
-				return {"ok":true, "world":candidate.snapshot(), "name":"Current neighborhood", "message":"Recovered autosave backup." if path.ends_with(".bak") else "Autosave is ready."}
+			if candidate.restore_saved(saved.data):
+				var recovered := path.ends_with(".bak")
+				return {"ok":true, "world":candidate.state, "data":saved.data, "view":saved.data.get("solo_view",{}), "name":"Current neighborhood (autosave)", "path":path, "recovered":recovered, "message":"Recovered autosave backup." if recovered else "Autosave is ready."}
 	return {"ok":false, "message":"Autosave and backup are missing, damaged, or unsupported."}
 
 func save_slot(name: String, id: String = "") -> Dictionary:
 	if not is_authority():
 		return {"ok":false, "message":"Only the host can save the shared neighborhood."}
-	var result: Dictionary = SaveLibrary.write_slot(slots_path,name,world.snapshot_for_save(),id)
+	var result: Dictionary = SaveLibrary.write_slot(slots_path,name,world.snapshot_for_save(),id,_current_solo_view())
 	if result.ok:
 		_set_status(str(result.message))
 	return result
@@ -288,15 +301,19 @@ func load_slot(id: String) -> Dictionary:
 	if not saved.ok:
 		return saved
 	var candidate = WorldModel.new()
-	if not candidate.restore(saved.world) or candidate.ensure_family(profile_id,display_name).is_empty():
+	if not candidate.restore_saved(saved.world) or candidate.ensure_family(profile_id,display_name).is_empty():
 		return {"ok":false, "message":"This save is invalid or has no free lot for your profile."}
-	var preserved := _preserve_current("Before loading " + str(saved.name).left(26))
+	var name: String=saved.name
+	var preserved := _preserve_current("Before loading " + (name.left(32).strip_edges()+"…" if name.length()>33 else name))
 	if not preserved.ok:
 		return preserved
-	var result := _activate_world(candidate)
+	var result := _activate_world(candidate,saved.get("view",{}),true)
 	if result.ok:
 		result.message = "Loaded “%s”." % str(saved.name)
+		if saved.get("recovered",false): result.message+=" Used its backup."
 		result.id = id
+		result.recovery_id = preserved.id
+		result.recovery_name = preserved.name
 		_set_status(str(result.message))
 	return result
 
@@ -313,9 +330,11 @@ func new_world(name: String = "Linden Grove") -> Dictionary:
 	var preserved := _preserve_current("Before new neighborhood")
 	if not preserved.ok:
 		return preserved
-	var result := _activate_world(candidate)
+	var result := _activate_world(candidate,{},false)
 	if result.ok:
-		result.message = "Started “%s”. Your previous neighborhood remains in Load game." % name
+		result.message = "Started “%s”." % name
+		result.recovery_id = preserved.id
+		result.recovery_name = preserved.name
 		_set_status(str(result.message))
 	return result
 
@@ -324,27 +343,55 @@ func _preserve_current(label: String) -> Dictionary:
 		return {"ok":false, "message":"The current autosave is protected after a load error. Save a named copy, then restart with a new --save-path before switching worlds."}
 	if not save_world():
 		return {"ok":false, "message":"Could not preserve the current neighborhood; no world was replaced."}
-	var stamp := Time.get_datetime_string_from_system().replace("T"," ")
-	return save_slot((label + " · " + stamp).left(48))
+	return save_slot(label)
 
-func _activate_world(candidate) -> Dictionary:
-	# Loading ends previous online sessions and returns absent visitors home.
-	for family_id in candidate.state.families:
-		candidate.set_online(str(family_id),false)
+func _activate_world(candidate, saved_view: Variant, continuing: bool) -> Dictionary:
+	var report: Dictionary = candidate.prepare_continuation(profile_id)
+	candidate.set_online(profile_id,true)
 	# Disk write succeeds before replacing the live model; failed loads are atomic.
 	var data: Dictionary = candidate.snapshot_for_save()
+	var view := _validated_solo_view(saved_view)
+	if not view.is_empty(): data.solo_view=view
 	if not Persistence.write_json(save_path,data,_previous_saved):
 		return {"ok":false, "message":"Could not write the active autosave. The current world remains open."}
 	_previous_saved=data
 	world=candidate
+	solo_view=view
+	startup_continuation={}
 	world_generation+=1
-	world.set_online(profile_id,not _dedicated)
+	solo_view_generation=world_generation
 	players={1:profile_id}
-	_simulation_clock=0.0
 	_save_clock=0.0
-	debug_speed=1.0; _resume_speed=1.0
+	_set_loaded_clock(continuing)
 	world_changed.emit()
-	return {"ok":true, "message":"Neighborhood loaded."}
+	return {"ok":true, "report":report}
+
+func _current_solo_view() -> Dictionary:
+	if not can_control_time(): return {}
+	var view: Dictionary=capture_solo_view.call() if capture_solo_view.is_valid() else solo_view.duplicate()
+	view.profile=profile_id
+	view.speed=_resume_speed
+	return _validated_solo_view(view)
+
+func _validated_solo_view(value: Variant) -> Dictionary:
+	if not value is Dictionary or value.get("profile")!=profile_id: return {}
+	var result := {"profile":profile_id,"speed":1.0}
+	var speed: Variant=value.get("speed")
+	if (speed is int or speed is float) and float(speed) in [1.0,2.0,4.0]: result.speed=float(speed)
+	for key: String in ["member","lot"]:
+		if value.get(key) is String and str(value[key]).length()<=160: result[key]=value[key]
+	if _integer(value.get("level"),0,2): result.level=int(value.level)
+	for key: String in ["zoom","pan_x","pan_y"]:
+		var number: Variant=value.get(key)
+		if not (number is float or number is int) or not is_finite(float(number)): continue
+		if key=="zoom" and float(number)>=0.65 and float(number)<=1.8: result[key]=float(number)
+		if key!="zoom" and absf(float(number))<=64.0: result[key]=float(number)
+	return result
+
+func _set_loaded_clock(continuing: bool) -> void:
+	_simulation_clock=0.0
+	debug_speed=0.0 if continuing else 1.0
+	_resume_speed=float(solo_view.get("speed",1.0))
 
 func can_control_time() -> bool:
 	return role=="offline" and not _dedicated
@@ -725,10 +772,13 @@ func _valid_credential(value: Variant) -> bool:
 			return false
 	return true
 
-func quit_application() -> void:
+func quit_application(already_saved: bool = false) -> void:
 	if _quitting: return
 	_quitting = true
-	leave()
+	if role=="offline":
+		if not already_saved: save_world()
+	else:
+		leave()
 	await Soundscape.shutdown_and_wait()
 	get_tree().quit()
 
@@ -741,8 +791,9 @@ func _notification(what: int) -> void:
 
 func _exit_tree() -> void:
 	if not _quitting and is_authority() and not profile_id.is_empty():
-		for family_id in players.values():
-			world.set_online(str(family_id), false)
+		if role=="host":
+			for family_id in players.values():
+				world.set_online(str(family_id), false)
 		save_world()
 	if peer != null:
 		peer.close()
