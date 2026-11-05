@@ -62,7 +62,7 @@ Use the world for richer color: oak, worn painted wood, cream plaster, terracott
 green planting, and soft blue upholstery. Increase detail around objects that
 residents use. Avoid decorative UI noise that competes with those objects.
 
-The decorating palette uses six floor finishes and six wall paints. Woods use
+The decorating palette uses nine floor finishes and nine wall treatments. Woods use
 board seams, tiles use grout/checkers, and carpet uses restrained flecks. Swatches
 show names as well as colors. Preview surfaces directly on the house before
 purchase, with an exact price and an area outline. Night lighting warms finishes
@@ -73,7 +73,7 @@ the actual floor with a boundary at floor level, behind the furnishings. Avoid
 drawing a grid over the furniture. An unaffordable room keeps its original finish
 and shows the selected extent with a warm warning and exact shortfall. Matching
 finishes get a quiet no-charge response. Walls, doorways, and missing floor bound
-the room; furniture and residents do not. Keep all six swatches visible at the
+the room; furniture and residents do not. Keep all nine swatches visible at the
 compact size, and retain keyboard focus when selecting a mode or finish.
 
 Hobby cards name an interest, its current title/rank, practices toward the next
@@ -83,11 +83,28 @@ available tomorrow. Rank changes use one modest confirmation sound and a short
 notice, plus a saved journal memory. No streaks, expiry, or recurring reminders.
 
 The build catalog keeps one compact category selector and one persistent search
-field above the scrolling results. Item cards show name, price, footprint, and
-use. Selected-item details and two small rows of edit controls stay below the
+field above the scrolling results. Two-column cards show a studio picture of the
+actual model, its name and price. Footprints and use stay in the selected-item
+details and tooltips. Room/use categories include Seating and Lighting, with all
+chairs and sofas together. Selected-item details and edit controls stay below the
 results, so scrolling never hides Undo or the chosen item's cost. Search refreshes
 must retain focus and caret; empty results offer an explicit way back to All.
 Popup menus use the same ink, cream, and leaf colors as the rest of the HUD.
+
+Drag a furniture card onto the lot to purchase; Move lets the player drag an
+existing piece. Right-drag horizontally rotates a pending piece in quarter turns,
+with the existing rotation button/keyboard option retained. Residents remain
+visible while paused and move to the street only when construction displaces
+them. They never make a placement preview invalid.
+
+Floor minus/plus selects among three storeys; separate down/up controls send the
+selected resident to a reachable staircase in live mode. Higher-floor views
+retain lower geometry and a real stair opening. Pools, 45-degree walls and round
+terrain brushes use the same warm preview/cost/undo language as room building.
+Brushes follow the pointer stroke and preserve level foundations. Windows have
+real openings and daylight-scaled interior lighting; lamps cast warm local light
+and shadows. Verify actual day/night and compact-window scenes before describing
+the lighting or new model library as visually reviewed.
 
 ## Typography and layout
 
@@ -580,6 +597,25 @@ forecasts on layout, resident, tool, rotation, and world changes. The guide
 explains all three placement colors in plain language.
 
 
+### Building with a rectangle
+
+Drag across the lot to fill a rectangle with flooring, draw its wall perimeter,
+or sell and demolish its contents. A straight wall drag makes one run. Keep
+existing doors when drawing walls. Show the price or refund before release and
+record one undo step for the entire edit. A regular click still acts on one
+tile or item. Room construction and finishes also accept a drag or two corner
+clicks.
+
+Use a ground outline for the extent, low wall ghosts for new walls, and coral
+footprints for furniture in a sale. A furnishing touched by the selection sells
+whole. Bulk sales protect unfinished canvases and store finished originals,
+following the whole-lot clearing rules. Escape or release over the HUD cancels
+the drag.
+
+Perpendicular walls and their trim meet at one physical corner in both cutaway
+and raised views. Match wall picking to the visible pieces. Preserve the
+supporting face where a window or painting is mounted.
+
 ### A little studio at home
 
 The Daydream easel uses the same warm wood and material palette as other
@@ -917,3 +953,53 @@ rendered poses separate from authoritative positions, routing and reservations;
 any actual gameplay change to seating must use the command/simulation layer.
 Review in the real camera, daylight, night and a compact window before claiming
 that physical interaction polish is complete.
+
+
+## Icons first — November 4, 2026
+
+Navigation uses original drawn pictograms from `game/ui_icons.gd`, with no emoji
+or installed-font dependency. The main/pause menus and secondary household tray
+use compact icon grids. A stable bottom dock provides build/finish, catalog or
+activities, and more options. The open book always opens the building catalog;
+the hammer enters construction and the check reopens the home.
+
+Use familiar silhouettes for needs, furniture, travel, mail, playback and editing.
+Keep item names, prices, counts and footprint dimensions; put secondary catalog
+uses and instructions in tooltips. Specific recipes, relationship descriptions,
+errors and destructive confirmations retain words when a pictogram would be
+ambiguous. This reduces dependence on reading; it is not a completed translation
+system or a claim that every icon is universally understood.
+
+Icon navigation retains 44px minimum targets, keyboard focus, accessible names,
+hover explanations and a focus hint. Catalog categories show pictograms in the
+closed selector and names beside them in the optional popup. Needs use the same
+pictograms as their furnishings; an urgent need appears as its own shape in the
+mood control. Badges retain counts and unread marks. Pause and pace use familiar
+playback symbols, with the exact rate in the tooltip. State cannot rely on color
+alone. Keep original SVG paths editable in source; raster textures are generated
+and cached only at runtime, with no committed binary icon assets.
+
+
+## Household dressing room — November 4, 2026
+
+Character creation occupies its own full-window mode. The left side is a large
+lit domestic studio with cream plaster, sage paneling, an oak floor and a rug;
+the right side has a scrolling editor. Identity, Face & hair, Body & voice,
+Outfits, Personality and Family share the same resident selector and fixed Save
+household/Cancel footer. Show full body or face, drag to turn, scroll to zoom,
+and offer explicit turn buttons and daylight/evening choices. Idle animation
+uses breathing, blinks and small glances; reduced motion keeps a steady pose.
+
+Keep named skin, hair, eye and clothing swatches beside the actual preview.
+Each occasion owns its own outfit. Copy requires an explicit source and action;
+merely browsing an occasion never changes the chosen everyday outfit. Voice
+preview is optional, original nonverbal synthesis on Effects, and respects mute.
+The same timbre and pitch are used for neighborhood conversation sounds.
+
+Long forms and the resident roster scroll; model rotation never moves a resident
+or changes a saved camera. Adding someone remains local until the entire household
+is accepted. Explain that ages are chosen stages, babies rest with comfortable
+needs, and hands-on infant care is not yet simulated. Family cards in People show
+the chosen tie separately from earned friendship. Drafts preserve edits after
+rejection, ignore unrelated acknowledgements, and cannot apply across a changed
+session/world generation. Existing residents are never deleted by this mode.

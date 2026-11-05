@@ -68,7 +68,7 @@ func _run() -> void:
 	assert(not session.last_action_ok and game._space_request.is_empty() and session.world.snapshot()==before,"A blocked entrance cannot move part of the household")
 	await _button(game.undo_button)
 	await _tile(7,7,false); await _capture("blocked-placement")
-	assert(not game.lot_view.preview_result.ok and game.lot_view.preview_result.message.contains("resident"))
+	assert(game.lot_view.preview_result.ok,"Residents do not block a build preview")
 	before=session.world.snapshot(); var control: Button=game.space_button
 	await _button(control)
 	assert(game.space_button==control and game._space_request.is_empty() and control.has_focus(),"Moving aside preserves the control, focus, and selected tool")

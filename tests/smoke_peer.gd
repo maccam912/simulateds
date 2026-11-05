@@ -163,11 +163,16 @@ func _client(index: String) -> void:
 	var identity_members: Array=[]
 	for resident: Dictionary in session.state.families[identity].members:
 		identity_members.append({"id":resident.id,"name":"Resident "+index+" "+str(identity_members.size()+1),"appearance":{"skin":4,"hair":2,"shirt":3,"style":1},"favorite":"reading" if identity_members.is_empty() else "gardening"})
+	for resident: Dictionary in identity_members:
+		resident.character=preload("res://game/character_profile.gd").defaults(resident)
+		resident.character.eyes=3; resident.character.voice=2; resident.character.traits=["Creative","Gentle"]
+		resident.character.outfits.formal.top_color=10
 	var identity_command := {"type":"household_edit","name":"Gardeners "+index,"revision":session.state.families[identity].get("identity_revision",0),"members":identity_members}
 	await _command(identity_command)
 	for _attempt in range(50):
 		if session.state.families[identity].name=="Gardeners "+index: break
 		await create_timer(0.1).timeout
+	assert(session.state.families[identity].members[0].character.outfits.formal.top_color==10 and session.state.families[identity].members[1].character.eyes==3,"Complete creator profiles replicate through bounded transfer")
 	assert(session.state.families[identity].members[1].appearance.shirt==3,"Appearance was not replicated")
 	assert(session.state.families[identity].members[0].favorite=="reading" and session.state.families[identity].members[1].favorite=="gardening","Favorite pastimes were not replicated")
 	await _command(identity_command,false)
@@ -205,20 +210,26 @@ func _client(index: String) -> void:
 		if session.state.lots[home].windows.get("7,3")==window_intent.style: break
 		await create_timer(0.1).timeout
 	assert(session.state.lots[home].windows.get("7,3")==window_intent.style)
-	await _command({"type": "place", "lot_id": home, "kind": "floor", "x": 0, "y": 0})
+	var before_area: Dictionary=session.state.lots[home].duplicate(true)
+	var area := {"type":"place_area","kind":"floor","lot_id":home,"x":1,"y":1,"end_x":0,"end_y":0,"revision":before_area.revision}
+	await _command(area); await _command(area,false)
 	for _attempt in range(50):
-		if [0,0] in session.state.lots[home].floors: break
+		if [1,1] in session.state.lots[home].floors: break
 		await create_timer(0.1).timeout
-	await _command({"type":"build_undo","lot_id":home,"revision":session.state.lots[home].revision})
+	assert([0,0] in session.state.lots[home].floors and [1,1] in session.state.lots[home].floors)
+	assert(session.state.lots[home].funds==before_area.funds-48,"The host charges for the four floor tiles once")
+	var demolition := {"type":"erase_area","lot_id":home,"x":0,"y":0,"end_x":1,"end_y":1,"revision":session.state.lots[home].revision,"refund":28}
+	await _command(demolition)
 	for _attempt in range(50):
 		if not [0,0] in session.state.lots[home].floors: break
 		await create_timer(0.1).timeout
-	assert(not [0,0] in session.state.lots[home].floors,"Client undo did not restore layout")
-	await _command({"type":"build_redo","lot_id":home,"revision":session.state.lots[home].revision})
+	assert(session.state.lots[home].floors==before_area.floors and session.state.lots[home].funds==before_area.funds-20)
+	await _command({"type":"build_undo","lot_id":home,"revision":session.state.lots[home].revision})
 	for _attempt in range(50):
-		if [0,0] in session.state.lots[home].floors: break
+		if [1,1] in session.state.lots[home].floors: break
 		await create_timer(0.1).timeout
-	assert([0,0] in session.state.lots[home].floors,"Wait for the accepted revision before recoloring")
+	assert([0,0] in session.state.lots[home].floors and [1,1] in session.state.lots[home].floors)
+	assert(session.state.lots[home].funds==before_area.funds-48,"One network Undo restores the whole cleared area and its refund")
 	var moved_id := ""
 	for object: Dictionary in session.state.lots[home].objects:
 		if object.kind=="fridge": moved_id=str(object.id)
@@ -663,6 +674,7 @@ func _client(index: String) -> void:
 	assert(session.state.families[identity].routines.entries[3].name=="Copied plan "+index and session.state.families[identity].routines.entries[3].steps==["bookshelf","table"],"Reconnect retains the reviewed copied routine")
 	assert(session.state.families[identity].routines.entries[2].name=="Quiet time "+index and session.state.families[identity].routines.entries[2].steps==["bookshelf","table"],"Reconnect retains the independent routine library")
 	assert(int(preload("res://game/friendships.gd").bond(session.state,member_id,companion_id).get("score",0))==32,"Reconnect lost the friendship")
+	assert(session.state.families[identity].members[0].character.voice==2 and session.state.families[identity].members[0].character.traits==["Creative","Gentle"],"Creator choices survive reconnect")
 	assert(session.state.families[identity].name=="Gardeners "+index and session.state.families[identity].members[1].appearance.style==1,"Reconnect lost household identity")
 	assert(session.state.families[identity].members[0].favorite=="reading" and session.state.families[identity].members[1].favorite=="gardening","Reconnect lost favorite pastimes")
 	assert([14,1] in session.state.lots[home].floors and [14,2] in session.state.lots[home].doors,"Reconnect lost the new room")

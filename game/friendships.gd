@@ -4,7 +4,7 @@ const GAIN := 12
 const DAILY_SESSIONS := 2
 const SHARED_TIME := 4.0
 const ACTIVITIES := ["chat","game_table","stereo","dining_table"]
-const MAX_BONDS := 28 # Eight residents, one record per unordered pair.
+const MAX_BONDS := 496 # Four households of eight, one record per unordered pair.
 
 static func key(first: String, second: String) -> String:
 	return JSON.stringify([first,second] if first<second else [second,first])
@@ -16,9 +16,11 @@ static func _new(first: String, second: String, day: int, score: int=0) -> Dicti
 	return {"a":first if first<second else second,"b":second if first<second else first,"score":score,"day":day,"today":0,"last_chat_day":0,"last_tick":-1,"last_social_day":0,"last_activity":""}
 
 static func ensure_housemates(world: Dictionary, family: Dictionary) -> void:
-	var first: String=family.members[0].id; var second: String=family.members[1].id
-	var id := key(first,second)
-	if not world.friendships.has(id): world.friendships[id]=_new(first,second,int(world.day),20)
+	for a in range(family.members.size()):
+		for b in range(a+1,family.members.size()):
+			var first: String=family.members[a].id; var second: String=family.members[b].id
+			var id := key(first,second)
+			if not world.friendships.has(id): world.friendships[id]=_new(first,second,int(world.day),20)
 
 static func record(world: Dictionary, first: String, second: String, started_tick: int, activity: String="chat") -> Dictionary:
 	if not activity in ACTIVITIES: return {"gain":0}

@@ -23,7 +23,7 @@ func _button(control: Button) -> void:
 	assert(pressed[0],"The visible access control receives actual input")
 
 func _named(node: Node, title: String) -> Button:
-	if node is Button and node.text==title: return node
+	if node is Button and (node.text==title or node.accessibility_name==title): return node
 	for child in node.get_children():
 		var found := _named(child,title)
 		if found!=null: return found
@@ -63,7 +63,7 @@ func _run() -> void:
 	game=load("res://game/main.tscn").instantiate(); root.add_child(game)
 	await process_frame; await process_frame
 	await _button(game.mode_button)
-	assert(game.access_button.text=="Access · Clear")
+	assert(game.access_button.text=="✓")
 	await _button(game.access_button)
 	await _key(KEY_ESCAPE)
 	assert(not game.context_panel.visible and not game.lot_view.access_visible and not game.lot_view.access_inspecting,"Escape leaves access inspection and restores ordinary building input")
@@ -110,11 +110,11 @@ func _run() -> void:
 	await _button(game.mode_button); game.lot_view.center_lot()
 	session.command({"type":"place","lot_id":lot.id,"kind":"wall","x":8,"y":11}); assert(session.last_action_ok)
 	game._refresh(); await _button(game.mode_button)
-	assert(game._access_report.issues.size()==12)
+	assert(game._access_report.issues.size()==10)
 	await _capture("closed-entrance")
 	if DisplayServer.get_name()!="headless":
 		var markers: Array=game.lot_view.access_markers.values()
-		assert(markers.size()==12)
+		assert(markers.size()==10)
 		for first in range(markers.size()):
 			for second in range(first+1,markers.size()): assert(not markers[first].intersects(markers[second]),"Numbered problems remain distinct in a crowded closed home")
 	await _button(game.undo_button); assert(game._access_report.ok)

@@ -170,7 +170,12 @@ func play_world(event: Dictionary) -> bool:
 		player.position=event.position
 		player.set_meta("member",str(event.get("member",""))); player.set_meta("task",str(event.get("task","")))
 		player.max_distance=maxf(get_viewport().get_visible_rect().size.x,get_viewport().get_visible_rect().size.y)*1.2
-		player.stream=_stream("res://assets/audio/"+sound+".wav")
+		if sound=="chat" and not event.get("voice",{}).is_empty():
+			var voice: Dictionary=event.voice
+			var key := "voice_"+str(voice.voice)+"_"+str(voice.pitch)
+			if not _streams.has(key): _streams[key]=preload("res://game/character_voice.gd").sample(voice)
+			player.stream=_streams[key]
+		else: player.stream=_stream("res://assets/audio/"+sound+".wav")
 		player.pitch_scale=clampf(float(event.get("pitch",1.0)),0.95,1.05)
 		player.volume_db=-18.0 if sound.begins_with("step_") or sound=="chat" else -12.0
 		player.play(); world_sounds_started+=1

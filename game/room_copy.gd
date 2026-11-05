@@ -26,7 +26,7 @@ static func capture(lot: Dictionary, seed: Vector2i) -> Dictionary:
 	var low := seed; var high := seed
 	for cell: Vector2i in region:
 		low=Vector2i(mini(low.x,cell.x),mini(low.y,cell.y)); high=Vector2i(maxi(high.x,cell.x),maxi(high.y,cell.y))
-	var result := {"ok":true,"low":low,"extent":high-low+Vector2i.ONE,"interior":[],"floors":[],"walls":[],"doors":[],"finishes":{"floor":{},"wall":{}},"windows":{},"objects":[],"garden":false,"art":false,"food":false}
+	var result := {"ok":true,"low":low,"extent":high-low+Vector2i.ONE,"interior":[],"floors":[],"walls":[],"doors":[],"finishes":{"floor":{},"wall":{}},"windows":{},"diagonal_walls":{},"objects":[],"garden":false,"art":false,"food":false}
 	for cell: Array in interior: result.interior.append([int(cell[0])-low.x,int(cell[1])-low.y])
 	for kind: String in ["floors","walls","doors"]:
 		for cell: Array in lot[kind]:
@@ -38,6 +38,9 @@ static func capture(lot: Dictionary, seed: Vector2i) -> Dictionary:
 				var surface := "floor" if kind=="floors" else "wall"
 				result.finishes[surface][Finishes.key(relative.x,relative.y)]=Finishes.at(lot,surface,position.x,position.y)
 			if kind=="walls" and not Windows.at(lot,position.x,position.y).is_empty(): result.windows[Windows.key(relative.x,relative.y)]=Windows.at(lot,position.x,position.y)
+	for id: String in lot.get("diagonal_walls",{}):
+		var parts := id.split(","); var point := Vector2i(int(parts[0]),int(parts[1]))
+		if region.has(point): result.diagonal_walls[Finishes.key(point.x-low.x,point.y-low.y)]=int(lot.diagonal_walls[id])
 	if result.doors.is_empty(): return _no("Add a doorway before copying this room.")
 	for object: Dictionary in lot.objects:
 		var size := Catalog.footprint(str(object.kind),int(object.rotation)); var count := 0
@@ -70,13 +73,16 @@ static func inspect(lot: Dictionary, command: Dictionary, residents: Array) -> D
 	return inspect_source(lot,command,residents,source)
 
 static func inspect_source(lot: Dictionary,command: Dictionary,residents: Array,source: Dictionary) -> Dictionary:
+	# Sheltered residents never veto a construction transaction. The host moves
+	# anyone displaced by an accepted edit back to a safe entrance position.
+	if lot.get("building",false): residents=[]
 	for key: String in ["x","y"]:
 		if not Rules._coordinate(command.get(key)): return _no("Keep the saved room inside this lot.")
 	if not Rules._integer(command.get("rotation",0)) or int(command.get("rotation",0))<0 or int(command.get("rotation",0))>3: return _no("Choose a valid rotation.")
 	if not source.get("ok",false): return _no("Choose a valid room design.")
 	var rotation := int(command.get("rotation",0)); var at := Vector2i(int(command.x),int(command.y))
 	var extent: Vector2i=Vector2i(source.extent.y,source.extent.x) if rotation%2 else source.extent
-	var plan := {"ok":true,"source":source,"low":at,"extent":extent,"interior":[],"floors":[],"walls":[],"doors":[],"objects":[],"finishes":{"floor":{},"wall":{}},"windows":{},"structure_cost":0,"furniture_cost":0,"finish_cost":0,"window_cost":0,"cost":0,"garden":source.garden,"art":source.art,"food":source.food}
+	var plan := {"ok":true,"source":source,"low":at,"extent":extent,"interior":[],"floors":[],"walls":[],"doors":[],"objects":[],"finishes":{"floor":{},"wall":{}},"windows":{},"diagonal_walls":{},"structure_cost":0,"furniture_cost":0,"finish_cost":0,"window_cost":0,"cost":0,"garden":source.garden,"art":source.art,"food":source.food}
 	if at.x+extent.x>16 or at.y+extent.y>16: return _reject(plan,"Keep the whole copied room inside the lot.")
 	for kind: String in ["interior","floors","walls","doors"]:
 		for cell: Array in source[kind]:
@@ -86,6 +92,7 @@ static func inspect_source(lot: Dictionary,command: Dictionary,residents: Array,
 	for kind: String in ["interior","floors","walls","doors"]:
 		for cell: Array in plan[kind]: touched[Vector2i(int(cell[0]),int(cell[1]))]=true
 	for cell: Vector2i in touched:
+		if [cell.x,cell.y] in lot.get("landscape",{}).get("pools",[]) or not Rules.flat_ground(lot,cell) or [cell.x,cell.y] in lot.get("stairwells",[]): return _reject(plan,"Choose level ground clear of pools and stairwells.")
 		if lot.walls.has([cell.x,cell.y]) or lot.doors.has([cell.x,cell.y]) or Rules._furniture_at(lot,cell,""): return _reject(plan,"Choose clear space. Existing walls, doorways, and furniture stay in place.")
 	for kind: String in ["walls","doors"]:
 		for cell: Array in plan[kind]:
@@ -115,6 +122,9 @@ static func inspect_source(lot: Dictionary,command: Dictionary,residents: Array,
 		var parts := key.split(","); var point := at+rotate_cell(Vector2i(int(parts[0]),int(parts[1])),source.extent,rotation)
 		var style: String=source.windows[key]
 		plan.windows[Windows.key(point.x,point.y)]=style; plan.window_cost+=int(Windows.STYLES[style].cost)
+	for id: String in source.get("diagonal_walls",{}):
+		var parts := id.split(","); var point := at+rotate_cell(Vector2i(int(parts[0]),int(parts[1])),source.extent,rotation)
+		plan.diagonal_walls[Finishes.key(point.x,point.y)]=int(source.diagonal_walls[id])*(-1 if rotation%2 else 1)
 	plan.cost=int(plan.structure_cost)+int(plan.furniture_cost)+int(plan.finish_cost)+int(plan.window_cost)
 	if plan.cost>int(lot.funds): return _reject(plan,"Copy costs §%d · Need §%d more." % [plan.cost,int(plan.cost)-int(lot.funds)])
 	var draft := lot.duplicate(true)
@@ -127,6 +137,8 @@ static func inspect_source(lot: Dictionary,command: Dictionary,residents: Array,
 	return plan
 
 static func apply_surfaces(lot: Dictionary, plan: Dictionary) -> void:
+	if not lot.has("diagonal_walls"): lot.diagonal_walls={}
+	lot.diagonal_walls.merge(plan.get("diagonal_walls",{}),true)
 	for kind: String in ["floors","walls","doors"]:
 		for cell: Array in plan[kind]:
 			if not lot[kind].has(cell): lot[kind].append(cell.duplicate())

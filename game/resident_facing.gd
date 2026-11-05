@@ -23,7 +23,7 @@ static func activity(world: Dictionary, member: Dictionary) -> Dictionary:
 			if preload("res://game/art_admiration.gd").current(lot,task): return {"kind":"admire_art","art":lot.artworks[task.target_id]}
 		else:
 			for object: Dictionary in lot.objects:
-				if object.id==task.get("target_id"): return {"kind":object.kind,"object":object}
+				if object.id==task.get("target_id"): return {"kind":"sofa" if object.kind in ["armchair","loveseat","long_sofa","wood_chair","garden_bench"] else object.kind,"object":object}
 	elif task.is_empty() and member.get("queue",[]).is_empty():
 		for family: Dictionary in world.get("families",{}).values():
 			for other: Dictionary in family.members:
@@ -39,7 +39,7 @@ static func direction(pose: Dictionary, member: Dictionary, positions: Dictionar
 		return (_position(pose.partner,positions)+Vector2(0.5,0.5)-here).normalized()
 	if pose.has("object"):
 		var object: Dictionary=pose.object
-		if object.kind in ["sofa","bed"]: return Vector2.DOWN.rotated(int(object.get("rotation",0))*PI*0.5)
+		if object.kind in ["sofa","bed","armchair","loveseat","long_sofa","wood_chair","garden_bench"]: return Vector2.DOWN.rotated(int(object.get("rotation",0))*PI*0.5)
 		var size := Vector2(Catalog.footprint(str(object.kind),int(object.get("rotation",0))))
 		return (Vector2(float(object.x),float(object.y))+size*0.5-here).normalized()
 	return Vector2.ZERO

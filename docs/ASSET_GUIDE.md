@@ -42,10 +42,23 @@ these measurements. Regenerate the collection after changing the source.
 embedded geometry, actual transformed bounds, catalog footprints, named character
 pivots, appearance materials and the current triangle/mesh budgets.
 
-The collection includes all 14 placeable furnishing kinds, four resident hair
+The 47-model collection includes all 31 placeable furnishing kinds, four resident hair
 variants, linden tree, shrub, street lantern, mailbox, fence, flower patch,
 tomato/radish crops, three window styles and an open door frame. Floor and wall
 runs are generated from the actual house layout by the renderer.
+
+The construction expansion adds five seats, six light fixtures, a straight oak
+staircase and five landscaping models. They are original geometry from the same
+editable Blender source, with the same project provenance and LFS rules. Each
+has an explicit `custom_` material for the existing recoloring palette. Lamp
+illumination is supplied by Godot lights at catalog-defined positions, ranges
+and colors; the GLBs themselves do not carry lights.
+
+Catalog pictures are runtime studio renders of these exact GLBs in one reusable
+160×120 SubViewport. They are memory-cached UI textures, not substitute world
+models or committed binary thumbnails. Floor patterns, wallpaper, wall openings,
+diagonal wall segments, terrain and pools are editable procedural geometry in
+`game/lot_scene_3d.gd`; their layout comes only from authoritative commands.
 
 ## Scale, orientation and names
 
@@ -155,3 +168,38 @@ After editing an asset, check the staged path with `git check-attr filter -- pat
 and verify it reports `lfs`; then run `git lfs fsck`. Commit the actual hydrated
 asset through the LFS filter, never a manually written pointer. See
 [BUILDING.md](BUILDING.md) for repository setup and the history-migration handoff.
+
+
+## Parametric creator residents
+
+`game/character_model.gd` is a second editable original geometry master, covered
+by the repository MIT license. It generates solid `ArrayMesh` surfaces directly
+in Godot for detailed creator profiles. `character_studio.gd` supplies the review
+room/camera, and `character_voice.gd` synthesizes an original nonverbal greeting.
+No outside art, pretrained output, recorded voice or additional binary source is
+used. Existing Blender-authored resident GLBs remain the legacy-save fallback.
+Do not replace or re-export those unchanged GLBs when editing this generator.
+
+Rebuild this asset by reopening the creator/changing a draft choice; the same
+source regenerates neighborhood meshes on accepted profile changes. Body, head,
+arms and legs retain the established named pivots. Geometry is merged by material
+within each articulated part; eyes stay independent for blinks. Creator meshes
+are bounded at 24,480 triangles in the checked age/hair/body matrix. World meshes
+use fewer sphere/loft segments; this explicit detail exception serves the large
+creator camera and keeps the distant world cheaper. Shape changes do not modify
+navigation footprints. Baby bassinets belong to the resident presentation and
+are not independently purchasable furniture or pathfinding blockers.
+
+Regeneration/review commands (screenshots stay in ignored `build/`):
+
+```sh
+python3 tools/godot.py --headless --script res://tests/character_models.gd
+python3 tools/godot.py --script res://tests/character_creator_ui.gd
+python3 tools/godot.py --script res://tests/character_creator_ui.gd -- --compact
+```
+
+Inspect full body, face, back, wardrobe slots, child/baby/elder proportions, actual
+neighborhood lighting and compact layout. Native images are `build/creator-*.png`.
+The studio uses neutral daylight for faithful palette selection and a warmer
+night comparison. Any screenshot or exported mesh added to Git still requires
+LFS; this runtime pipeline itself produces no committed binaries.

@@ -22,14 +22,18 @@ jobs:
         include:
           - platform: linux
             os: ubuntu-24.04
+            shard: 1
           - platform: windows
             os: windows-2022
+            shard: 2
           - platform: macos
             # ARM hosted jobs repeatedly expired before acquiring a runner.
             # Build both CPU slices on the standard Intel runner.
             os: macos-15-intel
+            shard: 4
           - platform: android
             os: ubuntu-24.04
+            shard: 3
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     steps:
@@ -75,8 +79,8 @@ jobs:
         run: sdkmanager 'platforms;android-36' 'build-tools;35.0.1' 'ndk;28.1.13356709'
       - name: Build native host extension
         run: python tools/build_native.py
-      - name: Import and test host plus two clients
-        run: python tools/check.py
+      - name: Run gameplay and multiplayer test shard
+        run: python tools/check.py --shard ${{ matrix.shard }}/4
       - name: Build Android extension
         if: matrix.platform == 'android'
         run: python tools/build_native.py android
@@ -115,6 +119,10 @@ jobs:
     name: Publish release
     if: github.event_name == 'push' && !github.event.deleted && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     needs: build
+    concurrency:
+      # Check and update Latest one release at a time, keeping every build queued.
+      group: simulateds-release
+      queue: max
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -134,21 +142,31 @@ jobs:
 
           tag="$GITHUB_REF_NAME"
           title="$tag"
-          flags=()
+          latest=true
           if [[ "$GITHUB_REF" == refs/heads/main ]]; then
-            tag="dev-$GITHUB_SHA"
-            title="Development Build $GITHUB_RUN_NUMBER"
-            flags+=(--prerelease)
+            tag="build-$GITHUB_RUN_NUMBER"
+            title="Build $GITHUB_RUN_NUMBER"
+
+            # A slower build can finish after a newer one has already shipped.
+            # shellcheck disable=SC2016
+            latest_tag=$(gh api graphql -F owner='{owner}' -F name='{repo}' \
+              -f query='query($owner: String!, $name: String!) {
+                repository(owner: $owner, name: $name) { latestRelease { tagName } }
+              }' --jq '.data.repository.latestRelease.tagName // ""')
+            if [[ "$latest_tag" =~ ^build-([1-9][0-9]*)$ ]] && (( BASH_REMATCH[1] > GITHUB_RUN_NUMBER )); then
+              latest=false
+            fi
+
             git push origin "$GITHUB_SHA:refs/tags/$tag"
 
             # A rerun can finish an interrupted draft or skip a published release.
             if draft=$(gh release view "$tag" --json isDraft --jq .isDraft 2>/dev/null); then
               if [[ "$draft" == true ]]; then
                 gh release upload "$tag" simulateds-* --clobber
-                gh release edit "$tag" --draft=false --prerelease
+                gh release edit "$tag" --draft=false --prerelease=false --latest="$latest"
               fi
               exit 0
             fi
           fi
 
-          gh release create "$tag" simulateds-* --verify-tag --generate-notes --title "$title" "${flags[@]}"
+          gh release create "$tag" simulateds-* --verify-tag --generate-notes --title "$title" --latest="$latest"

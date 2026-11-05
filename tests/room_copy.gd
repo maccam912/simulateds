@@ -59,8 +59,8 @@ func _run() -> void:
 	lot.funds=1; _reject(_intent())
 	_fresh(); lot.walls.erase([0,1]); assert(not Copy.capture(lot,Vector2i(2,2)).ok); _reject(_intent())
 	_fresh(); lot.doors=[]; lot.walls.append([1,4]); assert(not Copy.capture(lot,Vector2i(2,2)).ok)
-	_fresh(); world.state.families.a.members[0].x=9; world.state.families.a.members[0].y=6; _reject(_intent())
-	_fresh(); world.state.families.a.members[0].x=10; world.state.families.a.members[0].y=7; _reject(_intent())
+	_fresh(); world.state.families.a.members[0].x=9; world.state.families.a.members[0].y=6; assert(world.apply_command("a",_intent()).ok)
+	_fresh(); world.state.families.a.members[0].x=10; world.state.families.a.members[0].y=7; assert(world.apply_command("a",_intent()).ok)
 	# A copy can reuse a clear floor and only pays for missing/changed surfaces.
 	_fresh(); lot.floors.append([10,7]); lot.finishes.floor["10,7"]="blue_carpet"
 	var reused := Copy.inspect(lot,_intent(),[]); assert(reused.ok and reused.cost==1333-12-4)

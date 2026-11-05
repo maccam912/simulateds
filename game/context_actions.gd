@@ -14,6 +14,7 @@ static func options(world: RefCounted, profile_id: String, member_id: String, lo
 	var lot: Dictionary = world.state.get("lots",{}).get(lot_id,{})
 	if family.is_empty() or lot.is_empty(): return result
 	var member: Dictionary = world._member(family,member_id)
+	lot=preload("res://game/storeys.gd").view(lot,int(member.get("level",0)))
 	result.subtitle = "For " + str(member.get("name","your resident"))
 	var entries: Array = result.entries
 	match str(target.get("type","")):
@@ -53,6 +54,13 @@ static func options(world: RefCounted, profile_id: String, member_id: String, lo
 			var cell := Vector2i(int(target.get("x",-1)),int(target.get("y",-1)))
 			var option: Dictionary = world.move_option(profile_id,member_id,lot_id,cell)
 			_add(entries,"walk","Queue walk" if int(option.get("ahead",0))>0 else "Walk here",option,{"type":"move","member_id":member_id,"lot_id":lot_id,"x":cell.x,"y":cell.y})
+	# Presentation metadata only: these icons never change the reviewed intent.
+	var icons := {"walk":"walk","chat":"chat","person":"people","select":"person","find":"find","plan":"plan","care":"needs","cancel":"stop","home":"home","inspect":"info","hang":"art","admire":"art","call":"together"}
+	for entry: Dictionary in entries:
+		if icons.has(entry.id): entry.icon=icons[entry.id]
+		elif entry.id=="use":
+			var object: Dictionary=world._object(lot,str(target.get("id","")))
+			if not object.is_empty(): entry.icon=str(object.kind)
 	return result
 
 static func _add(entries: Array, id: String, label: String, option: Dictionary, command: Dictionary) -> void:

@@ -15,12 +15,13 @@ func _type(value: String) -> void:
 	for character: String in value: await _key(character.to_upper().unicode_at(0),character.unicode_at(0))
 
 func _mouse(point: Vector2) -> void:
+	var motion := InputEventMouseMotion.new(); motion.position=point; root.push_input(motion,true); await process_frame
 	for pressed in [true,false]:
 		var event := InputEventMouseButton.new(); event.button_index=MOUSE_BUTTON_LEFT; event.pressed=pressed; event.position=point
 		root.push_input(event,true); await process_frame
 
 func _click(control: Control) -> void:
-	await process_frame
+	await process_frame; await process_frame
 	if game.tools_box.is_ancestor_of(control): game.tools_box.get_parent().ensure_control_visible(control); await process_frame
 	var rect := control.get_global_rect()
 	assert(root.get_visible_rect().encloses(rect),"Catalog control must be on screen")
@@ -74,14 +75,18 @@ func _run() -> void:
 	await _search("zzzzzz")
 	assert(game.catalog_buttons.is_empty())
 	await _capture("empty")
-	await _click(game.tools_box.get_child(1))
+	var clear_filters: Button
+	for button: Button in game.tools_box.find_children("*","Button",true,false):
+		if button.accessibility_name=="Show everything" or button.text=="Show everything": clear_filters=button
+	assert(clear_filters!=null,"Empty results offer a way back to all items")
+	await _click(clear_filters)
 	assert(game.catalog_buttons.size()==Browse.ORDER.size() and game.catalog_search.text.is_empty() and game.selected_tool=="bed","Show everything clears filters while retaining the chosen tool")
 	await _filter("kitchen")
 	assert(game.catalog_buttons.keys()==["fridge","dining_table"],"Kitchen includes individual food and the shared-meal table")
 	await _search("read")
 	assert(game.catalog_buttons.is_empty(),"Search is scoped to the chosen category")
 	await _filter("living")
-	assert(game.catalog_buttons.keys()==["bookshelf"] and game.catalog_search.text=="read")
+	assert(game.catalog_buttons.has("bookshelf") and not game.catalog_buttons.has("fridge") and game.catalog_search.text=="read","Reading remains discoverable in Living, without kitchen results")
 	await _capture("category")
 	await _click(game.catalog_search)
 	await _key(KEY_ESCAPE)
@@ -119,7 +124,7 @@ func _run() -> void:
 	lot.funds=actual_funds; game._refresh()
 	game._clear_catalog_filters(); await process_frame
 	await _click(game.catalog_buttons.finish_floor)
-	assert(not game.catalog_filters.visible and game.finish_buttons.size()==6)
+	assert(not game.catalog_filters.visible and game.finish_buttons.size()==preload("res://game/finishes.gd").PALETTES.floor.size(),str([game.selected_tool,game.catalog_filters.visible,game.finish_buttons.keys()]))
 	await _capture("finishes")
 	await _key(KEY_F,0,true)
 	assert(game.catalog_filters.visible and game.catalog_search.has_focus(),"Find returns from the paint palette to the item catalog")

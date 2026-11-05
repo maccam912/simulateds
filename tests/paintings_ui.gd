@@ -26,7 +26,7 @@ func _button(control: Button) -> void:
 	await _mouse(control.get_global_rect().get_center(),true); assert(pressed[0])
 
 func _named(node: Node,title: String) -> Button:
-	if node is Button and node.text==title: return node
+	if node is Button and (node.text==title or node.accessibility_name==title): return node
 	for child in node.get_children():
 		var found := _named(child,title)
 		if found!=null: return found

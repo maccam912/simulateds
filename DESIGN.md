@@ -40,16 +40,16 @@ The foundation prioritizes four things:
 6. Visit another household when its lot is open. Return home whenever desired.
 7. Leave and return to the same household while the host keeps the world alive.
 
-There is no death, aging, marriage, career simulation, or elaborate economy in
-this slice. Initial funds, a $600 per simulated day household allowance, and
+Life stages and family ties are chosen in the household creator. There is no
+automatic aging, death, wedding, career simulation, or elaborate economy in this slice. Initial funds, a $600 per simulated day household allowance, and
 modest object costs make building possible. The allowance also accrues for absent
 households while the host runs; it is prototype funding, not a balanced economy.
 Jobs and maintenance systems need their own balancing pass.
 
 ## World and ownership
 
-The initial world has four 16-by-16 lots. Each household has one home lot and two
-residents. Persistent household identity is separate from the temporary numeric
+The initial world has four 16-by-16 lots. Each household has one home lot, starts with two residents, and can grow to
+eight through the household creator. Persistent household identity is separate from the temporary numeric
 connection IDs assigned by Iroh. A reconnect must recover the existing household
 rather than allocate a new one.
 
@@ -68,19 +68,34 @@ Construction is an explicit host-accepted state transition:
 1. The owner requests construction on their home lot.
 2. Visitors are returned to their own home lots and their visit actions stop.
 3. Residents of the home being edited are sheltered while it is under construction.
+   They remain visible in place, never veto edits, and the host relocates anyone
+   displaced or cut off by an accepted edit to clear space by the street.
 4. New visits and ordinary interactions on that lot are rejected.
 5. The owner places or removes floors, walls, doors, and objects using validated
    transactions. Placement checks bounds, occupancy, footprint, and funds.
 6. Reopening returns the lot to live simulation; any unusable position must be
    repaired or rejected safely.
 
+Build & buy offers a visual furniture catalog, room/use categories and search,
+drag placement, movement and quarter-turn rotation. Surfaces include flooring,
+wallpaper and paneling. Windows admit daylight through actual wall openings;
+placeable fixtures cast local light and shadows. Interior walls and doorways
+include 45-degree segments. A house may have three floors, connected by straight
+stairs with clear landings. Floor editing shares the lot's budget, revision and
+undo history; residents use stairs explicitly before interacting upstairs.
+
+Landscaping includes trees, shrubs, flowers, benches, fences, rocks and outdoor
+lights, rectangular pools, and round terrain raise/lower/flatten/material
+brushes. Pools block walking; swimming is not an activity yet. Terrain protects
+foundations and the entrance, with heights bounded from -0.75 to 1.5 tiles.
+
 The rest of the neighborhood continues to run. There is no shared pause or
 player-controlled global fast-forward. A disconnect releases construction so a
 forgotten editing session cannot leave a lot locked indefinitely. This first
 version applies edits visibly while construction is active but retains the last
 committed layout. Successful reopening commits the work. Disconnecting or loading
-a save rolls unfinished construction back, including its money changes. The owner can also discard the draft explicitly. Undo/redo and blueprints are
-follow-up features.
+a save rolls unfinished construction back, including its money changes. The owner
+can discard the draft explicitly, undo/redo transactions, and save room designs.
 
 ## Residents and needs
 
@@ -185,3 +200,35 @@ After that, decide the following in order:
 
 See [ROADMAP.md](docs/ROADMAP.md) for milestone exit criteria and
 [VALIDATION.md](docs/VALIDATION.md) for what has actually been checked.
+
+## Character creation
+
+**Create a household** opens a dedicated dressing room with a large, rotatable
+3D resident, idle breathing, glances and blinks. The studio shares its parametric
+geometry with the neighborhood; all previews are private drafts. Save household
+submits one revision-checked command. Cancel/Escape discards an unsent draft;
+while saving, wait for the host response before leaving the creator.
+Offline life pauses; a shared neighborhood keeps running.
+
+Residents have names, pronouns, a chosen life stage from baby to elder, skin/hair/
+eye colors, ten hairstyles, height, fullness, shoulders, hips, face/nose controls,
+and a voiced nonverbal greeting with four timbres and adjustable pitch. Seven
+independent wardrobe slots cover casual, formal, sleep, swim, athletic, party and
+outdoor clothing. Each combines a top, bottom, shoes, accessory, colors and fabric
+detail; the selected wearing slot is used in the neighborhood. Automatic outfit
+changes by event are not implemented.
+
+Pick up to three traits and neutral/like/dislike interests. Supported interests
+and traits gently weight ordinary autonomous choices without overriding urgent
+care or deliberate orders. Creative/painting preferences are retained for future
+autonomous art behavior; artwork still requires an explicit plan. Family links
+include partners, spouses, siblings, parents/children and grandparents. They are
+separate from earned friendship and visible in People. Family editing is confined
+to the owner's residents and validates age/ancestry constraints atomically.
+
+Add residents up to eight; newly added draft residents can be removed before
+saving. Established residents are retained: moving out/deleting them needs a
+separate flow that preserves their history. Age stages stay fixed until edited.
+Babies rest in a solid-geometry bassinet at home with stable needs and cannot be
+sent on ordinary activities or batch travel. Pregnancy, autonomous aging, hands-on
+infant care and age-specific careers/school are future simulation work.

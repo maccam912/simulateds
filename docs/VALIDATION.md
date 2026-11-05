@@ -81,6 +81,11 @@ For model/protocol checks without live peers:
 python3 tools/check.py --unit-only
 ```
 
+The release workflow divides gameplay and multiplayer checks among its four
+platform jobs and waits for all four to pass. Reproduce one job's share with
+`python3 tools/check.py --shard 1/4`. Run without `--shard` for the complete
+suite on your machine.
+
 An explicitly supplied Godot executable can be used with
 `--engine /absolute/path/to/godot`; that changes the engine being validated.
 Default checks use the pinned project engine. Test processes use separate world
@@ -1477,3 +1482,121 @@ The final push’s hosted workflow is a separate pending check: the preceding
 `c715ed7` run passed Linux/Windows, exposed the now-corrected test race on Android,
 and was still compiling macOS at handoff. No all-platform success is claimed for
 the final head. Feature work stops here for the user’s renderer evaluation.
+
+
+## Icon navigation — November 4, 2026
+
+Local icon/catalog/context/plan checks pass after adapting navigation to
+accessible names and preserving the concurrent thumbnail catalog. Native Godot
+checks cover mouse, keyboard, simulated touch, 1440×900 and 1280×720, daylight,
+night, urgent care, badges and notice spacing. See `build/icons-last/`,
+`build/icons-complete-*-engine.log` and `build/icons-reviewed-*.log`.
+
+The full validation run overlapped active catalog, character and server edits.
+Six Iroh scenarios passed; the server smoke reported a resource-shutdown error,
+and the new furnishings still fail the existing recoloring-coverage assertion.
+This checkpoint does not establish a clean full regression, hosted CI, exports,
+physical-device readiness or validation of the concurrently authored models.
+
+
+## Detailed household creator — November 4, 2026
+
+Focused `character_models`, `character_creator`, `character_creator_ui`,
+`household`, `protocol` and `app_flow` suites pass. Checks cover bounded profiles,
+all seven independent wardrobes, age/body/hair combinations (maximum preview
+24,480 triangles), immutable preview/animation state, trait/interest weighting,
+eight-member additions, family constraints, safe legacy migration, invalid/stale
+atomic rejection, save/restore, authenticated multipart assembly, expiry,
+duplicate replay, owner isolation and packet limits. Creator UI checks cover
+actual input, turn/zoom, colors, voice preview, outfit switching/copying, draft
+cancel, family addition and save confirmation. Later save-pending/context guards
+pass the focused UI and app checks. The 2D portrait fallback maps long hairstyles
+to a matching legacy silhouette. Evidence: `build/creator-focused-final.log`,
+`build/creator-final-acceptance.log`, and `build/creator-rechecks.log`.
+
+Native macOS runs passed at 1440×900 and 1280×720 with 125% UI scale. Inspected
+full-body/face/back, formal/PJs/swim/athletic, child/baby/elder, personality/family,
+and actual neighborhood day/night renders. The preview uses the same generated
+solid model as the neighborhood, with fewer world geometry segments. Idle and
+reduced-motion behavior cannot alter authority, paths or saves. Native logs:
+`build/creator-native.log`, `build/creator-compact.log`; screenshots:
+`build/creator-*.png`. The procedural masters and provenance are described in
+`docs/ASSET_GUIDE.md`; no new binary asset was staged for this creator work.
+`python3 tools/check_assets.py --worktree-only` passes (81 hydrated LFS assets).
+
+The new real-Iroh `creator_peer` scenario passes with a host and two clients.
+Both clients create eight-person households with every wardrobe slot, ages from
+baby through elder, family links, preferences and voices. Stale/invalid edits are
+rejected; reconnect preserves all profiles; the host writes and successfully
+restores its complete save (73,953 raw JSON bytes in the checked run).
+Evidence: `build/creator-peer-final.log` and `build/creator_peer/`.
+
+Required `python3 tools/check.py` was run. Its first pass stopped at a room-wall
+assertion while building code was changing concurrently; the remaining registry
+was then run. Later isolated checks resolve those room/copy/library/clear-lot/
+construction/access/impact/furniture-color failures and the transient shared
+script compilation failure. Across the initial run, remainder and focused
+rechecks, 120 of the current 121 gameplay/UI suites have a pass marker. The
+separately added `build_overhaul_ui` still fails at line 72 (dragging a furniture
+thumbnail to buy at the drop location); see `build/creator-last-integration.log`.
+This is accumulated local evidence during concurrent edits, not one clean final
+full-suite run. Earlier failure logs are retained in `build/creator-regression.log`
+and `build/creator-remaining-regression.log`; later results supersede them only
+for the named rechecked scenarios.
+
+All seven real-Iroh scenarios have local pass evidence: the ordinary smoke and
+creator test, plus the rechecked paintings, meals, recreation, commissions and
+pantry scenarios. The isolated dedicated-server smoke reaches ready but fails
+its clean-shutdown check with three leaked ObjectDB instances and one resource
+still in use. It is not a server pass. See `build/creator-rechecks.log` and
+`build/creator-server-recheck/engine.log`. The remaining recorded failures are
+that server shutdown and the separate furniture-thumbnail drag assertion.
+
+Hosted CI, new exports, physical-device/cross-device and human family play were
+not run. Chosen ages, babies resting with stable needs, manual outfit selection
+and the current stylized model vocabulary are deliberate feature limits; this
+checkpoint does not establish automatic aging, active infant care, event-driven
+wardrobe changes, moving out, or Sims-scale content/art fidelity.
+
+
+## Build & buy overhaul — November 4, 2026
+
+The final required checks pass in four independent local shards:
+`python3 tools/check.py --shard 1/4` through `--shard 4/4`. Each exits 0 with
+no engine/script errors. Together they cover all 121 registered gameplay/UI
+suites, eight real Iroh host/two-client scenarios and dedicated-server smoke.
+The earlier unsharded run reached all gameplay and peer passes, then exposed
+an unparented thumbnail Node in server mode; lazy UI-only allocation fixes that
+failure, and the final shard reruns include the fix. Retain the distinction
+between this local result and hosted CI.
+
+New authority tests cover resident displacement, pool/terrain atomicity and
+history, closed brush strokes and maximum packet size, diagonal doorway
+orientation, upstairs occupancy and undo, JSON save migration, duplicate-ID
+rejection, bidirectional stairs, upstairs furnishing use, recreation across
+floors and street arrival after travelling from upstairs. The new real-peer
+scenario exercises two independent upper-floor builds, a 256-point brush
+packet, pools, stair travel, committed saves and reconnect persistence.
+
+Native macOS Godot 4.7.2/OpenGL Compatibility checks pass at 1440×900 and compact
+1280×720. Actual day/night images of the shopping layout and all 17 new meshes
+were inspected, along with wallpaper, real window openings/daylight, light
+fixtures, pool, terrain, lower-floor geometry and stair cutouts. Pointer tests
+buy by dragging the actual catalog card, move the same placed object and rotate
+with right-drag. Sheltered residents are excluded from construction picking.
+Headless tests exercise the drop handler explicitly because that display has no
+OS cursor; native tests exercise Godot's complete drag/drop dispatch.
+
+Evidence: `build/build-overhaul-final-shard-*.log`,
+`build/build-overhaul-validation.json`, `build/build-overhaul-native.log`,
+`build/build-overhaul-peer-check.log` and `build/overhaul-*.png`.
+`tools/check_models.py` verifies all 47 models, 31 furnishing mappings and 143,792
+triangles with matching source/asset hashes. Both asset-storage checks pass for
+81 hydrated LFS assets; binaries remain unstaged and match existing attributes.
+No caches/build outputs were added to the repository.
+
+Hosted CI, exports, physical Android/other devices and human family play were
+not run for this overhaul. The house supports three floors and explicit stair
+travel; climbing animation is not authored. Pools block walking and are not
+swimmable. Wall diagonals are 45 degrees, furniture turns are 90 degrees, and
+terrain height stays within −0.75 to +1.5 tiles with foundation protection.

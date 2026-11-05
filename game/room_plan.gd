@@ -5,6 +5,9 @@ const Catalog = preload("res://game/catalog.gd")
 const Windows = preload("res://game/windows.gd")
 
 static func inspect(lot: Dictionary, command: Dictionary, residents: Array) -> Dictionary:
+	# Sheltered residents never veto a construction transaction. The host moves
+	# anyone displaced by an accepted edit back to a safe entrance position.
+	if lot.get("building",false): residents=[]
 	for key: String in ["x","y","end_x","end_y"]:
 		if not Rules._coordinate(command.get(key)): return _no("Keep both room corners inside the lot.")
 	var rotation: Variant=command.get("rotation",0)
@@ -19,10 +22,13 @@ static func inspect(lot: Dictionary, command: Dictionary, residents: Array) -> D
 	for y in range(low.y,high.y+1):
 		for x in range(low.x,high.x+1):
 			var cell := [x,y]
+			if cell in lot.get("landscape",{}).get("pools",[]): return Rules._no("Fill the pool before building here.")
+			if not Rules.flat_ground(lot,Vector2i(x,y)): return Rules._no("Flatten the terrain before building here.")
 			if not lot.floors.has(cell): plan.floors.append(cell)
 			if x!=low.x and x!=high.x and y!=low.y and y!=high.y: continue
 			# Existing doors always survive an extension. Only the selected new
 			# doorway replaces a wall; the rest of the room preserves prior work.
+			if cell in lot.get("stairwells",[]): return Rules._no("Keep the stairwell opening clear.")
 			if lot.doors.has(cell): continue
 			var door := Vector2i(x,y)==entrance
 			if not door and lot.walls.has(cell): continue

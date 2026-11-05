@@ -91,7 +91,7 @@ func _run() -> void:
 	assert(not Rules.inspect(lot,{"type":"place","kind":"bed","x":0,"y":0,"rotation":0},[]).ok,"Preview rejects missing floor")
 	assert(not Rules.inspect(lot,{"type":"place","kind":"bed","x":15,"y":15,"rotation":0},[]).ok,"Preview rejects footprint beyond lot")
 	assert(not Rules.inspect(lot,{"type":"move_object","object_id":sofa.id,"x":8,"y":11,"rotation":0},[]).ok,"Preview protects doorway")
-	assert(not Rules.inspect(lot,{"type":"place","kind":"plant","x":9,"y":9,"rotation":0},[Vector2i(9,9)]).ok,"Preview protects resident tile")
+	assert(Rules.inspect(lot,{"type":"place","kind":"plant","x":9,"y":9,"rotation":0},[Vector2i(9,9)]).ok,"Sheltered residents never block building")
 	assert(Rules.inspect(lot,{"type":"place","kind":"plant","x":9,"y":9,"rotation":0},[]).ok,"Preview accepts clear floor")
 	var empty_wallet: Dictionary=lot.duplicate(true); empty_wallet.funds=0
 	assert(not Rules.inspect(empty_wallet,{"type":"place","kind":"plant","x":9,"y":9,"rotation":0},[]).ok,"Preview reflects household funds")

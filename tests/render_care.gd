@@ -35,7 +35,7 @@ func _run() -> void:
 	var member: Dictionary=game._member()
 	member.needs.hunger=12.0; member.needs.energy=23.0; member.needs.hygiene=35.0
 	await _capture("low")
-	assert("Very hungry" in game.mood_button.text)
+	assert("Very hungry" in game.mood_button.tooltip_text)
 	var ground_clicks: Array=[]
 	game.lot_view.tile_clicked.connect(func(cell): ground_clicks.append(cell))
 	await _click(game.need_buttons.hunger)
@@ -53,7 +53,7 @@ func _run() -> void:
 	assert(member.task.is_empty() and member.queue.is_empty())
 	assert(member.needs.hunger>80 and member.needs.energy>80 and member.needs.hygiene>80)
 	await _capture("settled")
-	assert("Very hungry" not in game.mood_button.text)
+	assert("Very hungry" not in game.mood_button.tooltip_text)
 	# A missing object gives a readable suggestion rather than an invisible failed click.
 	for object: Dictionary in session.state.lots.lot_1.objects.duplicate():
 		if object.kind=="fridge": session.state.lots.lot_1.objects.erase(object)

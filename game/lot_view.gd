@@ -2,7 +2,10 @@ extends Control
 ## 3D neighborhood presentation with isometric camera and screen-space feedback.
 ## All world mutations still travel through the authoritative command interface.
 signal tile_clicked(cell: Vector2i)
+signal area_selected(first: Vector2i, last: Vector2i)
 signal hovered(cell: Vector2i)
+signal rotation_changed(value: int)
+signal catalog_dropped(kind: String, cell: Vector2i)
 signal entity_clicked(target: Dictionary)
 signal context_requested(target: Dictionary, position: Vector2)
 
@@ -12,6 +15,9 @@ const MealArt = preload("res://game/meal_art.gd")
 const WallArt = preload("res://game/wall_art.gd")
 const Paintings = preload("res://game/paintings.gd")
 const Gardens = preload("res://game/gardens.gd")
+const Landscaping = preload("res://game/landscaping.gd")
+const BuildArea = preload("res://game/build_area.gd")
+const ClearLot = preload("res://game/clear_lot.gd")
 const BuildRules = preload("res://game/build_rules.gd")
 const BuildImpact = preload("res://game/build_impact.gd")
 const RoomPlan = preload("res://game/room_plan.gd")
@@ -50,6 +56,7 @@ var resident_labels: Dictionary={}
 var _last_care_click := -1000
 var build_kind := "floor"
 var build_rotation := 0
+var brush_size := 1
 var build_object_id := ""
 var room_anchor := Vector2i(-1,-1)
 var room_pending := false
@@ -98,6 +105,15 @@ var pan := Vector2.ZERO
 var _camera_tween: Tween
 var hover_cell := Vector2i(-1, -1)
 var _dragging := false
+var _furniture_gesture: Dictionary={}
+var _area_context: Array = []
+var _area_origin := Vector2.ZERO
+var _area_first := Vector2i(-1,-1)
+var _area_finger := -1
+var _area_moved := false
+var _area_plan: Dictionary = {}
+var _brush_stroke: Array=[]
+var area_pending := false
 var _cell := Vector2(48, 24)
 var _origin := Vector2.ZERO
 var _font: Font
@@ -130,6 +146,7 @@ func _ready() -> void:
 	mouse_exited.connect(func(): hover_cell = Vector2i(-1, -1); hover_target = {}; _pointer = Vector2(-10000,-10000); queue_redraw())
 
 func _process(delta: float) -> void:
+	if not _area_context.is_empty() and _area_context!=_area_identity(): _area_context.clear()
 	_update_context_touch(delta)
 	var simulation_delta := delta*Session.effective_speed()
 	_time+=simulation_delta
@@ -174,7 +191,7 @@ func _update_activity_audio(delta: float) -> void:
 				var sound_kind := str(_activity_pose(member).get("kind",""))
 				if sound_kind=="easel" and task.get("paint_action")=="sell": sound_kind="painting_sale"
 				if sound_kind=="garden_bed": sound_kind="garden_"+str(task.get("garden_action","water"))
-				residents.append({"id":str(member.id),"cell":cell,"position":get_global_transform_with_canvas()*point,"kind":sound_kind,"task":str(task.get("id","")),"elapsed":float(task.get("elapsed",0.0)),"walking":motion.moving(str(member.id)) or not task.get("path",[]).is_empty(),"indoors":[roundi(cell.x),roundi(cell.y)] in lot.floors})
+				residents.append({"id":str(member.id),"cell":cell,"position":get_global_transform_with_canvas()*point,"kind":sound_kind,"task":str(task.get("id","")),"elapsed":float(task.get("elapsed",0.0)),"walking":motion.moving(str(member.id)) or not task.get("path",[]).is_empty(),"indoors":[roundi(cell.x),roundi(cell.y)] in lot.floors,"voice":member.get("character",{})})
 				sources[str(member.id)]={"position":get_global_transform_with_canvas()*point,"task":str(task.get("id",""))}
 	Soundscape.update_world_sources(sources)
 	for event: Dictionary in activity_audio.sample(key,residents,delta,active): Soundscape.play_world(event)
@@ -246,13 +263,18 @@ func grid_point(x: float, y: float) -> Vector2:
 	return _origin + Vector2((x - y) * _cell.x * 0.5, (x + y) * _cell.y * 0.5)
 
 func cell_at(point: Vector2) -> Vector2i:
+	if projection.camera!=null:
+		var ground: Vector2=projection.ground_at(point)
+		return Vector2i(floori(ground.x),floori(ground.y))
 	var v := point - _origin
 	return Vector2i(floori(v.x / _cell.x + v.y / _cell.y), floori(v.y / _cell.y - v.x / _cell.x))
 
 func _input(event: InputEvent) -> void:
+	if not _furniture_gesture.is_empty() and _furniture_input(event): return
 	# An overlay can receive the release even when the drag began on the lawn.
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_MIDDLE and not event.pressed:
 		_dragging = false
+	if not _area_context.is_empty() and _area_input(event): return
 	if _touch_index<0: return
 	if event is InputEventKey and event.pressed:
 		_touch_cancelled=true
@@ -274,6 +296,82 @@ func _input(event: InputEvent) -> void:
 		if _touch_cancelled and not _touch_fired and _touch_context_unchanged() and _point_available(local.position):
 			stop_camera_motion(); pan+=local.relative
 		get_viewport().set_input_as_handled()
+
+func _area_identity() -> Array:
+	var revision: int = world.get("lots",{}).get(lot_id,{}).get("revision",-1)
+	return [Session.world_generation,Session.profile_id,Session.role,lot_id,revision,building,build_kind,finish_selection,finish_choice,build_rotation,access_inspecting,area_pending]
+
+func _area_cell(point: Vector2) -> Vector2i:
+	if build_kind=="finish_wall":
+		var target := hit_target(point)
+		if target.get("type") in ["wall","wall_art"]: return Vector2i(int(target.x),int(target.y))
+	return cell_at(point)
+
+func _start_area(point: Vector2, finger: int = -1) -> bool:
+	if not building or access_inspecting or _dragging or not _point_available(point): return false
+	if build_kind not in Landscaping.TOOLS and build_kind not in ["floor","wall","erase","room","finish_floor","finish_wall"]: return false
+	if build_kind=="finish_floor" and finish_selection=="room": return false
+	var cell := _area_cell(point)
+	if not _in_bounds(cell): return false
+	stop_camera_motion()
+	_area_context=_area_identity()
+	_area_first=cell
+	_brush_stroke=[[cell.x,cell.y]]
+	_area_origin=point
+	_area_finger=finger
+	_area_moved=false
+	_pointer=point
+	hover_cell=cell
+	return true
+
+func _area_input(event: InputEvent) -> bool:
+	if event is InputEventKey and event.pressed and event.keycode==KEY_ESCAPE:
+		_area_context.clear()
+		get_viewport().set_input_as_handled()
+		return true
+	var release := false
+	var point: Vector2
+	if _area_finger>=0:
+		if event is InputEventScreenTouch:
+			if event.index!=_area_finger or event.canceled:
+				_area_context.clear()
+				get_viewport().set_input_as_handled()
+				return true
+			if event.pressed: return false
+			release=true
+		elif not event is InputEventScreenDrag or event.index!=_area_finger: return false
+	else:
+		if event is InputEventMouseButton and event.device!=InputEvent.DEVICE_ID_EMULATION:
+			if event.button_index!=MOUSE_BUTTON_LEFT:
+				_area_context.clear()
+				if event.button_index!=MOUSE_BUTTON_RIGHT: return false
+				get_viewport().set_input_as_handled()
+				return true
+			if event.pressed: return false
+			release=true
+		elif not event is InputEventMouseMotion: return false
+	point=make_input_local(event).position
+	var same_context := _area_context==_area_identity()
+	var available := same_context and _point_available(point)
+	var cell := _area_cell(point) if available else Vector2i(-1,-1)
+	_pointer=point
+	hover_cell=cell
+	if build_kind.begins_with("terrain_") and _in_bounds(cell) and (_brush_stroke.is_empty() or _brush_stroke.back()!=[cell.x,cell.y]):
+		if _brush_stroke.size()==256: _brush_stroke[-1]=[cell.x,cell.y]
+		else: _brush_stroke.append([cell.x,cell.y])
+	if point.distance_to(_area_origin)>4.0 and cell!=_area_first: _area_moved=true
+	if release:
+		_area_context.clear()
+		if available:
+			if _area_moved:
+				if _in_bounds(cell) and (cell!=_area_first or build_kind.begins_with("terrain_")): area_selected.emit(_area_first,cell)
+			else: _primary_click(point)
+	elif not same_context: _area_context.clear()
+	get_viewport().set_input_as_handled()
+	return true
+
+func _notification(what: int) -> void:
+	if what==NOTIFICATION_WM_WINDOW_FOCUS_OUT: _area_context.clear()
 
 func _touch_context_unchanged() -> bool:
 	return _touch_lot==lot_id and _touch_building==building and _touch_generation==Session.world_generation and _touch_profile==Session.profile_id and _touch_role==Session.role
@@ -340,6 +438,9 @@ func _gui_input(event: InputEvent) -> void:
 	_layout()
 	if event is InputEventScreenTouch:
 		if event.pressed and _touch_index<0 and _point_available(event.position):
+			if _start_area(event.position,event.index):
+				accept_event()
+				return
 			_touch_index=event.index; _touch_origin=event.position; _touch_elapsed=0.0
 			_touch_cancelled=false; _touch_fired=false; _touch_lot=lot_id; _touch_building=building
 			_touch_target=_context_target(event.position)
@@ -361,9 +462,9 @@ func _gui_input(event: InputEvent) -> void:
 				stop_camera_motion()
 				zoom = maxf(0.65, zoom - 0.1)
 			elif event.button_index == MOUSE_BUTTON_LEFT:
-				_primary_click(event.position,event.double_click)
+				if not _start_furniture(event.position,false) and not _start_area(event.position): _primary_click(event.position,event.double_click)
 			elif event.button_index==MOUSE_BUTTON_RIGHT:
-				_request_context(event.position)
+				if not _start_furniture(event.position,true): _request_context(event.position)
 			accept_event()
 	elif event is InputEventMouseMotion:
 		if _dragging:
@@ -428,8 +529,12 @@ func _draw() -> void:
 	for cell in lot.get("walls", []): walls[Vector2i(int(cell[0]),int(cell[1]))] = true
 	for cell in lot.get("doors", []): doors[Vector2i(int(cell[0]),int(cell[1]))] = true
 	_update_finish_preview(lot)
-	if building and not access_inspecting and _in_bounds(hover_cell):
-		if build_kind=="room" and room_anchor.x>=0 and not room_pending:
+	var area_preview := _show_area_preview()
+	if area_preview:
+		_update_area_preview(lot)
+		placement_impact=_area_plan.get("impact",{})
+	elif building and not access_inspecting and _in_bounds(hover_cell):
+		if build_kind=="room" and _room_start().x>=0 and not room_pending:
 			_update_room_preview(lot); placement_impact=preview_result.get("impact",{})
 		elif Catalog.ITEMS.has(build_kind) or (build_kind=="move" and not build_object_id.is_empty()):
 			_update_preview(lot); placement_impact=preview_result.get("impact",{})
@@ -465,6 +570,7 @@ func _draw() -> void:
 	hover_target = hit_target(_pointer)
 	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if (not building and not hover_target.is_empty()) or (building and access_inspecting and hover_target.get("type")=="access") else Control.CURSOR_ARROW
 	if building and access_inspecting: pass
+	elif area_preview: _draw_area_preview()
 	elif building and build_kind=="clear_lot": _draw_clear_review(lot)
 	elif building and build_kind=="furniture_color": _draw_furniture_color()
 	elif building and build_kind=="copy_room": _draw_room_copy(lot)
@@ -655,14 +761,81 @@ func _update_preview(lot: Dictionary) -> void:
 		draft.objects.append(candidate)
 		_preview_spaces=Leisure.spaces({},draft,candidate)
 
-func _update_room_preview(lot: Dictionary) -> void:
+func _room_start() -> Vector2i:
+	return _area_first if _selecting_area() else room_anchor
+
+func _selecting_area() -> bool:
+	return not _area_context.is_empty() and _area_moved and _in_bounds(hover_cell) and _point_available(_pointer)
+
+func _show_area_preview() -> bool:
+	return (_selecting_area() and build_kind in ["floor","wall","erase"]) or (building and not access_inspecting and build_kind in Landscaping.TOOLS and _in_bounds(hover_cell))
+
+func _update_area_preview(lot: Dictionary) -> void:
 	var people := _build_residents()
-	var signature := str(["room",Session.world.get_instance_id(),lot_id,lot.revision,lot.funds,hover_cell,room_anchor,build_rotation,people])
+	if build_kind in Landscaping.TOOLS:
+		var first := _area_first if not _area_context.is_empty() else hover_cell
+		_area_plan=Landscaping.inspect(lot,{"kind":build_kind,"x":first.x,"y":first.y,"end_x":hover_cell.x,"end_y":hover_cell.y,"radius":brush_size,"points":_brush_stroke if not _area_context.is_empty() and build_kind.begins_with("terrain_") else [[first.x,first.y],[hover_cell.x,hover_cell.y]]})
+		return
+	var command := {"type":"place_area","kind":build_kind,"x":_area_first.x,"y":_area_first.y,"end_x":hover_cell.x,"end_y":hover_cell.y}
+	var signature := str(["area",Session.world.get_instance_id(),lot_id,lot.revision,lot.funds,command,people])
+	if signature==_preview_signature: return
+	_preview_signature=signature
+	if build_kind=="erase":
+		_area_plan=ClearLot.inspect(lot,BuildArea.bounds(command))
+		return
+	var residents: Array=[]
+	for person: Dictionary in people: residents.append(Vector2i(person.x,person.y))
+	_area_plan=BuildArea.inspect(lot,command,residents)
+	_area_plan.impact=BuildImpact.inspect(lot,command,_area_plan,people)
+
+func _draw_area_preview() -> void:
+	if build_kind in Landscaping.TOOLS:
+		var valid: bool=_area_plan.get("ok",false)
+		var tone := Color("d8f1b2") if valid else Color("ffab8f")
+		for cell: Array in _area_plan.get("cells",[]):
+			_diamond(int(cell[0]),int(cell[1]),1,1,Color(tone,0.27),1,tone)
+		_draw_preview_label(str(_area_plan.message),valid,tone)
+		return
+	var low := _area_first.min(hover_cell)
+	var dimensions := (_area_first-hover_cell).abs()+Vector2i.ONE
+	var valid: bool=_area_plan.ok and not area_pending
+	var tone := Color("ffab8f") if build_kind=="erase" or not valid else Color("d8f1b2")
+	if placement_impact.get("warning",false): tone=Color("efc77d")
+	var message := str(_area_plan.message)
+	projection.feedback.diamond(low.x,low.y,dimensions.x,dimensions.y,Color.TRANSPARENT if build_kind=="wall" else Color(tone,0.24),tone,0.075,0.065)
+	if area_pending: message="Waiting for the previous edit…"
+	elif build_kind=="erase":
+		if not _area_plan.unfinished.is_empty(): message="An unfinished canvas is in the selection.\nFinish it or sell the easel individually."
+		for object: Dictionary in _area_plan.objects:
+			var footprint := Catalog.footprint(str(object.kind),int(object.rotation))
+			_diamond(int(object.x),int(object.y),footprint.x,footprint.y,Color(tone,0.26),5,tone)
+		if valid:
+			var tiles: int=_area_plan.floors+_area_plan.walls+_area_plan.doors
+			message="Release to clear · +§%d refund" % _area_plan.refund
+			var notes := PackedStringArray(["Tiles %d · Windows %d · Furnishings %d" % [tiles,_area_plan.windows,_area_plan.furnishings]])
+			var paintings: int=_area_plan.stored+_area_plan.paintings.size()
+			if paintings>0: notes.append("Paintings stored %d" % paintings)
+			if _area_plan.portions>0: notes.append("Meal portions discarded %d" % _area_plan.portions)
+			if _area_plan.crops>0: notes.append("Planted beds removed %d" % _area_plan.crops)
+			message+="\n"+"\n".join(notes)
+	elif valid:
+		message="Release to build · "+message
+		if build_kind=="wall":
+			for cell: Array in _area_plan.cells:
+				_block(int(cell[0]),int(cell[1]),1,1,14*_cell.x/48.0,Color(tone,0.38))
+		if not placement_impact.get("message","").is_empty(): message+="\n"+str(placement_impact.message)
+		_draw_impact_badges()
+	_draw_preview_label(message,valid,tone)
+
+func _update_room_preview(lot: Dictionary) -> void:
+	var anchor := _room_start()
+	var people := _build_residents()
+	var signature := str(["room",Session.world.get_instance_id(),lot_id,lot.revision,lot.funds,hover_cell,anchor,build_rotation,people])
 	if signature==_preview_signature: return
 	_preview_signature=signature
 	var residents: Array=[]
 	for member: Dictionary in people: residents.append(Vector2i(member.x,member.y))
-	var command := {"type":"build_room","x":room_anchor.x,"y":room_anchor.y,"end_x":hover_cell.x,"end_y":hover_cell.y,"rotation":build_rotation}
+	var command := {"type":"build_room","x":anchor.x,"y":anchor.y,"end_x":hover_cell.x,"end_y":hover_cell.y,"rotation":build_rotation}
 	preview_result=RoomPlan.inspect(lot,command,residents)
 	preview_result.impact=BuildImpact.inspect(lot,command,preview_result,people)
 
@@ -914,7 +1087,7 @@ func _update_finish_preview(lot: Dictionary) -> void:
 	var plan: Dictionary={}
 	if paint_pending: plan=paint_plan
 	elif _in_bounds(hover_cell):
-		var anchor := hover_cell if paint_anchor.x<0 or finish_selection=="room" else paint_anchor
+		var anchor := _finish_start()
 		var signature := str(["finish",lot_id,lot.revision,lot.funds,anchor,hover_cell,build_kind,finish_choice,finish_selection])
 		if signature!=_preview_signature:
 			_preview_signature=signature
@@ -928,6 +1101,11 @@ func _surface_finish(lot: Dictionary, surface: String, x: int, y: int) -> String
 	if build_kind=="finish_"+surface and _paint_cells.has(Finishes.key(x,y)): return _preview_finish
 	return Finishes.at(lot,surface,x,y)
 
+func _finish_start() -> Vector2i:
+	if finish_selection=="room": return hover_cell
+	if _selecting_area(): return _area_first
+	return hover_cell if paint_anchor.x<0 else paint_anchor
+
 func _draw_finish_preview() -> void:
 	if paint_pending:
 		_draw_preview_label("Decorating…",true); return
@@ -937,12 +1115,12 @@ func _draw_finish_preview() -> void:
 		var unchanged: bool=preview_result.get("reason")=="unchanged"
 		_draw_preview_label(("Click to fill room · " if valid else "")+str(preview_result.get("message","")),valid or unchanged)
 		return
-	var anchor := hover_cell if paint_anchor.x<0 else paint_anchor
+	var anchor := _finish_start()
 	var low := Vector2i(mini(anchor.x,hover_cell.x),mini(anchor.y,hover_cell.y))
 	var high := Vector2i(maxi(anchor.x,hover_cell.x),maxi(anchor.y,hover_cell.y))
 	var valid := bool(preview_result.get("ok",false))
 	_diamond(low.x,low.y,high.x-low.x+1,high.y-low.y+1,Color.TRANSPARENT if valid else Color(0.94,0.36,0.3,0.22),3,Color("d8f1b2") if valid else Color("ffab8f"))
-	var hint := "Click first corner · " if paint_anchor.x<0 else "Click to apply · "
+	var hint := "Release to apply · " if _selecting_area() else "Drag or click first corner · " if paint_anchor.x<0 else "Click to apply · "
 	_draw_preview_label((hint if valid else "")+str(preview_result.get("message","")),valid)
 
 func _draw_room_finish_ground() -> void:
@@ -992,13 +1170,14 @@ func _draw_room_preview(lot: Dictionary) -> void:
 	if room_pending:
 		_draw_preview_label("Building room…",true)
 		return
-	if room_anchor.x<0:
+	var anchor := _room_start()
+	if anchor.x<0:
 		_diamond(hover_cell.x,hover_cell.y,1,1,Color(0.85,0.94,0.65,0.2),3,Color("f8edb7"))
-		_draw_preview_label("Room · Click the first corner",true)
+		_draw_preview_label("Room · Drag or click the first corner",true)
 		return
 	_update_room_preview(lot)
-	var low := Vector2i(mini(room_anchor.x,hover_cell.x),mini(room_anchor.y,hover_cell.y))
-	var high := Vector2i(maxi(room_anchor.x,hover_cell.x),maxi(room_anchor.y,hover_cell.y))
+	var low := Vector2i(mini(anchor.x,hover_cell.x),mini(anchor.y,hover_cell.y))
+	var high := Vector2i(maxi(anchor.x,hover_cell.x),maxi(anchor.y,hover_cell.y))
 	var valid := bool(preview_result.get("ok",false))
 	var tint := Color(0.64,0.9,0.49,0.23) if valid else Color(0.94,0.36,0.3,0.3)
 	var outline := Color("d8f1b2") if valid else Color("ffab8f")
@@ -1010,9 +1189,10 @@ func _draw_room_preview(lot: Dictionary) -> void:
 			_block(int(cell[0]),int(cell[1]),1,1,14*s,Color(0.68,0.88,0.54,0.36))
 		for cell: Array in preview_result.doors:
 			_diamond(int(cell[0]),int(cell[1]),1,1,Color(1.0,0.81,0.4,0.75),5,Color("fff0ba"))
-	_diamond(room_anchor.x,room_anchor.y,1,1,Color(1,0.94,0.65,0.25),4,Color("fff0ba"))
+	_diamond(anchor.x,anchor.y,1,1,Color(1,0.94,0.65,0.25),4,Color("fff0ba"))
 	_draw_impact_badges()
 	var message := str(preview_result.get("message",""))
+	if _selecting_area(): message=message.replace("Click to build","Release to build")
 	if not placement_impact.get("message","").is_empty(): message+="\n"+str(placement_impact.message)
 	_draw_preview_label(message,valid,Color("efc77d") if placement_impact.get("warning",false) else Color.TRANSPARENT)
 
@@ -1086,3 +1266,47 @@ func _draw_clear_review(lot: Dictionary) -> void:
 	for object: Dictionary in lot.objects:
 		var footprint:=Catalog.footprint(object.kind,int(object.rotation))
 		_diamond(int(object.x),int(object.y),footprint.x,footprint.y,Color(color,0.1),2,color)
+
+func _can_drop_data(at: Vector2,data: Variant) -> bool:
+	if not data is Dictionary or not data.get("build_catalog_kind") is String: return false
+	return building and _point_available(at) and _in_bounds(cell_at(at))
+
+func _drop_data(at: Vector2,data: Variant) -> void:
+	if _can_drop_data(at,data): catalog_dropped.emit(str(data.build_catalog_kind),cell_at(at))
+
+func _start_furniture(at: Vector2,rotate: bool) -> bool:
+	if not building or access_inspecting or area_pending: return false
+	var target := hit_target(at)
+	if rotate:
+		if not (Catalog.ITEMS.has(build_kind) and build_kind not in ["floor","wall","door"]) and not (build_kind=="move" and not build_object_id.is_empty()): return false
+	else:
+		if build_kind!="move" or not build_object_id.is_empty() or target.get("type")!="object": return false
+		entity_clicked.emit(target)
+	_furniture_gesture={"origin":at,"rotation":build_rotation,"rotate":rotate,"moved":false,"cell":hover_cell,"lot":lot_id,"generation":Session.world_generation,"revision":world.lots[lot_id].revision}
+	return true
+
+func _furniture_input(event: InputEvent) -> bool:
+	if event is InputEventKey and event.pressed and event.keycode==KEY_ESCAPE:
+		_furniture_gesture.clear(); return false
+	if not building or _furniture_gesture.lot!=lot_id or _furniture_gesture.generation!=Session.world_generation or _furniture_gesture.revision!=world.lots[lot_id].revision:
+		_furniture_gesture.clear(); return false
+	if event is InputEventMouseMotion:
+		var local := make_input_local(event) as InputEventMouseMotion
+		var delta: Vector2=local.position-_furniture_gesture.origin
+		if delta.length()>5: _furniture_gesture.moved=true
+		if _furniture_gesture.rotate:
+			var next := posmod(int(_furniture_gesture.rotation)+roundi(delta.x/45.0),4)
+			if next!=build_rotation: rotation_changed.emit(next)
+			hover_cell=_furniture_gesture.cell
+		else:
+			_pointer=local.position; hover_cell=cell_at(local.position)
+		get_viewport().set_input_as_handled(); return true
+	if event is InputEventMouseButton and not event.pressed:
+		var button := MOUSE_BUTTON_RIGHT if _furniture_gesture.rotate else MOUSE_BUTTON_LEFT
+		if event.button_index!=button: return false
+		var local := make_input_local(event) as InputEventMouseButton
+		var place: bool=not _furniture_gesture.rotate and _furniture_gesture.moved and _point_available(local.position) and _in_bounds(cell_at(local.position))
+		_furniture_gesture.clear()
+		if place: tile_clicked.emit(cell_at(local.position))
+		get_viewport().set_input_as_handled(); return true
+	return false

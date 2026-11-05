@@ -29,7 +29,7 @@ func _tile(x: int,y: int,click: bool=true) -> void:
 
 func _named(title: String) -> Button:
 	for button: Button in game.tools_box.find_children("*","Button",true,false):
-		if button.text==title: return button
+		if button.text==title or button.accessibility_name==title: return button
 	assert(false,"Missing finish control "+title); return null
 
 func _key(code: int) -> void:
@@ -72,7 +72,7 @@ func _run() -> void:
 	assert(game.lot_view.preview_result.ok and game.lot_view.preview_result.area.size()==56 and game.lot_view.preview_result.cost==224 and session.world.snapshot()==before)
 	var viewport: Rect2=game.tools_box.get_parent().get_global_rect()
 	for button: Button in game.finish_buttons.values(): assert(viewport.encloses(button.get_global_rect()),"All six floor finishes fit alongside the selection controls")
-	assert("Click to finish a room" in game.help_label.text)
+	assert("Click to finish a room" in game.help_label.tooltip_text)
 	await _tile(7,7)
 	assert(lot.funds==budget-224 and lot.finishes.floor.size()==56 and game._paint_anchor.x<0 and game._paint_request.is_empty())
 	before=session.world.snapshot(); await _tile(7,7,false); await _capture("finished")
@@ -91,7 +91,7 @@ func _run() -> void:
 	await _button(_named("Walls")); assert(game._paint_selection()=="area" and game.finish_mode_buttons.is_empty())
 	await _button(_named("Floors")); assert(game._paint_selection()=="room")
 	await _button(game.access_button); await _capture("access")
-	assert(game.lot_view._paint_cells.is_empty() and "Choose Door" in game.help_label.text,"Access inspection shows the actual floor and its own instructions")
+	assert(game.lot_view._paint_cells.is_empty() and "Choose Door" in game.help_label.tooltip_text,"Access inspection shows the actual floor and its own instructions")
 	await _button(game.access_button)
 	await _button(game.finish_buttons.walnut)
 	var funds: int=lot.funds; lot.funds=1; game._refresh()

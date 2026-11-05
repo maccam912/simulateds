@@ -48,7 +48,7 @@ func _arrive(count: int) -> void:
 	assert(false,str([first,second]))
 
 func _find_button(node: Node, title: String) -> Button:
-	if node is Button and node.text==title: return node
+	if node is Button and (node.text==title or node.accessibility_name==title): return node
 	for child: Node in node.get_children():
 		var found := _find_button(child,title)
 		if found!=null: return found

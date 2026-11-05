@@ -4,7 +4,7 @@
   "creator": "Original procedural models authored for Simulateds",
   "license": "MIT (repository LICENSE)",
   "source": "tools/generate_models.py",
-  "source_sha256": "50175e14a702d16f9d592f7c887c35d5ba69e41a5e69db3b8c3afee81bfcd3c7",
+  "source_sha256": "0876a2b58cacaf1261475ae83b2749278984c9eca9f9ffa732f7701aa1eec2a3",
   "generator": "Blender 5.1.2",
   "units": "metres; one simulation tile = 1 metre",
   "coordinates": {
@@ -84,7 +84,7 @@
           0.5065
         ]
       },
-      "sha256": "c1378e9702ad69928b98a81a46a6c127faee748e665f56c6db669ffa88e192aa",
+      "sha256": "95ae8cfeefef7d7e98eea06f3993c5c38baf0831c44984e83df036da844191a7",
       "animated_pivots": false
     },
     "shower": {
@@ -117,7 +117,7 @@
           0.47
         ]
       },
-      "sha256": "84515de3fc065a403622371cce0b34f7248dd8b94cabbdd92b75183f353ce1d1",
+      "sha256": "12a4d0284508fd6d6ee02bcc29e84c97bf83e43a15b3b5153c7796bfe5a986dc",
       "animated_pivots": false
     },
     "toilet": {
@@ -147,7 +147,7 @@
           0.5
         ]
       },
-      "sha256": "d92ae8033551cfe67c2a3642f6d903834ae69d9080da8c35b00c22db8e621468",
+      "sha256": "fe0b251f9709e7c9d2d6fbf6ba2198a4b14f30fcdbc5b8488f9e0182879fc9a4",
       "animated_pivots": false
     },
     "sofa": {
@@ -247,7 +247,7 @@
           0.32
         ]
       },
-      "sha256": "ed742311c870eb9eca18096de57d1c1397e0f8d3fc22bbb266d8eb6bb57e2461",
+      "sha256": "4b222ddecaa5b2eaed019edc716cfa65515130b1f61032d8dca86a6b8e8cb5d8",
       "animated_pivots": false
     },
     "easel": {
@@ -279,7 +279,7 @@
           0.3052
         ]
       },
-      "sha256": "dd3614e73e89a18db4a0330285d9b1c24391984f5480482ce293993c6a652589",
+      "sha256": "8afc9267c23a1c9519631b89f28d70f50f6b630a0e99a56ee8061b0d6d700b9e",
       "animated_pivots": false
     },
     "bookshelf": {
@@ -375,7 +375,7 @@
           0.3443
         ]
       },
-      "sha256": "29f9b0ebfea5ed8cde456c2c9704490f8913b37b1b49d152ebbbc1c087ad00e1",
+      "sha256": "d522f916983747a4a9fffe3274b5330f892be24a01b0fd82656cdefaeeae6b1d",
       "animated_pivots": false
     },
     "table": {
@@ -406,7 +406,7 @@
           0.45
         ]
       },
-      "sha256": "6ead2973c5d69bac3d51f54928a8be0d68465c40ca1bcb88a11ffadeaa5a00d7",
+      "sha256": "2cdb9e27e396133bbd2f86c43f2510e7cdf65af202ca4db5a077c7f314d61280",
       "animated_pivots": false
     },
     "dining_table": {
@@ -469,7 +469,7 @@
           0.915
         ]
       },
-      "sha256": "594ee590efae4ff9eacbb6f46bef86de8a540c96b765cb99eb276ef4f5495561",
+      "sha256": "c9571e41483c7fabf5f5a3efc2f7ae9e7525c9fbf07e2cbcdfbf6f82ad19817d",
       "animated_pivots": false
     },
     "tree_linden": {
@@ -499,7 +499,7 @@
           1.2585
         ]
       },
-      "sha256": "9b19606075f6a13a4658eac143f3f8df7679bb76a91849e3f96236954428f4bb",
+      "sha256": "5a7169cf422d31b5f75d81a806d434b3fd36372172279f4bb20b966bf9d3efb3",
       "animated_pivots": false
     },
     "shrub": {
@@ -528,7 +528,7 @@
           0.31
         ]
       },
-      "sha256": "3b38729b0469e74e8f718551baece8d3ec74a67eea1de9acb5835e636df2519e",
+      "sha256": "8ae773d9f07204d468ad18ea9a5d2d3eab5fc21669b2a3bd53bc664e3a7fc4c7",
       "animated_pivots": false
     },
     "streetlamp": {
@@ -556,7 +556,7 @@
           0.2353
         ]
       },
-      "sha256": "4a60a8ba112ebf8fb9069e36ae3faff3b0ff5d88f4ea6bf008fd66444cb24f78",
+      "sha256": "8b20157e9b8f1b2865427d03982a1098513058c2692e892eb6e78c6c90e83dbd",
       "animated_pivots": false
     },
     "mailbox": {
@@ -588,7 +588,7 @@
           0.3545
         ]
       },
-      "sha256": "34876e2f737c1992d922e32ce230e08db43d0b3a17e78aac240247fad7d2cfcd",
+      "sha256": "651f949fba6ba32155cf7d34ea1cb4c19a09a5866325597519f34667e26cd92b",
       "animated_pivots": false
     },
     "fence": {
@@ -646,7 +646,7 @@
           0.3305
         ]
       },
-      "sha256": "62827dddb7b51c39090a8682b3292180ac523f0f45392d5fa0ba8c41d5a71813",
+      "sha256": "b78cff6e750f11d413181a98e301172485018aa1fa8b3ff962bcbeeefb61a75a",
       "animated_pivots": false
     },
     "crop_tomato": {
@@ -676,7 +676,7 @@
           0.1662
         ]
       },
-      "sha256": "b451ddb7619d22bc4372bab56d09f3e4294c3109c5a6db0c5c80e0e63c260fc8",
+      "sha256": "e1a4ab3556ad58cd55545faa853b090da85c9f10b0ab2ac7cd6d14b043aab55a",
       "animated_pivots": false
     },
     "crop_radish": {
@@ -706,7 +706,7 @@
           0.1662
         ]
       },
-      "sha256": "fdd523656f6f0071879c593b07087d01c9883f73869615f729c02235dbc77ccb",
+      "sha256": "39f4cd9b4544eb904bfac1cfa11263b057e7bcbac970484fe54a804df3f8a522",
       "animated_pivots": false
     },
     "window_cottage": {
@@ -824,7 +824,7 @@
           0.135
         ]
       },
-      "sha256": "2825d4465b07a214f86b188be53277421a969a1ae72d3a7d11a7b8dace787ea5",
+      "sha256": "4534a5314cfe8f8651bb2ecf14caa241be30a28dfdf75b6692ddd2bb6e79653e",
       "animated_pivots": false
     },
     "resident": {
@@ -859,7 +859,7 @@
           0.2155
         ]
       },
-      "sha256": "5e1caf19b9e15e2ae141e8df4daa1a99ef511f860be2226520395f2e22b4ced5",
+      "sha256": "2a408dd1c0575732a59558dba0a9c2cf8ca69529a4816eaf4a687455e2393394",
       "animated_pivots": true
     },
     "resident_bob": {
@@ -894,7 +894,7 @@
           0.2155
         ]
       },
-      "sha256": "2a835ffd7dd0028ae7b84e8267a0371db33b45c81bcbbc78b3ed92e96b4d01ce",
+      "sha256": "552dbe82b063caff742893f623668ed0a72d00219f7ec312063d4cdd27e5fc08",
       "animated_pivots": true
     },
     "resident_curls": {
@@ -929,7 +929,7 @@
           0.2155
         ]
       },
-      "sha256": "17c116e1aa70bcb52ec19ef2641bbb88b5c5ff885907a3364270441a32c7158f",
+      "sha256": "d33a136ef136690937d9bb03cd81f4932e04f3b6eaceb7754f4769621e53e9b8",
       "animated_pivots": true
     },
     "resident_shaved": {
@@ -964,8 +964,495 @@
           0.2155
         ]
       },
-      "sha256": "e32afb509d9f7687215820fe5ee132a74d2232d2a62777084e476f87c92afce8",
+      "sha256": "c8bc381c2d74822370e2de8cfda488894cd45ce240df42b284fe9bbf40b73162",
       "animated_pivots": true
+    },
+    "armchair": {
+      "file": "armchair.glb",
+      "footprint": [
+        1,
+        1
+      ],
+      "description": "Original domestic seating with solid legs, seats and backs.",
+      "triangles": 1208,
+      "meshes": 3,
+      "materials": [
+        "custom_armchair_cloth",
+        "custom_seat_wood",
+        "linen"
+      ],
+      "bounds": {
+        "min": [
+          -0.44,
+          0.0388,
+          -0.425
+        ],
+        "max": [
+          0.44,
+          1.1,
+          0.425
+        ]
+      },
+      "sha256": "e0a170d83df9622b1987e4a53c2efebfcb3b47fe9308f102bf931fbc7683f1d1",
+      "animated_pivots": false
+    },
+    "loveseat": {
+      "file": "loveseat.glb",
+      "footprint": [
+        2,
+        1
+      ],
+      "description": "Original domestic seating with solid legs, seats and backs.",
+      "triangles": 1424,
+      "meshes": 3,
+      "materials": [
+        "custom_loveseat_cloth",
+        "custom_seat_wood",
+        "linen"
+      ],
+      "bounds": {
+        "min": [
+          -0.925,
+          0.0379,
+          -0.425
+        ],
+        "max": [
+          0.925,
+          1.1,
+          0.425
+        ]
+      },
+      "sha256": "7d1b45d2cf63f49d8dc589862b2492c6fac63ae1817050cfebbb3b98ae054e1d",
+      "animated_pivots": false
+    },
+    "long_sofa": {
+      "file": "long_sofa.glb",
+      "footprint": [
+        3,
+        1
+      ],
+      "description": "Original domestic seating with solid legs, seats and backs.",
+      "triangles": 1640,
+      "meshes": 3,
+      "materials": [
+        "custom_long_sofa_cloth",
+        "custom_seat_wood",
+        "linen"
+      ],
+      "bounds": {
+        "min": [
+          -1.425,
+          0.0369,
+          -0.425
+        ],
+        "max": [
+          1.425,
+          1.1,
+          0.425
+        ]
+      },
+      "sha256": "293e09eb5801ede9961c86b44bd15512d6eea7b2f10931b7c2408e5a301abcb9",
+      "animated_pivots": false
+    },
+    "wood_chair": {
+      "file": "wood_chair.glb",
+      "footprint": [
+        1,
+        1
+      ],
+      "description": "Original domestic seating with solid legs, seats and backs.",
+      "triangles": 3032,
+      "meshes": 1,
+      "materials": [
+        "custom_seat_wood"
+      ],
+      "bounds": {
+        "min": [
+          -0.44,
+          0.0388,
+          -0.385
+        ],
+        "max": [
+          0.44,
+          1.015,
+          0.34
+        ]
+      },
+      "sha256": "1d75dd1b3c68d22305985cd59f573a757710a837e346f070686106ef9900d190",
+      "animated_pivots": false
+    },
+    "garden_bench": {
+      "file": "garden_bench.glb",
+      "footprint": [
+        2,
+        1
+      ],
+      "description": "Original domestic seating with solid legs, seats and backs.",
+      "triangles": 1868,
+      "meshes": 1,
+      "materials": [
+        "custom_seat_wood"
+      ],
+      "bounds": {
+        "min": [
+          -0.925,
+          0.0379,
+          -0.374
+        ],
+        "max": [
+          0.925,
+          1.05,
+          0.34
+        ]
+      },
+      "sha256": "ca7edd487901f542312a0d869dbdf625654fbd22dd4e5881fa7a9189caf5f6d4",
+      "animated_pivots": false
+    },
+    "floor_lamp": {
+      "file": "floor_lamp.glb",
+      "footprint": [
+        1,
+        1
+      ],
+      "description": "Original lamp geometry. Runtime supplies real shadow-casting illumination.",
+      "triangles": 1028,
+      "meshes": 4,
+      "materials": [
+        "custom_lamp_metal",
+        "custom_lamp_shade",
+        "lamp_glow",
+        "linen"
+      ],
+      "bounds": {
+        "min": [
+          -0.319,
+          0.0,
+          -0.319
+        ],
+        "max": [
+          0.319,
+          1.658,
+          0.319
+        ]
+      },
+      "sha256": "2e2536b3ae699745ca33c8d9ba963068196c67904bd2529dde0210797b1e2afc",
+      "animated_pivots": false
+    },
+    "arc_lamp": {
+      "file": "arc_lamp.glb",
+      "footprint": [
+        1,
+        1
+      ],
+      "description": "Original lamp geometry. Runtime supplies real shadow-casting illumination.",
+      "triangles": 1116,
+      "meshes": 2,
+      "materials": [
+        "custom_lamp_metal",
+        "lamp_glow"
+      ],
+      "bounds": {
+        "min": [
+          -0.22,
+          0.0,
+          -0.22
+        ],
+        "max": [
+          0.4281,
+          1.4598,
+          0.22
+        ]
+      },
+      "sha256": "94dd2662bf3ccd4adbef6f44071c95dda0fac1f5b77790cee206b36ec5c9710e",
+      "animated_pivots": false
+    },
+    "globe_lamp": {
+      "file": "globe_lamp.glb",
+      "footprint": [
+        1,
+        1
+      ],
+      "description": "Original lamp geometry. Runtime supplies real shadow-casting illumination.",
+      "triangles": 992,
+      "meshes": 2,
+      "materials": [
+        "custom_lamp_metal",
+        "lamp_glow"
+      ],
+      "bounds": {
+        "min": [
+          -0.24,
+          0.0,
+          -0.24
+        ],
+        "max": [
+          0.24,
+          1.49,
+          0.24
+        ]
+      },
+      "sha256": "822dfb2e561de893bc0ac505e084ef9c5982d81804db6ce97d1824cae5d675b2",
+      "animated_pivots": false
+    },
+    "pendant_lamp": {
+      "file": "pendant_lamp.glb",
+      "footprint": [
+        1,
+        1
+      ],
+      "description": "Original lamp geometry. Runtime supplies real shadow-casting illumination.",
+      "triangles": 840,
+      "meshes": 3,
+      "materials": [
+        "charcoal",
+        "custom_lamp_metal",
+        "lamp_glow"
+      ],
+      "bounds": {
+        "min": [
+          -0.3379,
+          1.783,
+          -0.3379
+        ],
+        "max": [
+          0.3379,
+          2.4225,
+          0.3379
+        ]
+      },
+      "sha256": "5fc8d975fabadf624fab654e7fc5765fcfeda71dbef31af2e015ce4648c437b9",
+      "animated_pivots": false
+    },
+    "garden_lantern": {
+      "file": "garden_lantern.glb",
+      "footprint": [
+        1,
+        1
+      ],
+      "description": "Original lamp geometry. Runtime supplies real shadow-casting illumination.",
+      "triangles": 1854,
+      "meshes": 2,
+      "materials": [
+        "custom_lamp_metal",
+        "lamp_glow"
+      ],
+      "bounds": {
+        "min": [
+          -0.2451,
+          0.0,
+          -0.2451
+        ],
+        "max": [
+          0.2451,
+          1.0372,
+          0.2451
+        ]
+      },
+      "sha256": "106405c5d4ec24765b9252c90eae792468df1d16a49fe786df04f9d0c62ffcbb",
+      "animated_pivots": false
+    },
+    "lamp_post": {
+      "file": "lamp_post.glb",
+      "footprint": [
+        1,
+        1
+      ],
+      "description": "Original lamp geometry. Runtime supplies real shadow-casting illumination.",
+      "triangles": 1854,
+      "meshes": 2,
+      "materials": [
+        "custom_lamp_metal",
+        "lamp_glow"
+      ],
+      "bounds": {
+        "min": [
+          -0.2451,
+          0.0,
+          -0.2451
+        ],
+        "max": [
+          0.2451,
+          2.7172,
+          0.2451
+        ]
+      },
+      "sha256": "cbd4dd2b32bfd63a297318bebd3206da194513fe02fec0931c0a97063e815ea6",
+      "animated_pivots": false
+    },
+    "linden_tree": {
+      "file": "linden_tree.glb",
+      "footprint": [
+        2,
+        2
+      ],
+      "description": "Original solid garden geometry; editable source retained.",
+      "triangles": 4204,
+      "meshes": 5,
+      "materials": [
+        "bark",
+        "custom_landscape_base",
+        "leaf",
+        "leaf_dark",
+        "leaf_light"
+      ],
+      "bounds": {
+        "min": [
+          -1.4001,
+          -0.0275,
+          -1.3975
+        ],
+        "max": [
+          1.41,
+          3.42,
+          1.2585
+        ]
+      },
+      "sha256": "716443b684d1ed3c1edf44a6d99854887e5003973359375643937dee1245351c",
+      "animated_pivots": false
+    },
+    "hedge": {
+      "file": "hedge.glb",
+      "footprint": [
+        1,
+        1
+      ],
+      "description": "Original solid garden geometry; editable source retained.",
+      "triangles": 884,
+      "meshes": 4,
+      "materials": [
+        "berry",
+        "custom_landscape_base",
+        "leaf_dark",
+        "leaf_light"
+      ],
+      "bounds": {
+        "min": [
+          -0.55,
+          0.0,
+          -0.408
+        ],
+        "max": [
+          0.58,
+          0.806,
+          0.31
+        ]
+      },
+      "sha256": "54b78cd88f30d283b9fcb3cc76679625c4917b45473546f45321e397b9901d3a",
+      "animated_pivots": false
+    },
+    "flowers": {
+      "file": "flowers.glb",
+      "footprint": [
+        1,
+        1
+      ],
+      "description": "Original solid garden geometry; editable source retained.",
+      "triangles": 5336,
+      "meshes": 6,
+      "materials": [
+        "brushed_brass",
+        "custom_landscape_base",
+        "flower_cream",
+        "flower_rose",
+        "leaf",
+        "leaf_dark"
+      ],
+      "bounds": {
+        "min": [
+          -0.3076,
+          0.0,
+          -0.3619
+        ],
+        "max": [
+          0.3695,
+          0.348,
+          0.3305
+        ]
+      },
+      "sha256": "b0969654b962ca7d841c8dabbf87fb01010c9e98c8ccb725848e30dab6b6be9d",
+      "animated_pivots": false
+    },
+    "picket_fence": {
+      "file": "picket_fence.glb",
+      "footprint": [
+        1,
+        1
+      ],
+      "description": "Original solid garden geometry; editable source retained.",
+      "triangles": 1472,
+      "meshes": 2,
+      "materials": [
+        "custom_landscape_base",
+        "fence_paint"
+      ],
+      "bounds": {
+        "min": [
+          -0.5455,
+          0.0,
+          -0.13
+        ],
+        "max": [
+          0.5455,
+          0.9964,
+          0.13
+        ]
+      },
+      "sha256": "f5f3facceef2992b6bf5136ff85fc5565ff125d253ade0d926a385205cfc5383",
+      "animated_pivots": false
+    },
+    "boulder": {
+      "file": "boulder.glb",
+      "footprint": [
+        1,
+        1
+      ],
+      "description": "Original solid garden geometry; editable source retained.",
+      "triangles": 200,
+      "meshes": 1,
+      "materials": [
+        "custom_stone"
+      ],
+      "bounds": {
+        "min": [
+          -0.4185,
+          -0.04,
+          -0.39
+        ],
+        "max": [
+          0.4212,
+          0.62,
+          0.43
+        ]
+      },
+      "sha256": "95d4fa96080b2186b7eaf5d987e00feb704b7762cfbfc8aae4c5479cc52acd8e",
+      "animated_pivots": false
+    },
+    "stairs": {
+      "file": "stairs.glb",
+      "footprint": [
+        1,
+        3
+      ],
+      "description": "Twelve oak treads, risers, balusters and rails; rises 2.64 metres.",
+      "triangles": 5904,
+      "meshes": 1,
+      "materials": [
+        "custom_stair_wood"
+      ],
+      "bounds": {
+        "min": [
+          -0.4923,
+          -0.0,
+          -1.5
+        ],
+        "max": [
+          0.4923,
+          3.3429,
+          1.525
+        ]
+      },
+      "sha256": "26214e0ee4d103dba88aa2cc7942559fa9b39e6ee5f75c38807281173ab61c4f",
+      "animated_pivots": false
     }
   }
 }

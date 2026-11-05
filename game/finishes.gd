@@ -10,7 +10,10 @@ const PALETTES := {
 		"slate":{"name":"Slate tiles","color":"7d969b","pattern":"tiles"},
 		"sage_tile":{"name":"Sage & cream","color":"acbaa0","pattern":"checkers"},
 		"rose_carpet":{"name":"Rose carpet","color":"c3958d","pattern":"carpet"},
-		"blue_carpet":{"name":"Blue carpet","color":"8babc0","pattern":"carpet"}
+		"blue_carpet":{"name":"Blue carpet","color":"8babc0","pattern":"carpet"},
+		"terracotta_tile":{"name":"Terracotta tile","color":"be896d","pattern":"tiles"},
+		"cream_tile":{"name":"Cream checker","color":"807b6b","pattern":"checkers"},
+		"pale_oak":{"name":"Pale oak","color":"e5d2aa","pattern":"boards"}
 	},
 	"wall":{
 		"cream":{"name":"Warm cream","color":"e6e2c6"},
@@ -18,7 +21,10 @@ const PALETTES := {
 		"sky":{"name":"Morning blue","color":"a4bdcb"},
 		"rose":{"name":"Dusty rose","color":"d2a8a1"},
 		"clay":{"name":"Terracotta","color":"c98f72"},
-		"ink":{"name":"Deep teal","color":"527f80"}
+		"ink":{"name":"Deep teal","color":"527f80"},
+		"sage_stripe":{"name":"Sage stripe wallpaper","color":"cbd2b6","pattern":"stripes"},
+		"rose_flower":{"name":"Rose sprig wallpaper","color":"e5cbbd","pattern":"sprigs"},
+		"oak_panel":{"name":"Oak wainscoting","color":"e6ddc5","pattern":"panel"}
 	}
 }
 

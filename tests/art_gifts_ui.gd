@@ -24,7 +24,7 @@ func _click(control: Button) -> void:
 	var clicked: Array=[false]; control.pressed.connect(func(): clicked[0]=true,CONNECT_ONE_SHOT)
 	await _mouse(control.get_global_rect().get_center(),true); assert(clicked[0])
 func _named(node: Node,title: String) -> Button:
-	if node is Button and node.text==title: return node
+	if node is Button and (node.text==title or node.accessibility_name==title): return node
 	for child in node.get_children():
 		var button:=_named(child,title)
 		if button!=null: return button

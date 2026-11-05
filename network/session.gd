@@ -13,7 +13,9 @@ const WorldModel = preload("res://game/world.gd")
 const Persistence = preload("res://game/persistence.gd")
 const SaveLibrary = preload("res://game/save_library.gd")
 const DebugCommands = preload("res://game/debug_commands.gd")
-const PROTOCOL := 2 # Game-table content requires a reader that knows its catalog kind.
+const PROTOCOL := 4 # Storeys, terrain and expanded construction require a matching reader.
+const HouseholdTransfer = preload("res://network/household_transfer.gd")
+var _household_transfer = HouseholdTransfer.new()
 const MAX_PLAYERS := 4
 const CONNECT_TIMEOUT_MS := 18000
 const MAX_PACKET := 1024
@@ -227,6 +229,7 @@ func leave() -> void:
 	_outgoing.clear()
 	_assembly.clear()
 	_requests.clear()
+	_household_transfer.assemblies.clear()
 	_responses.clear()
 	_highest_request.clear()
 	_rate.clear()
@@ -402,6 +405,7 @@ func _peer_disconnected(id: int) -> void:
 	pending.erase(id)
 	_outgoing.erase(id)
 	_responses.erase(id)
+	_household_transfer.assemblies.erase(id)
 	_highest_request.erase(id)
 	_rate.erase(id)
 	_last_chat.erase(id)
@@ -468,7 +472,7 @@ func _physics_process(delta: float) -> void:
 					return
 				request.sent = Time.get_ticks_msec()
 				request.tries += 1
-				_send(1, request.packet)
+				for packet: Dictionary in request.get("packets",[request.packet]): _send(1,packet)
 
 func _receive(sender: int, message: Dictionary) -> void:
 	var kind = message.get("type")
@@ -478,6 +482,9 @@ func _receive(sender: int, message: Dictionary) -> void:
 		elif players.has(sender):
 			if kind == "command":
 				_accept_command(sender, message)
+			elif kind == "household_part":
+				var assembled: Dictionary=_household_transfer.receive(sender,message,Time.get_ticks_msec())
+				if not assembled.is_empty(): _accept_command(sender,assembled)
 			elif kind == "chat":
 				_accept_chat(sender, message.get("text"))
 	elif role == "client" and sender == 1:
@@ -543,12 +550,15 @@ func command(intent: Dictionary) -> void:
 			return
 		_request_id += 1
 		var packet := {"type": "command", "id": _request_id, "intent": intent.duplicate(true)}
+		var packets: Array=[packet]
 		if JSON.stringify(packet).to_utf8_buffer().size() > MAX_PACKET:
-			_emit_action(false, "That action is too large.")
-			command_completed.emit(intent.duplicate(true),false,"That action is too large.")
-			return
-		_requests[_request_id] = {"packet": packet, "sent": Time.get_ticks_msec(), "tries": 1}
-		_send(1, packet)
+			packets=HouseholdTransfer.packets(_request_id,intent)
+			if packets.is_empty():
+				_emit_action(false, "That action is too large.")
+				command_completed.emit(intent.duplicate(true),false,"That action is too large.")
+				return
+		_requests[_request_id] = {"packet": packet, "packets":packets,"sent": Time.get_ticks_msec(), "tries": 1}
+		for part: Dictionary in packets: _send(1,part)
 	else:
 		_emit_action(false, "Wait until the neighborhood is connected.")
 		command_completed.emit(intent.duplicate(true),false,"Wait until the neighborhood is connected.")

@@ -565,6 +565,87 @@ def gallery():
     bpy.ops.render.render(write_still=True)
 
 
+def seating(kind):
+    width = 2.85 if kind == 'long_sofa' else 1.85 if kind in ['loveseat','garden_bench'] else .88
+    wood = custom('seat_wood','a17c58')
+    cloth = custom(kind+'_cloth', {'armchair':'8fa985','loveseat':'ddd3bc','long_sofa':'88a9bc'}.get(kind,'bfaa85'))
+    for x in [-width*.39,width*.39]:
+        for z in [-.29,.29]: leg(x,z,.48,wood,radius=.035)
+    if kind in ['wood_chair','garden_bench']:
+        for z in [-.27,-.09,.09,.27]: box('Seat slat',(0,.48,z),(width,.075,.14),wood,.015)
+        for x in [-width*.46,width*.46]: rod('Back upright',(x,.46,-.34),(x,1.0,-.34),.035,wood)
+        if kind=='wood_chair':
+            for x in [-.27,-.135,0,.135,.27]: rod('Spindle',(x,.52,-.34),(x,.95,-.34),.018,wood)
+            box('Top rail',(0,.97,-.34),(width,.09,.09),wood,.02)
+        else:
+            for y in [.65,.82,.99]: box('Back slat',(0,y,-.34),(width,.12,.065),wood,.015)
+    else:
+        box('Upholstered base',(0,.38,0),(width,.24,.85),cloth,.07)
+        count=3 if kind=='long_sofa' else 2 if kind=='loveseat' else 1
+        for i in range(count):
+            x=-width*.5+.14+(i+.5)*(width-.28)/count
+            box('Seat cushion',(x,.56,.04),((width-.3)/count-.025,.17,.64),cloth,.065)
+            box('Back cushion',(x,.84,-.31),((width-.3)/count-.025,.52,.21),cloth,.065)
+        for x in [-width*.5+.07,width*.5-.07]: box('Rounded arm',(x,.65,0),(.14,.37,.84),cloth,.06)
+        box('Pillow',(-width*.23,.76,-.16),(.29,.29,.14),CREAM,.06)
+
+def domestic_lamp(kind):
+    metal=custom('lamp_metal','8b927b' if kind=='pendant_lamp' else 'ae936a')
+    shade=custom('lamp_shade','dfcdb0')
+    glow=mat('lamp_glow','fff1cf',emission=.35)
+    if kind=='pendant_lamp':
+        cylinder('Ceiling rose',(0,2.4,0),.13,.045,metal)
+        rod('Cord',(0,1.95,0),(0,2.4,0),.014,INK)
+        cylinder('Enamel shade',(0,1.9,0),.34,.22,metal,.10)
+        cylinder('Diffuser',(0,1.789,0),.29,.012,glow)
+        return
+    h={'floor_lamp':1.45,'arc_lamp':1.30,'globe_lamp':1.25,'garden_lantern':.72,'lamp_post':2.4}[kind]
+    cylinder('Weighted base',(0,.055,0),.22,.11,metal)
+    rod('Lamp stem',(0,.1,0),(0,h-.05,0),.026,metal)
+    if kind=='globe_lamp':
+        ellipsoid('Opal globe',(0,h,0),(.24,.24,.24),glow,24,12)
+    elif kind=='arc_lamp':
+        rod('Angled arm',(0,h-.25,0),(.21,h+.15,0),.025,metal)
+        cylinder('Reading shade',(.21,h+.05,0),.22,.20,metal,.07)
+        cylinder('Light',(.21,h-.055,0),.18,.015,glow)
+    elif kind in ['garden_lantern','lamp_post']:
+        box('Lantern light',(0,h,0),(.23,.30,.23),glow,.02)
+        for x in [-.14,.14]:
+            for z in [-.14,.14]: rod('Lantern frame',(x,h-.19,z),(x,h+.19,z),.018,metal)
+        cylinder('Lantern roof',(0,h+.24,0),.25,.16,metal,0,4)
+        box('Lantern base',(0,h-.20,0),(.34,.06,.34),metal)
+    else:
+        cylinder('Linen shade',(0,h,0),.32,.4,shade,.22)
+        cylinder('Warm diffuser',(0,h-.205,0),.28,.012,glow)
+        cylinder('Shade cap',(0,h+.204,0),.22,.008,CREAM)
+
+def landscape(kind):
+    if kind=='linden_tree': tree_linden()
+    elif kind=='hedge': shrub()
+    elif kind=='flowers': flower_patch()
+    elif kind=='picket_fence': fence()
+    else:
+        rock=custom('stone','969c8c')
+        ellipsoid('Weathered stone',(0,.29,0),(.44,.33,.39),rock,10,6)
+        ellipsoid('Lower stone',(.25,.12,.23),(.18,.15,.20),rock,10,6)
+    # Outdoor finishes retain leaves and flowers; only timber/stone is recolored.
+    if kind!='boulder':
+        material=custom('landscape_base','857356')
+        cylinder('Ground collar',(0,.018,0),.13,.036,material)
+
+def stairs():
+    wood=custom('stair_wood','ad8860')
+    for i in range(12):
+        y=(i+1)*.22; z=1.375-i*.25
+        box('Stair riser',(0,y*.5,z),(.92,y,.25),wood,.005)
+        box('Tread nosing',(0,y+.015,z+.015),(.96,.035,.27),wood,.009)
+    for x in [-.46,.46]:
+        for i in [0,3,6,9,11]:
+            z=1.375-i*.25; y=(i+1)*.22
+            rod('Baluster',(x,y,z),(x,y+.68,z),.018,wood)
+        rod('Handrail',(x,.9,1.375),(x,3.32,-1.375),.034,wood)
+
+
 def main():
     build('bed',[1,2],'Oak slatted bed, quilt seams, linen pillow, blue sage duvet.',bed)
     build('fridge',[1,1],'Rounded enamel fridge, separate freezer, handles, vents and note.',fridge)
@@ -586,6 +667,13 @@ def main():
     build('door_frame',[1,1],'Open doorway with frame, threshold, and open paneled door.',door_frame)
     for i,name in enumerate(['resident','resident_bob','resident_curls','resident_shaved']):
         build(name,[.6,.4],'Resident with independently animated head, arms, legs and appearance materials.',lambda i=i:resident(i),True)
+    for kind,footprint in [('armchair',[1,1]),('loveseat',[2,1]),('long_sofa',[3,1]),('wood_chair',[1,1]),('garden_bench',[2,1])]:
+        build(kind,footprint,'Original domestic seating with solid legs, seats and backs.',lambda kind=kind:seating(kind))
+    for kind in ['floor_lamp','arc_lamp','globe_lamp','pendant_lamp','garden_lantern','lamp_post']:
+        build(kind,[1,1],'Original lamp geometry. Runtime supplies real shadow-casting illumination.',lambda kind=kind:domestic_lamp(kind))
+    for kind in ['linden_tree','hedge','flowers','picket_fence','boulder']:
+        build(kind,[2,2] if kind=='linden_tree' else [1,1],'Original solid garden geometry; editable source retained.',lambda kind=kind:landscape(kind))
+    build('stairs',[1,3],'Twelve oak treads, risers, balusters and rails; rises 2.64 metres.',stairs)
     manifest={'schema':1,'collection':'Linden Grove','creator':'Original procedural models authored for Simulateds','license':'MIT (repository LICENSE)','source':'tools/generate_models.py','source_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'generator':'Blender '+bpy.app.version_string,'units':'metres; one simulation tile = 1 metre','coordinates':{'up':'+Y','front':'+Z','origin':'footprint center at ground y=0'},'materials':{'custom_prefix':'custom_','resident':['skin','hair','shirt','trousers','shoes']},'models':MODELS}
     (OUT/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
     print('MODELS_GENERATED',len(MODELS),sum(m['triangles'] for m in MODELS.values()),'triangles')

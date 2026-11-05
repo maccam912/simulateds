@@ -26,7 +26,7 @@ func _safe() -> void:
 func _run() -> void:
 	_fresh(); var initial: Dictionary=world.snapshot(); var command:=_intent()
 	assert(Space.request(world.state,"a",lot.id).ok and command.orders.size()==2)
-	assert(not Rules.inspect(lot,{"type":"place","kind":"plant","x":7,"y":7},[Vector2i(7,7),Vector2i(8,7)]).ok)
+	assert(Rules.inspect(lot,{"type":"place","kind":"plant","x":7,"y":7},[Vector2i(7,7),Vector2i(8,7)]).ok)
 	assert(world.apply_command("a",JSON.parse_string(JSON.stringify(command))).ok); _safe(); _reject(command)
 	assert(world.state.lots==initial.lots and world.state.families.b==initial.families.b and world.state.next_object==initial.next_object)
 	for index in range(2):

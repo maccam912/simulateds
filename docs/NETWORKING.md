@@ -211,3 +211,33 @@ Existing room-copy rules create empty beds and tables. Host autosaves and normal
 snapshots retain the authoritative stock; clients never submit a stock amount.
 Caretakers and autonomy do not harvest or prepare food, and neither stored
 produce nor leftovers spoil while the household is absent.
+
+
+## Detailed household edits
+
+Construction uses protocol 4 and world schema 3. Explicit schema-1/2 migrations
+retain old ground-floor homes and add empty upper-storey storage. A lot holds one
+budget and revision; `level` selects a validated layer for build commands. Floors,
+stairs, terrain, pools and resident displacement are host transactions included
+in draft rollback and undo/redo. The renderer only projects the selected floor.
+Terrain strokes encode each bounded tile as two hexadecimal digits so even a
+256-point stroke fits the unchanged 1,024-byte command packet limit. Clients
+must match protocol 4; no older reader is allowed to discard the extra floors.
+
+Creator profiles use an atomic `household_edit` with an exact identity revision,
+up to eight members, and bounded family links. The schema-1 migration preserves
+legacy residents before adopting the creator schema; subsequent storey migration
+is separate. Profiles validate every enum, numeric range, outfit, trait, interest
+and relationship before applying any name, membership or appearance change.
+New members receive deterministic household-scoped IDs and host-created needs,
+positions, wishes and hobbies. Renderers and voice previews cannot write state.
+
+Large creator requests use `household_part`, introduced in protocol 3 and retained
+by protocol 4's construction expansion. The ordinary 1,024-byte packet limit is
+unchanged: each part carries at most 540 compressed bytes (720 base64 characters).
+One assembly per authenticated peer allows at most 61 parts, 32 KiB compressed
+and 48 KiB expanded, with a ten-second expiry and exact size/SHA-256 checks.
+Only a complete `household_edit` enters ordinary command validation and replay
+protection. Partial, expired, foreign-peer or malformed transfers never edit the
+world. Retries resend the same parts/request ID; the normal acknowledgement names
+the original intent, and the UI waits for the matching authoritative profile.

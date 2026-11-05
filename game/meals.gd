@@ -105,7 +105,10 @@ static func valid_reservations(world: Dictionary) -> bool:
 				var counter := id.trim_prefix(prefix)
 				if not id.begins_with(prefix) or not counter.is_valid_int() or str(int(counter))!=counter or int(counter)<1 or int(counter)>=int(member.next_action) or ids.has(id): return false
 				ids[id]=true
-	for lot: Dictionary in world.lots.values():
+	var layers: Array=[]
+	for root: Dictionary in world.lots.values():
+		for level in range(3): layers.append(preload("res://game/storeys.gd").view(root,level))
+	for lot: Dictionary in layers:
 		for table: Dictionary in lot.objects:
 			if table.kind!="dining_table": continue
 			var reserved := 0; var taken := 0; var preparations := 0

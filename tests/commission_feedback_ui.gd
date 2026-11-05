@@ -28,7 +28,7 @@ func _button(control: Button) -> void:
 	await _mouse(control.get_global_rect().get_center(),true); assert(pressed[0])
 
 func _named(node: Node,title: String) -> Button:
-	if node is Button and node.text==title: return node
+	if node is Button and (node.text==title or node.accessibility_name==title): return node
 	for child in node.get_children():
 		var found := _named(child,title)
 		if found!=null: return found
@@ -98,7 +98,7 @@ func _run() -> void:
 	assert(sound._effect_cursor==cursor)
 	game._notice_time=0; await _await_ready(); await _capture("ready-with-plan")
 	assert(game.notice_label.text.contains(terms.client.to_lower()) and game.notice_label.text.contains("§180"))
-	assert(game.palette_button.text=="Activities •" and game.palette_button.tooltip_text.contains("1 original ready"))
+	assert(game.palette_button.text=="•" and game.palette_button.tooltip_text.contains("1 original ready"))
 	assert(root.get_visible_rect().encloses(game.notice_panel.get_global_rect()) and game.notice_panel.get_global_rect().encloses(game.notice_label.get_global_rect()))
 	assert(game.notice_panel.get_global_rect().encloses(game.notice_commission_button.get_global_rect()) and not game.notice_people_button.visible)
 	if sound.enabled:
@@ -113,13 +113,13 @@ func _run() -> void:
 	assert(game.tools_box.get_parent().get_global_rect().encloses(game.commission_panel.review_buttons.values()[0].get_global_rect()),"The first original's Review button must fit without scrolling")
 	assert(game.selected_member==second.id and game.viewed_lot=="lot_2" and game.commission_panel.home_label.text.contains(home.name) and session.world.snapshot()==before and not game.notice_panel.visible,"Review originals opens the home list while preserving the visiting resident, viewed lot, and both plans")
 	game.plan_panel.hide(); await _button(game.palette_button); await _capture("activities-ready")
-	assert(game.commission_entry.text=="Art commissions · Ready" and game.commission_entry.tooltip_text.contains(preload("res://game/paintings.gd").SUBJECTS[terms.subject]))
+	assert(game.commission_entry.text=="•" and game.commission_entry.get_meta("icon_id")=="art" and game.commission_entry.tooltip_text.contains(preload("res://game/paintings.gd").SUBJECTS[terms.subject]))
 	before=session.world.snapshot(); await _button(game.commission_entry)
 	assert(session.world.snapshot()==before and game.commission_panel.review.is_empty())
 	# Save a ready request, deliver it, then load through real menus: ready remains discoverable without replay.
 	var saved: Dictionary=session.save_slot("Ready art commission"); assert(saved.ok)
 	await _button(game.commission_panel.review_buttons["easel:"+str(easel.id)]); await _button(game.commission_panel.confirm)
-	assert(game.palette_button.text=="Activities" and family.commissions.completed==1)
+	assert(game.palette_button.text=="" and family.commissions.completed==1)
 	app.open_pause(); await _button(_named(app.menu_content,"Load neighborhood"))
 	app.selected_slot=saved.id; await _button(_named(app.menu_content,"Load selected")); assert(app.page=="game")
 	family=session.state.families[session.profile_id]; home=session.state.lots[family.home_lot]
@@ -127,7 +127,7 @@ func _run() -> void:
 	var message: String=game.notice_label.text; cursor=sound._effect_cursor
 	await create_timer(2.0).timeout
 	assert(message.begins_with("Loaded") and game.notice_label.text==message and not game.notice_commission_button.visible and sound._effect_cursor==cursor)
-	assert(game.palette_button.text=="Activities •"); await _capture("loaded-quietly")
+	assert(game.palette_button.text=="•"); await _capture("loaded-quietly")
 	# Menus consume readiness quietly; returning still shows the persistent mark.
 	assert(session.world.apply_command(session.profile_id,preload("res://game/art_commissions.gd").candidates(session.state,session.profile_id)[0].intent).ok)
 	session.state.day+=1
@@ -136,7 +136,7 @@ func _run() -> void:
 	assert(session.world.apply_command(session.profile_id,{"type":"painting","member_id":first.id,"target_id":easel.id,"action":"start","subject":terms.subject,"revision":easel.painting.revision}).ok)
 	app.open_pause(); await _advance(30); assert(preload("res://game/paintings.gd").finished(easel.painting))
 	await _button(_named(app.menu_content,"Resume")); cursor=sound._effect_cursor; game._notice_time=0; await create_timer(0.7).timeout
-	assert(not game.notice_commission_button.visible and game.palette_button.text=="Activities •" and sound._effect_cursor==cursor)
+	assert(not game.notice_commission_button.visible and game.palette_button.text=="•" and sound._effect_cursor==cursor)
 	# The next newly accepted request can notify with Effects muted; cancellation invalidates its action.
 	prefs.set_value("effects_volume",0.0); game.context_panel.hide()
 	assert(session.world.apply_command(session.profile_id,{"type":"commission_cancel","commission_revision":board.revision,"offer":terms.id}).ok); game._refresh()
@@ -144,6 +144,6 @@ func _run() -> void:
 	await _await_ready(); await _capture("muted-ready")
 	assert(AudioServer.is_bus_mute(AudioServer.get_bus_index("Effects")))
 	assert(session.world.apply_command(session.profile_id,{"type":"commission_cancel","commission_revision":board.revision,"offer":terms.id}).ok); game._refresh()
-	assert(not game.notice_panel.visible and not game.notice_commission_button.visible and game.palette_button.text=="Activities")
+	assert(not game.notice_panel.visible and not game.notice_commission_button.visible and game.palette_button.text=="")
 	print("COMMISSION_FEEDBACK_UI_PASS")
 	await sound.shutdown_and_wait(); quit()

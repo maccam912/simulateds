@@ -9,7 +9,10 @@ const PALETTE := {
 	"honey":{"name":"Honey","color":"c9a363"},
 	"ink":{"name":"Ink","color":"596d78"}
 }
-const MATERIALS := {"dining_table":"Woodwork","easel":"Woodwork","bed":"Bedding","sofa":"Upholstery","fridge":"Enamel","shower":"Wall panel","toilet":"Porcelain","tv":"Cabinet","stereo":"Cabinet","bookshelf":"Woodwork","plant":"Pot","table":"Woodwork","game_table":"Woodwork","garden_bed":"Frame"}
+const MATERIALS := {"dining_table":"Woodwork","easel":"Woodwork","bed":"Bedding","sofa":"Upholstery","fridge":"Enamel","shower":"Wall panel","toilet":"Porcelain","tv":"Cabinet","stereo":"Cabinet","bookshelf":"Woodwork","plant":"Pot","table":"Woodwork","game_table":"Woodwork","garden_bed":"Frame",
+	"armchair":"Upholstery","loveseat":"Upholstery","long_sofa":"Upholstery","wood_chair":"Woodwork","garden_bench":"Woodwork",
+	"floor_lamp":"Shade","arc_lamp":"Shade","globe_lamp":"Base","pendant_lamp":"Shade","garden_lantern":"Frame","lamp_post":"Frame",
+	"linden_tree":"Base","hedge":"Base","flowers":"Base","picket_fence":"Base","boulder":"Stone","stairs":"Woodwork"}
 
 static func at(object: Dictionary) -> String: return str(object.get("color_style","original"))
 

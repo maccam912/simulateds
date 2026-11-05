@@ -15,6 +15,9 @@ func _fresh(kind: String="bed") -> void:
 	for y in range(16):
 		for x in range(16): lot.floors.append([x,y])
 	object=world._new_object(kind,4,4,0); lot.objects=[object]
+	if kind=="stairs":
+		lot.storeys={"1":preload("res://game/storeys.gd").empty()}
+		lot.storeys["1"].floors=[[4,3]]
 	if kind=="garden_bed": object.garden.crop="radish"; object.garden.growth=12.0; object.garden.water=60.0; object.garden.revision=1
 	assert(world.apply_command("a",{"type":"build_begin","lot_id":lot.id}).ok)
 

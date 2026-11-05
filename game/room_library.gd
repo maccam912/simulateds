@@ -16,7 +16,7 @@ static func find(board: Dictionary,id: String) -> Dictionary:
 		if entry.id==id: return entry
 	return {}
 static func layout(source: Dictionary) -> Dictionary:
-	return {"width":source.extent.x,"height":source.extent.y,"seed":source.interior[0].duplicate(),"floors":source.floors.duplicate(true),"walls":source.walls.duplicate(true),"doors":source.doors.duplicate(true),"finishes":source.finishes.duplicate(true),"windows":source.windows.duplicate(true),"objects":source.objects.duplicate(true)}
+	return {"width":source.extent.x,"height":source.extent.y,"seed":source.interior[0].duplicate(),"floors":source.floors.duplicate(true),"walls":source.walls.duplicate(true),"doors":source.doors.duplicate(true),"finishes":source.finishes.duplicate(true),"windows":source.windows.duplicate(true),"objects":source.objects.duplicate(true),"diagonal_walls":source.get("diagonal_walls",{}).duplicate(true)}
 static func source(design: Dictionary) -> Dictionary:
 	return Copy.capture(design,Vector2i(int(design.seed[0]),int(design.seed[1])))
 static func summary(design: Dictionary) -> String:
@@ -38,7 +38,7 @@ static func valid(value: Variant) -> bool:
 	var canonical: Dictionary=value.duplicate(true); normalize(canonical)
 	return JSON.stringify(canonical).to_utf8_buffer().size()<=MAX_BYTES
 static func valid_layout(value: Variant) -> bool:
-	if not value is Dictionary or value.size()!=9 or not _integer(value.get("width"),3,16) or not _integer(value.get("height"),3,16) or not _cell(value.get("seed"),value): return false
+	if not value is Dictionary or value.size() not in [9,10] or not _integer(value.get("width"),3,16) or not _integer(value.get("height"),3,16) or not _cell(value.get("seed"),value): return false
 	var cells := {}
 	for kind: String in ["floors","walls","doors"]:
 		if not value.get(kind) is Array or value[kind].size()>256: return false
@@ -50,6 +50,7 @@ static func valid_layout(value: Variant) -> bool:
 			seen[point]=true
 		if kind=="walls": cells=seen.duplicate()
 		elif kind=="doors": cells.merge(seen)
+	if not preload("res://game/landscaping.gd").valid(value): return false
 	if not Finishes.valid(value) or not Windows.valid(value) or not value.has("finishes") or not value.has("windows"): return false
 	if not value.get("objects") is Array or value.objects.size()>256: return false
 	for object: Variant in value.objects:
@@ -69,6 +70,7 @@ static func normalize(board: Dictionary) -> void:
 	board.revision=int(board.revision); board.next_id=int(board.next_id)
 	for entry: Dictionary in board.entries: _normalize_layout(entry.layout)
 static func _normalize_layout(design: Dictionary) -> void:
+	if not design.has("diagonal_walls"): design.diagonal_walls={}
 	design.width=int(design.width); design.height=int(design.height)
 	for cell: Array in [design.seed]+design.floors+design.walls+design.doors: cell[0]=int(cell[0]); cell[1]=int(cell[1])
 	for object: Dictionary in design.objects:

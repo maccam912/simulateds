@@ -1,4 +1,5 @@
 extends VBoxContainer
+var level := 0
 signal command_requested(command: Dictionary)
 signal tool_requested(kind: String)
 signal focus_requested(cell: Vector2)
@@ -47,7 +48,7 @@ func _button(value: String,action: Callable,parent: Node) -> Button:
 	button.pressed.connect(action); return button
 func refresh(lot_id: String) -> void:
 	_lot=lot_id
-	var lot: Dictionary=Session.state.lots.get(_lot,{})
+	var lot: Dictionary=preload("res://game/storeys.gd").view(Session.state.lots.get(_lot,{}),level)
 	if lot.is_empty() or confirm==null: return
 	if _ack and not pending.is_empty() and int(lot.revision)>int(pending.revision):
 		pending={}; _ack=false; plan={}; _error="Lot cleared. Undo restores the whole edit."
@@ -90,7 +91,7 @@ func _review_top() -> void:
 	if scroll!=null: scroll.scroll_vertical=0
 func _request() -> void:
 	if confirm.disabled or not pending.is_empty(): return
-	pending={"type":"clear_lot","lot_id":_lot,"revision":plan.revision,"refund":plan.refund}; _ack=false; _error=""
+	pending={"type":"clear_lot","lot_id":_lot,"level":level,"revision":plan.revision,"refund":plan.refund}; _ack=false; _error=""
 	refresh(_lot); command_requested.emit(pending.duplicate(true))
 func _completed(intent: Dictionary,ok: bool,message: String) -> void:
 	if pending.is_empty() or intent!=pending: return

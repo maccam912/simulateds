@@ -135,13 +135,14 @@ func _run() -> void:
 		session.world.step(0.1)
 		if game._member().task.is_empty() and game._member().queue.is_empty(): break
 	game._refresh()
-	_check(game.wishes_button.text=="Wishes · 1/3","HUD shows completed wish count")
+	_check(game.wishes_button.text=="1/3","HUD shows completed wish count")
 	_check(session.state.lots.lot_1.funds==wish_funds+40,"Wish UI leads to authoritative reward")
 	_check(game.tools_box.get_child(0).disabled,"Completed wish card cannot be repeated")
 	game._toggle_build()
 	await process_frame
-	var room_button: Button=game.tools_box.get_child(1)
-	_check("Room" in room_button.text,"Room tool appears in the structure catalog")
+	var room_button: Button=game.catalog_buttons.room
+	_check("Room" in room_button.accessibility_name or "Room" in room_button.text,"Room tool appears in the structure catalog")
+	game.tools_box.get_parent().ensure_control_visible(room_button); await process_frame; await process_frame
 	await _click(room_button.get_global_rect().get_center())
 	var room_funds: int=session.state.lots.lot_1.funds
 	await _click(game.lot_view.grid_point(0.5,0.5))

@@ -1,4 +1,5 @@
 extends VBoxContainer
+var level := 0
 signal command_requested(command: Dictionary)
 signal place_requested(id: String, revision: int)
 const Library=preload("res://game/room_library.gd")
@@ -51,7 +52,7 @@ func _button(value: String,action: Callable,parent: Node) -> Button:
 func _board() -> Dictionary: return Session.state.families.get(Session.profile_id,{}).get("room_library",Library.create())
 func refresh(lot_id: String,source: Vector2i,selected: String) -> void:
 	_lot=lot_id; _source=source
-	var lot: Dictionary=Session.state.lots.get(lot_id,{})
+	var lot: Dictionary=preload("res://game/storeys.gd").view(Session.state.lots.get(lot_id,{}),level)
 	_capture=Copy.capture(lot,source) if source.x>=0 else {}
 	var key:=str([lot_id,source,lot.get("revision",0)]) if source.x>=0 else ""
 	if key!=_capture_key:
@@ -109,7 +110,7 @@ func _cancel_edit() -> void:
 	_edit_id=""; _edit_kind=""; _error=""; name_input.text=""; _refresh_controls()
 func _submit() -> void:
 	if submit.disabled or not form.visible: return
-	pending={"type":_edit_kind if not _edit_id.is_empty() else "blueprint_save","lot_id":_lot,"library_revision":_edit_revision if not _edit_id.is_empty() else int(_board().revision)}
+	pending={"type":_edit_kind if not _edit_id.is_empty() else "blueprint_save","lot_id":_lot,"level":level,"library_revision":_edit_revision if not _edit_id.is_empty() else int(_board().revision)}
 	if _edit_id.is_empty(): pending.merge({"source_x":_source.x,"source_y":_source.y,"revision":Session.state.lots[_lot].revision,"name":name_input.text.strip_edges()})
 	else:
 		pending.blueprint_id=_edit_id

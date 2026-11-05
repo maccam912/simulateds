@@ -54,7 +54,7 @@ func _cancel() -> void:
 	for resident: Dictionary in [first,second]: assert(session.world.apply_command(session.profile_id,{"type":"cancel","member_id":resident.id}).ok)
 	game._refresh(); await process_frame
 func _find_button(node: Node,label: String) -> Button:
-	if node is Button and node.text==label: return node
+	if node is Button and (node.text==label or node.accessibility_name==label): return node
 	for child: Node in node.get_children():
 		var found:=_find_button(child,label)
 		if found!=null: return found

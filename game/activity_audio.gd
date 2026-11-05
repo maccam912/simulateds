@@ -63,4 +63,4 @@ func sample(context: String, residents: Array[Dictionary], delta: float, active:
 	return [event] # Sparse mix, bounded across all residents; never queue old cues.
 
 func _event(resident: Dictionary, sound: String, track: Dictionary) -> Dictionary:
-	return {"member":resident.id,"task":resident.task,"sound":sound,"position":resident.position,"pitch":0.97+float(posmod((str(resident.id)+str(track.count)).hash(),7))*0.01}
+	return {"member":resident.id,"task":resident.task,"sound":sound,"position":resident.position,"voice":resident.get("voice",{}),"pitch":0.97+float(posmod((str(resident.id)+str(track.count)).hash(),7))*0.01}

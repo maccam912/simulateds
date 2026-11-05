@@ -32,6 +32,27 @@ func _visible_point(id: String) -> Vector2:
 	assert(false,"No selectable projected model surface: "+id)
 	return Vector2.ZERO
 
+func _wall_parts(at: Vector2i) -> Array[AABB]:
+	var wall: Node3D=view.projection.scene.architecture.get_node("Wall_%d_%d" % [at.x,at.y])
+	return wall.get_meta("pick_parts")
+
+func _check_corners() -> void:
+	var corners := {
+		Vector2i(3,3):[Vector2i.RIGHT,Vector2i.DOWN],
+		Vector2i(12,3):[Vector2i.LEFT,Vector2i.DOWN],
+		Vector2i(3,11):[Vector2i.RIGHT,Vector2i.UP],
+		Vector2i(12,11):[Vector2i.LEFT,Vector2i.UP],
+	}
+	for corner: Vector2i in corners:
+		var parts := _wall_parts(corner)
+		assert(parts.size()==2,"A corner uses two joined perpendicular wall pieces.")
+		assert(parts.any(func(box: AABB): return box.has_point(Vector3(0,0.15,0))))
+		for direction: Vector2i in corners[corner]:
+			var edge := Vector3(direction.x*0.499,0.15,direction.y*0.499)
+			assert(parts.any(func(box: AABB): return box.has_point(edge)),"Corner geometry reaches the shared tile edge.")
+			assert(_wall_parts(corner+direction).any(func(box: AABB): return box.has_point(Vector3(-edge.x,edge.y,-edge.z))),"The adjoining wall reaches the corner.")
+			assert(not parts.any(func(box: AABB): return box.has_point(Vector3(-edge.x,edge.y,-edge.z))),"There is no stray wall stub beyond the corner.")
+
 func _run() -> void:
 	root.size=Vector2i(1440,900)
 	DirAccess.make_dir_recursive_absolute("res://build")
@@ -64,6 +85,7 @@ func _run() -> void:
 				assert(point.distance_to(view.projection.project(Vector3(tile.x,0,tile.y)))<0.1,"Camera and build grid agree")
 				assert(view.projection.ground_at(point).distance_to(tile)<0.001)
 	view.center_lot(); await _capture("day")
+	_check_corners()
 	for object: Dictionary in session.state.lots.lot_1.objects: _visible_point(str(object.id))
 	for member: Dictionary in session.state.families[session.profile_id].members: _visible_point(str(member.id))
 	assert(session.world.snapshot()==before,"Projection, meshes, picking and camera cannot mutate the saved world")
@@ -82,6 +104,10 @@ func _run() -> void:
 	session.state.day_minutes=0; game._refresh(); await _capture("night")
 	root.size=Vector2i(1280,720); root.get_node("Preferences").set_value("ui_scale",1.25)
 	await _capture("compact")
+	_check_corners()
+	game._select_build_tool("window")
+	await _capture("joined-full")
+	_check_corners()
 	assert(view.projection.viewport.size==Vector2i(view.size))
 	print("RENDERER_3D_PASS")
 	await root.get_node("Soundscape").shutdown_and_wait()

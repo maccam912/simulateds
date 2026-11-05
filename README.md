@@ -2,7 +2,7 @@
 
 A 3D shared-neighborhood life simulation with an orthographic dollhouse camera, inspired
 by the homebuilding and household management of the early life-sim era. Build a
-home, look after two residents, and visit a neighbor. Each player owns a separate
+home, create a family of up to eight residents, and visit a neighbor. Each player owns a separate
 lot and family; one can build while the other keeps playing.
 
 ![Linden Grove, the first playable neighborhood](docs/preview.png)
@@ -22,10 +22,11 @@ Read [DESIGN.md](DESIGN.md) for the game plan,
 
 ## Run
 
-Each push to `main` builds the tip commit and publishes a development
-prerelease if all builds and tests pass. Packages include Windows, macOS,
-Linux, Android, and the Linux dedicated server, with a SHA-256 checksum for
-each download. Push a `v*` tag to publish a stable release.
+Each push to `main` builds the tip commit and publishes a numbered GitHub
+release if all builds and tests pass. The number comes from the Actions run,
+so failed builds and runs for other branches can leave gaps. Packages include
+Windows, macOS, Linux, Android, and the Linux dedicated server, with a SHA-256
+checksum for each download. Push a `v*` tag to publish a versioned release.
 [GitHub Releases](https://github.com/maccam912/simulateds/releases)
 
 CI caches the Android development signing key. If the key changes, installing
@@ -306,14 +307,28 @@ or shell expressions.
   repeated activities and explains omitted walking, conversations, garden work,
   and automatic care. Long plans keep every reusable step for you to trim to six.
   Review, name, and save the recipe; the current plan keeps running unchanged.
-- **Edit** beside Household (or **Household** in the game menu) changes the
-  household name, both resident names, clothing/skin/hair colors, hair style, and
-  favorite pastimes (reading, television, gardening, tea, tabletop games, music and dancing, or a little of everything).
-  Preview your choices, then Apply changes; Cancel or Escape leaves them alone.
-  Choices belong to this neighborhood and persist through saves and reconnects.
-  Favorites gently influence autonomous choices when needs are similar; urgent
-  care and your orders come first. Plan shows the selected resident’s preference.
-  Existing saves start neutral, and automatic leisure earns no wish or hobby progress.
+- **Create a household** in the main menu or **More** opens a dedicated 3D
+  dressing room. Turn/zoom a large animated resident, switch between full body
+  and face, and compare daylight/evening lighting. Customize names, pronouns,
+  life stage, skin/eyes/hair, ten hairstyles, body proportions, face/nose, and
+  four voice timbres with pitch and an audible preview.
+- Build separate **casual, formal, PJs, swimming, athletic, party and outdoor**
+  outfits with tops, bottoms, shoes, accessories, colors and fabric details.
+  Each slot is saved independently. Select which outfit to wear in the world;
+  automatic changes by event are not implemented.
+- Choose up to **three personality traits**, likes/dislikes and a favorite
+  pastime. Preferences gently guide available everyday activities; urgent care
+  and your orders come first. Painting still requires a deliberate activity.
+- Add residents up to **eight** and define partners, spouses, siblings, parents
+  and grandparents. Babies through elders have distinct size/proportions. Ages
+  stay fixed until edited. Babies rest in a bassinet with stable needs; hands-on
+  baby care, pregnancy and automatic aging are future work. Existing residents
+  remain in the household; new draft members can be removed before saving.
+- **Save household** applies the entire validated draft through the host and
+  persists it with the neighborhood. Cancel/Escape discards an unsent draft;
+  saving waits for the host response. Offline life
+  pauses in the creator; shared neighborhoods keep running. Saves/reconnects
+  retain outfits, voice, appearance, personality and family ties.
 - **People** shows the selected resident’s relationships and offers Visit or Chat.
   Up to two catch-ups per pair per day build friendship when both households
   are online: finish a chosen chat, or spend 12 game minutes in deliberately
@@ -447,7 +462,7 @@ Playing restores fun; two or more participants also restore social. Each gets
 a separate place, and a fifth waits in their plan. Leaving the game preserves
 everyone else's activity. Construction sends visitors safely home as usual.
 The hover shows occupancy, and Plan explains when the game is shared.
-Multiplayer uses protocol 2 for this new furnishing; all peers must update
+The game-table checkpoint introduced protocol 2; current multiplayer uses protocol 4; all peers must update
 together. Existing neighborhood saves still load.
 
 Residents turn toward their accepted routes, furnishings, and conversation

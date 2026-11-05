@@ -5,14 +5,20 @@ const Catalog = preload("res://game/catalog.gd")
 const Finishes = preload("res://game/finishes.gd")
 const Windows = preload("res://game/windows.gd")
 const FurnitureColors = preload("res://game/furniture_colors.gd")
+const Character = preload("res://game/character_profile.gd")
+const CharacterModel = preload("res://game/character_model.gd")
+var _character_model = CharacterModel.new()
 const Appearance = preload("res://game/appearance.gd")
 const Gardens = preload("res://game/gardens.gd")
+const Storeys = preload("res://game/storeys.gd")
+const Landscaping = preload("res://game/landscaping.gd")
 const Daylight = preload("res://game/daylight.gd")
 
 var object_nodes: Dictionary = {}
 var resident_nodes: Dictionary = {}
 var window_nodes: Dictionary = {}
 var pick_nodes: Array[Node3D] = []
+var lower_floors: Node3D
 var architecture: Node3D
 var neighborhood: Node3D
 var residents: Node3D
@@ -23,6 +29,8 @@ var fill: DirectionalLight3D
 var environment: Environment
 var home_light: OmniLight3D
 var _lamps: Array[OmniLight3D] = []
+var furnishing_lights: Array[OmniLight3D] = []
+var daylight_windows: Array[SpotLight3D] = []
 var _scenes: Dictionary = {}
 var _missing: Dictionary = {}
 var _materials: Dictionary = {}
@@ -35,7 +43,9 @@ var _boxes: Array = []
 var _object_state: Dictionary = {}
 
 func _ready() -> void:
+	_character_model.high_detail=false
 	name = "LindenGrove3D"
+	lower_floors=Node3D.new(); lower_floors.name="LowerStoreys"; add_child(lower_floors)
 	architecture = Node3D.new(); architecture.name = "House"; add_child(architecture)
 	neighborhood = Node3D.new(); neighborhood.name = "Neighborhood"; add_child(neighborhood)
 	residents = Node3D.new(); residents.name = "Residents"; add_child(residents)
@@ -67,13 +77,14 @@ func sync(view: Control, _delta: float) -> void:
 	if quality != _scenery_quality:
 		_scenery_quality = quality; _build_neighborhood(quality == "high")
 	var lot: Dictionary = view.world.get("lots",{}).get(view.lot_id,{})
-	var full_walls: bool = view.building and view.build_kind in ["window","wall_art"] and not view.access_inspecting
+	var full_walls: bool = view.building and view.build_kind in ["window","wall_art","wall","door","diagonal_wall","finish_wall"] and not view.access_inspecting
 	var structure: Array = []
 	for object: Dictionary in lot.get("objects",[]):
 		structure.append([object.id,object.kind,object.x,object.y,object.rotation,object.get("color_style","original")])
-	var signature := str([view.lot_id,lot.get("floors",[]),lot.get("walls",[]),lot.get("doors",[]),lot.get("finishes",{}),lot.get("windows",{}),lot.get("artworks",{}),structure,full_walls,view._paint_cells,view._preview_finish,view.color_preview,view.art_preview,view.hover_cell if view.build_kind=="window" else Vector2i(-1,-1),view.window_style if view.build_kind=="window" else "",view.preview_result if view.build_kind=="window" else {}]).sha256_text()
+	var signature := str([view.lot_id,lot.get("level",0),lot.get("storeys",{}),lot.get("floors",[]),lot.get("walls",[]),lot.get("doors",[]),lot.get("finishes",{}),lot.get("windows",{}),lot.get("artworks",{}),lot.get("landscape",{}),lot.get("diagonal_walls",{}),structure,full_walls,view._paint_cells,view._preview_finish,view.color_preview,view.art_preview,view.hover_cell if view.build_kind=="window" else Vector2i(-1,-1),view.window_style if view.build_kind=="window" else "",view.preview_result if view.build_kind=="window" else {}]).sha256_text()
 	if signature != _signature:
 		_signature = signature; _build_house(lot,full_walls,view)
+		_build_lower_floors(view,lot)
 	# Quantized visual state avoids rebuilding growing plants every frame, while
 	# edits and changed meals remain immediately visible even when paused.
 	for object: Dictionary in lot.get("objects",[]): _update_object(object)
@@ -90,7 +101,9 @@ func _update_light(view: Control) -> void:
 	fill.light_energy = lerpf(0.12,0.07,night)
 	environment.ambient_light_color = Color("d1dce3").lerp(Color("8198c5"),night)
 	environment.ambient_light_energy = lerpf(0.38,0.29,night)
-	home_light.light_energy = night * (2.0 if view.building else 1.5)
+	home_light.light_energy = night * 0.18
+	for lamp: OmniLight3D in furnishing_lights: lamp.light_energy=float(lamp.get_meta("energy",1.0))*(0.65+0.35*night)
+	for window: SpotLight3D in daylight_windows: window.light_energy=(1.0-night)*1.0
 	for lamp: OmniLight3D in _lamps: lamp.light_energy = night * 2.4
 
 func _clear(parent: Node) -> void:
@@ -140,8 +153,11 @@ func _finish_boxes(parent: Node3D) -> void:
 
 func _build_neighborhood(high: bool) -> void:
 	_clear(neighborhood); _lamps.clear(); _boxes.clear()
-	_batch_box(Vector3(0,-0.09,0),Vector3(1000,0.12,1000),Color("8ea873"))
+	# Leave a real opening for the editable ground and pool excavation.
+	for patch: Rect2 in [Rect2(-500,-500,500,1000),Rect2(16,-500,484,1000),Rect2(0,-500,16,500),Rect2(0,16,16,484)]:
+		_batch_box(Vector3(patch.get_center().x,-0.09,patch.get_center().y),Vector3(patch.size.x,0.12,patch.size.y),Color("8ea873"))
 	for stripe in range(-24,25):
+		if stripe>=0 and stripe<=5: continue
 		_batch_box(Vector3(stripe*3,-0.022,0),Vector3(3,0.015,140),Color("88a16d") if posmod(stripe,2)==0 else Color("8ca572"))
 	_batch_box(Vector3(0,-0.005,16.66),Vector3(180,0.08,1.13),Color("c9c7b5"))
 	_batch_box(Vector3(0,-0.014,19.15),Vector3(180,0.03,3.82),Color("6d7876"))
@@ -170,11 +186,36 @@ func _build_neighborhood(high: bool) -> void:
 		neighborhood.add_child(pool); _lamps.append(pool)
 	var mailbox := _model("mailbox"); mailbox.position = Vector3(9.8,0,15.5); neighborhood.add_child(mailbox)
 
+func _wall_footprint(at: Vector2i, connected: Dictionary, along_x: bool, mounted: bool, width: float) -> Array[Rect2]:
+	var half := width*0.5
+	var left := connected.has(at+Vector2i.LEFT)
+	var right := connected.has(at+Vector2i.RIGHT)
+	var up := connected.has(at+Vector2i.UP)
+	var down := connected.has(at+Vector2i.DOWN)
+	if not (left or right) or not (up or down):
+		var straight: Array[Rect2]=[Rect2(-0.5,-half,1.0,width) if along_x else Rect2(-half,-0.5,width,1.0)]
+		return straight
+	# Use one shared center and extend only toward adjoining walls. A mounted
+	# window or picture still needs its original full-width supporting face.
+	var start := -0.5 if left or (mounted and along_x) else -half
+	var end := 0.5 if right or (mounted and along_x) else half
+	var parts: Array[Rect2]=[Rect2(start,-half,end-start,width)]
+	if up or (mounted and not along_x): parts.append(Rect2(-half,-0.5,width,0.5-half))
+	if down or (mounted and not along_x): parts.append(Rect2(-half,half,width,0.5-half))
+	return parts
+
+func _wall_boxes(center: Vector3, parts: Array[Rect2], height: float, color: Color) -> void:
+	for part: Rect2 in parts:
+		var middle := part.get_center()
+		_batch_box(center+Vector3(middle.x,0,middle.y),Vector3(part.size.x,height,part.size.y),color)
+
 func _build_house(lot: Dictionary, full_walls: bool, view: Control) -> void:
-	_clear(architecture); object_nodes.clear(); window_nodes.clear(); pick_nodes.clear(); _object_state.clear(); _boxes.clear()
+	_clear(architecture); object_nodes.clear(); window_nodes.clear(); pick_nodes.clear(); _object_state.clear(); _boxes.clear(); furnishing_lights.clear(); daylight_windows.clear()
+	if int(lot.get("level",0))==0: _build_ground(lot)
 	var floors := {}
 	for cell: Array in lot.get("floors",[]): floors[Vector2i(int(cell[0]),int(cell[1]))] = true
 	for cell: Array in lot.get("floors",[]):
+		if cell in lot.get("stairwells",[]): continue
 		var x := int(cell[0]); var z := int(cell[1])
 		var finish: Dictionary = Finishes.PALETTES.floor[view._surface_finish(lot,"floor",x,z)]
 		var color := Color(finish.color)
@@ -189,24 +230,73 @@ func _build_house(lot: Dictionary, full_walls: bool, view: Control) -> void:
 					var shade := color if finish.pattern=="tiles" or (xx+zz)%2==0 else Color("e6e0ca")
 					_batch_box(Vector3(x+0.25+xx*0.5,0.025,z+0.25+zz*0.5),Vector3(0.488,0.012,0.488),shade)
 		else: _batch_box(Vector3(x+0.5,0.025,z+0.5),Vector3(0.998,0.012,0.998),color)
+	for cell: Array in lot.get("floors",[]):
+		var at := Vector2i(int(cell[0]),int(cell[1]))
+		if cell in lot.walls or cell in lot.doors or cell in lot.get("stairwells",[]): continue
+		if not (floors.has(at+Vector2i.LEFT) and floors.has(at+Vector2i.RIGHT) and floors.has(at+Vector2i.UP) and floors.has(at+Vector2i.DOWN)): continue
+		var roof := _box(architecture,Vector3(at.x+0.5,2.48,at.y+0.5),Vector3(1,0.05,1),Color("e4dac2"))
+		roof.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
+	var connected := {}
+	for key: String in ["walls","doors"]:
+		for cell: Array in lot.get(key,[]): connected[Vector2i(int(cell[0]),int(cell[1]))]=true
+	var art_walls := {}
+	for entry: Dictionary in lot.get("artworks",{}).values():
+		if int(entry.x)>=0: art_walls[Vector2i(int(entry.x),int(entry.y))]=true
+	if view.art_preview.get("ok",false): art_walls[Vector2i(int(view.art_preview.x),int(view.art_preview.y))]=true
 	for cell: Array in lot.get("walls",[]):
 		var x := int(cell[0]); var z := int(cell[1]); var at := Vector2i(x,z)
 		var rear: bool = (floors.has(at+Vector2i.RIGHT) and not floors.has(at+Vector2i.LEFT)) or (floors.has(at+Vector2i.DOWN) and not floors.has(at+Vector2i.UP))
 		var height := 2.1 if rear or full_walls else 0.28
 		var along := Windows.along_x(lot,x,z)
-		var size := Vector3(1.015,height,0.24) if along else Vector3(0.24,height,1.015)
-		var center := Vector3(x+0.5,height*0.5+0.035,z+0.5)
-		var color := Color(Finishes.PALETTES.wall[view._surface_finish(lot,"wall",x,z)].color)
-		_batch_box(center,size,color)
-		_batch_box(Vector3(center.x,0.11,center.z),Vector3(size.x+0.025,0.16,size.z+0.025),Color("f0e5ca"))
-		_batch_box(Vector3(center.x,height+0.04,center.z),Vector3(size.x+0.025,0.06,size.z+0.025),color.lightened(0.11))
-		var wall := Node3D.new(); wall.name = "Wall_%d_%d" % [x,z]; wall.position = Vector3(x+0.5,0,z+0.5)
-		wall.set_meta("target",{"type":"wall","x":x,"y":z})
-		wall.set_meta("pick_aabb",AABB(Vector3(-size.x/2,0,-size.z/2),Vector3(size.x,height+0.08,size.z)))
-		architecture.add_child(wall); pick_nodes.append(wall)
 		var window_style := Windows.at(lot,x,z)
 		var previewing: bool = view.building and view.build_kind=="window" and not view.access_inspecting and not view.window_pending and view.hover_cell==at and view.preview_result.get("ok",false)
 		if previewing: window_style=view.window_style
+		var mounted := not window_style.is_empty() or art_walls.has(at)
+		var body := _wall_footprint(at,connected,along,mounted,0.24)
+		var trim := _wall_footprint(at,connected,along,mounted,0.265)
+		var center := Vector3(x+0.5,0,z+0.5)
+		var wall_finish: Dictionary=Finishes.PALETTES.wall[view._surface_finish(lot,"wall",x,z)]
+		var color := Color(wall_finish.color)
+		var diagonal := int(lot.get("diagonal_walls",{}).get("%d,%d" % [x,z],0))
+		if diagonal!=0 and not window_style.is_empty() and height>1:
+			along=true
+			var mount := Node3D.new(); mount.position=center; mount.rotation.y=-diagonal*PI/4; architecture.add_child(mount)
+			_window_wall(Vector3.ZERO,true,height,color,mount)
+			for side in [-1,1]: _box(mount,Vector3(side*0.6035,height*0.5,0),Vector3(0.207,height,0.24),color)
+		elif diagonal!=0:
+			var part := _box(architecture,center+Vector3.UP*(height*0.5+0.035),Vector3(1.414,height,0.24),color)
+			part.rotation.y=-diagonal*PI/4
+		elif not window_style.is_empty() and height>1:
+			_window_wall(center,along,height,color)
+		else: _wall_boxes(center+Vector3.UP*(height*0.5+0.035),body,height,color)
+		if diagonal==0: _wallpaper(center,body,height,wall_finish)
+		if height<1:
+			var shadow := Node3D.new(); architecture.add_child(shadow)
+			if window_style.is_empty():
+				for part: Rect2 in body:
+					var middle := part.get_center()
+					var blocker := _box(shadow,center+Vector3(middle.x,1.1,middle.y),Vector3(part.size.x,2.2,part.size.y),color)
+					blocker.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
+			else:
+				_window_wall(center,along,2.1,color,shadow)
+				for mesh: MeshInstance3D in _meshes(shadow): mesh.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
+		if diagonal==0:
+			_wall_boxes(center+Vector3.UP*0.11,trim,0.16,Color("f0e5ca"))
+			_wall_boxes(center+Vector3.UP*(height+0.04),trim,0.06,color.lightened(0.11))
+		else:
+			var cap := _box(architecture,center+Vector3.UP*(height+0.04),Vector3(1.414,0.06,0.265),color.lightened(0.11)); cap.rotation.y=-diagonal*PI/4
+			body=[Rect2(-0.707,-0.12,1.414,0.24)]
+		var wall := Node3D.new(); wall.name = "Wall_%d_%d" % [x,z]; wall.position = center
+		wall.set_meta("target",{"type":"wall","x":x,"y":z})
+		if diagonal!=0: wall.rotation.y=-diagonal*PI/4
+		var pick_parts: Array[AABB]=[]
+		for part: Rect2 in body:
+			pick_parts.append(AABB(Vector3(part.position.x,0,part.position.y),Vector3(part.size.x,height+0.08,part.size.y)))
+		var bounds := pick_parts[0]
+		for box: AABB in pick_parts: bounds=bounds.merge(box)
+		wall.set_meta("pick_aabb",bounds)
+		wall.set_meta("pick_parts",pick_parts)
+		architecture.add_child(wall); pick_nodes.append(wall)
 		if not window_style.is_empty():
 			var window := _model("window_"+window_style)
 			window.position = Vector3(0,0.035 if height>1 else 0.02,0.135)
@@ -214,19 +304,35 @@ func _build_house(lot: Dictionary, full_walls: bool, view: Control) -> void:
 			if height<1: window.scale.y=0.18
 			window.set_meta("style",window_style); window.set_meta("cutaway",height<1); window.set_meta("preview",previewing); window.set_meta("along_x",along)
 			wall.add_child(window)
+			for mesh: MeshInstance3D in _meshes(window):
+				for surface in mesh.mesh.get_surface_count():
+					var source := mesh.get_active_material(surface) as StandardMaterial3D
+					if source!=null and (source.resource_name.contains("glass") or source.resource_name.contains("reflection")):
+						var glass := source.duplicate() as StandardMaterial3D
+						glass.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA; glass.albedo_color=Color(0.7,0.85,0.9,0.14)
+						mesh.set_surface_override_material(surface,glass); mesh.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			var daylight := SpotLight3D.new(); daylight.name="WindowDaylight"
+			var inward := Vector3(0,0,1) if along else Vector3(1,0,0)
+			if diagonal!=0: inward=inward.rotated(Vector3.UP,-diagonal*PI/4)
+			if not floors.has(at+Vector2i(roundi(inward.x),roundi(inward.z))): inward=-inward
+			architecture.add_child(daylight); daylight.position=center+Vector3.UP*1.45+inward*0.18
+			daylight.look_at(daylight.position+inward+Vector3.DOWN*0.35)
+			daylight.light_color=Color("e3ecf7"); daylight.spot_range=5.5; daylight.spot_angle=53; daylight.shadow_enabled=true
+			daylight_windows.append(daylight)
 			window_nodes["%d,%d" % [x,z]]=window
 	for cell: Array in lot.get("doors",[]):
 		var x := int(cell[0]); var z := int(cell[1])
 		_batch_box(Vector3(x+0.5,0.035,z+0.5),Vector3(1,0.05,1),Color("a48b69"))
 		var frame := _model("door_frame"); frame.position = Vector3(x+0.5,0.04,z+0.5)
-		if not Windows.along_x(lot,x,z): frame.rotation.y = PI/2
+		if lot.get("diagonal_walls",{}).has("%d,%d" % [x,z]): frame.rotation.y=-int(lot.diagonal_walls["%d,%d" % [x,z]])*PI/4
+		elif not Windows.along_x(lot,x,z): frame.rotation.y = PI/2
 		# Doorways remain open and do not block the host's walkable threshold.
 		architecture.add_child(frame)
 	_finish_boxes(architecture)
 	for object: Dictionary in lot.get("objects",[]):
 		var model := _model(str(object.kind)); model.name = str(object.id)
 		var dimensions := Catalog.footprint(str(object.kind),int(object.rotation))
-		model.position = Vector3(float(object.x)+dimensions.x*0.5,0.04,float(object.y)+dimensions.y*0.5)
+		model.position = Vector3(float(object.x)+dimensions.x*0.5,0.04+ground_height(lot,Vector2(float(object.x)+dimensions.x*0.5,float(object.y)+dimensions.y*0.5)),float(object.y)+dimensions.y*0.5)
 		model.rotation.y = -int(object.rotation)*PI/2
 		model.set_meta("target",{"type":"object","id":object.id,"kind":object.kind,"x":object.x,"y":object.y,"rotation":object.rotation})
 		architecture.add_child(model); object_nodes[str(object.id)] = model; pick_nodes.append(model)
@@ -234,6 +340,13 @@ func _build_house(lot: Dictionary, full_walls: bool, view: Control) -> void:
 		if view.color_preview.get("ok",false) and view.color_preview.object_id==object.id:
 			drawn=object.duplicate(true); FurnitureColors.set_style(drawn,str(view.color_preview.style))
 		_recolor(model,drawn)
+		var illumination: Array=Catalog.ITEMS[object.kind].get("light",[])
+		if not illumination.is_empty():
+			for mesh: MeshInstance3D in _meshes(model): mesh.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			var lamp := OmniLight3D.new(); lamp.name="Light"
+			lamp.position=Vector3(0,float(illumination[0]),0); lamp.omni_range=float(illumination[1]); lamp.omni_attenuation=1.1
+			lamp.light_color=Color(illumination[3]); lamp.shadow_enabled=true; lamp.shadow_bias=0.05
+			lamp.set_meta("energy",float(illumination[2])); model.add_child(lamp); furnishing_lights.append(lamp)
 		_update_object(object)
 	for id: String in lot.get("artworks",{}):
 		var entry: Dictionary = lot.artworks[id]
@@ -365,22 +478,28 @@ func _update_residents(view: Control) -> void:
 		for member: Dictionary in family.get("members",[]):
 			if member.lot_id != view.lot_id: continue
 			var id := str(member.id); seen[id] = true
-			var look := Appearance.of(member); var look_key := str(look)
+			var look := Appearance.of(member); var look_key := str([look,member.get("character",{})])
 			var resident: Node3D = resident_nodes.get(id)
 			if resident != null and resident.get_meta("look","") != look_key:
 				pick_nodes.erase(resident); resident.get_parent().remove_child(resident); resident.queue_free(); resident = null
 			if resident == null:
 				resident = Node3D.new(); resident.name = id; residents.add_child(resident)
-				var kind: String = ["resident","resident_bob","resident_curls","resident_shaved"][int(look.style)]
-				var model := _model(kind); model.name = "Body"; resident.add_child(model)
+				var model: Node3D
+				if member.has("character"):
+					model=_character_model.build(member)
+					if Character.is_baby(member): resident.add_child(_character_model.bassinet())
+				else:
+					var kind: String = ["resident","resident_bob","resident_curls","resident_shaved"][int(look.style)]
+					model = _model(kind)
+					for mesh: MeshInstance3D in _meshes(model):
+						for surface in mesh.mesh.get_surface_count():
+							var source := mesh.get_active_material(surface) as StandardMaterial3D
+							if source == null or source.resource_name not in ["skin","hair","shirt"]: continue
+							var material := source.duplicate() as StandardMaterial3D
+							material.albedo_color = Appearance.SKIN[int(look.skin)] if source.resource_name=="skin" else Appearance.HAIR[int(look.hair)] if source.resource_name=="hair" else Appearance.SHIRT[int(look.shirt)]
+							mesh.set_surface_override_material(surface,material)
+				model.name = "Body"; resident.add_child(model)
 				resident.set_meta("look",look_key)
-				for mesh: MeshInstance3D in _meshes(model):
-					for surface in mesh.mesh.get_surface_count():
-						var source := mesh.get_active_material(surface) as StandardMaterial3D
-						if source == null or source.resource_name not in ["skin","hair","shirt"]: continue
-						var material := source.duplicate() as StandardMaterial3D
-						material.albedo_color = Appearance.SKIN[int(look.skin)] if source.resource_name=="skin" else Appearance.HAIR[int(look.hair)] if source.resource_name=="hair" else Appearance.SHIRT[int(look.shirt)]
-						mesh.set_surface_override_material(surface,material)
 				var ring := MeshInstance3D.new(); ring.name = "Selection"
 				var torus := TorusMesh.new(); torus.inner_radius = 0.27; torus.outer_radius = 0.30; torus.rings = 32; torus.ring_segments = 6
 				ring.mesh = torus; ring.material_override = _material(Color("f1d394")); ring.position.y = 0.035; ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -390,7 +509,7 @@ func _update_residents(view: Control) -> void:
 			var display: Vector2 = view.motion.position(member)+Vector2(0.5,0.5)
 			var pose: Dictionary = view._activity_pose(member); var kind := str(pose.get("kind",""))
 			var direction: Vector2 = view.motion.direction(member)
-			resident.position = Vector3(display.x,0.04,display.y)
+			resident.position = Vector3(display.x,0.04+ground_height(view.world.lots[view.lot_id],display),display.y)
 			resident.rotation = Vector3(0,atan2(direction.x,direction.y),0)
 			var model := resident.get_node("Body") as Node3D
 			model.position = Vector3.ZERO; model.rotation = Vector3.ZERO
@@ -428,6 +547,12 @@ func _update_residents(view: Control) -> void:
 				if arm_left != null: arm_left.rotation.x = -0.7+gesture
 				if arm_right != null: arm_right.rotation.x = -0.9-gesture
 				if kind=="garden_bed": model.rotation.x = 0.25
+			if Character.is_baby(member):
+				model.rotation=Vector3(-PI/2,0,0); model.position=Vector3(0,0.67,0.35)
+				if leg_left!=null: leg_left.rotation.x=-0.35
+				if leg_right!=null: leg_right.rotation.x=-0.35
+				if arm_left!=null: arm_left.rotation=Vector3(-0.65,0,0.5)
+				if arm_right!=null: arm_right.rotation=Vector3(-0.65,0,-0.5)
 			resident.get_node("Selection").visible = id==view.selected_member and view.show_cues
 	for id: String in resident_nodes.keys():
 		if not seen.has(id):
@@ -486,3 +611,108 @@ func _update_room_ghost(view: Control) -> void:
 		model.rotation.y=-int(object.rotation)*PI/2; room_ghost.add_child(model)
 		for mesh: MeshInstance3D in _meshes(model):
 			mesh.material_override=material; mesh.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+static func vertex_height(lot: Dictionary,x: int,z: int) -> float:
+	var value := 0.0
+	for dz in [-1,0]:
+		for dx in [-1,0]: value+=Landscaping.height(lot,x+dx,z+dz)
+	return value*0.25
+
+static func ground_height(lot: Dictionary,at: Vector2) -> float:
+	var x := floori(at.x); var z := floori(at.y)
+	return lerpf(lerpf(vertex_height(lot,x,z),vertex_height(lot,x+1,z),at.x-x),lerpf(vertex_height(lot,x,z+1),vertex_height(lot,x+1,z+1),at.x-x),at.y-z)
+
+func _build_ground(lot: Dictionary) -> void:
+	var surface := SurfaceTool.new(); surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for z in range(16):
+		for x in range(16):
+			if Landscaping.pooled(lot,x,z):
+				_batch_box(Vector3(x+0.5,-0.65,z+0.5),Vector3(1,0.06,1),Color("619aa7"))
+				var water := _box(architecture,Vector3(x+0.5,-0.10,z+0.5),Vector3(1,0.025,1),Color("78b6c1"))
+				water.name="PoolWater"
+				var material := _material(Color("78b6c1")).duplicate() as StandardMaterial3D
+				material.roughness=0.18; material.metallic=0.15; water.material_override=material
+				for direction: Vector2i in [Vector2i.LEFT,Vector2i.RIGHT,Vector2i.UP,Vector2i.DOWN]:
+					if Landscaping.pooled(lot,x+direction.x,z+direction.y): continue
+					var at := Vector3(x+0.5+direction.x*0.48,0.02,z+0.5+direction.y*0.48)
+					var size := Vector3(0.12,0.08,1.02) if direction.x!=0 else Vector3(1.02,0.08,0.12)
+					_batch_box(at,size,Color("e4d9bc"))
+					_batch_box(at+Vector3.DOWN*0.33,Vector3(size.x,0.65,size.z),Color("8fb4b8"))
+				continue
+			var paint: String=lot.get("landscape",{}).get("paints",{}).get(Landscaping.key(x,z),"grass")
+			var color := Color(Landscaping.PAINTS[paint]).lightened(float(posmod(x*7+z*11,5)-2)*0.012)
+			for point: Vector2i in [Vector2i(0,0),Vector2i(1,0),Vector2i(0,1),Vector2i(1,0),Vector2i(1,1),Vector2i(0,1)]:
+				surface.set_color(color); surface.add_vertex(Vector3(x+point.x,vertex_height(lot,x+point.x,z+point.y)-0.025,z+point.y))
+	surface.generate_normals()
+	var ground := MeshInstance3D.new(); ground.name="EditableGround"; ground.mesh=surface.commit()
+	var mat := StandardMaterial3D.new(); mat.vertex_color_use_as_albedo=true; mat.cull_mode=BaseMaterial3D.CULL_DISABLED; mat.roughness=1.0
+	ground.material_override=mat; architecture.add_child(ground)
+
+func _window_wall(center: Vector3,along: bool,height: float,color: Color,parent: Node3D=null) -> void:
+	var root := architecture if parent==null else parent
+	# Four solid pieces around an actual 0.72 × 0.92m aperture.
+	for data: Array in [[Vector3(0,0.45,0),Vector3(1,0.9,0.24)],[Vector3(0,(1.82+height)*0.5,0),Vector3(1,maxf(0.01,height-1.82),0.24)],[Vector3(-0.43,1.36,0),Vector3(0.14,0.92,0.24)],[Vector3(0.43,1.36,0),Vector3(0.14,0.92,0.24)]]:
+		var offset: Vector3=data[0]; var dimensions: Vector3=data[1]
+		if not along: offset=Vector3(offset.z,offset.y,offset.x); dimensions=Vector3(dimensions.z,dimensions.y,dimensions.x)
+		_box(root,center+offset,dimensions,color)
+
+func _wallpaper(center: Vector3,parts: Array[Rect2],height: float,finish: Dictionary) -> void:
+	var pattern := str(finish.get("pattern",""))
+	if pattern.is_empty(): return
+	var color := Color(finish.color)
+	for part: Rect2 in parts:
+		var along := part.size.x>part.size.y
+		var length := part.size.x if along else part.size.y
+		var start := part.position.x if along else part.position.y
+		if pattern=="panel":
+			_wall_boxes(center+Vector3.UP*minf(0.43,height*0.5),[part],minf(0.8,height),Color("af8c65"))
+			_wall_boxes(center+Vector3.UP*minf(0.85,height),[part.grow(0.014)],0.045,Color("896c4c"))
+		else:
+			for i in range(maxi(1,ceili(length/0.16))):
+				var offset := Vector3(start+(i+0.5)*0.16,height*0.5,0) if along else Vector3(0,height*0.5,start+(i+0.5)*0.16)
+				if pattern=="stripes":
+					_batch_box(center+offset,Vector3(0.035,height,0.248) if along else Vector3(0.248,height,0.035),color.darkened(0.15))
+				else:
+					for row in range(maxi(1,floori(height/0.3))):
+						offset.y=0.16+row*0.3
+						_batch_box(center+offset,Vector3(0.045,0.07,0.248) if along else Vector3(0.248,0.07,0.045),Color("a7867f"))
+
+func _build_lower_floors(view: Control,lot: Dictionary) -> void:
+	_clear(lower_floors)
+	var level := int(lot.get("level",0))
+	neighborhood.position.y=-level*Storeys.HEIGHT
+	if level==0: return
+	var root: Dictionary=Session.state.get("lots",{}).get(view.lot_id,{})
+	for index in range(level):
+		var layer := Storeys.view(root,index)
+		var shell := Node3D.new(); lower_floors.add_child(shell); shell.position.y=(index-level)*Storeys.HEIGHT
+		for cell: Array in layer.floors:
+			_box(shell,Vector3(float(cell[0])+0.5,0,float(cell[1])+0.5),Vector3(1,0.1,1),Color("b6a386"))
+		if index==0:
+			var active := architecture; architecture=shell; _build_ground(root); _finish_boxes(shell); architecture=active
+		for cell: Array in layer.walls:
+			var x := int(cell[0]); var z := int(cell[1]); var center := Vector3(x+0.5,0,z+0.5)
+			var along := Windows.along_x(layer,x,z)
+			var color := Color(Finishes.PALETTES.wall[Finishes.at(layer,"wall",x,z)].color)
+			var window_style := Windows.at(layer,x,z)
+			if window_style.is_empty():
+				var wall := _box(shell,center+Vector3.UP*1.1,Vector3(1,2.2,0.24) if along else Vector3(0.24,2.2,1),color)
+				var diagonal := int(layer.get("diagonal_walls",{}).get("%d,%d" % [x,z],0))
+				if diagonal!=0: wall.scale.x=1.414; wall.rotation.y=-diagonal*PI/4
+			else:
+				_window_wall(center,along,2.1,color,shell)
+				var window := _model("window_"+window_style); window.position=center+Vector3(0,0.035,0.135) if along else center+Vector3(0.135,0.035,0)
+				if not along: window.rotation.y=PI/2
+				shell.add_child(window)
+		for cell: Array in layer.doors:
+			var door := _model("door_frame"); door.position=Vector3(float(cell[0])+0.5,0.04,float(cell[1])+0.5)
+			if not Windows.along_x(layer,int(cell[0]),int(cell[1])): door.rotation.y=PI/2
+			shell.add_child(door)
+		for object: Dictionary in layer.objects:
+			if object.kind=="stairs": continue
+			var model := _model(str(object.kind)); var size := Catalog.footprint(str(object.kind),int(object.rotation))
+			model.position=Vector3(float(object.x)+size.x*0.5,0.04,float(object.y)+size.y*0.5); model.rotation.y=-int(object.rotation)*PI/2
+			shell.add_child(model); _recolor(model,object)
+		for stair: Dictionary in Storeys.stairs(root,index):
+			var model := _model("stairs"); var size := Catalog.footprint("stairs",int(stair.rotation))
+			model.position=Vector3(float(stair.x)+size.x*0.5,0.04,float(stair.y)+size.y*0.5); model.rotation.y=-int(stair.rotation)*PI/2; shell.add_child(model)

@@ -56,6 +56,9 @@ func ground_at(point: Vector2) -> Vector2:
 	var origin := camera.project_ray_origin(point)
 	var direction := camera.project_ray_normal(point)
 	var ground := origin-direction*(origin.y/direction.y)
+	for iteration in range(5):
+		var height := Scene3D.ground_height(view.world.get("lots",{}).get(view.lot_id,{}),Vector2(ground.x,ground.z))
+		ground=origin+direction*((height-origin.y)/direction.y)
 	return Vector2(ground.x,ground.z)
 
 func _meshes(node: Node, result: Array[MeshInstance3D]) -> void:
@@ -73,10 +76,13 @@ func register_targets() -> Array[Dictionary]:
 	for node: Node3D in scene.pick_nodes:
 		if not is_instance_valid(node) or not node.is_visible_in_tree(): continue
 		var target: Dictionary=node.get_meta("target",{})
+		if view.building and target.get("type")=="member": continue
 		if target.get("type")=="wall" and (not view.building or view.build_kind not in ["finish_wall","door","erase","window","wall_art"]): continue
 		if target.get("type")=="wall_art" and view.building and view.build_kind!="wall_art": target={"type":"wall","x":target.x,"y":target.y}
 		var pieces: Array[Dictionary]=[]
-		if node.has_meta("pick_aabb"): pieces.append({"box":node.get_meta("pick_aabb"),"transform":node.global_transform})
+		if node.has_meta("pick_parts"):
+			for box: AABB in node.get_meta("pick_parts"):
+				pieces.append({"box":box,"transform":node.global_transform})
 		else:
 			var meshes: Array[MeshInstance3D]=[]
 			_meshes(node,meshes)

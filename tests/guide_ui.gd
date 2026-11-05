@@ -30,7 +30,7 @@ func _key(code: int) -> void:
 
 func _find(text: String) -> Button:
 	for button: Button in app.menu_content.find_children("*","Button",true,false):
-		if button.text==text and button.is_visible_in_tree(): return button
+		if (button.text==text or button.accessibility_name==text) and button.is_visible_in_tree(): return button
 	assert(false,"Missing guide/menu control: "+text); return null
 
 func _tab(index: int) -> void:

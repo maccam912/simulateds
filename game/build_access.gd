@@ -9,10 +9,11 @@ static func inspect(lot: Dictionary, residents: Array) -> Dictionary:
 	var blocked := obstacles(lot)
 	var reachable := {}
 	var issues: Array[Dictionary]=[]
-	if blocked.has(GATE):
+	var entrances: Array=lot.get("entrances",[GATE])
+	if entrances.is_empty() or (int(lot.get("level",0))==0 and blocked.has(GATE)):
 		issues.append(_issue("gate","Entrance",GATE,Vector2i.ONE,"Keep the lot entrance clear."))
 	else:
-		reachable=reachable_from(blocked,GATE)
+		for entrance: Vector2i in entrances: reachable.merge(reachable_from(blocked,entrance))
 		for resident: Dictionary in residents:
 			var position := Vector2i(int(resident.x),int(resident.y))
 			var can_exit: bool=reachable.has(position)
@@ -24,6 +25,7 @@ static func inspect(lot: Dictionary, residents: Array) -> Dictionary:
 			if not can_exit:
 				issues.append(_issue("resident:"+str(resident.id),str(resident.name),position,Vector2i.ONE,"A resident cannot reach the entrance. Add a door or clear a path."))
 		for object: Dictionary in lot.objects:
+			if str(Catalog.ITEMS[object.kind].need).is_empty() and object.kind!="stairs": continue
 			var size := Catalog.footprint(str(object.kind),int(object.rotation))
 			var usable := false
 			for y in range(int(object.y),int(object.y)+size.y):
@@ -46,6 +48,12 @@ static func _inside(cell: Vector2i) -> bool:
 
 static func obstacles(lot: Dictionary) -> Dictionary:
 	var result := {}
+	for cell: Array in lot.get("stairwells",[]): result[Vector2i(int(cell[0]),int(cell[1]))]=true
+	if int(lot.get("level",0))>0:
+		for y in range(16):
+			for x in range(16):
+				if [x,y] not in lot.floors: result[Vector2i(x,y)]=true
+	for cell: Array in lot.get("landscape",{}).get("pools",[]): result[Vector2i(int(cell[0]),int(cell[1]))]=true
 	for cell: Array in lot.walls: result[Vector2i(int(cell[0]),int(cell[1]))]=true
 	for object: Dictionary in lot.objects:
 		var size := Catalog.footprint(str(object.kind),int(object.rotation))

@@ -73,7 +73,7 @@ func _run() -> void:
 	assert(Library.valid(JSON.parse_string(JSON.stringify(_board()))))
 	_fresh(); assert(world.apply_command("a",_save()).ok)
 	lot.funds=1; _reject(_place())
-	lot.funds=12000; world.state.families.a.members[0].x=10; world.state.families.a.members[0].y=7; _reject(_place())
+	lot.funds=12000; world.state.families.a.members[0].x=10; world.state.families.a.members[0].y=7; assert(world.apply_command("a",_place()).ok)
 	# Saved recipes contain no meal portions, crops, canvas progress, or wall originals.
 	for kind: String in ["dining_table","garden_bed","easel"]:
 		_fresh(); lot.objects.clear()

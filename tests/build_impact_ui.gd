@@ -25,7 +25,7 @@ func _button(control: Button) -> void:
 	await _mouse(control.get_global_rect().get_center(),true); assert(pressed[0])
 
 func _named(node: Node,title: String) -> Button:
-	if node is Button and node.text==title: return node
+	if node is Button and (node.text==title or node.accessibility_name==title): return node
 	for child in node.get_children():
 		var found := _named(child,title)
 		if found!=null: return found
@@ -98,10 +98,10 @@ func _run() -> void:
 	await _button(game.redo_button); assert(session.world.build_access(lot).ok)
 	await _button(game.catalog_buttons.wall)
 	before=session.world.snapshot(); await _tile(8,11); await _capture("entrance-warning"); _readable()
-	assert(view.preview_result.ok and view.placement_impact.introduced.size()==13 and view.impact_markers.size()==6 and session.world.snapshot()==before)
+	assert(view.preview_result.ok and view.placement_impact.introduced.size()==11 and view.impact_markers.size()==6 and session.world.snapshot()==before)
 	await _tile(8,11,true); assert(not session.world.build_access(lot).ok)
 	await _button(game.catalog_buttons.door); await _tile(8,11); await _capture("door-repair"); _readable()
-	assert(view.preview_result.ok and view.placement_impact.ok and view.placement_impact.resolved.size()==13)
+	assert(view.preview_result.ok and view.placement_impact.ok and view.placement_impact.resolved.size()==11)
 	await _tile(8,11,true); assert(session.world.build_access(lot).ok)
 	await _button(_named(game.context_box,"Sell")); await _mouse(_point(table),true)
 	assert(session.world._object(lot,table).is_empty(),"Remove the extra table before planning a kitchen divider")

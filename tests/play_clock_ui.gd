@@ -52,7 +52,7 @@ func _run() -> void:
 	session.set_physics_process(false); session.set_clock_rate(1)
 	await _click(game.time_buttons[4].get_global_rect().get_center()); assert(session.debug_speed==4)
 	await _capture("active-hover")
-	await _key(KEY_P); assert(session.debug_speed==0 and "Paused" in game.clock_label.text)
+	await _key(KEY_P); assert(session.debug_speed==0 and "Paused" in game.clock_label.tooltip_text)
 	var before: Dictionary=session.world.snapshot(); session._advance_simulation(1); assert(session.world.snapshot()==before)
 	var member: Dictionary=session.state.families[session.profile_id].members[0]
 	# Plan through a real world click while paused, with no need or movement tick.

@@ -11,7 +11,7 @@ const KINDS := {
 static func activity(world: Dictionary, member: Dictionary, kind: String="") -> Dictionary:
 	var task: Dictionary=member.get("task",{})
 	if task.get("type")!="interact" or task.get("target_kind","object")!="object": return {}
-	var lot: Dictionary=world.get("lots",{}).get(member.get("lot_id",""),{})
+	var lot: Dictionary=preload("res://game/storeys.gd").view(world.get("lots",{}).get(member.get("lot_id",""),{}),int(member.get("level",0)))
 	if lot.get("building",false): return {}
 	for object: Dictionary in lot.get("objects",[]):
 		if object.id==task.get("target_id") and KINDS.has(object.kind) and (kind.is_empty() or object.kind==kind): return object
@@ -44,7 +44,7 @@ static func place(member: Dictionary) -> Vector2i:
 static func spaces(world: Dictionary, lot: Dictionary, object: Dictionary, member: Dictionary={}) -> Dictionary:
 	var blocked := Access.obstacles(lot)
 	var local_member: bool=not member.is_empty() and member.get("lot_id")==lot.id
-	var origin := Vector2i(int(member.x),int(member.y)) if local_member else Access.GATE
+	var origin: Vector2i = Vector2i(int(member.x),int(member.y)) if local_member else lot.get("entrances",[Access.GATE])[0] if not lot.get("entrances",[Access.GATE]).is_empty() else Access.GATE
 	var reachable := Access.reachable_from(blocked,origin,local_member)
 	var reserved := {}; var occupied := {}
 	var users := players(world,str(lot.id),str(object.id),false)
@@ -54,7 +54,7 @@ static func spaces(world: Dictionary, lot: Dictionary, object: Dictionary, membe
 		if user.id!=member.get("id",""): others+=1
 	for family: Dictionary in world.get("families",{}).values():
 		for other: Dictionary in family.members:
-			if other.lot_id!=lot.id or other.id==member.get("id",""): continue
+			if other.lot_id!=lot.id or int(other.get("level",0))!=int(lot.get("level",0)) or other.id==member.get("id",""): continue
 			occupied[Vector2i(int(other.x),int(other.y))]=str(other.name)
 			if not activity(world,other).is_empty(): reserved[place(other)]=str(other.name)
 	var extent := Catalog.footprint(str(object.kind),int(object.get("rotation",0)))

@@ -34,7 +34,7 @@ func _run() -> void:
 	assert(report.ok and report.reachable.has(Access.GATE) and world.snapshot()==before,"Opening the diagnostic leaves the entire draft unchanged")
 	assert(world.apply_command("a",{"type":"place","lot_id":lot.id,"kind":"wall","x":8,"y":11}).ok)
 	report=world.build_access(lot)
-	assert(not report.ok and report.issues.size()==12 and report.unreachable.has(Vector2i(7,7)),"Closing the front door identifies both residents and every unreachable furnishing")
+	assert(not report.ok and report.issues.size()==10 and report.unreachable.has(Vector2i(7,7)),"Closing the front door moves residents aside and identifies unreachable furnishings")
 	before=world.snapshot()
 	var result: Dictionary=world.apply_command("a",{"type":"build_end","lot_id":lot.id})
 	assert(not result.ok and result.message==report.message and world.snapshot()==before,"Finish building uses the same explanation without committing a bad draft")

@@ -2,12 +2,14 @@ extends RefCounted
 ## Read-only consequences of an already validated draft edit. Placement remains
 ## flexible; the existing authoritative access check still guards publication.
 const Access = preload("res://game/build_access.gd")
+const BuildArea = preload("res://game/build_area.gd")
 const RoomPlan = preload("res://game/room_plan.gd")
 
 static func inspect(lot: Dictionary, command: Dictionary, plan: Dictionary, residents: Array) -> Dictionary:
-	if not plan.get("ok",false) or not command.get("type") in ["place","move_object","build_room"]: return {}
+	if not plan.get("ok",false) or not command.get("type") in ["place","move_object","build_room","place_area"]: return {}
 	var draft := lot.duplicate(true)
 	if command.type=="build_room": RoomPlan.apply(draft,plan)
+	elif command.type=="place_area": BuildArea.apply(draft,plan)
 	elif command.type=="move_object":
 		for object: Dictionary in draft.objects:
 			if object.id==command.object_id:
@@ -20,7 +22,7 @@ static func inspect(lot: Dictionary, command: Dictionary, plan: Dictionary, resi
 			draft[{"floor":"floors","wall":"walls","door":"doors"}[plan.kind]].append(cell)
 		else:
 			draft.objects.append({"id":"placement_preview","kind":str(plan.kind),"x":int(command.x),"y":int(command.y),"rotation":int(plan.rotation)})
-	var before := Access.inspect(lot,residents); var after := Access.inspect(draft,residents)
+	var before := Access.inspect(lot,[] if lot.get("building",false) else residents); var after := Access.inspect(draft,[] if lot.get("building",false) else residents)
 	var previous := {}; var current := {}
 	for issue: Dictionary in before.issues: previous[issue.key]=issue
 	for issue: Dictionary in after.issues: current[issue.key]=issue

@@ -50,7 +50,7 @@ func _run() -> void:
 	assert(session.state.families.mail_neighbor.mailbox.items.size()==1 and app.mail_panel.pending.is_empty())
 	assert(session.world.apply_command("mail_neighbor",{"type":"mail_send","recipient":session.profile_id,"note":"Yes please! A little something for the garden.","gift":100,"sequence":1}).ok)
 	session.world_changed.emit(); app.game._refresh()
-	assert(app.game.mail_button.text=="Mail · 1")
+	assert(app.game.mail_button.text=="1")
 	var mail_id: String=family.mailbox.items[0].id
 	app.mail_panel.open_buttons[mail_id].pressed.emit()
 	assert(family.mailbox.items[0].read and app.mail_panel.archive_button.disabled)

@@ -6,6 +6,9 @@ const BuildRules = preload("res://game/build_rules.gd")
 const RoomPlan = preload("res://game/room_plan.gd")
 const RoomCopy = preload("res://game/room_copy.gd")
 const ConstructionSpace = preload("res://game/construction_space.gd")
+const Storeys = preload("res://game/storeys.gd")
+const Landscaping = preload("res://game/landscaping.gd")
+const BuildArea = preload("res://game/build_area.gd")
 const ClearLot = preload("res://game/clear_lot.gd")
 const RoomLibrary = preload("res://game/room_library.gd")
 const FurnitureColors = preload("res://game/furniture_colors.gd")
@@ -33,15 +36,16 @@ const Meals = preload("res://game/meals.gd")
 const HouseholdTravel = preload("res://game/household_travel.gd")
 const Gardens = preload("res://game/gardens.gd")
 const ActivityLog = preload("res://game/activity_log.gd")
+const Character = preload("res://game/character_profile.gd")
 const HouseholdProfile = preload("res://game/household_profile.gd")
 const GRID_SIZE := 16
-const SCHEMA := 1
+const SCHEMA := 3
 const MAX_FAMILIES := 4
 const MAX_QUEUE := 8
 const MAX_BUILD_HISTORY := 32
 const MINUTES_PER_SECOND := 3.0
 const MIN_ACTIVITY_TIME := 4.0
-const BUILD_FIELDS := ["floors", "walls", "doors", "objects", "funds", "finishes", "windows", "artworks"]
+const BUILD_FIELDS := ["floors", "walls", "doors", "objects", "funds", "finishes", "windows", "artworks", "landscape", "diagonal_walls", "storeys"]
 const NEEDS := ["hunger", "energy", "hygiene", "bladder", "fun", "social", "comfort"]
 const DECAY := {"hunger":0.13, "energy":0.08, "hygiene":0.10, "bladder":0.15, "fun":0.12, "social":0.09, "comfort":0.07}
 const ACTION_NAMES := {"bed":"Sleeping", "fridge":"Making a meal", "shower":"Showering", "toilet":"Using the bathroom", "sofa":"Relaxing", "tv":"Watching television", "bookshelf":"Reading", "plant":"Tending plants", "table":"Having tea", "game_table":"Playing a tabletop puzzle", "stereo":"Dancing", "easel":"Painting"}
@@ -57,7 +61,7 @@ func initialize() -> void:
 	var names := ["Clover Cottage", "Willow House", "Juniper Place", "Maple Corner"]
 	for index in range(MAX_FAMILIES):
 		var id := "lot_%d" % (index + 1)
-		var lot := {"id":id, "name":names[index], "owner":"", "funds":12000, "building":false, "revision":0, "build_undo":0, "build_redo":0, "floors":[], "walls":[], "doors":[], "objects":[],"artworks":{}}
+		var lot := {"id":id, "name":names[index], "owner":"", "funds":12000, "building":false, "revision":0, "build_undo":0, "build_redo":0, "floors":[], "walls":[], "doors":[], "objects":[],"artworks":{},"landscape":Landscaping.empty(),"diagonal_walls":{},"storeys":{}}
 		for y in range(3, 12):
 			for x in range(3, 13):
 				lot.floors.append([x,y])
@@ -138,7 +142,15 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 		if outcome.ok and type=="commission_deliver": _event(str(outcome.message))
 		return outcome
 	if type == "news_read": return HomeNews.read(family,command.get("revision"))
-	if type == "household_edit": return HouseholdProfile.edit(family,command)
+	if type == "household_edit":
+		var edited := HouseholdProfile.edit(family,command,_create_resident)
+		if edited.ok:
+			Friendships.ensure_housemates(state,family)
+			for resident: Dictionary in family.members:
+				if Character.is_baby(resident):
+					_clear_member(resident,"Resting in the bassinet")
+					if resident.lot_id!=family.home_lot: _send_home(family,resident)
+		return edited
 	if type in ["routine_save","routine_delete"]: return Routines.edit(family,command)
 	if type in ["mail_send","mail_read","mail_claim","mail_archive"]:
 		return Mailbox.apply(state,profile_id,command,_adjust_funds)
@@ -157,6 +169,8 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 	var lot: Dictionary = state.lots[lot_id]
 	if type=="construction_space": return _construction_space(profile_id,command,lot)
 	if type in ["blueprint_save","blueprint_rename","blueprint_delete"]:
+		if not _integer(command.get("level",0)) or int(command.get("level",0))<0 or int(command.get("level",0))>Storeys.MAX_LEVEL: return _result(false,"Choose a floor from 1 to 3.")
+		lot=Storeys.view(lot,int(command.get("level",0)))
 		if lot.owner!=profile_id: return _result(false,"Only your own household can edit its saved rooms.")
 		var captured := {}
 		if type=="blueprint_save":
@@ -166,7 +180,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 			captured=RoomCopy.capture(lot,Vector2i(int(command.source_x),int(command.source_y)))
 			if not captured.ok: return captured
 		return RoomLibrary.edit(family,command,captured)
-	if type in ["build_begin", "build_end", "build_cancel", "build_undo", "build_redo", "place", "erase", "move_object", "build_room", "copy_room", "place_blueprint", "clear_lot", "paint", "set_window", "recolor", "art_hang", "art_store", "art_return"]:
+	if type in ["build_begin", "build_end", "build_cancel", "build_undo", "build_redo", "place", "erase", "move_object", "build_room", "copy_room", "place_blueprint", "clear_lot", "erase_area", "place_area", "landscape", "paint", "set_window", "recolor", "art_hang", "art_store", "art_return"]:
 		if lot.owner != profile_id:
 			return _result(false, "Only the owner can build on this lot.")
 		if type == "build_begin":
@@ -188,7 +202,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 			return _result(true, "Construction started. Your family is paused; neighbors keep living.")
 		if not lot.building:
 			return _result(false, "Enter construction mode first.")
-		if type in ["build_undo", "build_redo", "build_room", "copy_room", "place_blueprint", "clear_lot", "paint", "set_window", "recolor", "art_hang", "art_store", "art_return"]:
+		if type in ["build_undo", "build_redo", "build_room", "copy_room", "place_blueprint", "clear_lot", "erase_area", "place_area", "landscape", "paint", "set_window", "recolor", "art_hang", "art_store", "art_return"]:
 			if not _integer(command.get("revision")) or int(command.revision) != int(lot.revision):
 				return _result(false, "The building draft changed. Review the preview and try again.")
 			if type in ["build_undo","build_redo"]: return _history_step(lot,type == "build_redo")
@@ -199,6 +213,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 			lot.revision += 1
 			return _result(true, "Construction canceled. Your previous home and funds are restored.")
 		if type == "build_end":
+			_relocate_build_residents(lot)
 			var issue := _layout_issue(lot)
 			if not issue.is_empty():
 				return _result(false, issue)
@@ -209,8 +224,9 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 			_event(str(lot.name) + " is open for visitors again.")
 			return _result(true, "Welcome home. Your family is living again.")
 		var previous := _capture_build(lot)
-		var result := _build(lot, command)
+		var result := _build_storey(lot, command)
 		if result.ok:
+			_relocate_build_residents(lot)
 			var stored := WallArt.reconcile(lot)
 			if stored>0: result.message+=" A painting moved safely into the collection." if stored==1 else " %d paintings moved safely into the collection." % stored
 			var history: Dictionary = _build_history.get(lot_id,{"undo":[],"redo":[]})
@@ -229,6 +245,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 	if type=="meal_call": return _call_meal(profile_id,command)
 	if type=="recreation": return _recreation(profile_id,command,lot)
 	if type=="travel_household": return _travel_household(profile_id,command)
+	if Character.is_baby(member): return _result(false,"Babies rest at home in their bassinet. Choose an older resident for activities.")
 	if type == "renew_wishes":
 		if not Wishes.can_renew(member.wishes,int(state.day)):
 			return _result(false,"Finish these wishes first. A fresh set is available on the following day.")
@@ -243,7 +260,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 		if activity.is_empty(): return _result(false,"That wish is already complete or unavailable.")
 		if wish_id in Wishes.MEALS: return _result(false,"Open this wish to find a dining table, then choose a recipe or meal. Ingredients are paid only when served.")
 		if not wish_status(member,activity).is_empty(): return _result(false,"That activity is already in this resident’s plan.")
-		var destination: Dictionary=state.lots[member.lot_id]
+		var destination: Dictionary=_member_lot(member)
 		var target := ""
 		var best_score := 100000.0
 		if activity=="chat":
@@ -277,7 +294,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 		if member.task.get("id", "") == action_id:
 			_end_task(member,"cancelled","Cancelled from Plan.")
 			member.idle_clock = 0.0
-			_start_next(member, state.lots[member.lot_id])
+			_start_next(member, _member_lot(member))
 			return _result(true, "Current action canceled. The rest of the plan continues.")
 		for queued: Dictionary in member.queue:
 			if queued.get("id", "") == action_id:
@@ -313,7 +330,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 		# Resolve every step and queue limit before changing any task or counter.
 		for action: Dictionary in option.actions: _queue_action(member,action.duplicate(true))
 		if member.task.get("automatic",false): member.task={}
-		if member.task.is_empty(): _start_next(member,state.lots[member.lot_id])
+		if member.task.is_empty(): _start_next(member,_member_lot(member))
 		return _result(true,str(option.name)+" added to "+str(member.name)+"'s plan.")
 	if type=="practice_hobby":
 		var hobby: Variant=command.get("hobby")
@@ -340,12 +357,17 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 		if member.lot_id==destination.id: return _result(true,"Already at "+str(destination.name)+". Your plan continues.")
 		_clear_member(member,"Taking it easy","Travelled to "+str(destination.name)+".")
 		member.lot_id = destination.id
+		member.level=0
 		member.next_action+=1
 		var entry := _free_entry(destination,str(member.id))
 		member.x = entry.x
 		member.y = entry.y
 		_event(str(member.name) + " arrived at " + str(destination.name) + ".")
 		return _result(true, "Arrived at " + str(destination.name) + ".")
+	if type=="use_stairs": return _use_stairs(member,lot,command)
+	if type not in ["visit","go_home"]:
+		if command.has("level") and (not _integer(command.level) or int(command.level)!=int(member.get("level",0))): return _result(false,"Use the stairs to reach this floor first.")
+		lot=Storeys.view(lot,int(member.get("level",0)))
 	if member.lot_id != lot_id:
 		return _result(false, "Visit this lot before using it.")
 	if lot.building:
@@ -414,7 +436,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 		var object := _object(lot, target_id)
 		if object.is_empty():
 			var neighbor := _find_member(target_id)
-			if neighbor.is_empty() or neighbor.id == member.id or neighbor.lot_id != member.lot_id:
+			if neighbor.is_empty() or neighbor.id == member.id or neighbor.lot_id != member.lot_id or int(neighbor.get("level",0))!=int(member.get("level",0)):
 				return _result(false, "Choose another resident on this lot or a furnishing.")
 			if not chat_status(member,str(neighbor.id)).is_empty(): return _result(false,"That conversation is already in this resident’s plan.")
 			var goals := _social_cells(lot, neighbor)
@@ -422,6 +444,8 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 				return _result(false, "There is no path to chat with that resident.")
 			_queue_action(member, {"type":"interact", "target_id":target_id, "target_kind":"member"})
 		else:
+			if object.kind=="stairs": return _use_stairs(member,state.lots[member.lot_id],{"direction":1})
+			if str(Catalog.ITEMS[object.kind].need).is_empty(): return _result(false,"This furnishing decorates the home.")
 			if object.kind=="dining_table": return _result(false,"Open the dining table to prepare or choose a meal.")
 			if object.kind=="easel": return _result(false,"Open the easel to choose a subject or continue its painting.")
 			if object.kind=="garden_bed": return _result(false,"Open the garden bed to choose planting, watering, or harvesting.")
@@ -455,6 +479,7 @@ func _construction_space(profile_id: String,command: Dictionary,lot: Dictionary)
 		var member:=_member(state.families[profile_id],str(option.orders[index].member_id))
 		var at: Vector2i=placement.places[index]
 		if _position(member)!=at: changed+=1
+		member.level=0
 		_clear_member(member,"Waiting for construction","Moved aside for construction.")
 		member.x=at.x; member.y=at.y; member.next_action+=1
 	return _result(true,"Your family is already by the entrance." if changed==0 else ", ".join(option.names)+" moved aside. Keep building; Undo still restores your house edits.")
@@ -474,6 +499,7 @@ func travel_option(profile_id: String,lot_id: String,travelers: Variant) -> Dict
 		seen[id]=true
 	for member: Dictionary in family.members:
 		if not seen.has(member.id): continue
+		if Character.is_baby(member): result.message="Babies stay at home in their bassinet."; return result
 		if member.lot_id==lot_id: result.message=str(member.name)+" is already here. Review who is leaving."; return result
 		if int(member.next_action)>=9007199254740000: result.message="This resident's action counter is exhausted."; return result
 		result.orders.append(HouseholdTravel.stamp(member))
@@ -492,7 +518,7 @@ func _travel_household(profile_id: String,command: Dictionary) -> Dictionary:
 	for index in range(option.orders.size()):
 		var member := _member(state.families[profile_id],str(option.orders[index].member_id))
 		_clear_member(member,"Taking it easy","Travelled to "+str(lot.name)+".")
-		member.lot_id=lot.id; member.x=option.places[index].x; member.y=option.places[index].y; member.next_action+=1
+		member.lot_id=lot.id; member.level=0; member.x=option.places[index].x; member.y=option.places[index].y; member.next_action+=1
 		names.append(str(member.name))
 	_event(", ".join(names)+" arrived at "+str(lot.name)+".")
 	return _result(true,"Arrived together at "+str(lot.name)+"." if names.size()>1 else str(names[0])+" arrived at "+str(lot.name)+".")
@@ -501,7 +527,7 @@ func _arrival_places(lot: Dictionary,count: int,ignore_member: String="") -> Arr
 	var occupied := {}; var result: Array[Vector2i]=[]
 	for family: Dictionary in state.families.values():
 		for member: Dictionary in family.members:
-			if member.lot_id==lot.id and member.id!=ignore_member: occupied[_position(member)]=true
+			if member.lot_id==lot.id and int(member.get("level",0))==0 and member.id!=ignore_member: occupied[_position(member)]=true
 	# The entrance flood is ordered nearest-first and never puts someone in a sealed room.
 	for cell: Vector2i in BuildAccess.reachable_from(BuildAccess.obstacles(lot),BuildAccess.GATE):
 		if occupied.has(cell): continue
@@ -514,7 +540,7 @@ func recreation_option(profile_id: String,member_id: String,lot_id: String,targe
 	var family: Dictionary=state.families.get(profile_id,{})
 	var selected:=_member(family,member_id) if not family.is_empty() else {}
 	if selected.is_empty(): result.message="Choose one of your household's residents."; return result
-	var lot: Dictionary=state.lots.get(lot_id,{})
+	var lot: Dictionary=Storeys.view(state.lots.get(lot_id,{}),int(selected.get("level",0)))
 	if lot.is_empty() or not target_id is String: return result
 	var object:=_object(lot,target_id)
 	if not object.get("kind") in Recreation.KINDS: return result
@@ -530,6 +556,7 @@ func recreation_option(profile_id: String,member_id: String,lot_id: String,targe
 		var current: bool=not own.is_empty() and own.id==target_id
 		var planned: bool=resident.queue.any(func(task): return task.get("type")=="interact" and task.get("target_kind","object")=="object" and task.get("target_id")==target_id)
 		if resident.lot_id!=lot_id: row.detail="Away · Visit this lot first"
+		elif int(resident.get("level",0))!=int(selected.get("level",0)): row.detail="Another floor · Use the stairs first"
 		elif (current and not resident.task.get("automatic",false)) or planned: row.detail="Already chosen here" if current else "Already in their plan"
 		elif int(resident.next_action)>=9007199254740000: row.detail="Action limit reached"
 		elif current: row.action="choose"; row.detail="Choose current play · Keep place and time"
@@ -576,7 +603,7 @@ func meal_call_option(profile_id: String,member_id: String,lot_id: String,table_
 	var family: Dictionary=state.families.get(profile_id,{})
 	var preferred := _member(family,member_id) if not family.is_empty() else {}
 	if preferred.is_empty(): result.message="Choose one of your household's residents."; return result
-	var lot: Dictionary=state.lots.get(lot_id,{})
+	var lot: Dictionary=Storeys.view(state.lots.get(lot_id,{}),int(preferred.get("level",0)))
 	if lot.is_empty() or not table_id is String: return result
 	var table := _object(lot,table_id)
 	if table.get("kind")!="dining_table": return result
@@ -590,6 +617,7 @@ func meal_call_option(profile_id: String,member_id: String,lot_id: String,table_
 	for resident: Dictionary in residents:
 		var row := {"id":str(resident.id),"name":str(resident.name),"action":"","detail":""}
 		if resident.lot_id!=lot_id: row.detail="Away · Visit this lot first"
+		elif int(resident.get("level",0))!=int(preferred.get("level",0)): row.detail="Another floor · Use the stairs first"
 		else:
 			var choice := meal_option(profile_id,str(resident.id),lot_id,table_id,"choose")
 			if choice.ok: row.action="choose"; row.detail="Choose current meal · Keep portion and time"
@@ -633,7 +661,7 @@ func meal_option(profile_id: String,member_id: String,lot_id: String,table_id: V
 	var family: Dictionary=state.families.get(profile_id,{})
 	var member := _member(family,member_id) if not family.is_empty() else {}
 	if member.is_empty(): return _result(false,"Choose one of your own residents.")
-	var lot: Dictionary=state.lots.get(lot_id,{})
+	var lot: Dictionary=Storeys.view(state.lots.get(lot_id,{}),int(member.get("level",0)))
 	if lot.is_empty(): return _result(false,"Choose a dining table.")
 	if lot.building or state.lots[family.home_lot].building: return _result(false,"Finish construction before preparing or sharing a meal.")
 	if member.lot_id!=lot_id: return _result(false,"Visit this home with "+str(member.name)+" to share a meal.")
@@ -747,7 +775,7 @@ func admire_option(profile_id: String,member_id: String,lot_id: String,target_id
 	var family: Dictionary=state.families.get(profile_id,{})
 	var member := _member(family,member_id) if not family.is_empty() else {}
 	if member.is_empty(): return _result(false,"Choose one of your own residents.")
-	var lot: Dictionary=state.lots.get(lot_id,{})
+	var lot: Dictionary=Storeys.view(state.lots.get(lot_id,{}),int(member.get("level",0)))
 	if lot.is_empty(): return _result(false,"Choose a painting on a household wall.")
 	if state.lots[family.home_lot].building or lot.building: return _result(false,"Finish construction before admiring artwork.")
 	if member.lot_id!=lot_id: return _result(false,"Visit this home with "+str(member.name)+" to admire its paintings.")
@@ -766,7 +794,7 @@ func painting_option(profile_id: String,member_id: String,lot_id: String,target_
 	var family: Dictionary=state.families.get(profile_id,{})
 	var member := _member(family,member_id) if not family.is_empty() else {}
 	if member.is_empty(): return _result(false,"Select a resident from your household.")
-	var lot: Dictionary=state.lots.get(lot_id,{})
+	var lot: Dictionary=Storeys.view(state.lots.get(lot_id,{}),int(member.get("level",0)))
 	if lot.is_empty(): return _result(false,"That easel is no longer here.")
 	if member.lot_id!=lot_id: return _result(false,"Go to this lot before painting.")
 	if lot.building or state.lots[family.home_lot].building: return _result(false,"Finish construction before painting.")
@@ -833,7 +861,7 @@ func garden_option(profile_id: String,member_id: String,lot_id: String,target_id
 	if family.is_empty(): return _result(false,"Join a household first.")
 	var member := _member(family,member_id)
 	if member.is_empty(): return _result(false,"Select a resident from your household.")
-	var lot: Dictionary=state.lots.get(lot_id,{})
+	var lot: Dictionary=Storeys.view(state.lots.get(lot_id,{}),int(member.get("level",0)))
 	if lot.is_empty(): return _result(false,"That garden is no longer here.")
 	if member.lot_id!=lot_id: return _result(false,"Visit this lot before gardening.")
 	if lot.building or state.lots[family.home_lot].building: return _result(false,"Finish construction before gardening.")
@@ -897,7 +925,7 @@ func move_option(profile_id: String,member_id: String,lot_id: String,goal: Vecto
 	if member.is_empty(): return _result(false,"You can only direct your own family.")
 	if state.lots[family.home_lot].building: return _result(false,"Finish construction before directing your family.")
 	if member.lot_id!=lot_id: return _result(false,"Visit this lot before walking here.")
-	var lot: Dictionary=state.lots[lot_id]
+	var lot: Dictionary=_member_lot(member)
 	if lot.building: return _result(false,"This lot is under construction.")
 	if member.queue.size()>=MAX_QUEUE: return _result(false,"The action queue is full (8 actions).")
 	if not _inside(goal): return _result(false,"Choose a tile inside the lot.")
@@ -908,12 +936,24 @@ func move_option(profile_id: String,member_id: String,lot_id: String,goal: Vecto
 	return {"ok":true,"message":"Walk here" if ahead==0 else "Queue walk · %d %s first" % [ahead,"activity" if ahead==1 else "activities"],"path":route,"ahead":ahead,"cell":goal,"here":_position(member)==goal}
 
 func _build(lot: Dictionary, command: Dictionary) -> Dictionary:
-	if command.type=="clear_lot":
-		var plan:=ClearLot.inspect(lot)
+	if command.type=="landscape":
+		var plan := Landscaping.inspect(lot,command)
 		if not plan.ok: return plan
-		if not ClearLot.matches(command,plan): return _result(false,"The clearing quote changed. Review the lot again.")
+		Landscaping.apply(lot,plan)
+		return _result(true,str(plan.message)+". Undo restores the whole stroke.")
+	if command.type in ["clear_lot","erase_area"]:
+		var area := BuildArea.bounds(command) if command.type=="erase_area" else Rect2i(0,0,16,16)
+		if not area.has_area(): return _result(false,"Keep both corners inside the lot.")
+		var plan := ClearLot.inspect(lot,area)
+		if not plan.ok: return plan
+		if not ClearLot.matches(command,plan): return _result(false,"The clearing quote changed. Review the selection again.")
 		ClearLot.apply(lot,plan)
-		return _result(true,"Lot cleared · §%d refunded. %d paintings stored. Undo restores the whole edit." % [plan.refund,plan.stored+plan.paintings.size()])
+		var target := "Area" if command.type=="erase_area" else "Lot"
+		var message := "%s cleared · §%d refunded." % [target,plan.refund]
+		var stored: int=plan.stored+plan.paintings.size()
+		if stored==1: message+=" One painting moved to the collection."
+		elif stored>1: message+=" %d paintings moved to the collection." % stored
+		return _result(true,message+" Undo restores the whole edit.")
 	if command.type in ["art_hang","art_store","art_return"]:
 		var plan := WallArt.inspect(lot,command)
 		if not plan.ok: return plan
@@ -934,6 +974,9 @@ func _build(lot: Dictionary, command: Dictionary) -> Dictionary:
 		Windows.apply(lot,plan)
 		return _result(true,str(plan.message)+". Undo restores this edit.")
 	if command.type == "erase":
+		if Landscaping.pooled(lot,cell.x,cell.y):
+			lot.landscape.pools.erase([cell.x,cell.y]); lot.funds+=54; lot.revision+=1
+			return _result(true,"Pool tile filled · §54 refunded.")
 		if not Windows.at(lot,cell.x,cell.y).is_empty():
 			var plan := Windows.inspect(lot,{"style":"","x":cell.x,"y":cell.y})
 			if not plan.ok: return plan
@@ -949,6 +992,7 @@ func _build(lot: Dictionary, command: Dictionary) -> Dictionary:
 			var list: Array = lot[_tile_key(kind)]
 			if list.has([cell.x, cell.y]):
 				list.erase([cell.x, cell.y])
+				lot.get("diagonal_walls",{}).erase(Landscaping.key(cell.x,cell.y))
 				if kind in ["floor","wall"]: Finishes.remove(lot,kind,cell.x,cell.y)
 				lot.funds += int(Catalog.ITEMS[kind].cost * 0.6)
 				lot.revision += 1
@@ -981,6 +1025,11 @@ func _build(lot: Dictionary, command: Dictionary) -> Dictionary:
 			FurnitureColors.set_style(copied,FurnitureColors.at(object)); lot.objects.append(copied)
 		lot.funds-=int(plan.cost); lot.revision+=1
 		return _result(true,"Room copied for §%d. One Undo restores the whole placement." % int(plan.cost))
+	if command.type=="place_area":
+		var plan := BuildArea.inspect(lot,command,residents)
+		if not plan.ok: return plan
+		BuildArea.apply(lot,plan)
+		return _result(true,"Built %s. Undo restores the whole area." % str(plan.message))
 	if command.type=="build_room":
 		var plan := RoomPlan.inspect(lot,command,residents)
 		if not plan.ok: return plan
@@ -1025,8 +1074,9 @@ func step(delta: float) -> void:
 		_event("A new day. Households received their living allowance.")
 	for lot: Dictionary in state.lots.values():
 		if lot.building: continue
-		for object: Dictionary in lot.objects:
-			if object.kind=="garden_bed": Gardens.grow(object.garden,delta)
+		for level in range(Storeys.MAX_LEVEL+1):
+			for object: Dictionary in Storeys.view(lot,level).objects:
+				if object.kind=="garden_bed": Gardens.grow(object.garden,delta)
 	var company_holds:=Leisure.company_windows(state,delta)
 	_tick_shared_friendships(delta)
 	for family: Dictionary in state.families.values():
@@ -1034,7 +1084,10 @@ func step(delta: float) -> void:
 		if state.lots[family.home_lot].building:
 			continue
 		for member: Dictionary in family.members:
-			var lot: Dictionary = state.lots[member.lot_id]
+			var lot: Dictionary = _member_lot(member)
+			if Character.is_baby(member):
+				member.action="Resting in the bassinet"
+				continue
 			for need: String in NEEDS:
 				var floor_value := 0.0 if family.online else 55.0
 				member.needs[need] = clampf(float(member.needs[need]) - float(DECAY[need]) * delta, floor_value, 100.0)
@@ -1075,11 +1128,19 @@ func _tick_member(member: Dictionary, lot: Dictionary, delta: float,keep_company
 			member.y = int(next[1])
 		return
 	if task.type == "move":
+		if task.has("stairs_to"):
+			var root: Dictionary=state.lots[member.lot_id]
+			var lower := mini(int(member.get("level",0)),int(task.stairs_to))
+			var stair := _object(Storeys.view(root,lower),str(task.stairs_id))
+			if stair.get("kind")!="stairs": _end_task(member,"failed","The staircase changed."); return
+			var arrival := Storeys.landing(stair,int(task.stairs_to)>lower)
+			if not _walkable(Storeys.view(root,int(task.stairs_to)),arrival): _end_task(member,"failed","The stair landing is blocked."); return
+			member.level=int(task.stairs_to); member.x=arrival.x; member.y=arrival.y
 		_end_task(member,"done","Arrived.")
 		return
 	if task.get("target_kind", "object") == "member":
 		var neighbor := _find_member(str(task.target_id))
-		if neighbor.is_empty() or neighbor.lot_id != member.lot_id or _position(member).distance_to(_position(neighbor)) > 2.0:
+		if neighbor.is_empty() or neighbor.lot_id != member.lot_id or int(neighbor.get("level",0))!=int(member.get("level",0)) or _position(member).distance_to(_position(neighbor)) > 2.0:
 			_end_task(member,"failed","The other resident moved away.","They moved away")
 			return
 		if _chat_busy(neighbor,member):
@@ -1115,6 +1176,8 @@ func _tick_member(member: Dictionary, lot: Dictionary, delta: float,keep_company
 	if object.is_empty():
 		_end_task(member,"failed","The furnishing is no longer here.")
 		return
+	if str(Catalog.ITEMS[object.kind].need).is_empty():
+		_end_task(member,"done","Enjoyed the furnishing."); return
 	if object.kind=="dining_table":
 		_end_task(member,"failed","Choose a portion from the dining table."); return
 	if object.kind=="easel" or task.has("paint_action"):
@@ -1155,7 +1218,10 @@ func task_activity(task: Dictionary, lot_id: String) -> String:
 	if task.get("type")!="interact": return ""
 	if task.get("target_kind")=="member": return "chat"
 	if task.get("target_kind")=="art": return "admire_art"
-	return str(_object(state.lots[lot_id],str(task.get("target_id",""))).get("kind",""))
+	for level in range(Storeys.MAX_LEVEL+1):
+		var object := _object(Storeys.view(state.lots[lot_id],level),str(task.get("target_id","")))
+		if not object.is_empty(): return str(object.kind)
+	return ""
 
 static func personal_activity_rates(member: Dictionary, kind: String) -> Dictionary:
 	# The actor's restoration, shared by simulation and completion estimates.
@@ -1202,7 +1268,7 @@ func leisure_option(member: Dictionary, companion_id: String, kind: String="") -
 	for task: Dictionary in tasks:
 		if task==member.task and task.get("automatic",false):
 			if object.kind!="dining_table": continue
-			if Meals.choosing(member,object) and _meal_task_option(member,state.lots[member.lot_id],task).ok:
+			if Meals.choosing(member,object) and _meal_task_option(member,_member_lot(member),task).ok:
 				option.available=true; option.own_activity_id=str(task.id)
 				option.detail="Choose your current meal as shared time. Keep the same serving and remaining time; chosen company starts now."
 				return option
@@ -1214,11 +1280,11 @@ func leisure_option(member: Dictionary, companion_id: String, kind: String="") -
 	if member.queue.size()>=MAX_QUEUE:
 		option.label="Plan full"; option.detail="Make room in your plan before joining."
 		return option
-	if not _can_reach_object(state.lots[member.lot_id],_position(member),object):
+	if not _can_reach_object(_member_lot(member),_position(member),object):
 		option.label="No path to "+noun; option.detail="There is no path to reach this "+place+"."
 		return option
 	if object.kind=="dining_table":
-		if int(object.meal.servings)==0 or Meals.available(state,state.lots[member.lot_id],object)<=0:
+		if int(object.meal.servings)==0 or Meals.available(state,_member_lot(member),object)<=0:
 			option.label="No free portion"; option.detail="The remaining portions are already reserved or eaten."; return option
 		option.detail="Reserve a portion after your current plans. Hunger + comfort; eating together also restores social."
 	option.available=true
@@ -1232,7 +1298,7 @@ func care_option(member: Dictionary, need: String) -> Dictionary:
 		if family.members.has(member): profile_id=str(family.id); break
 	var status := care_status(member,need)
 	if not status.is_empty(): return {"available":false,"status":status,"label":status,"detail":str(member.name)+" is already taking care of "+need+"."}
-	var lot: Dictionary=state.lots[member.lot_id]
+	var lot: Dictionary=_member_lot(member)
 	var best: Dictionary={}
 	var best_score := 100000.0
 	for object: Dictionary in lot.objects:
@@ -1255,7 +1321,7 @@ func care_option(member: Dictionary, need: String) -> Dictionary:
 	if need=="social":
 		for family: Dictionary in state.families.values():
 			for other: Dictionary in family.members:
-				if other.id==member.id or other.lot_id!=member.lot_id: continue
+				if other.id==member.id or other.lot_id!=member.lot_id or int(other.get("level",0))!=int(member.get("level",0)): continue
 				var goals := _social_cells(lot,other)
 				var path := _path(lot,_position(member),goals)
 				if path.is_empty() and not goals.has(_position(member)): continue
@@ -1273,7 +1339,7 @@ func meal_wish_option(profile_id: String,member_id: String,wish_id: String) -> D
 	var member := _member(family,member_id) if not family.is_empty() else {}
 	if member.is_empty() or not wish_id in Wishes.MEALS: return result
 	if not member.wishes.wishes.any(func(wish): return wish.id==wish_id and not wish.done): return result
-	var home: Dictionary=state.lots[family.home_lot]; var lot: Dictionary=state.lots[member.lot_id]
+	var home: Dictionary=state.lots[family.home_lot]; var lot: Dictionary=_member_lot(member)
 	if home.building or lot.building:
 		result.label="Finish building"; result.detail="Finish construction before making time for a meal."; return result
 	if wish_id=="homemade" or not lot.objects.any(func(object): return object.kind=="dining_table"): lot=home
@@ -1319,7 +1385,7 @@ func routine_option(profile_id: String,member_id: String,routine_id: String) -> 
 	var entry := Routines.find(family.routines,routine_id)
 	if entry.is_empty(): return {"available":false,"detail":"That routine is no longer saved."}
 	var result := {"available":false,"name":str(entry.name),"detail":"","actions":[],"steps":[]}
-	if state.lots[family.home_lot].building or state.lots[member.lot_id].building:
+	if state.lots[family.home_lot].building or _member_lot(member).building:
 		result.detail="Finish construction before directing your family."; return result
 	var tasks: Array=member.queue.duplicate()
 	if not member.task.is_empty(): tasks.append(member.task)
@@ -1327,7 +1393,7 @@ func routine_option(profile_id: String,member_id: String,routine_id: String) -> 
 		if task.get("routine_id")==routine_id: result.detail="Already in this resident's plan."; return result
 	if member.queue.size()+entry.steps.size()>MAX_QUEUE:
 		result.detail="Needs %d free places in the plan; %d available." % [entry.steps.size(),MAX_QUEUE-member.queue.size()]; return result
-	var lot: Dictionary=state.lots[member.lot_id]
+	var lot: Dictionary=_member_lot(member)
 	var waits := 0
 	for kind: String in entry.steps:
 		var best: Dictionary={}; var best_score := 100000.0
@@ -1357,7 +1423,7 @@ func hobby_option(member: Dictionary, hobby: String) -> Dictionary:
 	var activity: String=Hobbies.CATALOG[hobby].activity
 	var status := wish_status(member,activity)
 	if not status.is_empty(): return {"available":false,"status":status,"detail":status}
-	var lot: Dictionary=state.lots[member.lot_id]
+	var lot: Dictionary=_member_lot(member)
 	var best: Dictionary={}
 	var best_score := 100000.0
 	for object: Dictionary in lot.objects:
@@ -1374,7 +1440,7 @@ func hobby_option(member: Dictionary, hobby: String) -> Dictionary:
 	return best
 
 func _painting_hobby_option(member: Dictionary) -> Dictionary:
-	var lot: Dictionary=state.lots[member.lot_id]
+	var lot: Dictionary=_member_lot(member)
 	var household: Dictionary=state.families.get(lot.owner,{})
 	if not household.get("members",[]).has(member): return {"available":false,"status":"At your own home","detail":"Paint at your household's easel. Visitors can inspect their neighbors' art."}
 	if lot.building: return {"available":false,"status":"Under construction","detail":"Finish building before painting."}
@@ -1406,7 +1472,7 @@ func _record_hobby(member: Dictionary,activity: String) -> void:
 func _conversation_partner(member: Dictionary) -> Dictionary:
 	for family: Dictionary in state.families.values():
 		for other: Dictionary in family.members:
-			if other.id==member.id or other.lot_id!=member.lot_id: continue
+			if other.id==member.id or other.lot_id!=member.lot_id or int(other.get("level",0))!=int(member.get("level",0)): continue
 			if other.task.get("target_kind")=="member" and other.task.get("target_id")==member.id and other.task.get("path",[]).is_empty() and float(other.task.get("elapsed",0))>0 and _position(other).distance_to(_position(member))<=2.0: return other
 	return {}
 
@@ -1440,6 +1506,7 @@ func _choose_autonomy(member: Dictionary, lot: Dictionary) -> void:
 			var places := _shared_places(member,lot,object)
 			if places.is_empty() or (not places.has(_position(member)) and _path(lot,_position(member),places).is_empty()): continue
 		var need: String = Catalog.ITEMS[object.kind].need
+		if need.is_empty(): continue
 		var value := float(member.needs[need])
 		if value >= 78.0 or not _can_reach_object(lot, _position(member), object):
 			continue
@@ -1453,7 +1520,9 @@ func _choose_autonomy(member: Dictionary, lot: Dictionary) -> void:
 		if urgent and value>Pastimes.URGENT: continue
 		var distance := _position(member).distance_to(Vector2i(int(object.x), int(object.y)))
 		var score := value + distance * 0.2
-		if not urgent and Pastimes.matches(member,str(object.kind)): score-=Pastimes.PREFERENCE
+		if not urgent:
+			if Pastimes.matches(member,str(object.kind)): score-=Pastimes.PREFERENCE
+			score-=Character.activity_bias(member,str(object.kind))
 		if score < best_score:
 			best = object
 			best_score = score
@@ -1516,7 +1585,7 @@ func _start_next(member: Dictionary, lot: Dictionary) -> void:
 		task.remaining=ArtAdmiration.DURATION; task.label="Admire painting"
 	elif task.get("target_kind", "object") == "member":
 		var neighbor := _find_member(str(task.target_id))
-		if neighbor.is_empty() or neighbor.lot_id != member.lot_id:
+		if neighbor.is_empty() or neighbor.lot_id != member.lot_id or int(neighbor.get("level",0))!=int(member.get("level",0)):
 			_record_activity(member,task,"failed","The other resident left this lot.")
 			return
 		goals = _social_cells(lot, neighbor)
@@ -1566,13 +1635,25 @@ func _object_user(lot_id: String, object: Dictionary, except_member: String = ""
 	return {}
 
 func _layout_issue(lot: Dictionary) -> String:
-	return str(build_access(lot).message)
+	for level in range(Storeys.MAX_LEVEL+1):
+		var layer := Storeys.view(lot,level)
+		if level>0 and layer.floors.is_empty() and layer.objects.is_empty(): continue
+		if level>0 and layer.entrances.is_empty(): return "Add stairs and a clear upper landing to floor %d." % (level+1)
+		for object: Dictionary in layer.objects:
+			for cell: Vector2i in _object_cells(object):
+				if [cell.x,cell.y] in layer.get("stairwells",[]): return "Move furnishings away from the stairwell on floor %d." % (level+1)
+		var issue := str(build_access(layer).message)
+		if not issue.is_empty(): return issue
+		for stair: Dictionary in Storeys.stairs(lot,level):
+			if level==Storeys.MAX_LEVEL: return "The top floor cannot have an upward staircase."
+			if not _walkable(layer,Storeys.landing(stair,false)) or not _walkable(Storeys.view(lot,level+1),Storeys.landing(stair,true)): return "Keep both staircase landings clear and add flooring upstairs."
+	return ""
 
 func build_access(lot: Dictionary) -> Dictionary:
 	var residents: Array=[]
 	for family: Dictionary in state.families.values():
 		for member: Dictionary in family.members:
-			if member.lot_id==lot.id: residents.append(member)
+			if member.lot_id==lot.id and int(member.get("level",0))==int(lot.get("level",0)): residents.append(member)
 	return BuildAccess.inspect(lot,residents)
 
 func _capture_build(lot: Dictionary) -> Dictionary:
@@ -1603,6 +1684,7 @@ func _history_step(lot: Dictionary, redo: bool) -> Dictionary:
 	history[destination].append(_capture_build(lot))
 	_apply_build_edit(lot,history[source].pop_back())
 	lot.revision += 1
+	_relocate_build_residents(lot)
 	_update_history_counts(lot)
 	return _result(true,"Building edit " + ("redone." if redo else "undone. Funds restored."))
 
@@ -1611,10 +1693,25 @@ func _restore_build(lot: Dictionary) -> void:
 	_build_backups.erase(lot.id)
 	_clear_build_history(lot)
 
+func _relocate_build_residents(lot: Dictionary) -> void:
+	# Paused residents stay put until a new obstacle or disconnected room would
+	# strand them. This is part of the host transaction, never a render side effect.
+	for family: Dictionary in state.families.values():
+		for member: Dictionary in family.members:
+			if member.lot_id!=lot.id: continue
+			var layer := _member_lot(member)
+			var report := BuildAccess.inspect(layer,[])
+			if _walkable(layer,_position(member)) and report.reachable.has(_position(member)): continue
+			member.level=0
+			var at := _free_entry(lot,str(member.id))
+			member.x=at.x; member.y=at.y
+			_clear_member(member,"Waiting by the street","Moved aside for building.")
+
 func _send_home(family: Dictionary, member: Dictionary, reason: String = "Household went away; returned home.") -> void:
 	var lot: Dictionary = state.lots[family.home_lot]
 	_clear_member(member,"Taking it easy",reason)
 	member.lot_id = family.home_lot
+	member.level=0
 	member.next_action+=1
 	var entry := _free_entry(lot,str(member.id))
 	member.x = entry.x
@@ -1633,11 +1730,11 @@ func _free_entry(lot: Dictionary,ignore_member: String="") -> Vector2i:
 func _activity_title(member: Dictionary, task: Dictionary) -> String:
 	if task.has("title"): return str(task.title)
 	if task.has("meal_action"): return Meals.label(str(task.meal_action),str(task.meal_recipe))
-	if task.get("target_kind")=="art": return ArtAdmiration.title(state.lots[member.lot_id].get("artworks",{}).get(task.get("target_id",""),{}))
+	if task.get("target_kind")=="art": return ArtAdmiration.title(_member_lot(member).get("artworks",{}).get(task.get("target_id",""),{}))
 	if task.get("type")=="move": return "Walk to %d, %d" % [int(task.x),int(task.y)]
 	if task.get("target_kind")=="member":
 		return ActivityLog.clean("Chat with "+str(_find_member(str(task.get("target_id",""))).get("name","neighbor")),100)
-	var object := _object(state.lots[member.lot_id],str(task.get("target_id","")))
+	var object := _object(_member_lot(member),str(task.get("target_id","")))
 	if task.has("paint_action"): return Paintings.label(str(task.paint_action),str(task.subject) if task.paint_action=="start" else str(object.get("painting",{}).get("subject","")))
 	if task.has("garden_action"):
 		return Gardens.label(str(task.garden_action),str(task.crop) if task.garden_action=="plant" else str(object.get("garden",{}).get("crop","")))
@@ -1721,7 +1818,7 @@ func _inside(cell: Vector2i) -> bool:
 	return cell.x >= 0 and cell.x < GRID_SIZE and cell.y >= 0 and cell.y < GRID_SIZE
 
 func _walkable(lot: Dictionary, cell: Vector2i) -> bool:
-	return _inside(cell) and not lot.walls.has([cell.x,cell.y]) and _object_at(lot, cell).is_empty()
+	return _inside(cell) and [cell.x,cell.y] not in lot.get("stairwells",[]) and (int(lot.get("level",0))==0 or [cell.x,cell.y] in lot.floors) and not Landscaping.pooled(lot,cell.x,cell.y) and not lot.walls.has([cell.x,cell.y]) and _object_at(lot, cell).is_empty()
 
 func _object_cells(object: Dictionary) -> Array:
 	var result: Array = []
@@ -1749,6 +1846,8 @@ func _path(lot: Dictionary, start: Vector2i, goals: Array) -> Array:
 		return []
 	# Construct the occupancy set once; BFS does not rescan furniture on each tile.
 	var blocked := {}
+	for tile: Array in lot.get("stairwells",[]): blocked[Vector2i(int(tile[0]),int(tile[1]))]=true
+	for tile: Array in lot.get("landscape",{}).get("pools",[]): blocked[Vector2i(int(tile[0]),int(tile[1]))]=true
 	for tile: Array in lot.walls:
 		blocked[Vector2i(int(tile[0]), int(tile[1]))] = true
 	for object: Dictionary in lot.objects:
@@ -1762,7 +1861,7 @@ func _path(lot: Dictionary, start: Vector2i, goals: Array) -> Array:
 		cursor += 1
 		for direction: Vector2i in DIRECTIONS:
 			var next := current + direction
-			if not _inside(next) or blocked.has(next) or previous.has(next):
+			if not _inside(next) or blocked.has(next) or previous.has(next) or (int(lot.get("level",0))>0 and [next.x,next.y] not in lot.floors):
 				continue
 			previous[next] = current
 			if goals.has(next):
@@ -1791,6 +1890,14 @@ func snapshot_for_save() -> Dictionary:
 	return saved
 
 func restore(data: Dictionary, preserve_runtime: bool = false) -> bool:
+	if data.get("schema")==1:
+		data=_migrate_v1(data)
+	if data.get("schema")==2:
+		if not data.get("lots") is Dictionary: return false
+		for lot: Variant in data.lots.values():
+			if not lot is Dictionary: return false
+		data=data.duplicate(true); data.schema=3
+		for lot: Dictionary in data.get("lots",{}).values(): lot.storeys={}
 	# Reject foreign/future/corrupt worlds atomically; never partially adopt a save.
 	if not _valid_state(data):
 		return false
@@ -1808,9 +1915,37 @@ func restore(data: Dictionary, preserve_runtime: bool = false) -> bool:
 		family.online = false
 		for member: Dictionary in family.members:
 			_clear_member(member,"Taking it easy","Neighborhood loaded; unfinished plans cleared.")
-			if not _walkable(state.lots[member.lot_id], _position(member)):
+			if not _walkable(_member_lot(member), _position(member)):
 				_send_home(family, member)
 	return true
+
+static func _migrate_v1(data: Dictionary) -> Dictionary:
+	# Additive creator schema. Legacy residents retain their exact looks and needs;
+	# absent profiles are resolved to neutral defaults only when opening the creator.
+	var migrated := data.duplicate(true)
+	migrated.schema=2
+	return migrated
+
+func _creator_position(family: Dictionary, id: String) -> Vector2i:
+	var lot: Dictionary=state.lots[family.home_lot]
+	var places: Array[Vector2i]=[]
+	for tile: Array in lot.floors:
+		var cell := Vector2i(int(tile[0]),int(tile[1]))
+		if _walkable(lot,cell) and not _resident_at(str(lot.id),cell): places.append(cell)
+	places.sort_custom(func(a: Vector2i,b: Vector2i): return a.distance_squared_to(Vector2i(7,7))<b.distance_squared_to(Vector2i(7,7)))
+	for cell: Vector2i in places:
+		if cell==BuildAccess.GATE or not _path(lot,BuildAccess.GATE,[cell]).is_empty(): return cell
+	return _free_entry(lot,id)
+
+func _create_resident(family: Dictionary, id: String, resident_name: String) -> Dictionary:
+	var lot: Dictionary=state.lots[family.home_lot]
+	var at := _creator_position(family,id)
+	var needs := {}
+	for need: String in NEEDS: needs[need]=85.0
+	var member := {"id":id,"name":resident_name,"lot_id":family.home_lot,"x":at.x,"y":at.y,"needs":needs,"action":"Taking it easy","queue":[],"task":{},"activity_log":[],"walk_clock":0.0,"idle_clock":0.0,"autonomy":true,"next_action":1}
+	member.wishes=Wishes.create(id,int(state.day)); member.hobbies=Hobbies.create(int(state.day))
+	member.appearance=Appearance.defaults(member); member.favorite="variety"
+	return member
 
 func _normalize_numbers() -> void:
 	# JSON has one numeric type. Tile-array equality in Godot distinguishes floats
@@ -1822,6 +1957,19 @@ func _normalize_numbers() -> void:
 		if not lot.has("finishes"): lot.finishes=Finishes.create()
 		if not lot.has("windows"): lot.windows={}
 		if not lot.has("artworks"): lot.artworks={}
+		if not lot.has("landscape"): lot.landscape=Landscaping.empty()
+		if not lot.has("diagonal_walls"): lot.diagonal_walls={}
+		if not lot.has("storeys"): lot.storeys={}
+		for layer: Dictionary in lot.storeys.values():
+			for field: String in ["floors","walls","doors"]:
+				for tile: Array in layer[field]: tile[0]=int(tile[0]); tile[1]=int(tile[1])
+			for object: Dictionary in layer.objects:
+				for field: String in ["x","y","rotation"]: object[field]=int(object[field])
+				if object.kind=="easel": Paintings.normalize(object.painting)
+				if object.kind=="dining_table": Meals.normalize(object.meal)
+				if object.kind=="garden_bed":
+					for field: String in ["revision","harvests"]: object.garden[field]=int(object.garden[field])
+		for tile: Array in lot.landscape.pools: tile[0]=int(tile[0]); tile[1]=int(tile[1])
 		for entry: Dictionary in lot.artworks.values():
 			entry.x=int(entry.x); entry.y=int(entry.y)
 			Paintings.normalize(entry.picture)
@@ -1851,7 +1999,9 @@ func _normalize_numbers() -> void:
 		if not family.has("pantry"): family.pantry=Pantry.create()
 		Pantry.normalize(family.pantry)
 		family.identity_revision=int(family.get("identity_revision",0))
+		for link: Dictionary in family.get("relations",[]): link.kind=int(link.kind)
 		for member: Dictionary in family.members:
+			if member.has("character"): Character.normalize(member.character)
 			if not member.has("favorite"): member.favorite="variety"
 			if not member.has("appearance"): member.appearance=Appearance.defaults(member)
 			for key: String in member.appearance: member.appearance[key]=int(member.appearance[key])
@@ -1860,6 +2010,7 @@ func _normalize_numbers() -> void:
 			if not member.has("hobbies"): member.hobbies=Hobbies.create(int(state.day))
 			Hobbies.normalize(member.hobbies,int(state.day))
 			ActivityLog.normalize(member)
+			member.level=int(member.get("level",0))
 			member.autonomy = member.get("autonomy", true)
 			member.next_action = int(member.get("next_action", 1))
 			member.x = int(member.x)
@@ -1902,58 +2053,25 @@ func _valid_state(data: Dictionary) -> bool:
 		var lot: Dictionary = data.lots[id]
 		if lot.get("id") != id or not lot.get("name") is String or str(lot.name).length() > 64 or not lot.get("owner") is String or str(lot.owner).length() > 128 or not _integer(lot.get("funds")) or float(lot.funds) < 0 or float(lot.funds) > 1000000000 or not lot.get("building") is bool or not _integer(lot.get("revision")):
 			return false
-		for key: String in ["floors", "walls", "doors"]:
-			if not lot.get(key) is Array or lot[key].size() > GRID_SIZE * GRID_SIZE:
-				return false
-			var seen := {}
-			for cell: Variant in lot[key]:
-				if not cell is Array or cell.size() != 2 or not _valid_coord(cell[0]) or not _valid_coord(cell[1]):
-					return false
-				var position := Vector2i(int(cell[0]), int(cell[1]))
-				if seen.has(position):
-					return false
-				seen[position] = true
-		for key: String in ["build_undo","build_redo"]:
-			if not _integer(lot.get(key,0)) or float(lot.get(key,0)) < 0 or float(lot.get(key,0)) > MAX_BUILD_HISTORY: return false
-		if float(lot.revision) < 0 or float(lot.revision) > 9007199254740991:
-			return false
-		if not lot.get("objects") is Array or lot.objects.size() > GRID_SIZE * GRID_SIZE:
-			return false
-		var occupied := {}
-		var floor_cells := {}
-		for cell: Array in lot.floors:
-			floor_cells[Vector2i(int(cell[0]), int(cell[1]))] = true
-		for cell: Array in lot.walls:
-			occupied[Vector2i(int(cell[0]), int(cell[1]))] = true
-		for cell: Array in lot.doors:
-			var position := Vector2i(int(cell[0]), int(cell[1]))
-			if occupied.has(position):
-				return false
-			occupied[position] = true
-		for object: Variant in lot.objects:
-			if not object is Dictionary or not object.get("id") is String or str(object.id).length() > 64 or object_ids.has(object.id) or not Catalog.ITEMS.has(object.get("kind")) or object.kind in ["floor", "wall", "door"] or not _valid_coord(object.get("x")) or not _valid_coord(object.get("y")) or not _integer(object.get("rotation")) or int(object.rotation) < 0 or int(object.rotation) > 3:
-				return false
-			if not str(object.id).begins_with("object_") or not str(object.id).trim_prefix("object_").is_valid_int() or int(str(object.id).trim_prefix("object_")) >= int(data.next_object):
-				return false
-			object_ids[object.id] = true
-			if object.kind=="garden_bed" and not Gardens.valid(object.get("garden")): return false
-			if object.kind!="garden_bed" and object.has("garden"): return false
-			if object.kind=="dining_table" and not Meals.valid(object.get("meal"),int(data.day)): return false
-			if object.kind!="dining_table" and object.has("meal"): return false
-			if object.kind=="easel" and not Paintings.valid(object.get("painting"),int(data.day)): return false
-			if object.kind!="easel" and object.has("painting"): return false
-			if not FurnitureColors.valid(object): return false
-			for cell: Vector2i in _object_cells(object):
-				if not _inside(cell) or occupied.has(cell) or (object.kind!="garden_bed" and not floor_cells.has(cell)):
-					return false
-				occupied[cell] = true
-		if not Finishes.valid(lot) or not Windows.valid(lot) or not WallArt.valid(lot,int(data.day)): return false
+		if not _valid_lot_layout(lot,object_ids,data): return false
+		if not lot.get("storeys",{}) is Dictionary or lot.get("storeys",{}).size()>Storeys.MAX_LEVEL: return false
+		for key: Variant in lot.get("storeys",{}):
+			if not key is String or key not in ["1","2"] or not lot.storeys[key] is Dictionary: return false
+			var layer: Dictionary=lot.storeys[key]
+			if layer.size()!=Storeys.FIELDS.size(): return false
+			for field: String in Storeys.FIELDS:
+				if not layer.has(field): return false
+			var checked := lot.duplicate()
+			for field: String in Storeys.FIELDS: checked[field]=layer[field]
+			checked.landscape=Landscaping.empty()
+			if not _valid_lot_layout(checked,object_ids,data): return false
+
 	var members_seen := {}
 	for profile_id: Variant in data.families:
 		if not profile_id is String or profile_id.is_empty() or profile_id.length() > 128 or not data.families[profile_id] is Dictionary:
 			return false
 		var family: Dictionary = data.families[profile_id]
-		if family.get("id") != profile_id or not family.get("name") is String or str(family.name).length() > 64 or not data.lots.has(family.get("home_lot")) or data.lots[family.home_lot].owner != profile_id or not family.get("online") is bool or not family.get("members") is Array or family.members.size() != 2:
+		if family.get("id") != profile_id or not family.get("name") is String or str(family.name).length() > 64 or not data.lots.has(family.get("home_lot")) or data.lots[family.home_lot].owner != profile_id or not family.get("online") is bool or not family.get("members") is Array or family.members.is_empty() or family.members.size() > Character.MAX_MEMBERS:
 			return false
 		if family.has("home_news") and not HomeNews.valid(family.home_news): return false
 		if family.has("routines") and not Routines.valid(family.routines): return false
@@ -1964,11 +2082,13 @@ func _valid_state(data: Dictionary) -> bool:
 		for member: Variant in family.members:
 			if not member is Dictionary or not member.get("id") is String or str(member.id).length() > 160 or members_seen.has(member.id) or not member.get("name") is String or str(member.name).length() > 32 or not data.lots.has(member.get("lot_id")) or not _valid_coord(member.get("x")) or not _valid_coord(member.get("y")) or not member.get("needs") is Dictionary:
 				return false
+			if not _integer(member.get("level",0)) or int(member.get("level",0))<0 or int(member.get("level",0))>Storeys.MAX_LEVEL: return false
 			if not member.get("autonomy", true) is bool or not _integer(member.get("next_action", 1)) or float(member.get("next_action", 1)) < 1 or float(member.get("next_action", 1)) > 9007199254740000:
 				return false
 			if member.has("activity_log") and not ActivityLog.valid(member.activity_log,int(data.day),int(data.tick)): return false
 			if member.has("favorite") and not Pastimes.valid(member.favorite): return false
 			if member.has("appearance") and not Appearance.valid(member.appearance): return false
+			if member.has("character") and not Character.valid(member.character): return false
 			if member.has("wishes") and not Wishes.valid(member.wishes,int(data.day)): return false
 			if member.has("hobbies") and not Hobbies.valid(member.hobbies,int(data.day)): return false
 			members_seen[member.id] = true
@@ -1985,6 +2105,7 @@ func _valid_state(data: Dictionary) -> bool:
 			for need: String in NEEDS:
 				if not _number(member.needs.get(need)) or float(member.needs[need]) < 0 or float(member.needs[need]) > 100:
 					return false
+		if family.has("relations") and not Character.relations_valid(family.relations,family.members): return false
 	if data.has("friendships") and not Friendships.valid(data.friendships,members_seen,int(data.day),int(data.tick)): return false
 	if not Meals.valid_reservations(data): return false
 	if not Pantry.valid_reservations(data): return false
@@ -2027,6 +2148,7 @@ func _valid_task(value: Variant, active: bool) -> bool:
 	if value.has("routine_id") or value.has("routine_name"):
 		if value.type!="interact" or not Routines.valid_id(value.get("routine_id")) or not HouseholdProfile.valid_name(value.get("routine_name"),32): return false
 	if value.has("social_started") and (not _integer(value.social_started) or float(value.social_started)<0 or float(value.social_started)>9007199254740991): return false
+	if value.has("stairs_to") and (value.type!="move" or not _integer(value.stairs_to) or int(value.stairs_to)<0 or int(value.stairs_to)>Storeys.MAX_LEVEL or not value.get("stairs_id") is String): return false
 	if value.has("elapsed") and (not _number(value.elapsed) or float(value.elapsed)<0 or float(value.elapsed)>120): return false
 	if value.has("id") and (not value.id is String or str(value.id).is_empty() or str(value.id).length() > 180):
 		return false
@@ -2130,3 +2252,83 @@ func _announce_friendship(member: Dictionary, neighbor: Dictionary, result: Dict
 		var text := ("Got to know " if milestone=="met" else "Became "+milestone+" with ")+str(pair[1].name)+"."
 		pair[0].wishes.journal.push_front({"day":int(state.day),"text":text})
 		if pair[0].wishes.journal.size()>Wishes.MAX_JOURNAL: pair[0].wishes.journal.resize(Wishes.MAX_JOURNAL)
+
+func _valid_lot_layout(lot: Dictionary,object_ids: Dictionary,data: Dictionary) -> bool:
+	for key: String in ["floors", "walls", "doors"]:
+		if not lot.get(key) is Array or lot[key].size() > GRID_SIZE * GRID_SIZE:
+			return false
+		var seen := {}
+		for cell: Variant in lot[key]:
+			if not cell is Array or cell.size() != 2 or not _valid_coord(cell[0]) or not _valid_coord(cell[1]):
+				return false
+			var position := Vector2i(int(cell[0]), int(cell[1]))
+			if seen.has(position):
+				return false
+			seen[position] = true
+	for key: String in ["build_undo","build_redo"]:
+		if not _integer(lot.get(key,0)) or float(lot.get(key,0)) < 0 or float(lot.get(key,0)) > MAX_BUILD_HISTORY: return false
+	if float(lot.revision) < 0 or float(lot.revision) > 9007199254740991:
+		return false
+	if not lot.get("objects") is Array or lot.objects.size() > GRID_SIZE * GRID_SIZE:
+		return false
+	var occupied := {}
+	var floor_cells := {}
+	for cell: Array in lot.floors:
+		floor_cells[Vector2i(int(cell[0]), int(cell[1]))] = true
+	for cell: Array in lot.walls:
+		occupied[Vector2i(int(cell[0]), int(cell[1]))] = true
+	for cell: Array in lot.doors:
+		var position := Vector2i(int(cell[0]), int(cell[1]))
+		if occupied.has(position):
+			return false
+		occupied[position] = true
+	for object: Variant in lot.objects:
+		if not object is Dictionary or not object.get("id") is String or str(object.id).length() > 64 or object_ids.has(object.id) or not Catalog.ITEMS.has(object.get("kind")) or object.kind in ["floor", "wall", "door"] or not _valid_coord(object.get("x")) or not _valid_coord(object.get("y")) or not _integer(object.get("rotation")) or int(object.rotation) < 0 or int(object.rotation) > 3:
+			return false
+		if not str(object.id).begins_with("object_") or not str(object.id).trim_prefix("object_").is_valid_int() or int(str(object.id).trim_prefix("object_")) >= int(data.next_object):
+			return false
+		object_ids[object.id] = true
+		if object.kind=="garden_bed" and not Gardens.valid(object.get("garden")): return false
+		if object.kind!="garden_bed" and object.has("garden"): return false
+		if object.kind=="dining_table" and not Meals.valid(object.get("meal"),int(data.day)): return false
+		if object.kind!="dining_table" and object.has("meal"): return false
+		if object.kind=="easel" and not Paintings.valid(object.get("painting"),int(data.day)): return false
+		if object.kind!="easel" and object.has("painting"): return false
+		if not FurnitureColors.valid(object): return false
+		for cell: Vector2i in _object_cells(object):
+			if not _inside(cell) or occupied.has(cell) or (not Catalog.ITEMS[object.kind].get("outdoor",object.kind=="garden_bed") and not floor_cells.has(cell)):
+				return false
+			occupied[cell] = true
+	if not Landscaping.valid(lot): return false
+	if not Finishes.valid(lot) or not Windows.valid(lot) or not WallArt.valid(lot,int(data.day)): return false
+	return true
+
+func _member_lot(member: Dictionary) -> Dictionary:
+	return Storeys.view(state.lots[member.lot_id],int(member.get("level",0)))
+
+func _build_storey(lot: Dictionary,command: Dictionary) -> Dictionary:
+	var level: Variant=command.get("level",0)
+	if not _integer(level) or int(level)<0 or int(level)>Storeys.MAX_LEVEL: return _result(false,"Choose a floor from 1 to 3.")
+	if int(level)==Storeys.MAX_LEVEL and command.get("kind")=="stairs": return _result(false,"This is the top floor.")
+	var layer := lot if int(level)==0 else Storeys.view(lot,int(level)).duplicate(true)
+	var outcome := _build(layer,command)
+	if outcome.ok and int(level)>0: Storeys.commit(lot,layer,int(level))
+	return outcome
+
+func _use_stairs(member: Dictionary,lot: Dictionary,command: Dictionary) -> Dictionary:
+	if member.lot_id!=lot.id or lot.building: return _result(false,"Finish building and visit this home first.")
+	var direction: Variant=command.get("direction",1)
+	if not _integer(direction) or int(direction) not in [-1,1]: return _result(false,"Choose upstairs or downstairs.")
+	var level := int(member.get("level",0)); var destination := level+int(direction)
+	if destination<0 or destination>Storeys.MAX_LEVEL: return _result(false,"There is no floor in that direction.")
+	if member.queue.size()>=MAX_QUEUE: return _result(false,"The plan is full.")
+	var current := _member_lot(member)
+	for stair: Dictionary in Storeys.stairs(lot,mini(level,destination)):
+		var start := Storeys.landing(stair,int(direction)<0)
+		var arrival := Storeys.landing(stair,int(direction)>0)
+		if not _walkable(Storeys.view(lot,destination),arrival) or not _walkable(current,start): continue
+		if start!=_position(member) and _path(current,_position(member),[start]).is_empty(): continue
+		_queue_action(member,{"type":"move","x":start.x,"y":start.y,"stairs_to":destination,"stairs_id":stair.id,"title":"Go upstairs" if int(direction)>0 else "Go downstairs"})
+		if member.task.get("automatic",false): _end_task(member,"cancelled","Using the stairs.")
+		return _result(true,"Stairs added to the plan.")
+	return _result(false,"No reachable staircase with clear landings connects these floors.")

@@ -62,7 +62,7 @@ func _run() -> void:
 	_fresh()
 	var member: Dictionary=world.state.families.owner.members[0]
 	member.x=0; member.y=0; original=world.snapshot()
-	assert(not world.apply_command("owner",_room()).ok and world.snapshot()==original,"Residents are protected from room walls")
+	assert(world.apply_command("owner",_room()).ok and Vector2i(member.x,member.y)!=Vector2i.ZERO,"Room building moves sheltered residents aside")
 	_fresh(); command=_room(); command.x=7; command.y=12; command.end_x=9; command.end_y=14
 	original=world.snapshot()
 	assert(not world.apply_command("owner",command).ok and world.snapshot()==original,"Lot entrance stays clear")

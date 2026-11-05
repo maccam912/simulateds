@@ -5,6 +5,7 @@ signal action_selected(id: String)
 signal closed
 
 const Style = preload("res://game/style.gd")
+const Icons = preload("res://game/ui_icons.gd")
 const BUTTON_SIZE := Vector2(174,56)
 const RADIUS := Vector2(218,164)
 const EXTENT := Vector2(280,196)
@@ -81,6 +82,7 @@ func dismiss() -> void:
 func _make_button(label: String, callback: Callable) -> Button:
 	var button := Button.new()
 	button.text=label
+	Icons.action(button,label)
 	button.add_theme_font_size_override("font_size",14)
 	button.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	button.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -117,8 +119,11 @@ func _rebuild() -> void:
 		var id := str(entry.id)
 		var button := _make_button(str(entry.get("label",id)),func(): _activate(id))
 		button.disabled=bool(entry.get("disabled",false))
-		button.tooltip_text=str(entry.get("tooltip",entry.get("label",id)))
-		button.mouse_entered.connect(func(): _show_hint(button.tooltip_text if button.disabled else _default_subtitle))
+		var icon_id := str(entry.get("icon",""))
+		if not icon_id.is_empty(): Icons.apply(button,icon_id,str(entry.label))
+		button.tooltip_text=str(entry.get("label",id))+"\n"+str(entry.get("tooltip",""))
+		button.mouse_entered.connect(func(): _show_hint(button.tooltip_text))
+		button.focus_entered.connect(func(): _show_hint(button.tooltip_text))
 		button.mouse_exited.connect(func(): _show_hint(_default_subtitle))
 		button.custom_minimum_size=BUTTON_SIZE; button.size=BUTTON_SIZE
 		add_child(button); _buttons.append(button); entry_buttons[id]=button
