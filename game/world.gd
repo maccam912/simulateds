@@ -230,6 +230,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 			var stored := WallArt.reconcile(lot)
 			if stored>0: result.message+=" A painting moved safely into the collection." if stored==1 else " %d paintings moved safely into the collection." % stored
 			var history: Dictionary = _build_history.get(lot_id,{"undo":[],"redo":[]})
+			previous._edit_label=preload("res://game/build_history_summary.gd").describe(command,previous,lot)
 			history.undo.append(previous)
 			if history.undo.size() > MAX_BUILD_HISTORY: history.undo.pop_front()
 			history.redo.clear()
@@ -1741,18 +1742,23 @@ func _update_history_counts(lot: Dictionary) -> void:
 	var history: Dictionary = _build_history.get(lot.id,{"undo":[],"redo":[]})
 	lot.build_undo = history.undo.size()
 	lot.build_redo = history.redo.size()
+	for branch: String in ["undo","redo"]:
+		lot["build_"+branch+"_hint"]="" if history[branch].is_empty() else preload("res://game/build_history_summary.gd").hint(lot,history[branch].back())
 
 func _clear_build_history(lot: Dictionary) -> void:
 	_build_history.erase(lot.id)
 	lot.build_undo = 0
 	lot.build_redo = 0
+	lot.erase("build_undo_hint"); lot.erase("build_redo_hint")
 
 func _history_step(lot: Dictionary, redo: bool) -> Dictionary:
 	var history: Dictionary = _build_history.get(lot.id,{"undo":[],"redo":[]})
 	var source: String = "redo" if redo else "undo"
 	var destination: String = "undo" if redo else "redo"
 	if history[source].is_empty(): return _result(false,"Nothing to " + source + ".")
-	history[destination].append(_capture_build(lot))
+	var current := _capture_build(lot)
+	current._edit_label=history[source].back().get("_edit_label","Building edit")
+	history[destination].append(current)
 	_apply_build_edit(lot,history[source].pop_back())
 	lot.revision += 1
 	_relocate_build_residents(lot)
@@ -1958,6 +1964,7 @@ func snapshot_for_save() -> Dictionary:
 		lot.building = false
 		lot.build_undo = 0
 		lot.build_redo = 0
+		lot.erase("build_undo_hint"); lot.erase("build_redo_hint")
 	return saved
 
 func restore(data: Dictionary, preserve_runtime: bool = false) -> bool:
@@ -2426,6 +2433,8 @@ func _valid_lot_layout(lot: Dictionary,object_ids: Dictionary,data: Dictionary) 
 			if seen.has(position):
 				return false
 			seen[position] = true
+	for key: String in ["build_undo_hint","build_redo_hint"]:
+		if not lot.get(key,"") is String or str(lot.get(key,"")).length()>512: return false
 	for key: String in ["build_undo","build_redo"]:
 		if not _integer(lot.get(key,0)) or float(lot.get(key,0)) < 0 or float(lot.get(key,0)) > MAX_BUILD_HISTORY: return false
 	if float(lot.revision) < 0 or float(lot.revision) > 9007199254740991:

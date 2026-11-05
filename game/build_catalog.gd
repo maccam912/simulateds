@@ -46,4 +46,40 @@ static func results(category: String, query: String) -> Array[String]:
 		for term: String in terms:
 			if not searchable.contains(term): matches=false; break
 		if matches: found.append(kind)
+	if not terms.is_empty():
+		# Stable catalog order breaks ties; whole names/category words outrank
+		# incidental substrings such as table in vegetable.
+		found.sort_custom(func(a,b):
+			var left := search_rank(a,query); var right := search_rank(b,query)
+			return ORDER.find(a)<ORDER.find(b) if left==right else left>right)
 	return found
+
+static func search_rank(kind: String, query: String) -> int:
+	var item := entry(kind)
+	var name := str(item.name).to_lower()
+	var words := (kind.replace("_"," ")+" "+name).split(" ",false)
+	var category := (str(item.category)+" "+str(CATEGORIES[item.category])).to_lower().split(" ",false)
+	var score := 1000 if query.strip_edges().to_lower() in [name,kind.replace("_"," ")] else 0
+	for term: String in query.to_lower().strip_edges().split(" ",false):
+		if term in words: score+=100
+		elif name.contains(term): score+=50
+		elif term in category: score+=30
+		elif str(KEYWORDS.get(kind,"")).split(" ",false).has(term): score+=10
+	if query.strip_edges().to_lower() in ["floor","wall"] and kind in ["floor","wall","finish_floor","finish_wall"]: score+=200
+	return score
+
+static func match_hint(kind: String, query: String) -> String:
+	if query.strip_edges().is_empty() or search_rank(kind,query)>=30: return ""
+	var item := entry(kind)
+	var words := (str(item.use)+" "+str(item.description)+" "+str(KEYWORDS.get(kind,""))).to_lower().replace(".","").split(" ",false)
+	for term: String in query.to_lower().strip_edges().split(" ",false):
+		for word: String in words:
+			if word.contains(term): return "Matches “%s” in “%s”" % [term,word]
+	return "Related use: "+str(item.use)
+
+static func requirement(kind: String) -> String:
+	if not Catalog.ITEMS.has(kind): return ""
+	if kind in ["floor","wall","door"]: return "Level ground · Inside lot"
+	if Catalog.ITEMS[kind].get("outdoor",kind=="garden_bed"): return "Outdoors · Inside lot"
+	if kind=="stairs": return "Floor below · Clear landings & upper opening"
+	return "Floor beneath entire footprint"

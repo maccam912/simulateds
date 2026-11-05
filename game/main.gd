@@ -109,6 +109,8 @@ var stair_caption: Label
 var stair_down: Button
 var stair_up: Button
 var floor_caption: Label
+var build_light_button: CheckButton
+var _build_light_context: Array=[]
 var catalog_detail: Label
 var _catalog_category := "all"
 var _catalog_query := ""
@@ -260,6 +262,7 @@ func _ready() -> void:
 	Session.command_completed.connect(_color_completed)
 	Session.command_completed.connect(_space_completed)
 	Session.command_completed.connect(_area_completed)
+	Session.command_completed.connect(func(intent,ok,_message): lot_view.placement_completed(intent,ok))
 	Rooms.changed.connect(_refresh)
 	_refresh()
 
@@ -519,6 +522,11 @@ func _build_ui() -> void:
 	floor_down=_button("−",func(): _set_view_level(view_level-1)); floor_down.tooltip_text="View floor below · Does not move residents"; floor_down.accessibility_name="View floor below"; floor_controls.add_child(floor_down)
 	floor_caption=_label("View · Floor 1",12,Style.GOLD); floor_caption.size_flags_horizontal=Control.SIZE_EXPAND_FILL; floor_controls.add_child(floor_caption)
 	floor_up=_button("+",func(): _set_view_level(view_level+1)); floor_up.tooltip_text="View floor above · Does not move residents"; floor_up.accessibility_name="View floor above"; floor_controls.add_child(floor_up)
+	build_light_button=CheckButton.new(); build_light_button.text="Daylight"; build_light_button.custom_minimum_size.y=44
+	build_light_button.add_theme_font_size_override("font_size",12)
+	build_light_button.tooltip_text="Construction daylight preview · View only. Turn off to compare the actual time and lighting. The neighborhood clock keeps its own pace."
+	build_light_button.toggled.connect(func(enabled): lot_view.build_daylight=enabled; lot_view.queue_redraw())
+	floor_controls.add_child(build_light_button)
 	stair_controls=VBoxContainer.new(); context.add_child(stair_controls)
 	stair_caption=_label("",12); stair_caption.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; stair_controls.add_child(stair_caption)
 	var travel_row := HBoxContainer.new(); stair_controls.add_child(travel_row)
@@ -909,6 +917,12 @@ func _refresh() -> void:
 			need_buttons[need].disabled=bool(state.lots[family.home_lot].building)
 			if care_values.has(need) and is_instance_valid(care_values[need]): care_values[need].text=str(need).capitalize()+" · %d" % int(value)
 	var build_mode := building and mine
+	build_light_button.visible=build_mode
+	var light_context := [Session.world_generation,Session.profile_id,Session.role,viewed_lot,build_mode]
+	if light_context!=_build_light_context:
+		_build_light_context=light_context; lot_view.build_daylight=false; build_light_button.set_pressed_no_signal(false)
+	context_panel.offset_left=-396 if build_mode else -304
+	context_panel.offset_top=maxf(122,clock_panel.get_rect().end.y+6) if build_mode else 122
 	var tray_icon := "catalog" if build_mode else str({"care":"needs","wishes":"heart","hobbies":"star","people":"people","travel":"together","garden":"garden_bed","garden_overview":"garden_bed","painting":"palette","meal":"food","meals":"food","wall_art_inspect":"art","commissions":"art"}.get(_context_page,"activities"))
 	context_icon.texture=Icons.texture(tray_icon); context_icon.accessibility_name=tray_icon.capitalize()
 	catalog_category.text=""
@@ -1443,6 +1457,7 @@ func _send(command: Dictionary) -> void:
 	if command.get("type")=="move_object":
 		_move_request=command.duplicate()
 		_move_request.revision=_view_lot().revision
+	lot_view.placement_started(command)
 	Session.command(command)
 	if Session.is_authority() and Session.last_action_ok and command.get("type") in ["place","build_room","paint"]: Soundscape.play_ui("build")
 	_refresh()
@@ -2076,7 +2091,7 @@ func _follow_social(target_id: String) -> void:
 func _build_catalog() -> void:
 	catalog_buttons.clear()
 	var matches := BuildCatalog.results(_catalog_category,_catalog_query)
-	activity_label.text=str(matches.size()); activity_label.tooltip_text="Catalog · %d items" % matches.size()
+	activity_label.text="Catalog · %d" % matches.size(); activity_label.tooltip_text="Catalog · %d items" % matches.size()
 	var funds := int(_view_lot().funds)
 	# The persistent icon selector above the results owns category navigation.
 	var grid := GridContainer.new(); grid.columns=2; grid.size_flags_horizontal=Control.SIZE_EXPAND_FILL
@@ -2085,20 +2100,22 @@ func _build_catalog() -> void:
 		var item := BuildCatalog.entry(kind)
 		var button := CatalogCard.new(); button.kind=kind
 		button.pressed.connect(func(): _select_build_tool(kind))
-		button.custom_minimum_size=Vector2(118,132); button.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+		button.custom_minimum_size=Vector2(160,60); button.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 		button.tooltip_text=str(item.name)+" · "+str(item.price)+"\n"+str(item.description)+"\n"+str(item.use)+("\nOver budget: need §%d more." % (int(item.cost)-funds) if int(item.get("cost",0))>funds else "")
+		var match_hint := BuildCatalog.match_hint(kind,_catalog_query)
+		if not match_hint.is_empty(): button.tooltip_text+="\n"+match_hint
 		button.accessibility_name=str(item.name)+" · "+str(item.price)
 		_compact_control(button,selected_tool==kind); grid.add_child(button); catalog_buttons[kind]=button
 		var picture := TextureRect.new(); picture.name="Picture"; picture.mouse_filter=Control.MOUSE_FILTER_IGNORE
 		picture.expand_mode=TextureRect.EXPAND_IGNORE_SIZE; picture.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		picture.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE); picture.offset_left=6; picture.offset_right=-6; picture.offset_top=4; picture.offset_bottom=88
+		picture.position=Vector2(4,6); picture.size=Vector2(48,48)
 		picture.texture=catalog_thumbnails.request(kind)
 		if picture.texture==null: picture.texture=Icons.texture(kind,84)
 		button.add_child(picture)
-		var caption := _label(str(item.name)+"\n"+str(item.price),11,Style.INK if selected_tool==kind else Style.TEXT)
+		var caption := _label(str(item.name)+"\n"+str(item.price),13,Style.INK if selected_tool==kind else Style.TEXT)
 		caption.mouse_filter=Control.MOUSE_FILTER_IGNORE; caption.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
 		caption.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; caption.clip_text=true
-		caption.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE); caption.offset_left=4; caption.offset_right=-4; caption.offset_top=-40; caption.offset_bottom=-4
+		caption.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE); caption.offset_left=54; caption.offset_right=-4; caption.offset_top=-52; caption.offset_bottom=-6
 		if int(item.get("cost",0))>funds and selected_tool!=kind: caption.add_theme_color_override("font_color",Style.GOLD)
 		button.add_child(caption)
 	if matches.is_empty():
@@ -2153,6 +2170,7 @@ func _clear_busy() -> bool:
 	return _context_page=="clear_lot" and is_instance_valid(clear_panel) and not clear_panel.pending.is_empty()
 
 func _build_edit_controls(lot: Dictionary) -> void:
+	var edit_actions: HBoxContainer
 	if selected_tool.begins_with("terrain_"):
 		var brushes := HBoxContainer.new(); context_box.add_child(brushes)
 		for radius in [1,2,3]:
@@ -2177,22 +2195,24 @@ func _build_edit_controls(lot: Dictionary) -> void:
 		var hint := ""
 		if BuildCatalog.ORDER.has(selected_tool):
 			var item := BuildCatalog.entry(selected_tool)
-			title=str(item.name)+" · "+str(item.price)
+			title="Using: "+str(item.name)+" · "+str(item.price)
 			detail=str(item.use)
 			if selected_tool=="floor": detail="Drag to fill a rectangle"
 			if selected_tool=="wall": detail="Drag to outline a rectangle"
 			if item.has("size") and selected_tool not in ["floor","wall"]:
 				var footprint := Catalog.footprint(selected_tool,build_rotation)
-				detail="%d×%d · " % [footprint.x,footprint.y]+detail
+				detail="%d×%d · %d° · " % [footprint.x,footprint.y,build_rotation*90]+detail
 			hint=str(item.description)
-			if int(item.get("cost",0))>int(lot.funds): detail="Need §%d more · Preview available" % (int(item.cost)-int(lot.funds))
+			if int(item.get("cost",0))>int(lot.funds): detail+="\nNeed §%d more · Preview available" % (int(item.cost)-int(lot.funds))
+			var requirement := BuildCatalog.requirement(selected_tool)
+			if not requirement.is_empty(): detail+="\n"+requirement
 		elif selected_tool=="move":
 			title="Move furniture · Free"; detail="Choose furniture, then its new spot"; hint="Drag furniture to move it. Hold the right mouse button and drag left or right to rotate in 90° steps. Escape cancels."
 		else:
 			title="Sell & demolish"; detail="Drag to clear an area"; hint="Click for one item. Drag to review the refund and clear all selected tiles and furnishings on release. One Undo restores the area."
-		catalog_detail=_label(title,12,Style.GOLD); catalog_detail.clip_text=true; catalog_detail.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; catalog_detail.tooltip_text=title+"\n"+hint; context_box.add_child(catalog_detail)
-		var subtitle := _label(detail,11,Style.MUTED); subtitle.clip_text=true; subtitle.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; subtitle.tooltip_text=detail+"\n"+hint; context_box.add_child(subtitle)
-		var editing := HBoxContainer.new(); editing.add_theme_constant_override("separation",5); context_box.add_child(editing)
+		catalog_detail=_label(title,14,Style.GOLD); catalog_detail.clip_text=true; catalog_detail.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; catalog_detail.tooltip_text=title+"\n"+hint; context_box.add_child(catalog_detail)
+		var subtitle := _label(detail,13,Style.TEXT); subtitle.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; subtitle.tooltip_text=detail+"\n"+hint; context_box.add_child(subtitle)
+		var editing := HBoxContainer.new(); edit_actions=editing; editing.add_theme_constant_override("separation",5); context_box.add_child(editing)
 		var move := _edit_button("Save room…" if selected_tool=="copy_room" else "Cancel move" if not _moving_object.is_empty() else "Move",func(): _open_room_library() if selected_tool=="copy_room" else _select_build_tool("move"),editing,"Save the selected room to your library." if selected_tool=="copy_room" else "Choose furniture to rearrange at no cost.")
 		move.disabled=not _move_request.is_empty() or (selected_tool=="copy_room" and (_copy_source.x<0 or not _copy_request.is_empty()))
 		if selected_tool=="copy_room": save_room_button=move
@@ -2202,8 +2222,8 @@ func _build_edit_controls(lot: Dictionary) -> void:
 		Icons.apply(rotate_button,"rotate","Rotate",str(build_rotation+1) if selected_tool=="room" else "%d°" % (build_rotation*90))
 		rotate_button.tooltip_text=rotation_hint
 	var history := HBoxContainer.new(); history.add_theme_constant_override("separation",5); context_box.add_child(history)
-	undo_button=_edit_button("Undo",func(): _build_history(false),history,"Undo the last edit and its price · Ctrl/Cmd+Z")
-	redo_button=_edit_button("Redo",func(): _build_history(true),history,"Redo a building edit · Ctrl/Cmd+Shift+Z or Ctrl+Y")
+	undo_button=_edit_button("Undo",func(): _build_history(false),history,str(lot.get("build_undo_hint","Undo the last edit and its price"))+" · Ctrl/Cmd+Z")
+	redo_button=_edit_button("Redo",func(): _build_history(true),history,str(lot.get("build_redo_hint","Redo a building edit"))+" · Ctrl/Cmd+Shift+Z or Ctrl+Y")
 	undo_button.disabled=int(lot.get("build_undo",0))==0; redo_button.disabled=int(lot.get("build_redo",0))==0
 	if not painting:
 		var discard:=_edit_button("Discard draft",func(): _send({"type":"build_cancel","lot_id":viewed_lot}),history,"Restore the whole house and budget from before construction.")
@@ -2216,7 +2236,9 @@ func _build_edit_controls(lot: Dictionary) -> void:
 		cancel.disabled=_paint_anchor.x<0 or not _paint_request.is_empty()
 		_edit_button("Discard draft",func(): _send({"type":"build_cancel","lot_id":viewed_lot}),finish,"Restore the whole house and budget from before construction.")
 	if _context_page in ["blueprints","clear_lot"]: return
-	var access_actions:=HBoxContainer.new(); access_actions.add_theme_constant_override("separation",5); context_box.add_child(access_actions)
+	var access_actions:=edit_actions if edit_actions!=null else HBoxContainer.new()
+	if edit_actions==null:
+		access_actions.add_theme_constant_override("separation",5); context_box.add_child(access_actions)
 	space_button=_edit_button("Move family",_move_family_aside,access_actions)
 	access_button=_edit_button("Hide access" if _context_page=="access" else "Access · Clear" if _access_report.get("ok",true) else "Access · %d issues" % _access_report.issues.size(),_toggle_access,access_actions,"Show routes from the entrance and locate blocked residents or furnishings.")
 	Icons.apply(access_button,"access","Hide access" if _context_page=="access" else "Home access", "✓" if _access_report.get("ok",true) else str(_access_report.issues.size()))

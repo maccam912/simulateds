@@ -94,7 +94,7 @@ func sync(view: Control, _delta: float) -> void:
 	_update_light(view)
 
 func _update_light(view: Control) -> void:
-	var light := Daylight.sample(float(view.world.get("day_minutes",480)))
+	var light := Daylight.sample(view.presentation_minutes())
 	var night := float(light.night)
 	sun.light_energy = lerpf(0.68,0.11,night)
 	sun.light_color = Color("fff1dc").lerp(Color("a5b9ed"),night)
@@ -553,7 +553,7 @@ func _update_ghost(view: Control) -> void:
 	if kind=="move" and not str(view.build_object_id).is_empty():
 		for object: Dictionary in view.world.get("lots",{}).get(view.lot_id,{}).get("objects",[]):
 			if object.id==view.build_object_id: kind=str(object.kind); break
-	var enabled: bool = view.building and not view.access_inspecting and Catalog.ITEMS.has(kind) and kind not in ["floor","wall","door"] and view.hover_cell.x>=0 and view.hover_cell.y>=0 and view.hover_cell.x<16 and view.hover_cell.y<16
+	var enabled: bool = view.building and not view.placement_confirmed() and not view.access_inspecting and Catalog.ITEMS.has(kind) and kind not in ["floor","wall","door"] and view.hover_cell.x>=0 and view.hover_cell.y>=0 and view.hover_cell.x<16 and view.hover_cell.y<16
 	var key := kind if enabled else ""
 	if key != _ghost_key:
 		_ghost_key = key

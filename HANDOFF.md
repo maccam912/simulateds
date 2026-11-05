@@ -1,3 +1,32 @@
+# Construction catalog and feedback — November 5, 2026
+
+- Issue #6: BUILD-01–09 implemented; BUILD-10's human mouse/trackpad drag
+  verification remains outstanding. Keep the issue open. Full dispositions and
+  reproducible checks: `docs/BUILD_CATALOG_QA.md`.
+- Accepted stationary purchases show success without a duplicate obstruction
+  ghost. Local feedback expires on pointer/context/revision changes; host
+  occupancy, funds and transaction validation remain authoritative.
+- Compact catalog shows four complete choices with model miniatures and prices,
+  ranked search, an explicit active-item summary and support requirements.
+  Optional construction daylight changes rendering only and resets on exit.
+- Undo/Redo descriptions come from accepted host transactions, including affected
+  counts and exact next costs/refunds. Optional bounded runtime snapshot strings
+  are absent from disk saves; no save-schema or asset changes.
+- Native macOS Godot 4.7.2/OpenGL review passed at 1440×900/100% and
+  1280×720/125%, day/night/daylight preview, purchases and compact search.
+  Automated native catalog/Move/right-rotation drags passed. Evidence:
+  ignored `build/build-feedback-*.png`, `build/issue6/native-*.log`,
+  `build/issue6/final-native.log`. Human hardware is not established by automation.
+- Local validation: all 127 gameplay/UI suites, both save-continuity processes,
+  eight real Iroh scenarios and dedicated-server smoke passed across the required
+  `tools/check.py` run and resumed checks. One old drag test hit the wider tray;
+  panning its work area fixed it. Final focused checks and compact native area
+  dragging passed. Logs: `build/issue6/check*.log`, `final-focused.log`,
+  `native-area.log`; coverage audit: `build/issue6/validation.json`.
+- Staged asset-storage and whitespace checks pass. Hosted CI is separate and
+  unverified at this checkpoint. No local exports, physical-device tests or
+  human playtest were performed.
+
 # Neighborhood context — November 5, 2026
 
 - Issue #11: vacant-lot feedback and off-lot resident context implemented;

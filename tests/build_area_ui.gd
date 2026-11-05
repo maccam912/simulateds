@@ -74,6 +74,9 @@ func _run() -> void:
 	root.add_child(game)
 	await process_frame; await process_frame
 	var view: Control=game.lot_view
+	# Pan the right-hand work area clear of the wider catalog before dragging.
+	view.pan.x-=120; view._layout()
+	await process_frame; await process_frame
 	var first := _cell(7,2)
 	var last := _cell(10,0)
 	var before: Dictionary=session.world.snapshot()
