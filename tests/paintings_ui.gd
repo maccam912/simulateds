@@ -93,7 +93,7 @@ func _run() -> void:
 	assert(float(easel.painting.progress)>0 and float(easel.painting.progress)<24 and game.lot_view._activity_pose(member).kind=="easel")
 	await _button(game.queue_label); await _capture("plan")
 	assert(game._plan_detail.text.contains("Paint morning meadow") and game._plan_detail.tooltip_text.contains("Painting finishes"))
-	await _button(game.plan_controls[member.task.id].cancel); game.plan_panel.hide(); game._refresh()
+	await _button(game.plan_controls[member.task.id].cancel); game.plan_panel.hide(); game._refresh(); await _mouse(_point(id),true)
 	var partial: Dictionary=easel.painting.duplicate(true)
 	await _advance(3); assert(easel.painting==partial and not game.painting_panel.buttons.resume.disabled)
 	await _capture("paused-canvas")

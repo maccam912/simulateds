@@ -54,6 +54,7 @@ const RadialMenu = preload("res://game/radial_menu.gd")
 const ContextActions = preload("res://game/context_actions.gd")
 var radial_menu: Control
 var more_panel: PanelContainer
+var dock_labels := {}
 var more_button: Button
 var needs_panel: PanelContainer
 var needs_details: Control
@@ -69,6 +70,7 @@ var _applied_solo_view := -1
 var selected_tool := "floor"
 var build_rotation := 0
 var lot_view: Control
+var clock_state: Label
 var clock_label: Label
 var clock_panel: PanelContainer
 var time_buttons: Dictionary={}
@@ -83,6 +85,10 @@ var visit_button: Button
 var home_button: Button
 var together_button: Button
 var travel_panel: VBoxContainer
+var family_panel: PanelContainer
+var family_scroll: ScrollContainer
+var family_count: Label
+var family_rows := {}
 var family_box: VBoxContainer
 var household_button: Button
 var mail_button: Button
@@ -367,19 +373,22 @@ func _build_ui() -> void:
 	var menu_button := _button("☰",_request_pause); menu_button.tooltip_text="Game menu · " + Preferences.action_label("pause")
 	var clock_space := Control.new(); clock_space.size_flags_horizontal=Control.SIZE_EXPAND_FILL; clock_space.mouse_filter=Control.MOUSE_FILTER_IGNORE; session_row.add_child(clock_space)
 	_compact_control(menu_button); menu_button.custom_minimum_size=Vector2(44,44); session_row.add_child(menu_button)
+	clock_state=_label("Solo · 1×",12,Style.TEXT); clock_box.add_child(clock_state)
 	connection_label = _label("Local neighborhood",11,Style.MUTED)
+	connection_label.clip_text=true; connection_label.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS
 
 	# Compact control islands float over the world, rather than enclosing it.
-	var family_panel := _hud_panel(Rect2(16,-124,190,108),Vector2(0,1))
+	family_panel = _hud_panel(Rect2(16,-124,190,108),Vector2(0,1))
 	var family_column := _vbox(family_panel,7)
-	household_button=_button("Create a household",func(): household_requested.emit())
+	household_button=_button("Edit household",func(): household_requested.emit())
 	household_button.tooltip_text="Character creator: appearance, wardrobes, personality and family"
-	var family_scroll := ScrollContainer.new(); family_scroll.custom_minimum_size.y=76; family_scroll.size_flags_vertical=Control.SIZE_EXPAND_FILL; family_scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED; family_scroll.follow_focus=true; family_column.add_child(family_scroll)
+	family_scroll = ScrollContainer.new(); family_scroll.custom_minimum_size.y=93; family_scroll.size_flags_vertical=Control.SIZE_EXPAND_FILL; family_scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED; family_scroll.follow_focus=true; family_column.add_child(family_scroll)
 	family_box = _vbox(family_scroll,5); family_box.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+	family_count=_label("",11,Style.MUTED); family_column.add_child(family_count)
 
 	needs_panel = _hud_panel(Rect2(218,-124,600,108),Vector2(0,1))
-	needs_panel.anchor_right=0.0; needs_panel.offset_right=minf(818,size.x-260)
-	resized.connect(func(): needs_panel.offset_right=minf(818,size.x-260))
+	needs_panel.anchor_right=0.0; needs_panel.offset_right=minf(818,size.x-280)
+	resized.connect(func(): needs_panel.offset_right=minf(818,size.x-280))
 	var needs := _vbox(needs_panel,5)
 	var needs_head := HBoxContainer.new(); needs.add_child(needs_head)
 	needs_title = _label("Alex · Taking it easy",14); needs_title.size_flags_horizontal=Control.SIZE_EXPAND_FILL; needs_title.clip_text=true; needs_title.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; needs_head.add_child(needs_title)
@@ -388,7 +397,7 @@ func _build_ui() -> void:
 	needs_toggle=_button("Needs",_toggle_needs); _compact_control(needs_toggle); needs_toggle.custom_minimum_size.y=44; needs_head.add_child(needs_toggle)
 	queue_label = _button("Plan",func(): _show_tray(plan_panel,not plan_panel.visible))
 	queue_label.add_theme_font_size_override("font_size",12); _compact_control(queue_label); needs_head.add_child(queue_label)
-	plan_panel = _hud_panel(Rect2(16,-484,408,300),Vector2(0,1))
+	plan_panel = _hud_panel(Rect2(218,-484,408,344),Vector2(0,1))
 	plan_panel.hide()
 	var plan := _vbox(plan_panel,8)
 	var plan_head := HBoxContainer.new(); plan.add_child(plan_head)
@@ -410,15 +419,21 @@ func _build_ui() -> void:
 	pastime_label.tooltip_text="Change this in Household. A favorite nudges free-time choices; urgent needs and your orders come first."
 	plan_scroll = ScrollContainer.new(); plan_scroll.size_flags_vertical=Control.SIZE_EXPAND_FILL; plan_scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED; plan.add_child(plan_scroll)
 	plan_box = _vbox(plan_scroll,5); plan_box.size_flags_horizontal=Control.SIZE_EXPAND_FILL
-	var bars := HBoxContainer.new(); bars.add_theme_constant_override("separation",8); needs.add_child(bars)
-	needs_details=bars; needs_details.hide()
+	needs_details=_hud_panel(Rect2(218,-250,600,118),Vector2(0,1))
+	needs_details.offset_right=minf(818,size.x-280)
+	resized.connect(func(): needs_details.offset_right=minf(818,size.x-280))
+	needs_details.hide()
+	var details := _vbox(needs_details,5)
+	details.add_child(_label("Select a need to review care; choose an activity to order it.",11,Style.MUTED))
+	var bars := HBoxContainer.new(); bars.add_theme_constant_override("separation",8); details.add_child(bars)
 	for need: String in Wellbeing.ORDER:
-		var button := _button("",func(): _care_need(need)); button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; button.custom_minimum_size=Vector2(54,42); bars.add_child(button); need_buttons[need]=button
+		var button := _button("",func(): _inspect_need(need)); button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; button.custom_minimum_size=Vector2(54,62); bars.add_child(button); need_buttons[need]=button
 		for state_name: String in ["normal","disabled","hover","focus"]:
 			var surface := Style.box(Color.TRANSPARENT if state_name in ["normal","disabled","focus"] else Style.PANEL,3,Style.GREEN if state_name in ["hover","focus"] else Color.TRANSPARENT)
 			surface.content_margin_left=0; surface.content_margin_right=0; surface.content_margin_top=0; surface.content_margin_bottom=0
 			button.add_theme_stylebox_override(state_name,surface)
 		var column := _vbox(button,4); column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); column.mouse_filter=Control.MOUSE_FILTER_IGNORE
+		var caption := _label(need.capitalize(),10); caption.mouse_filter=Control.MOUSE_FILTER_IGNORE; caption.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER; column.add_child(caption)
 		var row := HBoxContainer.new(); row.mouse_filter=Control.MOUSE_FILTER_IGNORE; column.add_child(row)
 		var label := TextureRect.new(); label.texture=Icons.texture(need); label.expand_mode=TextureRect.EXPAND_IGNORE_SIZE; label.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED; label.custom_minimum_size=Vector2(22,22); label.mouse_filter=Control.MOUSE_FILTER_IGNORE; label.size_flags_horizontal=Control.SIZE_EXPAND_FILL; row.add_child(label)
 		button.accessibility_name=need.capitalize()
@@ -434,21 +449,21 @@ func _build_ui() -> void:
 	help_label.size_flags_horizontal=Control.SIZE_EXPAND_FILL; help_label.clip_text=true; help_label.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; wellbeing_row.add_child(help_label)
 
 	# One stable dock: build/finish, catalog/activities, and secondary actions.
-	var dock := _hud_panel(Rect2(-264,-80,248,64),Vector2(1,1))
+	var dock := _hud_panel(Rect2(-264,-102,248,86),Vector2(1,1))
 	var mode_row := HBoxContainer.new(); mode_row.add_theme_constant_override("separation",8); dock.add_child(mode_row)
 	more_button=_button("More",func(): _show_tray(more_panel,not more_panel.visible))
 	more_button.tooltip_text="Household, activities, travel, mail and play together"
-	more_panel = _hud_panel(Rect2(-304,122,288,272),Vector2(1,0)); more_panel.hide()
+	more_panel = _hud_panel(Rect2(-352,-440,336,326),Vector2(1,1)); more_panel.hide()
 	var actions := _vbox(more_panel,8)
-	var more_head := HBoxContainer.new(); actions.add_child(more_head)
-	var more_title := _label("",16); more_title.size_flags_horizontal=Control.SIZE_EXPAND_FILL; more_head.add_child(more_title)
-	more_head.add_child(_button("×",func(): more_panel.hide()))
 	mode_button = _button("Build & furnish",_toggle_build); mode_row.add_child(mode_button)
 	palette_button = _button("Activities",func():
 		var was_activities := _context_page=="activities"
 		_context_page="activities"; _refresh(); _show_tray(context_panel,not context_panel.visible if was_activities else true)); mode_row.add_child(palette_button)
 	mode_row.add_child(more_button)
 	for control: Button in [mode_button,palette_button,more_button]:
+		mode_row.remove_child(control)
+		var column := VBoxContainer.new(); column.add_theme_constant_override("separation",2); column.size_flags_horizontal=Control.SIZE_EXPAND_FILL; mode_row.add_child(column); column.add_child(control)
+		var caption := _label("",11); caption.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER; caption.mouse_filter=Control.MOUSE_FILTER_IGNORE; column.add_child(caption); dock_labels[control]=caption
 		_compact_control(control); control.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	visit_button = _button("Visit lot",_visit)
 	home_button = _button("Go home",_go_home)
@@ -459,10 +474,11 @@ func _build_ui() -> void:
 	cancel.tooltip_text="Clear the selected resident’s current action and plan."
 	mail_button=_button("Mail",func(): mail_requested.emit())
 	# Social, household, travel, then utility controls keep related icons together.
-	var grid := GridContainer.new(); grid.columns=3; grid.add_theme_constant_override("h_separation",8); grid.add_theme_constant_override("v_separation",8); actions.add_child(grid)
+	var grid := GridContainer.new(); grid.columns=2; grid.add_theme_constant_override("h_separation",8); grid.add_theme_constant_override("v_separation",4); actions.add_child(grid)
 	for control: Button in [people_button,wishes_button,hobbies_button,household_button,mail_button,_button("Play together",_open_connection),visit_button,home_button,together_button,_button("Center view",func(): lot_view.center_lot()),_button("Save",_request_save_menu),cancel]:
+		control.set_meta("nav_caption",control.accessibility_name)
 		control.size_flags_horizontal=Control.SIZE_EXPAND_FILL; grid.add_child(control)
-	actions.add_child(connection_label)
+	actions.add_child(connection_label); actions.move_child(connection_label,0)
 	for control: Button in actions.find_children("*","Button",true,false):
 		_compact_control(control); control.add_theme_font_size_override("font_size",12)
 		control.pressed.connect(func(): more_panel.hide())
@@ -553,10 +569,11 @@ func _process(delta: float) -> void:
 
 func _toggle_needs() -> void:
 	needs_details.visible=not needs_details.visible
-	needs_panel.offset_top=-180 if needs_details.visible else -124
+	if needs_details.visible: plan_panel.hide()
 	Icons.apply(needs_toggle,"needs","Hide needs" if needs_details.visible else "Show needs")
+	Icons.navigation(needs_toggle,"Needs",bool(Preferences.values.navigation_labels))
 	_compact_control(needs_toggle,needs_details.visible)
-	needs_toggle.tooltip_text="Hide the need bars" if needs_details.visible else "Show all seven needs · Click a bar to plan care"
+	needs_toggle.tooltip_text="Hide the need bars" if needs_details.visible else "Show all seven needs · Select a bar to review care"
 
 func _session_context() -> String:
 	return str([Session.world_generation,Session.profile_id,Session.role])
@@ -767,7 +784,8 @@ func _refresh() -> void:
 	var minutes := int(float(state.get("day_minutes",480)))
 	var day := int(state.get("day",1))
 	clock_label.text="%02d  ·  %02d:%02d" % [day,int(minutes%1440/60),minutes%60]
-	if Session.can_control_time() and Session.debug_speed==0.0: clock_label.text+="  Ⅱ"
+	clock_state.text=("Solo · Paused" if Session.debug_speed==0 else "Solo · "+Session.speed_label()) if Session.can_control_time() else "Shared time"
+	if building: clock_state.text+=" · Lot sheltered"
 	_refresh_time_controls()
 	clock_label.tooltip_text="Day %d · " % day + ("Paused · " if Session.debug_speed==0.0 else "") + preload("res://game/daylight.gd").sample(minutes).phase+" · The neighborhood shares one clock."
 	if Session.role=="offline":
@@ -775,7 +793,8 @@ func _refresh() -> void:
 	else:
 		connection_label.text="Shared clock · "+("Hosting" if Session.role=="host" else "Joining…" if Session.role=="joining" else "Connected")
 		if not Rooms.code.is_empty(): connection_label.text+=" · "+Rooms.code
-	connection_label.tooltip_text=str(Session.status)
+	connection_label.text=str(member.get("name","Household"))+" · "+connection_label.text
+	connection_label.tooltip_text=connection_label.text+"\n"+str(Session.status)
 	var lot_cards := Neighborhood.cards(state,Session.profile_id)
 	var lot_signature := str(lot_cards.map(func(card): return str(card.id)))
 	if lot_signature!=_lots_signature:
@@ -785,13 +804,27 @@ func _refresh() -> void:
 			var button:=NeighborhoodCard.new(); button.pressed.connect(func(): _select_lot(id)); lots_box.add_child(button)
 			Soundscape.attach_controls(button); lot_buttons[id]=button
 	for card: Dictionary in lot_cards: lot_buttons[card.id].refresh(card,str(card.id)==viewed_lot)
-	var family_signature := selected_member+str(family.get("name",""))+str(family.get("identity_revision",0))+str(family.get("members",[]).size())
+	var residents: Array=family.get("members",[])
+	var family_signature := str(residents.map(func(resident): return str(resident.id)))
 	if family_signature!=_family_signature:
-		_family_signature=family_signature; _clear(family_box)
-		for resident in family.get("members",[]):
-			var b := _button(("●  " if str(resident.id)==selected_member else "○  ")+str(resident.name),func(): _select_resident(str(resident.id)))
-			_compact_control(b); b.custom_minimum_size.y=34
-			b.alignment=HORIZONTAL_ALIGNMENT_LEFT; b.clip_text=true; b.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; b.tooltip_text=str(resident.name)+" · Unwinds with: "+Pastimes.label(resident)+" · Click again to find this resident"; family_box.add_child(b)
+		_family_signature=family_signature; _clear(family_box); family_rows.clear()
+		for resident: Dictionary in residents:
+			var id := str(resident.id)
+			var b := _button("",func(): _select_resident(id))
+			_compact_control(b); b.custom_minimum_size.y=44
+			b.add_theme_font_size_override("font_size",12)
+			b.alignment=HORIZONTAL_ALIGNMENT_LEFT; b.clip_text=true; b.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS
+			family_box.add_child(b); family_rows[id]=b
+		family_scroll.custom_minimum_size.y=mini(4,residents.size())*49-5
+		family_panel.offset_top=-(family_scroll.custom_minimum_size.y+62)
+		family_count.text="%d residents%s" % [residents.size()," · Scroll ↕" if residents.size()>4 else ""]
+	for resident: Dictionary in residents:
+		var b: Button=family_rows[str(resident.id)]
+		var mood := Wellbeing.mood(resident.get("needs",{}))
+		b.text=("● " if str(resident.id)==selected_member else "○ ")+str(resident.name)+"\n"+(str(mood.label) if mood.tone!="good" else str(resident.get("action","Enjoying the day")))
+		b.accessibility_name=b.text
+		b.tooltip_text=str(resident.name)+" · "+str(mood.label)+"\n"+str(resident.get("action","Enjoying the day"))+"\nClick again to find this resident"
+		b.add_theme_color_override("font_color",_mood_color(str(mood.tone)))
 	if not member.is_empty():
 		needs_title.text=str(member.name)+"  ·  "+str(member.get("action","Enjoying the day"))
 		needs_title.tooltip_text=needs_title.text
@@ -815,11 +848,12 @@ func _refresh() -> void:
 			need_bars[need].add_theme_stylebox_override("fill",Style.box(color,4))
 			var option: Dictionary=Session.world.care_option(member,need)
 			_care_options[need]=option
-			need_buttons[need].tooltip_text=str(need).capitalize()+" · "+str(int(value))+"\n"+("Click: "+str(option.label)+"\n" if option.available else "")+str(option.detail)
+			need_buttons[need].tooltip_text=str(need).capitalize()+" · "+str(int(value))+"\n"+("Review care for "+str(member.name)+": "+str(option.label)+"\n" if option.available else "")+str(option.detail)
 			need_buttons[need].disabled=bool(state.lots[family.home_lot].building)
 			if care_values.has(need) and is_instance_valid(care_values[need]): care_values[need].text=str(need).capitalize()+" · %d" % int(value)
 	var build_mode := building and mine
-	context_icon.texture=Icons.texture("catalog" if build_mode else "activities")
+	var tray_icon := "catalog" if build_mode else str({"care":"needs","wishes":"heart","hobbies":"star","people":"people","travel":"together","garden":"garden_bed","garden_overview":"garden_bed","painting":"palette","meal":"food","meals":"food","wall_art_inspect":"art","commissions":"art"}.get(_context_page,"activities"))
+	context_icon.texture=Icons.texture(tray_icon); context_icon.accessibility_name=tray_icon.capitalize()
 	catalog_category.text=""
 	catalog_category.accessibility_name="Catalog category: "+str(BuildCatalog.CATEGORIES[_catalog_category])
 	catalog_category.tooltip_text=catalog_category.accessibility_name
@@ -837,6 +871,14 @@ func _refresh() -> void:
 	Icons.apply(palette_button,"catalog" if build_mode else "activities","Catalog" if build_mode else "Activities","•" if art_ready and not build_mode else "")
 	palette_button.add_theme_color_override("font_color",Style.GOLD if art_ready and not build_mode else Style.TEXT)
 	Icons.apply(more_button,"more","More · Household, travel, mail and shared play","•" if art_ready or unread>0 or news_pending else "")
+	var labeled := bool(Preferences.values.navigation_labels)
+	for control: Button in [needs_toggle,queue_label]:
+		Icons.navigation(control,"Needs" if control==needs_toggle else "Plan" if control==queue_label else "More",labeled)
+	for control: Button in dock_labels:
+		dock_labels[control].text=("Finish" if build_mode else "Build") if control==mode_button else ("Catalog" if build_mode else "Activities") if control==palette_button else "More"
+		dock_labels[control].visible=labeled
+	for control: Button in more_panel.find_children("*","Button",true,false):
+		if control.has_meta("nav_caption"): Icons.navigation(control,str(control.get_meta("nav_caption")),labeled)
 	palette_button.tooltip_text="Art commission · %d %s ready to review\nOpen Activities → Art commissions." % [_commission_status.ready.size(),"original" if _commission_status.ready.size()==1 else "originals"] if art_ready and not build_mode else "Building tools and furnishings" if build_mode else "Things to do and optional art commissions"
 	var tools_signature := _art_source+str(_art_request.is_empty())+str(building and mine)+selected_tool+_moving_object+str(_move_request.is_empty())+_selected_object+str(build_rotation)+viewed_lot+str(lot.get("revision",0))+_context_page+selected_member+str(_room_anchor)+str(_room_request.is_empty())
 	if build_mode: tools_signature+=_catalog_category+":"+_catalog_query+":"+str(lot.get("funds",0))+str(_access_visible)+str(_access_report.get("issues",[]))
@@ -924,11 +966,16 @@ func _refresh() -> void:
 
 func _layout_notice() -> void:
 	if notice_panel==null: return
-	var left := -minf(340.0,size.x*0.5-16.0)
-	if plan_panel.visible: left=maxf(left,plan_panel.get_rect().end.x+16.0-size.x*0.5)
-	notice_panel.offset_left=left
-	notice_panel.offset_right=minf(340.0,size.x*0.5-16.0)
-	notice_panel.offset_bottom=needs_panel.offset_top-16.0
+	# Feedback stays clear of both the roster and the currently open tray.
+	var left := maxf(218.0,size.x*0.5-340.0)
+	var right := minf(size.x-16.0,size.x*0.5+340.0)
+	if plan_panel.visible: left=maxf(left,plan_panel.get_rect().end.x+16.0)
+	elif more_panel.visible: right=minf(right,more_panel.get_rect().position.x-16.0)
+	elif context_panel.visible: right=minf(right,context_panel.get_rect().position.x-16.0)
+	notice_panel.offset_left=left-size.x*0.5
+	notice_panel.offset_right=right-size.x*0.5
+	notice_panel.offset_bottom=minf(needs_panel.offset_top,family_panel.offset_top)-16.0
+	if needs_details.visible: notice_panel.offset_bottom=minf(notice_panel.offset_bottom,needs_details.offset_top-16.0)
 	notice_panel.offset_top=notice_panel.offset_bottom-42.0
 
 func _refresh_plan(member: Dictionary) -> void:
@@ -1610,6 +1657,10 @@ func _request_save_menu() -> void:
 	else: save_menu_requested.emit()
 
 func _show_tray(panel: Control,show_panel: bool) -> void:
+	if show_panel and panel==plan_panel:
+		context_panel.hide()
+		if needs_details.visible: _toggle_needs()
+	if show_panel and panel==context_panel: plan_panel.hide()
 	if show_panel and radial_menu!=null: radial_menu.dismiss()
 	if show_panel and more_panel!=null and panel!=more_panel: more_panel.hide()
 	if show_panel and panel==more_panel: context_panel.hide(); plan_panel.hide(); neighborhood_panel.hide()
@@ -1784,6 +1835,14 @@ func _build_finish_palette(surface: String) -> void:
 func _mood_color(tone: String) -> Color:
 	return Color("df9785") if tone=="low" else Style.GOLD if tone=="warm" else Style.GREEN
 
+func _inspect_need(need: String) -> void:
+	if needs_details.visible: _toggle_needs()
+	_context_page="care"; _refresh(); _show_tray(context_panel,true)
+	await get_tree().process_frame
+	if care_buttons.has(need) and is_instance_valid(care_buttons[need]):
+		tools_box.get_parent().ensure_control_visible(care_values[need])
+		if not care_buttons[need].disabled: care_buttons[need].grab_focus()
+
 func _care_need(need: String) -> void:
 	var member := _member()
 	if member.is_empty(): return
@@ -1808,7 +1867,7 @@ func _rebuild_care() -> void:
 		tools_box.add_child(button); care_buttons[need]=button
 		if not option.available and str(option.status)=="Unavailable here":
 			var reason := _label(str(option.detail),11,Style.GOLD); reason.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; reason.custom_minimum_size.x=200; tools_box.add_child(reason)
-	var note := _label("Choose a break for any need, or click its bar below. Your existing plan stays in order.",12,Style.MUTED)
+	var note := _label("Care for "+str(member.name)+". Choose an activity to add it to Plan. Reading needs never gives an order.",12,Style.MUTED)
 	note.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; note.custom_minimum_size.x=200; context_box.add_child(note)
 
 func _rebuild_people() -> void:

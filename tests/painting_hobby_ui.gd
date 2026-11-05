@@ -85,7 +85,7 @@ func _run() -> void:
 	assert(float(easel.painting.progress)>=4 and alex.hobbies.painting.sessions==0)
 	await _capture("contribution")
 	assert(game.painting_panel.practice.visible and game.painting_panel.practice.text.contains("Finish this canvas"))
-	await _button(_named(game,"○  Robin"))
+	await _button(game.family_rows[robin.id])
 	await _button(game.hobbies_button); await _button(game.hobby_buttons.painting)
 	assert(game.painting_panel.buttons.resume.visible)
 	await _button(game.painting_panel.buttons.resume); await _advance(28); await _capture("shared-finished")

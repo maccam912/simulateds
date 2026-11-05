@@ -78,7 +78,7 @@ func _run() -> void:
 	assert(game.lot_view._activity_pose(member).get("kind")=="garden_bed")
 	await _button(game.queue_label); await _capture("plan")
 	assert("Plant radishes" in game._plan_detail.text and "Gardening finishes" in game._plan_detail.tooltip_text)
-	game.plan_panel.hide()
+	game.plan_panel.hide(); await _mouse(point) # Reopen the garden after inspecting Plan.
 	await _advance(8); await _capture("seedlings")
 	assert(bed.garden.crop=="radish" and lot.funds==budget-10 and not game.garden_panel.buttons.radish.visible)
 	assert(game.garden_panel.feedback.text.is_empty(),"Completed planting clears the old queue acknowledgement")

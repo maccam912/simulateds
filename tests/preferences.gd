@@ -8,6 +8,8 @@ func _run() -> void:
 	var original_path: String=prefs.settings_path
 	prefs.settings_path=original_path+".test"
 	assert(prefs.reset_defaults())
+	assert(prefs.values.navigation_labels)
+	assert(prefs.set_value("navigation_labels",false))
 	assert(prefs.set_value("master_volume",0.0))
 	assert(AudioServer.is_bus_mute(AudioServer.get_bus_index("Master")))
 	assert(prefs.set_value("music_volume",0.25))
@@ -37,6 +39,7 @@ func _run() -> void:
 	prefs.values={}
 	prefs.load_and_apply()
 	assert(prefs.values.reduced_motion and prefs.values.quality=="low")
+	assert(not prefs.values.navigation_labels,"Compact navigation choice persists")
 	assert(is_equal_approx(prefs.values.music_volume,0.25))
 	assert(is_equal_approx(prefs.values.stereo_volume,0.6))
 	# A legacy combined music level migrates to both channels, including mute.

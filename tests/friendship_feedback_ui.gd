@@ -82,7 +82,7 @@ func _run() -> void:
 	table=session.world._new_object("game_table",8,5,0); lot.objects.append(table)
 	app=load("res://game/app.tscn").instantiate(); root.add_child(app); game=app.game
 	await create_timer(0.9).timeout
-	await _button(_find_button(app.menu_content,"Continue")); assert(app.page=="game")
+	await _button(_find_button(app.menu_content,"Play starter household" if session.started_fresh else "Continue")); assert(app.page=="game")
 	await _object(table); await _button(game.recreation_panel.household_button)
 	var sound: Node=root.get_node("Soundscape"); var cursor: int=sound._effect_cursor
 	session.last_action_ok=false # An old rejected command cannot turn this success into an error cue.

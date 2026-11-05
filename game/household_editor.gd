@@ -37,7 +37,7 @@ func setup(family: Dictionary, context: String) -> void:
 	size_flags_vertical=Control.SIZE_EXPAND_FILL; size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	add_theme_constant_override("separation",12)
 	var heading := HBoxContainer.new(); heading.add_theme_constant_override("separation",16); add_child(heading)
-	heading.add_child(_label("Create a household",26,Style.TEXT))
+	heading.add_child(_label("Edit household",26,Style.TEXT))
 	var spacer := Control.new(); spacer.size_flags_horizontal=Control.SIZE_EXPAND_FILL; heading.add_child(spacer)
 	heading.add_child(_label("Household",13))
 	family_name=LineEdit.new(); family_name.text=str(draft.name); family_name.max_length=64

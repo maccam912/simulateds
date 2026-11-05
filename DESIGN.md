@@ -224,7 +224,7 @@ See [ROADMAP.md](docs/ROADMAP.md) for milestone exit criteria and
 
 ## Character creation
 
-**Create a household** opens a dedicated dressing room with a large, rotatable
+**Edit household** opens a dedicated dressing room with a large, rotatable
 3D resident, idle breathing, glances and blinks. The studio shares its parametric
 geometry with the neighborhood; all previews are private drafts. Save household
 submits one revision-checked command. Cancel/Escape discards an unsent draft;

@@ -53,7 +53,7 @@ func _run() -> void:
 	await create_timer(0.9).timeout
 	assert(app.page=="main","A pending recap never forces a startup popup")
 	app.show_game(); session.menu_paused=true
-	assert(app.page=="game" and family.home_news.report.pending and app.game.mail_button.text=="2")
+	assert(app.page=="game" and family.home_news.report.pending and app.game.mail_button.text.ends_with("2"))
 	assert("Home news" in app.game.mail_button.tooltip_text)
 	await _capture("badge")
 	await _click(app.game.mail_button)
@@ -89,7 +89,7 @@ func _run() -> void:
 	session.world.set_online(session.profile_id,true)
 	for entry: Dictionary in family.mailbox.items: entry.read=true
 	app.game._refresh()
-	assert(app.game.mail_button.text=="•")
+	assert(app.game.mail_button.text.ends_with("•"))
 	await _capture("quiet-badge")
 	session.command({"type":"build_begin","lot_id":family.home_lot})
 	app.game._refresh()

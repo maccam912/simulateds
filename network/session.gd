@@ -46,6 +46,7 @@ var world_generation := 0
 var solo_view: Dictionary = {}
 var solo_view_generation := 0
 var capture_solo_view: Callable
+var started_fresh := false
 var startup_continuation: Dictionary = {}
 var last_action_ok := true
 var last_action_message := ""
@@ -133,6 +134,7 @@ func _load_world() -> void:
 	world.initialize()
 	solo_view={}
 	startup_continuation={}
+	started_fresh=not FileAccess.file_exists(save_path) and not FileAccess.file_exists(save_path+".bak")
 	var saved := _read_autosave()
 	if saved.ok and world.restore_saved(saved.world):
 		_previous_saved=saved.data
@@ -356,6 +358,7 @@ func _activate_world(candidate, saved_view: Variant, continuing: bool) -> Dictio
 		return {"ok":false, "message":"Could not write the active autosave. The current world remains open."}
 	_previous_saved=data
 	world=candidate
+	started_fresh=not continuing
 	solo_view=view
 	startup_continuation={}
 	world_generation+=1

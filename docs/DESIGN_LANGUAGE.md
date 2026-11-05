@@ -53,9 +53,10 @@ subtle depth. Translucency can preserve the landscape behind the HUD, but text
 surfaces must remain dark enough to read over pale floors. Do not place text
 straight over animated grass without a backing or a dependable shadow.
 
-Needs are also controls: hovering explains the proposed care action, clicking
-adds it to the resident's plan, and an optional Care tray explains unavailable
-activities. The mood summary comes from current needs rather than an extra hidden
+Needs are inspection controls: hovering explains the proposed care action, and
+activation opens Care without issuing an order. The tray names the resident and
+activity; choosing that named activity adds it to Plan. Unavailable choices explain
+what is missing. The mood summary comes from current needs rather than an extra hidden
 meter. Low moods use explicit text with terracotta/brass, never flashing alarms.
 
 Use the world for richer color: oak, worn painted wood, cream plaster, terracotta,
@@ -980,7 +981,7 @@ Review in the real camera, daylight, night and a compact window before claiming
 that physical interaction polish is complete.
 
 
-## Icons first — November 4, 2026
+## Icons first — November 4, 2026 (superseded by the navigation review below)
 
 Navigation uses original drawn pictograms from `game/ui_icons.gd`, with no emoji
 or installed-font dependency. The main/pause menus and secondary household tray
@@ -1046,3 +1047,35 @@ retain detail in pale swatches; evening is a comparison, not a recoloring. Revie
 full bodies and faces, side/back views, children and elders, all outfits, and the
 normal gameplay camera before accepting a model change. Faces stay readable
 without photoreal textures or a new visual effect imposed on the whole world.
+
+
+## Discoverable HUD — November 5, 2026
+
+Navigation labels are on by default in menus, More, Needs, Plan and beneath the
+three dock icons. Display → Show navigation labels retains a compact icon option.
+Keep accessible names, keyboard activation and useful hover/focus descriptions in
+both modes. Guide examples use the same pictograms and Edit household terminology.
+Fresh entry offers Play starter household and Customize household; entering the
+world changes that local entry state to Continue. An existing or damaged autosave
+never takes the fresh-entry path, and neither choice replaces a neighborhood.
+
+Needs and Plan stay in one fixed lower row. Needs opens a separate panel above it;
+Plan and care trays are mutually exclusive. A need bar names its need and value,
+uses an action cursor and opens a read-only care review. The fixed care footer
+names the actor; only a named activity button sends the existing care command.
+Keep accepted/rejected feedback above the roster and clear of open trays.
+
+Show up to four complete 44px household rows, growing with household size. Larger
+families use a persistent resident count, explicit Scroll cue, scrollbar and
+keyboard-following scroll. Row callbacks bind resident IDs; refresh text in place
+so changing activity or selection retains focus and scroll. Each row names an
+urgent need or its current activity, with full names and both states on hover.
+Portraits and bespoke activity icons are deferred until they can represent all
+current creator choices faithfully; legacy appearance swatches are insufficient.
+
+More opens directly above its dock, with the acting resident in its heading.
+The clock persistently says Solo · Paused, Solo · exact rate, or Shared time;
+Lot sheltered separately identifies construction. Context trays use the existing
+need, garden, palette, meal, wish, hobby, people and travel pictograms. These are
+UI surfaces and do not change world geometry, saves, routing or simulation rules.
+See [the issue #2 dispositions](HUD_QA.md) for validation and remaining boundaries.
