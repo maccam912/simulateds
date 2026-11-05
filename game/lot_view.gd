@@ -94,6 +94,10 @@ var leisure_report: Dictionary={}
 var leisure_markers: Array=[]
 var _leisure_key := ""
 var _leisure_cached: Dictionary={}
+# Acknowledged purchase feedback is local and never changes placement validity.
+var _placement_request: Dictionary={}
+var _placement_success: Dictionary={}
+var build_daylight := false
 var building := false
 var access_report: Dictionary={}
 var access_visible := false
@@ -143,7 +147,7 @@ func _ready() -> void:
 	_font = ThemeDB.fallback_font
 	_layout()
 	projection.setup(self)
-	mouse_exited.connect(func(): hover_cell = Vector2i(-1, -1); hover_target = {}; _pointer = Vector2(-10000,-10000); queue_redraw())
+	mouse_exited.connect(func(): _placement_success.clear(); _placement_request.clear(); hover_cell = Vector2i(-1, -1); hover_target = {}; _pointer = Vector2(-10000,-10000); queue_redraw())
 
 func _process(delta: float) -> void:
 	if not _area_context.is_empty() and _area_context!=_area_identity(): _area_context.clear()
@@ -153,7 +157,7 @@ func _process(delta: float) -> void:
 	motion.update(world,lot_id,simulation_delta,bool(Preferences.values.get("reduced_motion",false)),0.42 if Session.role=="client" else 0.22)
 	_update_activity_audio(delta)
 	_layout()
-	light=Daylight.sample(float(world.get("day_minutes",480)))
+	light=Daylight.sample(presentation_minutes())
 	projection.sync(simulation_delta)
 	var ground_hover := Rect2(Vector2.ZERO,size).has_point(_pointer) and hit_target(_pointer).is_empty() and not _dragging
 	walking.update(world,str(Session.profile_id),selected_member,lot_id,cell_at(_pointer),ground_hover and _in_bounds(cell_at(_pointer)),show_plan_routes,delta,show_cues and not building and Session.role!="joining")
@@ -286,6 +290,8 @@ func cell_at(point: Vector2) -> Vector2i:
 	return Vector2i(floori(v.x / _cell.x + v.y / _cell.y), floori(v.y / _cell.y - v.x / _cell.x))
 
 func _input(event: InputEvent) -> void:
+	if (event is InputEventMouseMotion or event is InputEventScreenDrag) and make_input_local(event).position!=_pointer:
+		_placement_success.clear(); _placement_request.clear()
 	if not _furniture_gesture.is_empty() and _furniture_input(event): return
 	# An overlay can receive the release even when the drag began on the lawn.
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_MIDDLE and not event.pressed:
@@ -528,7 +534,7 @@ func _draw() -> void:
 	impact_markers.clear(); placement_impact={}
 	_drawing_target = {}
 	_layout()
-	light=Daylight.sample(float(world.get("day_minutes",480)))
+	light=Daylight.sample(presentation_minutes())
 	if not world.has("lots") or not world.lots.has(lot_id):
 		draw_string(_font, Vector2(40,80), "Preparing your neighborhood…", HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color("34514c"))
 		projection.feedback.finish()
@@ -562,7 +568,9 @@ func _draw() -> void:
 	projection.sync(0.0)
 	_hit_regions.assign(projection.register_targets())
 	if building:
-		_diamond(0,0,16,16,Color.TRANSPARENT,0,Color(0.95,0.97,0.78,0.65))
+		# Paired dark/light edges retain contrast on both lawn and pale flooring.
+		projection.feedback.diamond(0,0,16,16,Color.TRANSPARENT,Color("142329"),0.070,0.12)
+		projection.feedback.diamond(0,0,16,16,Color.TRANSPARENT,Color("f4e1a3"),0.074,0.045)
 		for y in range(16):
 			for x in range(16): _diamond(x,y,1,1,Color.TRANSPARENT,0,Color(0.30,0.41,0.24,0.25))
 	if building and build_kind=="finish_floor" and finish_selection=="room" and not access_inspecting: _draw_room_finish_ground()
@@ -595,6 +603,10 @@ func _draw() -> void:
 	elif building and build_kind in ["finish_floor","finish_wall"]: _draw_finish_preview()
 	elif building and build_kind=="window": _draw_window_preview()
 	elif building and build_kind=="wall_art": _draw_art_preview()
+	elif building and placement_confirmed():
+		var footprint := Catalog.footprint(build_kind,build_rotation)
+		projection.feedback.diamond(hover_cell.x,hover_cell.y,footprint.x,footprint.y,Color.TRANSPARENT,Color("d8f1b2"),0.08,0.06)
+		_draw_preview_label(str(Catalog.ITEMS[build_kind].name)+" placed · Move pointer for another",true)
 	elif building and _in_bounds(hover_cell):
 		var tint := Color(0.96,0.99,0.81,0.32)
 		var outline := Color("f8f3c7")
@@ -641,15 +653,18 @@ func _draw() -> void:
 			tint=Color(0.94,0.4,0.3,0.35)
 			if not WallArt.at(lot,hover_cell.x,hover_cell.y).is_empty(): hint_message="Remove wall · Painting moves into the collection"
 			if not Windows.at(lot,hover_cell.x,hover_cell.y).is_empty(): hint_message="Remove window · Refund §%d · Wall stays" % Windows.resale(lot,hover_cell.x,hover_cell.y)
-		_diamond(preview_cell.x,preview_cell.y,footprint.x,footprint.y,tint,4,outline)
+		projection.feedback.diamond(preview_cell.x,preview_cell.y,footprint.x,footprint.y,tint,Color("142329"),0.080,0.12)
+		projection.feedback.diamond(preview_cell.x,preview_cell.y,footprint.x,footprint.y,Color.TRANSPARENT,outline,0.084,0.05)
 		_draw_impact_badges()
 		if not hint_message.is_empty(): _draw_preview_label(hint_message,hint_valid,hint_tone)
+	elif building and not _in_bounds(hover_cell) and _point_available(_pointer):
+		_draw_preview_label("Choose a tile inside the lot boundary.",false)
 	if not building and not hover_target.is_empty(): _draw_hover()
 	elif not walking.preview.is_empty(): _draw_walk_hint()
 	if lot.building:
 		var badge := Rect2(Vector2(size.x*0.5-150,22),Vector2(300,34))
 		draw_style_box(preload("res://game/style.gd").box(Color("eac88c"),17),badge)
-		draw_string(_font,badge.position+Vector2(25,23),"UNDER CONSTRUCTION  ·  Lot paused",HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("5d4a2d"))
+		draw_string(_font,badge.position+Vector2(25,23),"CONSTRUCTION · Daylight preview" if build_daylight else "UNDER CONSTRUCTION  ·  Lot paused",HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("5d4a2d"))
 	projection.feedback.finish()
 
 func _walk_line(cells: Array,start_cell: Vector2,color: Color) -> void:
@@ -759,6 +774,31 @@ func _build_residents() -> Array:
 		for member: Dictionary in family.members:
 			if member.lot_id==lot_id: residents.append({"id":str(member.id),"name":str(member.name),"x":int(member.x),"y":int(member.y)})
 	return residents
+
+func _placement_context() -> Array:
+	return [Session.world_generation,Session.profile_id,Session.role,lot_id,int(world.get("lots",{}).get(lot_id,{}).get("level",0)),building,build_kind,build_rotation,access_inspecting]
+
+func placement_started(command: Dictionary) -> void:
+	_placement_success.clear(); _placement_request.clear()
+	if command.get("type")!="place" or command.get("kind")!=build_kind: return
+	_placement_request={"intent":command.duplicate(true),"context":_placement_context(),"cell":Vector2i(int(command.x),int(command.y)),"pointer":_pointer,"revision":int(world.lots[lot_id].revision)+1}
+
+func placement_completed(command: Dictionary, ok: bool) -> void:
+	if _placement_request.is_empty() or _placement_request.intent!=command: return
+	if ok and _placement_request.context==_placement_context() and _placement_request.cell==hover_cell and _placement_request.pointer==_pointer:
+		_placement_success=_placement_request.duplicate(true)
+	_placement_request.clear()
+	queue_redraw()
+
+func placement_confirmed() -> bool:
+	if _placement_success.is_empty(): return false
+	var revision := int(world.get("lots",{}).get(lot_id,{}).get("revision",-1))
+	if _placement_success.context!=_placement_context() or _placement_success.cell!=hover_cell or _placement_success.pointer!=_pointer or revision>int(_placement_success.revision):
+		_placement_success.clear(); return false
+	return true
+
+func presentation_minutes() -> float:
+	return 720.0 if building and build_daylight else float(world.get("day_minutes",480))
 
 func _update_preview(lot: Dictionary) -> void:
 	var people := _build_residents()

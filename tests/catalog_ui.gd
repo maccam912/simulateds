@@ -103,7 +103,7 @@ func _run() -> void:
 	assert(lot.doors.has([5,11]) and lot.floors.has([5,13]))
 	var room_funds: int=lot.funds
 	game.build_rotation=0
-	for item: Array in [["sleep","bed",4,12,450],["book","bookshelf",6,12,160],["garden","plant",6,14,45]]:
+	for item: Array in [["sleep","bed",4,12,450],["book","bookshelf",6,12,160],["plant","plant",6,14,45]]:
 		await _search(str(item[0]))
 		assert(game.catalog_buttons.has(item[1]))
 		await _key(KEY_ENTER)

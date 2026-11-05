@@ -46,6 +46,12 @@ func _client(index: String) -> void:
 	await _edit({"type":"place_area","kind":"floor","level":1,"x":8,"y":2,"end_x":11,"end_y":8})
 	await _edit({"type":"place","kind":"loveseat","level":1,"x":8,"y":8})
 	await _edit({"type":"place","kind":"floor_lamp","level":1,"x":11,"y":6})
+	var funds: int=session.state.lots[home].funds
+	assert("Linen floor lamp" in session.state.lots[home].build_undo_hint and "Refund §95" in session.state.lots[home].build_undo_hint)
+	await _edit({"type":"build_undo"})
+	assert(session.state.lots[home].funds==funds+95 and "Cost §95" in session.state.lots[home].build_redo_hint)
+	await _edit({"type":"build_redo"})
+	assert(session.state.lots[home].funds==funds and "Refund §95" in session.state.lots[home].build_undo_hint)
 	await _edit({"type":"build_end"})
 	_check_lot(session.state.lots[home])
 	await _command({"type":"use_stairs","lot_id":home,"member_id":member_id,"direction":1})

@@ -1138,3 +1138,29 @@ reasons. An owner being away does not close their occupied home.
 Optional solo NPC households and distinct starter-house layouts are deferred to
 separate ownership/save and content reviews. Preserve vacant player capacity and
 existing saved homes. See [issue #11 dispositions](NEIGHBORHOOD_QA.md).
+
+
+## Construction catalog feedback — November 5, 2026
+
+Construction uses a wider floating tray with short two-column catalog cards.
+Keep actual-model miniatures, names and prices; show four complete choices at
+720p/125% UI. The fixed footer names the active tool with “Using,” its price,
+rotated footprint, angle, use and essential support requirement. Searching never
+changes that tool. Whole-name/category matches lead incidental text matches;
+related-result tooltips explain the matching word. Keep keyboard search and
+empty-result recovery intact.
+
+After host-accepted placement, remove the duplicate ghost and acknowledge the
+placed item at the stationary pointer. Moving the pointer resumes ordinary
+validation. This success feedback cannot make an occupied position valid or
+replace a host reply. Ink/cream perimeter lines and strong active footprint
+edges distinguish usable space in day and night, with explicit error text.
+
+Daylight in the construction View row is an optional presentation setting. Its
+banner says Daylight preview; the clock retains the actual time. Switch it off to
+compare real lighting. Leave simulation, saves and networking unchanged, and
+reset the setting when leaving construction or changing the viewed lot/session.
+Undo/Redo tooltips identify the accepted transaction and the next exact cost or
+refund from bounded host-provided runtime descriptions. See
+[issue #6 dispositions](BUILD_CATALOG_QA.md), including the outstanding human
+mouse/trackpad check.
