@@ -1,3 +1,29 @@
+# Household creator safety and usability — November 5, 2026
+
+- Issue #5: dirty drafts now require explicit discard; Keep editing and Escape
+  retain all choices. Clean cancellation stays direct. Pending/rejected saves
+  and session changes preserve the existing authoritative boundaries.
+- Named family rows disable invalid choices using the host's whole-family
+  validator, explain age constraints and show relationship direction. Host Save
+  still rejects invalid drafts atomically, including ties invalidated by age edits.
+- Hair/clothing have previous/next browsing; sections reset front framing;
+  Front / reset and zoom controls stay visible. Full-body framing is tighter.
+  Entry titles, unsaved state, actual trait effects and household trait summaries
+  clarify the draft. No model, binary asset, save or protocol changes.
+- All 12 dispositions are in `docs/CREATOR_QA.md`. Cast defaults, stage proportions,
+  hair/sleeve refinements and facial variants are explicitly deferred art work.
+- Local `python3 tools/check.py` exited 0: all 127 gameplay/UI suites, both
+  save-continuity processes, eight real Iroh scenarios and dedicated-server smoke.
+  Final focused creator/app/household checks also passed. Logs and coverage audit:
+  ignored `build/issue5/check.log`, `final-focused.log`, `validation.json`.
+- Native macOS Godot 4.7.2/OpenGL review passed at 1440×900 and 1280×720 with
+  125% UI, studio daylight/evening and actual gameplay day/night. Pointer controls,
+  Escape recovery, family warnings, child/infant/elder framing and outfit browsing
+  passed. Captures: ignored `build/creator-*.png`; logs: `build/issue5/final-*.log`.
+- Staged asset-storage and whitespace checks pass. Hosted CI is separate and
+  unverified at this checkpoint. No local exports, physical-device tests or
+  human playtest were performed.
+
 # Construction catalog and feedback — November 5, 2026
 
 - Issue #6: BUILD-01–09 implemented; BUILD-10's human mouse/trackpad drag

@@ -1,5 +1,6 @@
 extends VBoxContainer
 ## Dedicated household creator. This entire mode edits a private draft.
+signal dirty_changed(dirty: bool)
 const Style = preload("res://game/style.gd")
 const Pastimes = preload("res://game/pastimes.gd")
 const Appearance = preload("res://game/appearance.gd")
@@ -28,6 +29,12 @@ var controls := {}
 var swatches: Array[Dictionary]=[]
 var original_count := 0
 var pending := false
+var title_label: Label
+var framing: OptionButton
+var reset_view: Button
+var _baseline: Dictionary
+var _dirty := false
+var _dirty_elapsed := 0.0
 var _copy_source := ""
 const SECTIONS := ["Identity", "Face & hair", "Body & voice", "Outfits", "Personality", "Family"]
 
@@ -37,7 +44,7 @@ func setup(family: Dictionary, context: String) -> void:
 	size_flags_vertical=Control.SIZE_EXPAND_FILL; size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	add_theme_constant_override("separation",12)
 	var heading := HBoxContainer.new(); heading.add_theme_constant_override("separation",16); add_child(heading)
-	heading.add_child(_label("Edit household",26,Style.TEXT))
+	title_label=_label("Edit household",26,Style.TEXT); heading.add_child(title_label)
 	var spacer := Control.new(); spacer.size_flags_horizontal=Control.SIZE_EXPAND_FILL; heading.add_child(spacer)
 	heading.add_child(_label("Household",13))
 	family_name=LineEdit.new(); family_name.text=str(draft.name); family_name.max_length=64
@@ -47,16 +54,20 @@ func setup(family: Dictionary, context: String) -> void:
 	var preview_panel := PanelContainer.new(); preview_panel.size_flags_vertical=Control.SIZE_EXPAND_FILL; preview_column.add_child(preview_panel)
 	preview_panel.add_theme_stylebox_override("panel",Style.box(Color("c8c4ae"),8))
 	studio=Studio.new(); studio.custom_minimum_size=Vector2(180,220); preview_panel.add_child(studio)
-	var view_controls := HBoxContainer.new(); preview_column.add_child(view_controls)
+	var view_controls := HFlowContainer.new(); preview_column.add_child(view_controls)
 	view_controls.add_theme_constant_override("separation",6)
 	view_controls.add_child(_button("↶",func(): studio.yaw-=PI/4,"Turn left"))
 	view_controls.add_child(_button("↷",func(): studio.yaw+=PI/4,"Turn right"))
-	var framing := OptionButton.new(); framing.add_item("Full body"); framing.add_item("Face")
+	framing=OptionButton.new(); framing.add_item("Full body"); framing.add_item("Face"); framing.custom_minimum_size.y=44
 	framing.item_selected.connect(func(value): studio.set_close_up(value==1)); view_controls.add_child(framing); controls.framing=framing
 	var lighting := OptionButton.new(); lighting.add_item("Daylight"); lighting.add_item("Evening")
 	lighting.item_selected.connect(func(value): studio.set_night(value==1)); view_controls.add_child(lighting); controls.lighting=lighting
 	var animate := CheckButton.new(); animate.text="Idle"; animate.button_pressed=true
 	animate.toggled.connect(func(value): studio.paused=not value); view_controls.add_child(animate)
+	reset_view=_button("Front / reset",func(): studio.reset_view(framing.selected==1),"Face forward and restore this preview's framing")
+	view_controls.add_child(reset_view)
+	view_controls.add_child(_button("−",func(): studio.zoom_by(1.1),"Zoom out"))
+	view_controls.add_child(_button("+",func(): studio.zoom_by(0.9),"Zoom in"))
 	var identity := HBoxContainer.new(); preview_column.add_child(identity)
 	name_label=_label("",21,Style.TEXT); name_label.size_flags_horizontal=Control.SIZE_EXPAND_FILL; name_label.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; identity.add_child(name_label)
 	age_label=_label("",13); identity.add_child(age_label)
@@ -79,7 +90,19 @@ func setup(family: Dictionary, context: String) -> void:
 	for member: Dictionary in draft.members: _prepare_member(member)
 	resized.connect(_responsive)
 	_refresh_roster(); _build_fields(); _preview(); _responsive()
+	_baseline=payload()
 	Soundscape.attach_controls(self)
+
+func is_dirty() -> bool:
+	return not _baseline.is_empty() and payload()!=_baseline
+
+func _process(delta: float) -> void:
+	_dirty_elapsed+=delta
+	if _dirty_elapsed<0.15 or _baseline.is_empty(): return
+	_dirty_elapsed=0.0
+	var next := is_dirty()
+	if next!=_dirty:
+		_dirty=next; dirty_changed.emit(_dirty)
 
 func _prepare_member(member: Dictionary) -> void:
 	member.appearance=Appearance.of(member).duplicate(true)
@@ -116,7 +139,11 @@ func select_member(index: int) -> void:
 	selected=index; _copy_source=""; status.text=""; _refresh_roster(); _build_fields(); _preview()
 
 func select_section(index: int) -> void:
+	if pending: return
 	section=index; tabs.select(index); _copy_source=""; status.text=""; _build_fields()
+	if index in [1,2,3]:
+		framing.select(1 if index==1 else 0)
+		studio.reset_view(index==1)
 
 func _refresh_identity() -> void:
 	name_label.text=member_names[selected].text
@@ -237,12 +264,14 @@ func _personality_fields() -> void:
 	var count := _label("%d / 3 traits" % _profile().traits.size(),14,Style.GREEN); fields.add_child(count); controls.trait_count=count
 	for trait_name: String in Profile.TRAITS:
 		var check := CheckBox.new(); check.text=trait_name; check.button_pressed=trait_name in _profile().traits; check.custom_minimum_size.y=34
+		check.tooltip_text=_trait_example(trait_name)
 		check.toggled.connect(func(value):
 			var traits: Array=_profile().traits
 			if value and traits.size()>=3: check.set_pressed_no_signal(false); status.text="Choose up to three traits."; return
 			if value: traits.append(trait_name)
 			else: traits.erase(trait_name)
-			count.text="%d / 3 traits" % traits.size(); status.text="")
+			count.text="%d / 3 traits" % traits.size(); status.text=_trait_example(trait_name) if value else "")
+		check.toggled.connect(func(_value): _refresh_trait_summary())
 		fields.add_child(check); controls["trait_"+trait_name]=check
 	_heading("Likes & dislikes")
 	for interest: String in Profile.INTERESTS:
@@ -251,6 +280,23 @@ func _personality_fields() -> void:
 			_profile().likes.erase(interest); _profile().dislikes.erase(interest)
 			if value==1: _profile().likes.append(interest)
 			elif value==2: _profile().dislikes.append(interest),"interest_"+interest)
+	_heading("Your household")
+	for index in range(draft.members.size()):
+		var summary := _label("",13); summary.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+		fields.add_child(summary); controls["traits_summary_"+str(index)]=summary
+	_refresh_trait_summary()
+	_note("This summary reflects your draft. Select another resident to compare their choices.")
+
+func _refresh_trait_summary() -> void:
+	for index in range(draft.members.size()):
+		if not controls.has("traits_summary_"+str(index)): continue
+		var traits: Array=draft.members[index].character.traits
+		controls["traits_summary_"+str(index)].text=member_names[index].text+" · "+(", ".join(traits) if not traits.is_empty() else "No traits chosen")
+
+func _trait_example(trait_name: String) -> String:
+	if trait_name=="Creative": return "Creative: kept as a preference. Painting still needs your explicit choice; it does not start automatically."
+	var activities := {"bookshelf":"reading", "table":"having tea", "sofa":"relaxing on a sofa", "stereo":"dancing", "game_table":"tabletop games", "shower":"showering", "dining_table":"eating available prepared food", "plant":"tending houseplants"}
+	return trait_name+": gently favors "+str(activities.get(Profile.TRAIT_KINDS[trait_name],"ordinary care"))+" among useful, reachable choices. Your plans and urgent needs come first."
 
 func _family_fields() -> void:
 	_heading("Family connections")
@@ -263,21 +309,82 @@ func _family_fields() -> void:
 			if link.a==draft.members[selected].id and link.b==other.id: value=int(link.kind)
 			elif link.b==draft.members[selected].id and link.a==other.id: value=Profile.REVERSE[int(link.kind)]
 		_option("With "+member_names[index].text,Profile.RELATIONS,value,func(choice): _set_relation(index,choice),"relation_"+str(index))
+		var summary := _label("",13); summary.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+		fields.add_child(summary); controls["relation_summary_"+str(index)]=summary
+	_refresh_relations()
 	_note("Family ties are saved together. Friendship still grows through time spent together.")
 	fields.add_child(_button("+ Add a resident",add_member))
 
 func _set_relation(other: int, kind: int) -> void:
+	if pending: return
+	var reason := _relation_reason(other,kind)
+	if not reason.is_empty(): status.text=reason; _refresh_relations(); return
+	draft.relations=_relation_candidate(other,kind)
+	status.text=""; _refresh_relations()
+
+func _relation_candidate(other: int, kind: int) -> Array:
 	var a: String=draft.members[selected].id; var b: String=draft.members[other].id
-	draft.relations=draft.relations.filter(func(link): return not ((link.a==a and link.b==b) or (link.b==a and link.a==b)))
-	if kind>0: draft.relations.append({"a":a,"b":b,"kind":kind})
-	status.text="" if Profile.relations_valid(draft.relations,draft.members) else "This family connection conflicts with their ages or another relationship. Change it before saving."
+	var links: Array=draft.relations.filter(func(link): return not ((link.a==a and link.b==b) or (link.b==a and link.a==b)))
+	if kind>0: links.append({"a":a,"b":b,"kind":kind})
+	return links
+
+func _relation_sentence(other: int, kind: int) -> String:
+	var a := member_names[selected].text; var b := member_names[other].text
+	if kind<=3: return a+" and "+b+" are "+str(Profile.RELATIONS[kind]).to_lower()+"."
+	return a+" is "+b+"’s "+["parent","child","grandparent","grandchild"][kind-4]+"."
+
+func _relation_reason(other: int, kind: int) -> String:
+	if kind==0: return "" # Removing a tie must remain possible even in an invalid draft.
+	var prefix := "Unavailable: "+_relation_sentence(other,kind)+" "
+	var age_a := int(_profile().age); var age_b := int(draft.members[other].character.age)
+	if kind in [1,2] and (age_a<4 or age_b<4): return prefix+"Both must be young adults or older."
+	if kind>=4:
+		var older := age_b if kind in [5,7] else age_a
+		var younger := age_a if kind in [5,7] else age_b
+		if older<4 or older-younger<(2 if kind in [6,7] else 1):
+			return prefix+"A "+("grandparent needs at least two older life stages" if kind in [6,7] else "parent needs an older life stage")+" and must be a young adult or older."
+	if not Profile.relations_valid(_relation_candidate(other,kind),draft.members):
+		return prefix+"Conflicts with another family tie. Check ages, partners and ancestry, or remove a tie first."
+	return ""
+
+func _refresh_relations() -> void:
+	for index in range(draft.members.size()):
+		var key := "relation_"+str(index)
+		if not controls.has(key): continue
+		var option: OptionButton=controls[key]
+		var value := 0
+		for link: Dictionary in draft.relations:
+			if link.a==draft.members[selected].id and link.b==draft.members[index].id: value=int(link.kind)
+			elif link.b==draft.members[selected].id and link.a==draft.members[index].id: value=Profile.REVERSE[int(link.kind)]
+		option.select(value)
+		for kind in range(Profile.RELATIONS.size()):
+			var reason := _relation_reason(index,kind)
+			option.set_item_disabled(kind,not reason.is_empty())
+			option.get_popup().set_item_tooltip(kind,reason if not reason.is_empty() else _relation_sentence(index,kind))
+		var reason := _relation_reason(index,value)
+		controls["relation_summary_"+str(index)].text=_relation_sentence(index,value) if reason.is_empty() else reason
+		controls["relation_summary_"+str(index)].add_theme_color_override("font_color",Style.MUTED if reason.is_empty() else Style.GOLD)
 
 func _option(title: String, choices: Array, value: int, changed: Callable, key: String) -> void:
 	fields.add_child(_label(title))
 	var option := OptionButton.new(); option.fit_to_longest_item=false; option.custom_minimum_size.y=44
 	option.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	for choice: String in choices: option.add_item(choice)
-	option.select(value); option.item_selected.connect(changed); fields.add_child(option); controls[key]=option
+	option.select(value); option.item_selected.connect(changed); controls[key]=option
+	if key in ["hairstyle","top","bottom","shoes","accessory"]:
+		var row := HBoxContainer.new(); fields.add_child(row)
+		option.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+		var previous := _button("‹",func(): _browse(option,-1,changed),"Previous "+title.to_lower())
+		var next := _button("›",func(): _browse(option,1,changed),"Next "+title.to_lower())
+		previous.custom_minimum_size.x=44; next.custom_minimum_size.x=44
+		row.add_child(previous); row.add_child(option); row.add_child(next)
+		controls[key+"_previous"]=previous; controls[key+"_next"]=next
+	else: fields.add_child(option)
+
+func _browse(option: OptionButton, step: int, changed: Callable) -> void:
+	if pending: return
+	var index := wrapi(option.selected+step,0,option.item_count)
+	option.select(index); changed.call(index)
 
 func _slider(title: String, key: String, low: String, high: String) -> void:
 	var row := HBoxContainer.new(); fields.add_child(row)
