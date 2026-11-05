@@ -346,7 +346,6 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 		if not option.available: return _result(false,str(option.detail))
 		if option.has("meal_batch"): return apply_command(profile_id,{"type":"meal","member_id":member.id,"lot_id":member.lot_id,"target_id":option.target_id,"action":"eat","recipe":"","batch":option.meal_batch})
 		var result := apply_command(profile_id,{"type":"interact","member_id":member.id,"lot_id":member.lot_id,"target_id":option.target_id})
-		if result.ok: result.message="Added to plan · "+str(option.label)+(" · Wait until it is free" if option.busy else "")
 		return result
 	if type in ["visit", "go_home"]:
 		var destination: Dictionary = state.lots[family.home_lot] if type == "go_home" else lot
@@ -390,7 +389,6 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 			if not own.is_empty(): intent.activity_id=own
 			return apply_command(profile_id,intent)
 		var result := apply_command(profile_id,{"type":"interact","member_id":member.id,"lot_id":lot_id,"target_id":option.target_id})
-		if result.ok: result.message="Dancing added to your plan." if type=="join_dance" else "Tabletop game added to your plan."
 		return result
 	if type=="meal":
 		var option := meal_option(profile_id,str(member.id),str(lot_id),command.get("target_id"),command.get("action"),command.get("recipe",""))
@@ -455,11 +453,18 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 	else:
 		return _result(false, "Unknown action.")
 	# A direct order interrupts an autonomous task, but preserves player-queued work.
+	var accepted: Dictionary=member.queue[-1]
 	if bool(member.task.get("automatic", false)):
 		member.task = {}
 	if member.task.is_empty():
 		_start_next(member, lot)
-	return _result(true, "Action queued.")
+	var activity := str(accepted.title)
+	if type=="interact" and accepted.get("target_kind","")!="member":
+		activity=str(ACTION_NAMES.get(_object(lot,str(accepted.target_id)).get("kind",""),activity))
+	var outcome := "Starting" if member.task.get("id")==accepted.id else "Queued"
+	if member.task.get("id")!=accepted.id and not member.queue.has(accepted):
+		return _result(true,str(member.name)+" · "+activity+" could not start: "+str(member.action))
+	return _result(true,str(member.name)+" · "+outcome+": "+activity+". Manage in Plan.")
 
 func _construction_space(profile_id: String,command: Dictionary,lot: Dictionary) -> Dictionary:
 	var option:=ConstructionSpace.request(state,profile_id,str(lot.id))

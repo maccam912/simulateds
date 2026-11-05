@@ -1,3 +1,34 @@
+# Context action feedback — November 5, 2026 (issue #3)
+
+- Short context menus use a compact list beside the target; long menus retain
+  paging and viewport clamping. Action labels, acting resident and Order/Inspect
+  hints clarify quick clicks, keyboard choices and held-touch review.
+- Accepted single orders name the resident/activity and distinguish Starting from
+  Queued. Care and join-game/dance retain the host's precise reply. The ordinary
+  HUD shares Plan's accepted-state remaining time and thin progress indicator.
+  Plan's existing action-ID cancellation remains the recovery path.
+- Painting buttons bind held presses to the reviewed canvas, resident and world
+  generation. Completion/replacement cannot turn an in-progress click or key
+  into a new action. Disappearing focus returns to the hobby link.
+- All seven dispositions are in `docs/ACTION_QA.md`. Optional inspect-first,
+  automatic pause-on-choice and a combined recent-moments feed are deferred;
+  existing quick clicks, manual pause and saved journals remain available.
+- Local validation: required `python3 tools/check.py` exited 0, with all 123
+  gameplay/UI suites, both save-continuity processes, eight real Iroh peer
+  scenarios and dedicated-server smoke passing (`build/issue3-check.log`). Final
+  edits also passed six focused headless and six native runs (`build/issue3-final`).
+  The runner now isolates each gameplay suite's settings as well as saves/profiles.
+- Native macOS Godot 4.7.2/OpenGL review: actual-camera 1440×900 and 1280×720
+  with 125% UI, day/night, short/paged menus at every edge, primary hover,
+  HUD/Plan timing, painting completion and held-pointer/Space safety. Captures
+  are ignored `build/context-*.png`, `build/activity-status-*.png` and
+  `build/paintings-*.png`. Earlier compact test picking failures were corrected;
+  final logs have no script/engine errors. Synthetic touch is not device proof.
+- Staged asset storage and whitespace checks pass. No assets, save schema,
+  simulation rules or protocol changes; authoritative changes are reply wording.
+  Hosted CI is unverified at this checkpoint. No local exports, physical-device,
+  other-OS or human playtests were performed.
+
 # HUD navigation — November 5, 2026 (issue #2)
 
 - Labels are on by default, with a persisted compact-icon option. More opens above

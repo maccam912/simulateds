@@ -64,10 +64,10 @@ static func options(world: RefCounted, profile_id: String, member_id: String, lo
 	return result
 
 static func _add(entries: Array, id: String, label: String, option: Dictionary, command: Dictionary) -> void:
-	entries.append({"id":id,"label":label,"disabled":not bool(option.get("ok",false)),"tooltip":str(option.get("message","")),"command":command})
+	entries.append({"id":id,"label":label,"disabled":not bool(option.get("ok",false)),"tooltip":"Order · "+str(option.get("message","")),"command":command})
 
 static func _nav(entries: Array, id: String, label: String, destination: String, data: Dictionary={}, tooltip: String="") -> void:
-	var entry := {"id":id,"label":label,"disabled":false,"tooltip":tooltip,"navigate":destination}
+	var entry := {"id":id,"label":label,"disabled":false,"tooltip":(("Arrange · Enters build mode. " if destination=="hang" else "Inspect · No order. ")+tooltip).strip_edges(),"navigate":destination}
 	entry.merge(data)
 	entries.append(entry)
 
@@ -160,3 +160,12 @@ static func _resident(entries: Array, world: RefCounted, profile: String, family
 	_nav(entries,"people","People","people",{"member_id":str(other.id)})
 	if not other.task.is_empty() or not other.queue.is_empty():
 		_add(entries,"cancel","Cancel actions",{"ok":true,"message":"Clear "+str(other.name)+"'s current action and plan."},{"type":"cancel","member_id":str(other.id)})
+
+## Shared wording for the world hover and accessible activity controls.
+static func primary_hint(kind: String, member: Dictionary, busy: bool=false) -> String:
+	if kind in ["easel","garden_bed","dining_table","game_table","stereo"]:
+		return "Click / tap: inspect choices · No order"
+	if str(Catalog.ITEMS.get(kind,{}).get("need","")).is_empty() and kind!="stairs":
+		return "Decoration · No activity"
+	var queued: bool=busy or not member.get("queue",[]).is_empty() or (not member.get("task",{}).is_empty() and not member.task.get("automatic",false))
+	return "Click / tap: "+("add to plan" if queued else "start activity")+" for "+str(member.get("name","selected resident"))

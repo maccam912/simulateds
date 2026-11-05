@@ -109,6 +109,8 @@ var _catalog_query := ""
 var context_box: VBoxContainer
 var activity_label: Label
 var context_icon: TextureRect
+var activity_timing: Label
+var activity_progress: ProgressBar
 var needs_title: Label
 var wish_buttons := {}
 var _meal_wish_options := {}
@@ -391,7 +393,15 @@ func _build_ui() -> void:
 	resized.connect(func(): needs_panel.offset_right=minf(818,size.x-280))
 	var needs := _vbox(needs_panel,5)
 	var needs_head := HBoxContainer.new(); needs.add_child(needs_head)
-	needs_title = _label("Alex · Taking it easy",14); needs_title.size_flags_horizontal=Control.SIZE_EXPAND_FILL; needs_title.clip_text=true; needs_title.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; needs_head.add_child(needs_title)
+	needs_title = _label("Alex · Taking it easy",14); needs_title.size_flags_horizontal=Control.SIZE_EXPAND_FILL; needs_title.clip_text=true; needs_title.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS
+	var activity_column := VBoxContainer.new(); activity_column.add_theme_constant_override("separation",2); activity_column.size_flags_horizontal=Control.SIZE_EXPAND_FILL; needs_head.add_child(activity_column)
+	activity_column.add_child(needs_title)
+	activity_timing=_label("",11,Style.MUTED); activity_timing.clip_text=true; activity_timing.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; activity_column.add_child(activity_timing)
+	activity_progress=ProgressBar.new(); activity_progress.custom_minimum_size.y=4; activity_progress.show_percentage=false; activity_progress.max_value=1.0; activity_progress.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	for part: String in ["background","fill"]:
+		var track := StyleBoxFlat.new(); track.bg_color=Style.INK if part=="background" else Style.GREEN; track.set_corner_radius_all(2)
+		activity_progress.add_theme_stylebox_override(part,track)
+	activity_column.add_child(activity_progress)
 	wishes_button = _button("Wishes",_open_wishes)
 	hobbies_button = _button("Hobbies",_open_hobbies)
 	needs_toggle=_button("Needs",_toggle_needs); _compact_control(needs_toggle); needs_toggle.custom_minimum_size.y=44; needs_head.add_child(needs_toggle)
@@ -828,6 +838,11 @@ func _refresh() -> void:
 	if not member.is_empty():
 		needs_title.text=str(member.name)+"  ·  "+str(member.get("action","Enjoying the day"))
 		needs_title.tooltip_text=needs_title.text
+		var status := ActivityStatus.sample(member,Session.state.lots[member.lot_id],Session.state)
+		activity_timing.text=("~%d min left" % maxi(1,ceili(float(status.remaining)*ActivityStatus.World.MINUTES_PER_SECOND)) if float(status.remaining)>0.1 else "Finishing up") if status.phase=="activity" else str(status.detail)
+		activity_timing.tooltip_text=str(status.detail)+" · Neighborhood time"
+		activity_progress.visible=float(status.progress)>=0.0
+		activity_progress.value=maxf(0.0,float(status.progress))
 		Icons.apply(queue_label,"plan","Plan",str(member.get("queue",[]).size() + (0 if member.get("task",{}).is_empty() else 1)))
 		_refresh_plan(member)
 		Icons.apply(wishes_button,"heart","Wishes","%d/3" % Wishes.completed(member.get("wishes",{})))

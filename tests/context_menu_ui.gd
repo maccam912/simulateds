@@ -73,6 +73,9 @@ func _run() -> void:
 	assert(not game.more_panel.visible and not game.needs_details.visible and not game.context_panel.visible,"Ordinary play starts with secondary controls tucked away")
 	var before: Dictionary=session.world.snapshot()
 	await _capture("quiet-day")
+	var hover := InputEventMouseMotion.new(); hover.position=_point(str(object.id))
+	root.push_input(hover,true); await process_frame
+	await _capture("primary-hover")
 	await _click(game.more_button)
 	for control: Control in [game.household_button,game.mail_button,game.palette_button,game.people_button,game.wishes_button,game.hobbies_button]:
 		assert(control.is_visible_in_tree() and root.get_visible_rect().encloses(control.get_global_rect()),"More preserves access to "+control.text)
@@ -85,6 +88,18 @@ func _run() -> void:
 	assert(game.radial_menu.visible and game.radial_menu.entry_buttons.has("use"))
 	assert(session.world.snapshot()==before and commands.is_empty(),"Opening furniture actions is read-only")
 	await _capture("furniture-day")
+	var menu: Control=game.radial_menu
+	assert(menu._center_panel.size.x<=260,"Two choices use a compact list")
+	for corner: Vector2 in [Vector2(1,1),Vector2(root.size.x-1,1),Vector2(1,root.size.y-1),Vector2(root.size)-Vector2.ONE]:
+		menu._anchor=corner; menu._place()
+		assert(root.get_visible_rect().encloses(menu._center_panel.get_global_rect()))
+		for button: Button in menu.entry_buttons.values():
+			assert(root.get_visible_rect().encloses(button.get_global_rect()) and button.size.y>=44)
+	# Details is inspection even for a furnishing whose quick click orders use.
+	await _click(menu.entry_buttons.inspect)
+	assert(commands.is_empty() and session.world.snapshot()==before and game.context_panel.visible)
+	await _key(KEY_ESCAPE)
+	await _mouse(_point(str(object.id)),MOUSE_BUTTON_RIGHT)
 	var pause_requests := [0]; game.pause_requested.connect(func(): pause_requests[0]+=1)
 	await _key(KEY_B); assert(not lot.building and game.radial_menu.visible,"Gameplay shortcuts stay inside the open menu")
 	await _key(KEY_ESCAPE)
@@ -115,6 +130,12 @@ func _run() -> void:
 	member.lot_id=family.home_lot; game._refresh(); await process_frame
 	await _mouse(_point(str(housemate.id)),MOUSE_BUTTON_RIGHT)
 	assert(game.radial_menu.entry_buttons.has("chat") and game.radial_menu.entry_buttons.has("select"))
+	var resident_anchor: Vector2=game.radial_menu._anchor
+	for corner: Vector2 in [Vector2(1,1),Vector2(root.size.x-1,1),Vector2(1,root.size.y-1),Vector2(root.size)-Vector2.ONE]:
+		game.radial_menu._anchor=corner; game.radial_menu._place()
+		for control: Control in game.radial_menu.entry_buttons.values():
+			assert(root.get_visible_rect().encloses(control.get_global_rect()),"Long menus stay clamped at every edge")
+	game.radial_menu._anchor=resident_anchor; game.radial_menu._place()
 	await _capture("resident-day")
 	await _click(game.radial_menu.entry_buttons.__next)
 	assert(game.radial_menu.entry_buttons.has("plan") and game.radial_menu.entry_buttons.has("hobbies") and commands.is_empty(),"More keeps every resident option accessible without ordering")
