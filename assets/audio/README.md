@@ -56,10 +56,12 @@ of soft bass, offbeat wooden keys, and synthesized drums. It comes from the same
 standard-library generator. One visible stereo with an arrived dancer plays at a
 time, preferring the selected resident's source and otherwise using stable object
 order. Camera changes update its position; identical snapshots and additional
-dancers do not restart or stack it. The Music slider controls both stereo and
-background score. An internal Score bus lowers the background by 18 dB while the
-stereo plays, independently of context crossfades. Effects mute affects household
-textures and UI, while Music mute stops the stereo. Pause, menus, construction,
+dancers do not restart or stack it. Background music controls the score, while
+Household stereos controls the positional source on its own Stereos bus. Both
+route through Master. An internal Score bus lowers the background by 18 dB while
+an audible stereo plays, independently of context crossfades. Effects mute affects
+household textures and UI; score mute leaves the stereo playing. Stereo mute stops
+only the local sound, never the resident's activity. Pause, menus, construction,
 source departure, and offscreen speakers stop it; shutdown releases its stream.
 
 A short household activity now retains one onset cue through the 180-ms mix gap
@@ -67,8 +69,8 @@ following a footstep. It is discarded immediately if that exact activity stops,
 changes, leaves view, or is paused; this is not a queue of past sounds. Repeated
 snapshots still cannot replay an already-emitted onset.
 
-The native dancing playtest records `build/dancing-music*.wav` and
-`build/dancing-muted*.wav`, verifying audible unclipped output and music mute in
+The native dancing playtest records `build/dancing-{music,muted,score-only,master-muted}*.wav`,
+verifying nonzero unclipped output and independent score/stereo/master mute in
 standard and compact windows. Mixer measurements do not replace listening on
 family devices.
 

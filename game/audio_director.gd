@@ -35,7 +35,7 @@ func _ready() -> void:
 		AudioServer.add_bus(); _score_bus=AudioServer.bus_count-1
 		AudioServer.set_bus_name(_score_bus,"Score"); AudioServer.set_bus_send(_score_bus,"Music")
 	AudioServer.set_bus_volume_db(_score_bus,0.0)
-	_dance_music=AudioStreamPlayer2D.new(); _dance_music.bus="Music"; _dance_music.panning_strength=0.65
+	_dance_music=AudioStreamPlayer2D.new(); _dance_music.bus="Stereos"; _dance_music.panning_strength=0.65
 	_dance_music.volume_db=-60; add_child(_dance_music)
 	for index in range(2):
 		var player:=AudioStreamPlayer.new()
@@ -56,7 +56,7 @@ func _ready() -> void:
 		if float(Preferences.values.master_volume)<=0.0: stop_world()
 		elif float(Preferences.values.effects_volume)<=0.0:
 			for player: AudioStreamPlayer2D in _world_effects: player.stop()
-		if float(Preferences.values.music_volume)<=0.0: _stop_dance())
+		if float(Preferences.values.stereo_volume)<=0.0: _stop_dance())
 	_ambience=AudioStreamPlayer.new()
 	_ambience.bus="Ambience"
 	_ambience.volume_db=-60
@@ -71,7 +71,7 @@ func _process(delta: float) -> void:
 	if playing: _dance_music.volume_db=move_toward(_dance_music.volume_db,-10.0,delta*200.0)
 
 func sync_dance(key: String, position: Vector2) -> void:
-	if not enabled or not _world_active or context!="live" or key.is_empty() or float(Preferences.values.master_volume)<=0.0 or float(Preferences.values.music_volume)<=0.0:
+	if not enabled or not _world_active or context!="live" or key.is_empty() or float(Preferences.values.master_volume)<=0.0 or float(Preferences.values.stereo_volume)<=0.0:
 		_stop_dance(); return
 	_dance_music.position=position
 	_dance_music.max_distance=maxf(get_viewport().get_visible_rect().size.x,get_viewport().get_visible_rect().size.y)*1.2

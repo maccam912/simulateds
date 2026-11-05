@@ -127,6 +127,12 @@ Settings should show their current value, not just a slider position. Controls
 must remain usable at the supported UI scales; scroll long content instead of
 shrinking its text.
 
+Independent text enlargement is deferred pending shared text-size tokens and
+catalog/HUD reflow; the current whole-interface scale is not a text-only option.
+See [the accessibility review](ACCESSIBILITY_REVIEW.md) for the decision and
+remaining screen-reader/listening verification. Settings starts at its tab bar,
+names sliders and pickers for assistive technology, and scrolls to keyboard focus.
+
 ## Construction access
 
 Construction access is an optional view of the home. Tint connected floor green
@@ -169,6 +175,10 @@ report real work rather than holding the player for a fixed presentation beat.
 The foundation console uses a short fade and immediate safe close. Reduced
 motion also bypasses movement interpolation and freezes decorative activity
 motion. Accepted simulation positions and activity state remain authoritative.
+The Comfort label is **Reduced motion**, with visible copy explaining menu fades,
+camera focus, resident motion/turning and shorter audio crossfades. Manual camera
+control, time-driven lighting, static activity poses, cues and simulation timing
+remain available; reduced motion is not a pause or a sound-mute setting.
 Facing follows each displayed route leg, then the furnishing or actual conversation
 partner. Turn briefly (up to about 150 ms for a right angle), preserving the last
 idle direction. Reduced motion sets the same direction immediately. Front, side,
@@ -213,7 +223,8 @@ room-specific domestic sounds. The world must remain comfortable with music off.
 | Save succeeds | Brief resolving chime, only after a successful write |
 | Menu / live / build context | Context loop changes with a short fade, preserving level |
 
-Provide independent Master, Music, Effects, and Ambience levels. A zero slider
+Provide independent Master, Background music, Household stereos, Effects, and
+Ambience levels. A zero slider
 must be silent. Headless hosts do not create audio playback. Important
 information is never conveyed only through sound. Later recordings and richer
 ambience should retain these bus boundaries and comparable loudness.
@@ -475,11 +486,16 @@ name/need overlays legible.
 
 Music is one positional source per viewed lot, not one track per dancer. Prefer
 the selected resident's playing stereo, then a stable visible source. Keep its
-original 100-BPM groove on Music, lower the background score beneath it, and keep
+original 100-BPM groove on Stereos, lower the background score beneath it, and keep
 household textures on Effects. Changing or replaying a state snapshot must not
 restart the song. People offers Join dance using the same voluntary, independently
 owned participation as tabletop games; its label and occupancy explain the shared
 activity without a separate social-game screen.
+
+Background music and Household stereos have independent persisted levels, both
+under Master. Legacy combined Music values initialize both controls, including
+mute. Muting the score leaves the stereo playing; muting the stereo releases score
+ducking. These preferences cannot stop a resident's accepted dancing activity.
 
 ### Places for company
 
