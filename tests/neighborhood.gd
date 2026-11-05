@@ -49,4 +49,45 @@ func _run() -> void:
 	assert(Neighborhood.cards(world.state,"a")==cards,"Unrelated activity changes do not change presence")
 	var replica:=World.new(); assert(replica.restore(JSON.parse_string(JSON.stringify(world.snapshot())),true))
 	assert(Neighborhood.cards(replica.state,"a")==cards)
+	_travel_feedback()
 	print("NEIGHBORHOOD_PASS"); quit()
+
+func _travel_feedback() -> void:
+	world=World.new(); world.initialize(); world.ensure_family("a","Alex"); world.set_online("a",true)
+	var member: Dictionary=world.state.families.a.members[0]
+	var toilet: Dictionary=world.state.lots.lot_2.objects.filter(func(object): return object.kind=="toilet")[0]
+	var before: Dictionary=world.snapshot()
+	var vacant: String=world.destination_unavailable("lot_2")
+	assert(vacant.contains("Nobody lives") and vacant.contains("Find resident"))
+	assert(world.visit_option("a",member.id,"lot_2").message==vacant)
+	assert(world.travel_option("a","lot_2",[member.id]).message==vacant)
+	for command: Dictionary in [{"type":"interact","target_id":toilet.id,"level":2},{"type":"visit"},{"type":"move","x":0,"y":0}]:
+		command.member_id=member.id; command.lot_id="lot_2"
+		var result: Dictionary=world.apply_command("a",command)
+		assert(not result.ok and result.message==vacant and world.snapshot()==before,str(result))
+	var choices: Dictionary=preload("res://game/context_actions.gd").options(world,"a",member.id,"lot_2",{"type":"object","id":toilet.id})
+	assert(choices.entries[0].disabled and choices.entries[0].tooltip.contains(vacant))
+	assert(world.move_option("a",member.id,"lot_2",Vector2i.ZERO).message==vacant)
+	assert(world.garden_option("a",member.id,"lot_2","missing","water").message==vacant)
+	assert(world.painting_option("a",member.id,"lot_2","missing","continue").message==vacant)
+	assert(world.meal_option("a",member.id,"lot_2","missing","eat").message==vacant)
+	assert(world.snapshot()==before,"All availability previews are read-only")
+	world.ensure_family("b","Violet") # Occupied caretaker homes remain visitable.
+	assert(world.visit_option("a",member.id,"lot_2").ok)
+	assert(world.visit_required_message("a",member.id,"lot_2").begins_with("Visit this lot"))
+	world.set_online("b",true)
+	assert(world.apply_command("b",{"type":"build_begin","lot_id":"lot_2"}).ok)
+	var closed: String=world.destination_unavailable("lot_2")
+	assert(closed.contains("construction") and world.visit_option("a",member.id,"lot_2").message==closed)
+	assert(world.travel_option("a","lot_2",[member.id]).message==closed)
+	assert(world.apply_command("a",{"type":"interact","member_id":member.id,"lot_id":"lot_2","target_id":toilet.id}).message==closed)
+	assert(world.apply_command("b",{"type":"build_cancel","lot_id":"lot_2"}).ok)
+	# A blocked arrival cannot clear a plan or use the forced-return fallback.
+	world.state.lots.lot_2.walls.append([8,14])
+	before=world.snapshot()
+	var full: Dictionary=world.visit_option("a",member.id,"lot_2")
+	assert(not full.ok and full.message.contains("arrival space"))
+	assert(world.travel_option("a","lot_2",[member.id]).message==full.message)
+	assert(not world.apply_command("a",{"type":"visit","member_id":member.id,"lot_id":"lot_2"}).ok)
+	assert(world.snapshot()==before)
+	assert(not world.visit_option("a","b_1","lot_2").ok,"Cannot direct a neighbor")

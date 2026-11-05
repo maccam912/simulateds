@@ -1120,3 +1120,21 @@ implicit pace changes from trays. Shared simulation continues. Retain the saved
 Little Moments journal, Plan → Recent, hobby cards and People records; do not
 introduce another notification stream or invent saved milestone history.
 See [issue #3 dispositions](ACTION_QA.md) for scope and validation boundaries.
+
+
+## Viewing a neighbor's home — November 5, 2026
+
+Viewing a lot never sends anyone there. When the selected resident is elsewhere,
+the ordinary resident strip names their real home location and retains their
+current activity and timing. Offer a labeled **Find resident** beside the care
+control; it restores the resident's actual lot/floor and camera without changing
+positions or plans. Keep full long names in hover text.
+
+Vacant homes explain that nobody lives there yet, then point to an occupied home
+in Neighborhood or Find resident. Visit, Travel together and furnishing choices
+share destination availability, with specific construction and arrival-space
+reasons. An owner being away does not close their occupied home.
+
+Optional solo NPC households and distinct starter-house layouts are deferred to
+separate ownership/save and content reviews. Preserve vacant player capacity and
+existing saved homes. See [issue #11 dispositions](NEIGHBORHOOD_QA.md).

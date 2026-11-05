@@ -1,3 +1,28 @@
+# Neighborhood context — November 5, 2026
+
+- Issue #11: vacant-lot feedback and off-lot resident context implemented;
+  optional NPC households and distinct starter layouts explicitly deferred.
+  All four dispositions are in `docs/NEIGHBORHOOD_QA.md`.
+- Visit, household travel and remote interaction feedback share read-only
+  destination availability. Single visits reject blocked arrivals before
+  cancelling plans; forced construction/disconnect returns keep their fallback.
+  Occupied caretaker homes remain open. No save schema, protocol or asset change.
+- The HUD names the selected resident's real location while viewing another lot,
+  retains activity/timing, and offers a labeled Find resident action. It uses
+  existing camera navigation and preserves both residents' positions and plans.
+- Native macOS Godot 4.7.2/OpenGL pointer/keyboard checks and visual review passed
+  at 1440×900 and 1280×720 with the UI setting at 125%, day/night and long names.
+  Evidence: ignored `build/neighbor-context-*.png`, `build/issue11/native.log`,
+  and `build/issue11/compact.log`. Staged asset-storage and whitespace checks pass.
+- Local regression: all 126 gameplay/UI suites, save-continuity restart checks,
+  eight real Iroh scenarios and dedicated-server smoke passed across the required
+  `tools/check.py` run and resumed checks. An initial meal-call assertion caught
+  a lost Away status label; the compact label was restored and the failed and
+  remaining suites passed. Logs: `build/issue11/check.log`, `check-resumed.log`,
+  `final-focused.log`; coverage audit: `build/issue11/validation.json`.
+- Hosted CI is separate. No local exports, physical-device tests or human
+  second-player playtest were performed.
+
 # Storey access and floor context — November 5, 2026
 
 - Issue #7: all four findings implemented; dispositions in `docs/STOREY_QA.md`.
