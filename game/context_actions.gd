@@ -28,7 +28,7 @@ static func options(world: RefCounted, profile_id: String, member_id: String, lo
 				"garden_bed": _garden(entries,world,profile_id,member_id,lot,object)
 				"easel": _painting(entries,world,profile_id,member_id,lot,object)
 				_:
-					var option := _basic_option(world,family,member,lot)
+					var option := _basic_option(world,profile_id,family,member,lot)
 					if option.ok and not world._can_reach_object(lot,world._position(member),object): option={"ok":false,"message":"There is no path to use this furnishing."}
 					if option.ok: option.message=str(Catalog.ITEMS.get(object.kind,{}).get("description","")) + " Adds to " + str(member.name) + "'s plan."
 					_add(entries,"use",str(USE_LABELS.get(object.kind,"Use furnishing")),option,{"type":"interact","member_id":member_id,"lot_id":lot_id,"target_id":str(object.id)})
@@ -71,10 +71,10 @@ static func _nav(entries: Array, id: String, label: String, destination: String,
 	entry.merge(data)
 	entries.append(entry)
 
-static func _basic_option(world: RefCounted, family: Dictionary, member: Dictionary, lot: Dictionary) -> Dictionary:
+static func _basic_option(world: RefCounted, profile_id: String, family: Dictionary, member: Dictionary, lot: Dictionary) -> Dictionary:
 	if member.is_empty(): return {"ok":false,"message":"Choose one of your own residents."}
 	if bool(lot.building) or bool(world.state.lots[family.home_lot].building): return {"ok":false,"message":"Finish construction before directing your family."}
-	if member.lot_id!=lot.id: return {"ok":false,"message":"Visit this lot first."}
+	if member.lot_id!=lot.id: return {"ok":false,"message":world.visit_required_message(profile_id,str(member.id),str(lot.id))}
 	if member.queue.size()>=8: return {"ok":false,"message":"The plan is full. Make room in Plan."}
 	if int(member.next_action)>=9007199254740000: return {"ok":false,"message":"This resident has reached the activity limit."}
 	return {"ok":true,"message":"Adds to this resident's plan."}
@@ -139,7 +139,7 @@ static func _meals(entries: Array, world: RefCounted, profile: String, member: S
 static func _resident(entries: Array, world: RefCounted, profile: String, family: Dictionary, member: Dictionary, lot: Dictionary, other: Dictionary) -> void:
 	var own: bool = not world._member(family,str(other.id)).is_empty()
 	if not member.is_empty() and other.id!=member.id:
-		var option := _basic_option(world,family,member,lot)
+		var option := _basic_option(world,profile,family,member,lot)
 		var status: String = world.chat_status(member,str(other.id))
 		if not status.is_empty(): option={"ok":false,"message":status+" · This conversation is already planned."}
 		if option.ok:

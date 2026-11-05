@@ -349,10 +349,8 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 		return result
 	if type in ["visit", "go_home"]:
 		var destination: Dictionary = state.lots[family.home_lot] if type == "go_home" else lot
-		if destination.building:
-			return _result(false, "This home is under construction. Visit again soon.")
-		if type == "visit" and str(destination.owner).is_empty():
-			return _result(false, "Nobody lives here yet.")
+		var availability := visit_option(profile_id,str(member.id),str(destination.id))
+		if not availability.ok: return availability
 		if member.lot_id==destination.id: return _result(true,"Already at "+str(destination.name)+". Your plan continues.")
 		_clear_member(member,"Taking it easy","Travelled to "+str(destination.name)+".")
 		member.lot_id = destination.id
@@ -363,12 +361,12 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 		member.y = entry.y
 		_event(str(member.name) + " arrived at " + str(destination.name) + ".")
 		return _result(true, "Arrived at " + str(destination.name) + ".")
+	if member.lot_id != lot_id:
+		return _result(false,visit_required_message(profile_id,str(member.id),lot_id))
 	if type=="use_stairs": return _use_stairs(member,lot,command)
 	if type not in ["visit","go_home"]:
 		if command.has("level") and (not _integer(command.level) or int(command.level)!=int(member.get("level",0))): return _result(false,"Use the stairs to reach this floor first.")
 		lot=Storeys.view(lot,int(member.get("level",0)))
-	if member.lot_id != lot_id:
-		return _result(false, "Visit this lot before using it.")
 	if lot.building:
 		return _result(false, "This lot is under construction.")
 	if member.queue.size() >= MAX_QUEUE and not (type=="meal" and command.get("action") in ["clear","choose"]) and not (type=="join_meal" and command.has("own_activity_id")):
@@ -489,14 +487,40 @@ func _construction_space(profile_id: String,command: Dictionary,lot: Dictionary)
 		member.x=at.x; member.y=at.y; member.next_action+=1
 	return _result(true,"Your family is already by the entrance." if changed==0 else ", ".join(option.names)+" moved aside. Keep building; Undo still restores your house edits.")
 
+func destination_unavailable(lot_id: String) -> String:
+	# One read-only reason for visits, household travel and remote interactions.
+	var lot: Dictionary=state.lots.get(lot_id,{})
+	if lot.is_empty(): return "That lot does not exist. Choose a home in Neighborhood."
+	if str(lot.owner).is_empty(): return "Nobody lives here yet. Choose an occupied home in Neighborhood, or Find resident to return to your resident's view."
+	if lot.building: return "This home is under construction. Visit again when it reopens."
+	return ""
+
+func visit_option(profile_id: String,member_id: String,lot_id: String) -> Dictionary:
+	var family: Dictionary=state.families.get(profile_id,{})
+	var member := _member(family,member_id) if not family.is_empty() else {}
+	if member.is_empty(): return _result(false,"Choose one of your own residents.")
+	if state.lots[family.home_lot].building: return _result(false,"Finish construction before directing your family.")
+	var reason := destination_unavailable(lot_id)
+	if not reason.is_empty(): return _result(false,reason)
+	if Character.is_baby(member): return _result(false,"Babies stay at home in their bassinet.")
+	var lot: Dictionary=state.lots[lot_id]
+	if member.lot_id==lot_id: return _result(true,"Already at "+str(lot.name)+". Your plan continues.")
+	if _arrival_places(lot,1,str(member.id)).is_empty(): return _result(false,"Not enough clear arrival space by the entrance.")
+	return _result(true,"Visit "+str(lot.name)+" with "+str(member.name)+". Travel stops their current action and clears their plan.")
+
+func visit_required_message(profile_id: String,member_id: String,lot_id: String,available_message: String="Visit this lot before using it. Choose Visit lot in More.") -> String:
+	var option := visit_option(profile_id,member_id,lot_id)
+	return available_message if option.ok else str(option.message)
+
 func travel_option(profile_id: String,lot_id: String,travelers: Variant) -> Dictionary:
 	var result := {"ok":false,"message":"Choose household residents to travel.","orders":[],"places":[]}
 	var family: Dictionary=state.families.get(profile_id,{})
 	var lot: Dictionary=state.lots.get(lot_id,{})
 	if family.is_empty() or lot.is_empty(): return result
-	if lot.building or state.lots[family.home_lot].building:
-		result.message="Finish construction before travelling."; return result
-	if str(lot.owner).is_empty(): result.message="Nobody lives here yet."; return result
+	if state.lots[family.home_lot].building:
+		result.message="Finish construction before directing your family."; return result
+	var reason := destination_unavailable(lot_id)
+	if not reason.is_empty(): result.message=reason; return result
 	if not travelers is Array or travelers.is_empty() or travelers.size()>family.members.size(): return result
 	var seen := {}
 	for id: Variant in travelers:
@@ -560,7 +584,7 @@ func recreation_option(profile_id: String,member_id: String,lot_id: String,targe
 		var own:=Leisure.activity(state,resident)
 		var current: bool=not own.is_empty() and own.id==target_id
 		var planned: bool=resident.queue.any(func(task): return task.get("type")=="interact" and task.get("target_kind","object")=="object" and task.get("target_id")==target_id)
-		if resident.lot_id!=lot_id: row.detail="Away · Visit this lot first"
+		if resident.lot_id!=lot_id: row.detail="Away · "+visit_required_message(profile_id,str(resident.id),lot_id,"Visit this lot first")
 		elif int(resident.get("level",0))!=int(selected.get("level",0)): row.detail="Another floor · Use the stairs first"
 		elif (current and not resident.task.get("automatic",false)) or planned: row.detail="Already chosen here" if current else "Already in their plan"
 		elif int(resident.next_action)>=9007199254740000: row.detail="Action limit reached"
@@ -621,7 +645,7 @@ func meal_call_option(profile_id: String,member_id: String,lot_id: String,table_
 	var portions := Meals.available(state,lot,table)
 	for resident: Dictionary in residents:
 		var row := {"id":str(resident.id),"name":str(resident.name),"action":"","detail":""}
-		if resident.lot_id!=lot_id: row.detail="Away · Visit this lot first"
+		if resident.lot_id!=lot_id: row.detail="Away · "+visit_required_message(profile_id,str(resident.id),lot_id,"Visit this lot first")
 		elif int(resident.get("level",0))!=int(preferred.get("level",0)): row.detail="Another floor · Use the stairs first"
 		else:
 			var choice := meal_option(profile_id,str(resident.id),lot_id,table_id,"choose")
@@ -669,7 +693,7 @@ func meal_option(profile_id: String,member_id: String,lot_id: String,table_id: V
 	var lot: Dictionary=Storeys.view(state.lots.get(lot_id,{}),int(member.get("level",0)))
 	if lot.is_empty(): return _result(false,"Choose a dining table.")
 	if lot.building or state.lots[family.home_lot].building: return _result(false,"Finish construction before preparing or sharing a meal.")
-	if member.lot_id!=lot_id: return _result(false,"Visit this home with "+str(member.name)+" to share a meal.")
+	if member.lot_id!=lot_id: return _result(false,visit_required_message(profile_id,member_id,lot_id))
 	if not table_id is String or not action is String or not action in ["prepare","eat","clear","choose"] or not recipe is String: return _result(false,"Choose a meal activity.")
 	var table := _object(lot,table_id)
 	if table.get("kind")!="dining_table": return _result(false,"Choose a dining table.")
@@ -783,7 +807,7 @@ func admire_option(profile_id: String,member_id: String,lot_id: String,target_id
 	var lot: Dictionary=Storeys.view(state.lots.get(lot_id,{}),int(member.get("level",0)))
 	if lot.is_empty(): return _result(false,"Choose a painting on a household wall.")
 	if state.lots[family.home_lot].building or lot.building: return _result(false,"Finish construction before admiring artwork.")
-	if member.lot_id!=lot_id: return _result(false,"Visit this home with "+str(member.name)+" to admire its paintings.")
+	if member.lot_id!=lot_id: return _result(false,visit_required_message(profile_id,member_id,lot_id))
 	if not target_id is String: return _result(false,"Choose a painting on the wall.")
 	var entry: Dictionary=lot.get("artworks",{}).get(target_id,{})
 	if entry.is_empty() or int(entry.x)<0: return _result(false,"This painting is no longer on the wall.")
@@ -801,7 +825,7 @@ func painting_option(profile_id: String,member_id: String,lot_id: String,target_
 	if member.is_empty(): return _result(false,"Select a resident from your household.")
 	var lot: Dictionary=Storeys.view(state.lots.get(lot_id,{}),int(member.get("level",0)))
 	if lot.is_empty(): return _result(false,"That easel is no longer here.")
-	if member.lot_id!=lot_id: return _result(false,"Go to this lot before painting.")
+	if member.lot_id!=lot_id: return _result(false,visit_required_message(profile_id,member_id,lot_id))
 	if lot.building or state.lots[family.home_lot].building: return _result(false,"Finish construction before painting.")
 	if not target_id is String: return _result(false,"Choose an easel.")
 	var object := _object(lot,target_id)
@@ -868,7 +892,7 @@ func garden_option(profile_id: String,member_id: String,lot_id: String,target_id
 	if member.is_empty(): return _result(false,"Select a resident from your household.")
 	var lot: Dictionary=Storeys.view(state.lots.get(lot_id,{}),int(member.get("level",0)))
 	if lot.is_empty(): return _result(false,"That garden is no longer here.")
-	if member.lot_id!=lot_id: return _result(false,"Visit this lot before gardening.")
+	if member.lot_id!=lot_id: return _result(false,visit_required_message(profile_id,member_id,lot_id))
 	if lot.building or state.lots[family.home_lot].building: return _result(false,"Finish construction before gardening.")
 	if not target_id is String: return _result(false,"Choose a garden bed.")
 	var object := _object(lot,target_id)
@@ -929,7 +953,7 @@ func move_option(profile_id: String,member_id: String,lot_id: String,goal: Vecto
 	var member := _member(family,member_id)
 	if member.is_empty(): return _result(false,"You can only direct your own family.")
 	if state.lots[family.home_lot].building: return _result(false,"Finish construction before directing your family.")
-	if member.lot_id!=lot_id: return _result(false,"Visit this lot before walking here.")
+	if member.lot_id!=lot_id: return _result(false,visit_required_message(profile_id,member_id,lot_id))
 	var lot: Dictionary=_member_lot(member)
 	if lot.building: return _result(false,"This lot is under construction.")
 	if member.queue.size()>=MAX_QUEUE: return _result(false,"The action queue is full (8 actions).")

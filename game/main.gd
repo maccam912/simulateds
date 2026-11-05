@@ -117,6 +117,7 @@ var activity_label: Label
 var context_icon: TextureRect
 var activity_timing: Label
 var activity_progress: ProgressBar
+var location_find_button: Button
 var needs_title: Label
 var wish_buttons := {}
 var _meal_wish_options := {}
@@ -456,6 +457,11 @@ func _build_ui() -> void:
 		var value := _label("100",11); value.mouse_filter=Control.MOUSE_FILTER_IGNORE; row.add_child(value); need_values[need]=value
 		var bar := ProgressBar.new(); bar.mouse_filter=Control.MOUSE_FILTER_IGNORE; bar.show_percentage=false; bar.custom_minimum_size.y=10; column.add_child(bar); need_bars[need]=bar
 	var wellbeing_row := HBoxContainer.new(); needs.add_child(wellbeing_row)
+	location_find_button=_button("Find resident",_find_resident)
+	Icons.navigation(location_find_button,"Find resident",true)
+	location_find_button.add_theme_font_size_override("font_size",12)
+	location_find_button.custom_minimum_size.y=44
+	wellbeing_row.add_child(location_find_button)
 	mood_button=_button("Content · Care",func(): _context_page="care"; _refresh(); _show_tray(context_panel,true)); mood_button.add_theme_font_size_override("font_size",11); wellbeing_row.add_child(mood_button)
 	mood_button.add_theme_color_override("font_pressed_color",Style.TEXT)
 	for state_name: String in ["normal","hover","pressed","disabled"]:
@@ -816,7 +822,9 @@ func _refresh() -> void:
 	mode_button.disabled=not mine or Session.role=="joining"
 	Icons.apply(mode_button,"check" if building else "build","Finish building" if building else "Build & buy")
 	_compact_control(mode_button,building)
-	visit_button.disabled=mine or building or member.is_empty() or str(lot.get("owner","")).is_empty() or member.get("lot_id")==viewed_lot
+	var visit := Session.world.visit_option(Session.profile_id,selected_member,viewed_lot)
+	visit_button.disabled=not visit.ok or member.get("lot_id")==viewed_lot or Session.role=="joining"
+	visit_button.tooltip_text=str(visit.message)
 	home_button.disabled=member.is_empty() or str(member.get("lot_id",""))==str(family.get("home_lot",""))
 	together_button.disabled=family.is_empty() or Session.role=="joining" or bool(state.lots.get(family.get("home_lot",""),{}).get("building",false))
 	var minutes := int(float(state.get("day_minutes",480)))
@@ -863,12 +871,18 @@ func _refresh() -> void:
 		b.accessibility_name=b.text
 		b.tooltip_text=str(resident.name)+" · "+str(mood.label)+"\n"+str(resident.get("action","Enjoying the day"))+"\nClick again to find this resident"
 		b.add_theme_color_override("font_color",_mood_color(str(mood.tone)))
+	location_find_button.visible=not member.is_empty() and str(member.get("lot_id",""))!=viewed_lot
+	location_find_button.disabled=Session.role=="joining"
 	if not member.is_empty():
-		needs_title.text=str(member.name)+"  ·  "+str(member.get("action","Enjoying the day"))
+		var elsewhere := location_find_button.visible
+		var resident_location := str(state.lots[member.lot_id].name)
+		location_find_button.tooltip_text="View "+str(member.name)+" at "+resident_location+". Positions and plans stay unchanged."
+		needs_title.text=(str(member.name)+" is at "+resident_location) if elsewhere else str(member.name)+"  ·  "+str(member.get("action","Enjoying the day"))
 		needs_title.tooltip_text=needs_title.text
 		var status := ActivityStatus.sample(member,Session.state.lots[member.lot_id],Session.state)
 		activity_timing.text=("~%d min left" % maxi(1,ceili(float(status.remaining)*ActivityStatus.World.MINUTES_PER_SECOND)) if float(status.remaining)>0.1 else "Finishing up") if status.phase=="activity" else str(status.detail)
-		activity_timing.tooltip_text=str(status.detail)+" · Neighborhood time"
+		if elsewhere: activity_timing.text=str(member.get("action","Enjoying the day"))+" · "+activity_timing.text
+		activity_timing.tooltip_text=activity_timing.text+" · "+str(status.detail)+" · Neighborhood time"
 		activity_progress.visible=float(status.progress)>=0.0
 		activity_progress.value=maxf(0.0,float(status.progress))
 		Icons.apply(queue_label,"plan","Plan",str(member.get("queue",[]).size() + (0 if member.get("task",{}).is_empty() else 1)))
