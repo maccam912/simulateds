@@ -7,6 +7,7 @@ const Windows = preload("res://game/windows.gd")
 const FurnitureColors = preload("res://game/furniture_colors.gd")
 const Character = preload("res://game/character_profile.gd")
 const CharacterModel = preload("res://game/character_model.gd")
+const DiningPose = preload("res://game/dining_pose.gd")
 var _character_model = CharacterModel.new()
 const Appearance = preload("res://game/appearance.gd")
 const Gardens = preload("res://game/gardens.gd")
@@ -89,6 +90,7 @@ func sync(view: Control, _delta: float) -> void:
 	# edits and changed meals remain immediately visible even when paused.
 	for object: Dictionary in lot.get("objects",[]): _update_object(object)
 	_update_residents(view)
+	_update_dining_tables(view)
 	_update_showers(view)
 	_update_ghost(view)
 	_update_room_ghost(view)
@@ -504,6 +506,9 @@ func _update_residents(view: Control) -> void:
 			resident.rotation = Vector3(0,atan2(direction.x,direction.y),0)
 			var model := resident.get_node("Body") as Node3D
 			model.position = Vector3.ZERO; model.rotation = Vector3.ZERO
+			DiningPose.clear(self,resident)
+			for side: String in ["L","R"]:
+				model.get_node("Leg_"+side+"/Knee_"+side).rotation=Vector3.ZERO
 			var reduced := bool(Preferences.values.get("reduced_motion",false))
 			var stride: float = view.motion.stride(id) if view.motion.moving(id) and not reduced else 0.0
 			var phase: float = view._time*TAU/0.6+float(posmod(id.hash(),7))*0.4
@@ -543,7 +548,9 @@ func _update_residents(view: Control) -> void:
 					var wash := 0.0 if reduced else sin(view._time*2.0)*0.07
 					if arm_left != null: arm_left.rotation = Vector3(-1.15+wash,0,0.12)
 					if arm_right != null: arm_right.rotation = Vector3(-1.3-wash,0,-0.12)
-			elif kind in ["chat","bookshelf","table","game_table","easel","garden_bed","meal_eat","meal_prepare","admire_art"]:
+			elif kind=="meal_eat":
+				DiningPose.apply(self,resident,member,pose.object,view._time,reduced)
+			elif kind in ["chat","bookshelf","table","game_table","easel","garden_bed","meal_prepare","admire_art"]:
 				var gesture := 0.0 if reduced else sin(view._time*3.5)*0.08
 				if arm_left != null: arm_left.rotation.x = -0.7+gesture
 				if arm_right != null: arm_right.rotation.x = -0.9-gesture
@@ -558,6 +565,21 @@ func _update_residents(view: Control) -> void:
 	for id: String in resident_nodes.keys():
 		if not seen.has(id):
 			var resident: Node3D = resident_nodes[id]; pick_nodes.erase(resident); resident.get_parent().remove_child(resident); resident.queue_free(); resident_nodes.erase(id)
+
+func _update_dining_tables(view: Control) -> void:
+	var occupied := {}
+	for family: Dictionary in view.world.get("families",{}).values():
+		for member: Dictionary in family.get("members",[]):
+			var pose: Dictionary=view._activity_pose(member)
+			if member.lot_id==view.lot_id and pose.get("kind")=="meal_eat" and not DiningPose.place(member,pose.object).is_empty(): occupied[str(pose.object.id)]=true
+	for object: Dictionary in view.world.get("lots",{}).get(view.lot_id,{}).get("objects",[]):
+		if object.kind!="dining_table" or not object_nodes.has(str(object.id)): continue
+		# The model's decorative settings are replaced by the actual reserved places.
+		# Only original imported meshes participate; dynamic food remains visible.
+		for child: Node in object_nodes[str(object.id)].get_children():
+			if not child is MeshInstance3D: continue
+			var source: Material=child.mesh.surface_get_material(0)
+			if source!=null and source.resource_name in ["porcelain","steel","linen"]: child.visible=not occupied.has(str(object.id))
 
 func _update_showers(view: Control) -> void:
 	var occupied := {}
