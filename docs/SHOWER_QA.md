@@ -29,8 +29,9 @@ existing bed/sofa presentation does. Convincing choreography needs a separate
 review of approach sides and the shower's solid back/side panels; interpolating
 through them would create a new visual defect. Do not close the issue from this PR.
 
-POSE-01 and POSE-03–08 (TV seating, dining, broader child contact, transitions,
-bedding, crowded silhouettes and emotion) remain open and unchanged.
+POSE-03 dining is addressed by the subsequent [dining review](DINING_QA.md).
+POSE-01 and POSE-04–08 (TV seating, broader child contact, transitions,
+bedding, crowded silhouettes and emotion) remain open.
 
 ## Reproduction and evidence
 

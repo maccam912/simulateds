@@ -1,3 +1,28 @@
+# Shared dining places — November 5, 2026
+
+- Issue #4 / POSE-03: arrived diners sit at their accepted places, face the
+  table edge and reach individual plates. Child-height stools/footrests and
+  articulated knees support the unchanged body proportions. Props follow the
+  consumed portion, remain after the platter empties, and clear on cancellation,
+  completion, construction or stale targets. Simulation and save rules are unchanged.
+- Original editable geometry lives in `game/dining_pose.gd` and
+  `game/character_model.gd`; no binary assets or external sources. Character
+  triangle counts stay at 32,268 studio / 12,732 world, with two extra knee
+  mesh groups. Each dining stool/plate is batched to two groups.
+- Keep issue #4 open. Other findings, general child contact, garment draping and
+  entry/exit choreography remain separate; see `docs/DINING_QA.md`.
+- Native macOS Godot 4.7.2/OpenGL review passed: four body profiles through four
+  table rotations, adjacent diners, mesh picking, day/night, 1440×900 and
+  1280×720/125% UI, low scenery and a closer view. Existing activity renders pass.
+  Evidence: ignored `build/dining-*.png`, `build/issue4-dining/native.log`,
+  `activities.log`. Final focused assertions include the batched props.
+- Local `python3 tools/check.py` exited 0: all 129 gameplay/UI suites, both
+  save-continuity processes, eight real Iroh scenarios and dedicated-server smoke.
+  Final native dining checks also pass after prop batching. Logs/audit: ignored
+  `build/issue4-dining/check.log` and `validation.json`.
+- Staged asset-storage and whitespace checks pass. Hosted CI is separate and
+  unverified at this checkpoint. No exports, physical-device or human playtests.
+
 # Shower occupancy — November 5, 2026
 
 - Focused issue #4 / POSE-02 fix: visible occupants stand inside the tray, face

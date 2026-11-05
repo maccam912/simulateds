@@ -26,7 +26,7 @@ func _initialize() -> void:
 				for pivot: String in ["Torso","Head","Arm_L","Arm_R","Leg_L","Leg_R"]: assert(model.has_node(pivot))
 				meshes=0
 				var result := _inspect(model,Transform3D.IDENTITY)
-				assert(result.triangles>1000 and result.triangles< (36000 if detail else 14000) and meshes<=10,"Bounded true geometry at both camera detail levels")
+				assert(result.triangles>1000 and result.triangles< (36000 if detail else 14000) and meshes<=12,"Bounded true geometry, including two articulated knees, at both camera detail levels")
 				assert(result.bounds.size.y>0.5 and result.bounds.size.y<2.3)
 				assert(absf(result.bounds.position.y)<0.015,"Feet meet the floor at every age and height")
 				if detail: largest=maxi(largest,result.triangles)

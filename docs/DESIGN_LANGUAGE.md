@@ -1,5 +1,17 @@
 # Simulateds design language
 
+## Places at the dining table
+
+Accepted eaters use a small oak stool at their reserved dining cell, facing its
+table edge. Each has a plate with the served recipe and a quiet hand-to-plate
+gesture. Child-height seats and footrests support the existing body proportions;
+do not scale a resident to fit the table. Stools and settings appear only after
+arrival and consumption of a portion, including when no servings remain on the
+shared platter. They are activity props, not purchased or independently usable
+furnishings. Cancellation clears them immediately. The simulation still owns
+places, portions, paths and timing; reduced motion holds a steady dining pose.
+See [the dining review](DINING_QA.md) for scope and validation.
+
 ## Shower occupancy
 
 During an accepted shower activity, the clothed resident stands in the tray and

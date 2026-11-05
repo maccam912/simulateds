@@ -90,17 +90,22 @@ func build(member: Dictionary, occasion: String="") -> Node3D:
 		var leg := _pivot(body,"Leg_"+suffix,Vector3(lx,0.755,0))
 		var leg_width := 0.076*lerpf(0.85,1.25,float(profile.build)/100)
 		var bare := int(outfit.bottom) in [2,3,4,7]
-		_loft(leg,Vector3.ZERO,[[-0.64,leg_width*0.63,leg_width*0.70],[-0.42,leg_width*0.85,leg_width*0.94],[-0.31,leg_width*0.79,leg_width*0.90],[-0.12,leg_width*1.15,leg_width*1.12],[0.035,leg_width*1.16,leg_width*1.22]],skin if bare else bottom)
+		_loft(leg,Vector3.ZERO,[[-0.31,leg_width*0.79,leg_width*0.90],[-0.12,leg_width*1.15,leg_width*1.12],[0.035,leg_width*1.16,leg_width*1.22]],skin if bare else bottom)
 		if int(outfit.bottom) in [2,7]: _loft(leg,Vector3.ZERO,[[-0.27,leg_width*1.20,leg_width*1.20],[0.035,leg_width*1.23,leg_width*1.25]],bottom)
+		# A knee keeps seated feet down instead of extending the whole rigid leg.
+		# Translate the original lower-leg geometry into its pivot's coordinates.
+		var shin := _pivot(leg,"Knee_"+suffix,Vector3(0,-0.31,0))
+		_loft(shin,Vector3(0,0.31,0),[[-0.64,leg_width*0.63,leg_width*0.70],[-0.42,leg_width*0.85,leg_width*0.94],[-0.31,leg_width*0.79,leg_width*0.90]],skin if bare else bottom)
+		var foot := shin
 		var shoe_kind := int(outfit.shoes)
-		_loft(leg,Vector3.ZERO,[[-0.746,0.067,0.130,0,0.047],[-0.72,0.077,0.145,0,0.047],[-0.685,0.073,0.133,0,0.044],[-0.657,0.061,0.098,0,0.023],[-0.624,0.048,0.055,0,0.001]],skin if shoe_kind in [4,6] else shoe)
+		_loft(foot,Vector3(0,0.31,0),[[-0.746,0.067,0.130,0,0.047],[-0.72,0.077,0.145,0,0.047],[-0.685,0.073,0.133,0,0.044],[-0.657,0.061,0.098,0,0.023],[-0.624,0.048,0.055,0,0.001]],skin if shoe_kind in [4,6] else shoe)
 		if shoe_kind!=6:
-			_loft(leg,Vector3.ZERO,[[-0.755,0.069,0.132,0,0.047],[-0.746,0.080,0.148,0,0.047],[-0.727,0.079,0.147,0,0.047]],Color("d3c6ad") if shoe_kind==0 else shoe.darkened(0.2))
-			if shoe_kind==2: _loft(leg,Vector3.ZERO,[[-0.69,0.077,0.085],[-0.46,0.078,0.077]],shoe)
+			_loft(foot,Vector3(0,0.31,0),[[-0.755,0.069,0.132,0,0.047],[-0.746,0.080,0.148,0,0.047],[-0.727,0.079,0.147,0,0.047]],Color("d3c6ad") if shoe_kind==0 else shoe.darkened(0.2))
+			if shoe_kind==2: _loft(foot,Vector3(0,0.31,0),[[-0.69,0.077,0.085],[-0.46,0.078,0.077]],shoe)
 			if shoe_kind in [0,1]:
-				for zz in [0.025,0.055,0.085]: _rod(leg,Vector3(-0.030,-0.646-zz*0.22,zz),Vector3(0.030,-0.646-zz*0.22,zz+0.008),0.004,trim)
+				for zz in [0.025,0.055,0.085]: _rod(foot,Vector3(-0.030,-0.336-zz*0.22,zz),Vector3(0.030,-0.336-zz*0.22,zz+0.008),0.004,trim)
 			if shoe_kind==4:
-				for zz in [0.04,0.11]: _ellipsoid(leg,Vector3(0,-0.642,zz),Vector3(0.077,0.016,0.014),shoe)
+				for zz in [0.04,0.11]: _ellipsoid(foot,Vector3(0,-0.332,zz),Vector3(0.077,0.016,0.014),shoe)
 	var head := _pivot(body,"Head",Vector3(0,1.30,0))
 	_face_width=lerpf(0.147,0.177,float(profile.face)/100)
 	_face(head,profile,skin,hair)

@@ -172,6 +172,19 @@ asset through the LFS filter, never a manually written pointer. See
 
 ## Parametric creator residents
 
+The runtime rig includes `Leg_L/Knee_L` and `Leg_R/Knee_R`. Straight legs retain
+their original geometry and bounds; the two knee pivots allow dining feet to
+point down. They add two mesh groups without increasing the measured triangle
+budget. Non-dining activities reset both knee rotations.
+
+`game/dining_pose.gd` is the editable original source for runtime solid oak stools,
+child footrests, plates and recipe-colored food. It regenerates these activity
+props in Godot and batches their meshes by material. This source is covered by
+the repository MIT license, uses no external assets and needs no binary export.
+The existing dining-table GLB remains unchanged; its decorative settings hide
+while actual reserved places are shown. Review with `tests/dining_pose.gd` in
+the actual game camera, including adjacent diners, day/night and compact windows.
+
 `game/character_model.gd` is a second editable original geometry master, covered
 by the repository MIT license. It generates solid `ArrayMesh` surfaces directly
 in Godot for detailed creator profiles. `character_studio.gd` supplies the review
