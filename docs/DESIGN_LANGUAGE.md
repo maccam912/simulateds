@@ -1040,6 +1040,21 @@ the chosen tie separately from earned friendship. Drafts preserve edits after
 rejection, ignore unrelated acknowledgements, and cannot apply across a changed
 session/world generation. Existing residents are never deleted by this mode.
 
+Cancel or Escape reviews real unsaved edits in the fixed footer. Keep editing
+returns to the same draft; only Discard changes exits. Clean drafts close directly.
+Show the pending-edit state beside Save household, and use Customize household
+only at fresh entry. Family rows name both people and the direction of their tie;
+unavailable choices explain ages or conflicting ties before Save. Host validation
+remains authoritative, including when a later age change invalidates a family tie.
+
+Face & hair starts at a front close-up; Body & voice and Outfits start at a front
+full-body view. Keep Front / reset and explicit zoom controls visible, with tighter
+full-body framing at compact sizes. Hair and garment pickers have previous/next
+buttons beside their names, previewing only the current occasion in the private
+studio. Traits explain implemented preferences, including that Creative does not
+start painting automatically. A scrolling household summary compares draft traits.
+See [issue #5 dispositions](CREATOR_QA.md) for the deferred cast/model proposals.
+
 
 ### Residents as an illustrated cast — November 4, 2026
 

@@ -25,6 +25,11 @@ func _click(control: Control) -> void:
 		var event := InputEventMouseButton.new(); event.button_index=MOUSE_BUTTON_LEFT; event.pressed=pressed; event.position=control.get_global_rect().get_center(); root.push_input(event,true)
 		await process_frame
 
+func _escape() -> void:
+	for pressed in [true,false]:
+		var event := InputEventKey.new(); event.keycode=KEY_ESCAPE; event.pressed=pressed
+		root.push_input(event,true); await process_frame
+
 func _run() -> void:
 	var compact := "--compact" in OS.get_cmdline_user_args()
 	root.size=Vector2i(1280,720) if compact else Vector2i(1440,900)
@@ -37,6 +42,20 @@ func _run() -> void:
 	await create_timer(0.9).timeout
 	app.show_game(); app.open_household(); editor=app.household_editor
 	await _settle()
+	assert(editor.title_label.text=="Edit household" and not editor.is_dirty())
+	# Preview navigation alone is clean; returning an edit to its baseline is clean too.
+	editor.select_section(1); editor.studio.yaw=PI; editor.studio.zoom_by(0.9)
+	editor.select_section(3)
+	assert(not editor.studio.close_up and is_zero_approx(editor.studio.yaw) and editor.framing.selected==0)
+	editor.studio.yaw=PI; await _click(editor.reset_view)
+	assert(is_zero_approx(editor.studio.yaw) and not editor.is_dirty())
+	var original_top: int=editor._profile().outfits.casual.top
+	await _click(editor.controls.top_next)
+	assert(editor._profile().outfits.casual.top!=original_top and editor.is_dirty())
+	await _click(editor.controls.top_previous)
+	assert(not editor.is_dirty())
+	await _click(app.household_cancel); assert(app.page=="game")
+	app.open_household(); editor=app.household_editor; await _settle()
 	var before: Dictionary=session.world.snapshot()
 	var center: Vector2=editor.studio.get_global_rect().get_center()
 	var press := InputEventMouseButton.new(); press.position=center; press.button_index=MOUSE_BUTTON_LEFT; press.pressed=true; root.push_input(press,true)
@@ -84,6 +103,7 @@ func _run() -> void:
 	editor.controls["trait_Creative"].button_pressed=true; editor.controls["trait_Gentle"].button_pressed=true; editor.controls["trait_Bookworm"].button_pressed=true
 	editor.controls["trait_Playful"].button_pressed=true
 	assert(editor._profile().traits.size()==3 and not editor.controls["trait_Playful"].button_pressed)
+	assert("Creative" in editor.controls.traits_summary_0.text and "explicit choice" in editor.controls.trait_Creative.tooltip_text)
 	await _choose("interest_Reading",1); await _choose("interest_Television",2)
 	await _capture("personality")
 	editor.select_section(2); await _choose("voice",2); editor.controls.pitch.value=37
@@ -93,6 +113,25 @@ func _run() -> void:
 	editor.select_member(1); editor.member_names[1].text="Robin"; editor._set_profile("age",4)
 	editor.add_member(); editor.member_names[2].text="Juniper"; editor._set_profile("age",2); editor._set_profile("hairstyle",8)
 	await _capture("child")
+	editor.select_section(5)
+	assert(editor.controls.relation_0.is_item_disabled(4) and editor.controls.relation_0.is_item_disabled(1))
+	var before_tie: Array=editor.draft.relations.duplicate(true)
+	editor._set_relation(0,4)
+	assert(editor.draft.relations==before_tie and "Juniper" in editor.status.text and "Rowan" in editor.status.text)
+	await _capture("invalid-family")
+	editor._set_relation(0,5)
+	assert("Juniper is Rowan’s child" in editor.controls.relation_summary_0.text)
+	await _capture("child-family")
+	# A later age edit can invalidate a previously valid tie; it stays visible
+	# with the exact pair and the host still rejects the complete draft atomically.
+	editor._set_profile("age",5)
+	assert(not Profile.relations_valid(editor.draft.relations,editor.draft.members))
+	assert("older life stage" in editor.controls.relation_summary_0.text)
+	var before_invalid_save: Dictionary=session.world.snapshot()
+	app._apply_household()
+	assert(app.page=="household" and session.world.snapshot()==before_invalid_save and editor.is_dirty())
+	editor._set_profile("age",2)
+	editor._set_relation(0,0)
 	editor.add_member(); editor.member_names[3].text="Pip"; editor._set_profile("age",0)
 	await _capture("baby")
 	editor.add_member(); editor.member_names[4].text="Mara"; editor._set_profile("age",6); editor._choose(4,"hair",5)
@@ -128,10 +167,19 @@ func _run() -> void:
 	assert(editor._profile().outfits.formal==formal and editor.draft.relations==command.relations)
 	var before_cancel: Dictionary=session.world.snapshot()
 	editor._set_profile("eyes",7); app._back()
-	assert(session.world.snapshot()==before_cancel,"Cancel discards detailed changes")
+	assert(app.page=="household" and app.household_discard.visible and editor.pending)
+	var reviewed: Dictionary=editor.payload()
+	await _capture("discard-review")
+	await _escape()
+	assert(not app.household_discard.visible and not editor.pending and editor.payload()==reviewed)
+	await _escape(); await _click(app.household_discard.get_child(1))
+	assert(editor.payload()==reviewed and not app.household_discard.visible,"Keep editing retains all choices")
+	await _click(app.household_cancel); await _click(app.household_discard.get_child(2))
+	assert(app.page=="game" and session.world.snapshot()==before_cancel,"Only explicit discard loses detailed changes")
 	# A submitted draft has exactly one pending result. An unrelated reply or
 	# Escape cannot pretend to cancel an already-sent save; rejection restores it.
 	session.role="client"; session._welcomed=true; app.open_household(); editor=app.household_editor
+	editor._set_profile("eyes",6)
 	app._apply_household()
 	assert(not app._pending_household.is_empty() and app.household_cancel.disabled)
 	var pending: Dictionary=app._pending_household.duplicate(true)
@@ -139,8 +187,12 @@ func _run() -> void:
 	app._back(); assert(app.page=="household" and app._pending_household==pending)
 	app._household_result(pending,false,"Choose a valid family tie")
 	assert(app._pending_household.is_empty() and not app.household_apply.disabled and not app.household_cancel.disabled)
+	assert(editor.is_dirty() and editor._profile().eyes==6,"Rejection preserves the draft and its dirty state")
 	app._apply_household(); session.role="offline"; app._session_status("Disconnected")
 	assert(app._pending_household.is_empty() and app.household_apply.disabled and not app.household_cancel.disabled)
 	session._requests.clear(); session._welcomed=false; app._back()
+	assert(app.household_discard.visible)
+	app._keep_household(); assert(app.household_apply.disabled and editor.is_dirty())
+	app._back(); app._discard_household()
 	print("CHARACTER_CREATOR_UI_PASS")
 	await root.get_node("Soundscape").shutdown_and_wait(); quit()

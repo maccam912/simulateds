@@ -68,7 +68,7 @@ func _camera() -> void:
 	var height := 1.74*Profile.height_scale(_profile) if not _profile.is_empty() else 1.74
 	var baby := not _profile.is_empty() and int(_profile.age)==0
 	var target := Vector3(0,height*0.53,0)
-	camera.size=maxf(1.15,height*1.27)
+	camera.size=maxf(1.0,height*1.14)
 	if baby: target=Vector3(0,0.62,0); camera.size=1.8
 	if close_up:
 		target=Vector3(0,height*0.86,0.04); camera.size=maxf(0.52,height*0.43)
@@ -79,6 +79,12 @@ func _camera() -> void:
 
 func set_close_up(value: bool) -> void:
 	close_up=value; _camera()
+
+func reset_view(face: bool=false) -> void:
+	yaw=0.0; set_close_up(face)
+
+func zoom_by(factor: float) -> void:
+	camera.size=clampf(camera.size*factor,0.5,3.2)
 
 func set_night(value: bool) -> void:
 	night=value; sun.light_energy=0.20 if night else 0.30
@@ -113,7 +119,7 @@ func _input_preview(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		if event.button_index==MOUSE_BUTTON_LEFT: _dragging=event.pressed; accept_event()
 		elif event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP,MOUSE_BUTTON_WHEEL_DOWN]:
-			camera.size=clampf(camera.size*(0.9 if event.button_index==MOUSE_BUTTON_WHEEL_UP else 1.1),0.5,3.2); accept_event()
+			zoom_by(0.9 if event.button_index==MOUSE_BUTTON_WHEEL_UP else 1.1); accept_event()
 	elif event is InputEventMouseMotion and _dragging: yaw+=event.relative.x*0.009; accept_event()
 	elif event is InputEventScreenDrag: yaw+=event.relative.x*0.009; accept_event()
 

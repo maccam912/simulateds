@@ -26,7 +26,9 @@ func _run() -> void:
 	app.household_editor._choose(1,"shirt",3)
 	assert(family==before,"Editor previews do not mutate the household")
 	await _key(KEY_ESCAPE)
-	assert(app.page=="game","Escape closes the household editor")
+	assert(app.page=="household" and app.household_discard.visible,"Escape reviews an edited draft before discarding")
+	app._discard_household()
+	assert(app.page=="game","Explicit discard closes the household editor")
 	assert(family.name==before.name and family.members[1].name==before.members[1].name and family.members[1].appearance==before.members[1].appearance,"Cancel discards identity preview changes while simulation resumes")
 	app.open_household()
 	app.household_editor.family_name.text="The Gardeners"
@@ -38,6 +40,7 @@ func _run() -> void:
 	app._apply_household()
 	assert(app.page=="household" and not app.household_apply.disabled and not app.message_label.text.is_empty(),"Invalid names leave an editable form with feedback")
 	app._back()
+	app._discard_household()
 	# Mail drafts remain local; explicit delivery/collection changes saved state.
 	session.world.ensure_family("mail_neighbor","Violet")
 	app.game.mail_requested.emit()

@@ -34,6 +34,9 @@ var household_editor: Control
 var household_apply: Button
 var household_cancel: Button
 var _pending_household: Dictionary = {}
+var household_discard: HBoxContainer
+var household_actions: HBoxContainer
+var household_dirty: Label
 var mail_panel: Control
 var guide_panel: Control
 var _guide_return := "main"
@@ -440,7 +443,7 @@ func _option_setting(parent: Node,key: String,title: String,values: Array,labels
 func _input(event: InputEvent) -> void:
 	# LineEdit consumes its cancel key before unhandled input. Household Escape
 	# closes the preview even while a name field has keyboard focus.
-	if page in ["household","mail"] and event is InputEventKey and event.pressed and event.keycode==KEY_ESCAPE and (console==null or not console.is_open()):
+	if page in ["household","mail"] and event is InputEventKey and event.pressed and not event.echo and event.keycode==KEY_ESCAPE and (console==null or not console.is_open()):
 		_back(); get_viewport().set_input_as_handled(); return
 	if page=="splash" and _booted and event is InputEventMouseButton and event.pressed:
 		show_main(); get_viewport().set_input_as_handled(); return
@@ -487,7 +490,7 @@ func _preferences_changed() -> void:
 
 func _session_status(_message: String) -> void:
 	if page=="household" and is_instance_valid(household_editor) and household_editor.context_key!=_household_context():
-		_pending_household.clear(); household_editor.set_pending(false); household_apply.disabled=true; household_cancel.disabled=false
+		_pending_household.clear(); household_editor.set_pending(household_discard.visible); household_apply.disabled=true; household_cancel.disabled=false
 		_feedback("The session changed. Reopen the creator to edit the current household.",false)
 	if page=="game" and game!=null: game._refresh()
 	_refresh_guide_context()
@@ -495,6 +498,17 @@ func _session_status(_message: String) -> void:
 func _back() -> void:
 	if page=="household" and not _pending_household.is_empty():
 		_feedback("Waiting for the host to finish saving this household…",true); return
+	if page=="household":
+		if household_discard.visible:
+			_keep_household(); return
+		if household_editor.is_dirty():
+			household_actions.hide(); household_discard.show()
+			household_editor.set_pending(true)
+			household_discard.get_child(1).grab_focus()
+			return
+	_leave_page()
+
+func _leave_page() -> void:
 	match previous_page:
 		"game": show_game()
 		"pause": open_pause()
@@ -582,14 +596,33 @@ func open_household() -> void:
 	_show_page("household")
 	household_editor=HouseholdEditor.new(); menu_content.add_child(household_editor)
 	household_editor.setup(family,_household_context())
-	var actions := HBoxContainer.new(); menu_content.add_child(actions)
-	household_apply=_button("Save household",_apply_household,true); actions.add_child(household_apply)
-	household_cancel=_button("Cancel",_back); actions.add_child(household_cancel)
+	household_editor.title_label.text="Customize household" if Session.started_fresh else "Edit household"
+	household_actions=HBoxContainer.new(); menu_content.add_child(household_actions)
+	household_apply=_button("Save household",_apply_household,true); household_actions.add_child(household_apply)
+	household_cancel=_button("Cancel",_back); household_actions.add_child(household_cancel)
+	# Keep destructive choices labeled even when compact navigation icons are enabled.
+	household_cancel.text="Cancel"; household_cancel.icon=null
+	household_dirty=_label("No unsaved changes",13,Style.GOLD); household_actions.add_child(household_dirty)
+	household_editor.dirty_changed.connect(func(dirty: bool): household_dirty.text="Unsaved changes" if dirty else "No unsaved changes")
+	household_discard=HBoxContainer.new(); household_discard.hide(); menu_content.add_child(household_discard)
+	household_discard.add_child(_label("Discard household changes?",15))
+	household_discard.add_child(_button("Keep editing",_keep_household,true))
+	household_discard.add_child(_button("Discard changes",_discard_household))
 	_message_area()
 	household_editor.family_name.grab_focus()
 
+func _keep_household() -> void:
+	household_discard.hide(); household_actions.show()
+	household_editor.set_pending(false)
+	household_apply.disabled=household_editor.context_key!=_household_context()
+	household_cancel.grab_focus()
+
+func _discard_household() -> void:
+	if page!="household" or not household_discard.visible or not _pending_household.is_empty(): return
+	_leave_page()
+
 func _apply_household() -> void:
-	if page!="household" or not _pending_household.is_empty(): return
+	if page!="household" or household_discard.visible or not _pending_household.is_empty(): return
 	if household_editor.context_key!=_household_context():
 		_feedback("The session changed. Reopen the household editor.",false); return
 	_pending_household=household_editor.payload()
@@ -617,7 +650,7 @@ func _household_changed() -> void:
 		if not found: return
 	_pending_household.clear()
 	Soundscape.play_ui("confirm")
-	_back()
+	_leave_page()
 	game._refresh()
 	game._notice("Household updated.")
 
