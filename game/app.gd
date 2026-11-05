@@ -354,9 +354,9 @@ func _show_load_notice(message: String, report: Dictionary) -> void:
 func open_settings(selected_tab: String = "") -> void:
 	if page!="settings": previous_page=page
 	_show_page("settings","Settings","Changes apply immediately and are saved on this device.")
-	var tabs:=TabContainer.new(); tabs.size_flags_vertical=Control.SIZE_EXPAND_FILL; menu_content.add_child(tabs)
+	var tabs:=TabContainer.new(); tabs.name="SettingsTabs"; tabs.size_flags_vertical=Control.SIZE_EXPAND_FILL; menu_content.add_child(tabs)
 	var audio_page:=_settings_tab(tabs,"Audio")
-	for entry in [["master_volume","Master"],["music_volume","Music & stereos"],["effects_volume","Effects"],["ambience_volume","Ambience"]]:
+	for entry in [["master_volume","Master"],["music_volume","Background music"],["stereo_volume","Household stereos"],["effects_volume","Effects"],["ambience_volume","Ambience"]]:
 		_volume_row(audio_page,str(entry[0]),str(entry[1]))
 	audio_page.add_child(_button("Preview sound",func(): Soundscape.play_ui("confirm")))
 	var display:=_settings_tab(tabs,"Display")
@@ -366,7 +366,9 @@ func open_settings(selected_tab: String = "") -> void:
 	_option_setting(display,"quality","Scenery detail",["high","low"],["High","Low"])
 	_option_setting(display,"ui_scale","Interface scale",[0.9,1.0,1.1,1.25],["90%","100%","110%","125%"])
 	var access:=_settings_tab(tabs,"Comfort")
-	_check_setting(access,"reduced_motion","Reduce interface animation")
+	_check_setting(access,"reduced_motion","Reduced motion")
+	var motion_note:=_label("Stops menu fades and decorative resident motion. Camera focus, resident movement and turns update immediately. Game timing and activity cues are unchanged. Sounds stay on, with shorter music fades.",14,Style.MUTED)
+	motion_note.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; access.add_child(motion_note)
 	_check_setting(access,"first_day_guide","Offer the guide in new neighborhoods")
 	var note:=_label("Need bars also show numbers. Sound is never the only indication of success or failure.",14,Style.MUTED); note.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; access.add_child(note)
 	var controls:=_settings_tab(tabs,"Controls")
@@ -376,6 +378,8 @@ func open_settings(selected_tab: String = "") -> void:
 		grid.add_child(_label(str(Preferences.ACTION_NAMES[action]),14))
 		var button:=_button(Preferences.action_label(action),func():
 			binding_action=str(action); binding_hint.text="Press a key for "+str(Preferences.ACTION_NAMES[action])+". Escape cancels.")
+		button.accessibility_name=str(Preferences.ACTION_NAMES[action])
+		button.accessibility_description="Current key: "+Preferences.action_label(action)
 		button.size_flags_horizontal=Control.SIZE_EXPAND_FILL; grid.add_child(button); binding_buttons[action]=button
 	for index in range(tabs.get_tab_count()):
 		if tabs.get_tab_title(index)==selected_tab: tabs.current_tab=index
@@ -387,7 +391,7 @@ func open_settings(selected_tab: String = "") -> void:
 	_message_area()
 
 func _settings_tab(tabs: TabContainer, title: String) -> VBoxContainer:
-	var scroll:=ScrollContainer.new(); scroll.name=title; scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED; tabs.add_child(scroll)
+	var scroll:=ScrollContainer.new(); scroll.name=title; scroll.follow_focus=true; scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED; tabs.add_child(scroll)
 	var margin:=MarginContainer.new(); margin.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	for side in ["left","right","top","bottom"]: margin.add_theme_constant_override("margin_"+side,14)
 	scroll.add_child(margin)
@@ -400,6 +404,8 @@ func _volume_row(parent: Node,key: String,title: String) -> void:
 	var label:=_label(title,15); label.size_flags_horizontal=Control.SIZE_EXPAND_FILL; row.add_child(label)
 	var value:=_label("%d%%" % roundi(float(Preferences.values.get(key,1.0))*100),14,Style.MUTED); row.add_child(value)
 	var slider:=HSlider.new(); slider.min_value=0; slider.max_value=100; slider.step=1; slider.value=float(Preferences.values.get(key,1.0))*100; box.add_child(slider)
+	slider.accessibility_name=title
+	slider.accessibility_description="Volume in percent. Zero mutes this channel."
 	slider.value_changed.connect(func(number):
 		if not Preferences.set_value(key,float(number)/100.0):
 			slider.set_value_no_signal(float(Preferences.values[key])*100)
@@ -416,7 +422,7 @@ func _check_setting(parent: Node,key: String,title: String) -> void:
 func _option_setting(parent: Node,key: String,title: String,values: Array,labels: Array) -> void:
 	var row:=HBoxContainer.new(); parent.add_child(row)
 	var label:=_label(title,15); label.size_flags_horizontal=Control.SIZE_EXPAND_FILL; row.add_child(label)
-	var option:=OptionButton.new(); option.custom_minimum_size.x=180
+	var option:=OptionButton.new(); option.custom_minimum_size.x=180; option.accessibility_name=title
 	for i in range(labels.size()):
 		option.add_item(labels[i])
 		if str(Preferences.values.get(key))==str(values[i]): option.select(i)
@@ -441,6 +447,7 @@ func _input(event: InputEvent) -> void:
 		var result:Dictionary=Preferences.bind_action(binding_action,int(event.physical_keycode if event.physical_keycode!=0 else event.keycode))
 		if result.ok:
 			binding_buttons[binding_action].text=Preferences.action_label(binding_action)
+			binding_buttons[binding_action].accessibility_description="Current key: "+Preferences.action_label(binding_action)
 			binding_action=""
 		binding_hint.text=result.message
 
@@ -541,6 +548,11 @@ func _space(parent: Node,height: float) -> void:
 
 func _focus_menu() -> void:
 	if page=="game" or not is_instance_valid(menu_content): return
+	if page=="settings":
+		var tabs:=menu_content.get_node_or_null("SettingsTabs") as TabContainer
+		if tabs!=null:
+			tabs.get_tab_bar().grab_focus()
+			return
 	for child: Button in menu_content.find_children("*","Button",true,false):
 		if child.is_visible_in_tree() and not child.disabled:
 			child.grab_focus()

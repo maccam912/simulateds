@@ -528,7 +528,7 @@ func _update_residents(view: Control) -> void:
 					model.position.y = -0.17
 					if leg_left != null: leg_left.rotation.x = -PI/2
 					if leg_right != null: leg_right.rotation.x = -PI/2
-			elif dancing:
+			elif kind=="stereo":
 				model.rotation.z = stride*0.08
 				if arm_left != null: arm_left.rotation = Vector3(-0.65,0,0.65+stride*0.18)
 				if arm_right != null: arm_right.rotation = Vector3(-0.65,0,-0.65+stride*0.18)

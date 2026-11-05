@@ -94,7 +94,7 @@ func _run() -> void:
 	await _mouse(_point()); assert(first.task.is_empty()); await _button(game.recreation_panel.single_button); assert(first.task.target_id==stereo.id)
 	await _arrive(1); await _capture("solo")
 	assert(first.action=="Dancing" and view._activity_pose(first).kind=="stereo")
-	if sound.enabled: assert(sound._dance_music.playing and sound._dance_music.bus=="Music")
+	if sound.enabled: assert(sound._dance_music.playing and sound._dance_music.bus=="Stereos")
 	# A visiting family chooses to participate; Robin joins through the People UI.
 	assert(session.world.apply_command("violet",{"type":"visit","member_id":visitor.id,"lot_id":"lot_1"}).ok)
 	assert(session.world.apply_command("violet",{"type":"interact","member_id":visitor.id,"lot_id":"lot_1","target_id":stereo.id}).ok)
@@ -111,6 +111,16 @@ func _run() -> void:
 	await _capture("plan")
 	prefs.set_value("reduced_motion",true); await _capture("reduced-motion")
 	assert(view._activity_pose(second).kind=="stereo")
+	var scene: Node3D=view.projection.scene
+	var dancer: Node3D=scene.resident_nodes[second.id].get_node("Body")
+	assert(is_equal_approx(dancer.get_node("Arm_L").rotation.x,-0.65),"Reduced motion retains the dancing pose")
+	var still_pose: Vector3=dancer.get_node("Arm_L").rotation
+	var accepted: Dictionary=session.world.snapshot()
+	await create_timer(0.2).timeout
+	assert(dancer.get_node("Arm_L").rotation==still_pose and session.world.snapshot()==accepted)
+	var minute: float=session.state.day_minutes
+	session.state.day_minutes=60.0; await _capture("reduced-motion-night")
+	session.state.day_minutes=minute
 	prefs.set_value("reduced_motion",false)
 	if sound.enabled:
 		await create_timer(0.3).timeout
@@ -120,13 +130,20 @@ func _run() -> void:
 			session.world.state=session.world.snapshot(); game._refresh(); await process_frame
 		assert(sound.dance_tracks_started==starts,"Repeated snapshots and multiple dancers cannot restart or stack the music")
 		# Isolate the actual speaker from the background score and ambient bed.
-		AudioServer.set_bus_mute(AudioServer.get_bus_index("Score"),true)
+		prefs.set_value("music_volume",0.0)
 		prefs.set_value("effects_volume",0.0); prefs.set_value("ambience_volume",0.0)
 		await create_timer(0.15).timeout
-		assert(sound._dance_music.playing and await _record("music",0.5)>0.000001,"Effects mute leaves music audible on its own bus")
-		prefs.set_value("music_volume",0.0); await create_timer(0.15).timeout
+		assert(sound._dance_music.playing and await _record("music",0.5)>0.000001,"Score and effects mute leave the household stereo audible")
+		prefs.set_value("stereo_volume",0.0); await create_timer(0.15).timeout
 		assert(not sound._dance_music.playing and await _record("muted",0.3)<0.00000001)
-		prefs.set_value("music_volume",0.35); await create_timer(0.3).timeout
+		prefs.set_value("music_volume",0.35); await create_timer(0.4).timeout
+		assert(not sound._dance_music.playing and await _record("score-only",0.5)>0.000001,"Stereo mute leaves the background score audible")
+		prefs.set_value("music_volume",0.0)
+		prefs.set_value("stereo_volume",0.35); await create_timer(0.3).timeout
+		assert(sound._dance_music.playing)
+		prefs.set_value("master_volume",0.0); await create_timer(0.15).timeout
+		assert(not sound._dance_music.playing and await _record("master-muted",0.3)<0.00000001)
+		prefs.set_value("master_volume",0.8); await create_timer(0.3).timeout
 		assert(sound._dance_music.playing)
 		await _button(game.time_buttons[0]); await create_timer(0.1).timeout
 		assert(not sound._dance_music.playing,"Pausing solo simulation stops the stereo")
@@ -137,7 +154,7 @@ func _run() -> void:
 		var old_pan: Vector2=view.pan; view.pan=Vector2(5000,0); await create_timer(0.1).timeout
 		assert(not sound._dance_music.playing,"Offscreen speakers stop")
 		view.pan=old_pan; await create_timer(0.2).timeout; assert(sound._dance_music.playing)
-		AudioServer.set_bus_mute(AudioServer.get_bus_index("Score"),false)
+		prefs.set_value("music_volume",0.35)
 	# Cancelling one member keeps the others dancing; construction recalls visitors.
 	first=session.state.families[session.profile_id].members[0]; second=session.state.families[session.profile_id].members[1]; visitor=session.state.families.violet.members[0]
 	var first_task: String=first.task.id

@@ -11,13 +11,13 @@ const ACTION_NAMES := {
 	"speed_normal":"Normal time (1×)", "speed_fast":"Fast time (2×)", "speed_faster":"Faster time (4×)"
 }
 const DEFAULTS := {
-	"master_volume":0.8, "music_volume":0.35, "effects_volume":0.7, "ambience_volume":0.35,
+	"master_volume":0.8, "music_volume":0.35, "stereo_volume":0.35, "effects_volume":0.7, "ambience_volume":0.35,
 	"fullscreen":false, "vsync":true, "fps_limit":60, "ui_scale":1.0,
 	"reduced_motion":false, "quality":"high", "first_day_guide":true,
 	"bindings":{"pause":KEY_ESCAPE,"console":KEY_QUOTELEFT,"rotate":KEY_R,
 		"quick_save":KEY_F5,"fullscreen":KEY_F11,"neighborhood":KEY_N,"build":KEY_B,"home":KEY_H,"cancel":KEY_X,"focus_resident":KEY_F,"play_pause":KEY_P,"speed_normal":KEY_1,"speed_fast":KEY_2,"speed_faster":KEY_3}
 }
-const VOLUMES := {"master_volume":"Master","music_volume":"Music","effects_volume":"Effects","ambience_volume":"Ambience"}
+const VOLUMES := {"master_volume":"Master","music_volume":"Music","stereo_volume":"Stereos","effects_volume":"Effects","ambience_volume":"Ambience"}
 var values: Dictionary = DEFAULTS.duplicate(true)
 var settings_path := "user://settings.json"
 var last_error := ""
@@ -44,6 +44,10 @@ func load_and_apply() -> void:
 		for key in DEFAULTS:
 			if key != "bindings" and data.has(key) and _valid_value(key,data[key]):
 				values[key]=data[key]
+		# The former Music slider controlled both score and stereos. Preserve its
+		# level (including mute) until the player chooses independent levels.
+		if not data.has("stereo_volume"):
+			values.stereo_volume=values.music_volume
 		# Validate the complete key map before replacing any binding, so saved swaps work.
 		if data.get("bindings") is Dictionary:
 			var bindings := _upgraded_bindings(data.bindings)
@@ -130,7 +134,7 @@ func apply() -> void:
 			window.content_scale_factor=float(values.ui_scale)
 
 func _ensure_audio_buses() -> void:
-	for bus_name in ["Music","Effects","Ambience"]:
+	for bus_name in ["Music","Stereos","Effects","Ambience"]:
 		if AudioServer.get_bus_index(bus_name)<0:
 			AudioServer.add_bus()
 			var index:=AudioServer.bus_count-1

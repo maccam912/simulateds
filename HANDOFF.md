@@ -1,3 +1,28 @@
+# Accessibility settings (QA #12) — November 4, 2026
+
+- Added settings control names, action/key descriptions, tab-bar entry focus and
+  scroll-to-focus. Native macOS AX exposes labels, roles, values and checked/tab
+  states with `--accessibility always`; default Auto behavior is retained.
+- Reduced motion now explains its wider effects. Dancers retain the static
+  raised-arm pose when motion is reduced. No authoritative state or assets changed.
+- Background music and Household stereos have independent persisted levels and
+  buses under Master. Old combined levels initialize both, including mute.
+- `docs/ACCESSIBILITY_REVIEW.md` records every finding's disposition. Independent
+  larger text/reflow is deferred. Actual VoiceOver reading/announcements and an
+  actual audio listening pass remain outstanding; do not auto-close issue #12.
+- Native settings and dancing checks passed at 1440×900 and 1280×720/125%, day
+  and night, including keyboard scrolling, static-pose/state invariance, and
+  measured independent score/stereo/master mute. Captures/recordings are ignored
+  `build/accessibility-*.png` and `build/dancing-*.{png,wav}`. No exports, physical
+  Android, other OS or human playtests were performed locally.
+- The first aggregate run encountered an old commission test save restoring the
+  second resident. A fresh-profile rerun passed that test. Old `build/checks`
+  artifacts were preserved under `build/accessibility-review/checks-before-fresh-run`.
+- The fresh `python3 tools/check.py` run exited 0: all 122 gameplay/UI suites,
+  save-continuity restart checks, eight Iroh scenarios and dedicated-server smoke.
+  Log: `build/accessibility-review/check-fresh.log`. Staged asset-storage and diff
+  checks pass. Hosted CI status belongs to the PR, separately from these results.
+
 # Solo save continuity — November 4, 2026
 
 - Solo restart and named loads start paused, keep safe resident positions and

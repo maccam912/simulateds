@@ -12,6 +12,13 @@ func _run() -> void:
 	assert(AudioServer.is_bus_mute(AudioServer.get_bus_index("Master")))
 	assert(prefs.set_value("music_volume",0.25))
 	assert(is_equal_approx(AudioServer.get_bus_volume_db(AudioServer.get_bus_index("Music")),linear_to_db(0.25)))
+	assert(prefs.set_value("stereo_volume",0.6))
+	assert(AudioServer.get_bus_send(AudioServer.get_bus_index("Stereos"))=="Master")
+	assert(is_equal_approx(AudioServer.get_bus_volume_db(AudioServer.get_bus_index("Stereos")),linear_to_db(0.6)))
+	assert(prefs.set_value("music_volume",0.0))
+	assert(AudioServer.is_bus_mute(AudioServer.get_bus_index("Music")))
+	assert(not AudioServer.is_bus_mute(AudioServer.get_bus_index("Stereos")))
+	assert(prefs.set_value("music_volume",0.25))
 	assert(not prefs.set_value("music_volume",2.0))
 	assert(not prefs.set_value("music_volume",NAN))
 	assert(not prefs.set_value("fps_limit",999))
@@ -31,6 +38,16 @@ func _run() -> void:
 	prefs.load_and_apply()
 	assert(prefs.values.reduced_motion and prefs.values.quality=="low")
 	assert(is_equal_approx(prefs.values.music_volume,0.25))
+	assert(is_equal_approx(prefs.values.stereo_volume,0.6))
+	# A legacy combined music level migrates to both channels, including mute.
+	var old_audio: Dictionary=prefs.values.duplicate(true)
+	old_audio.erase("stereo_volume")
+	for level in [0.0,0.25]:
+		old_audio.music_volume=level
+		assert(prefs.Persistence.write_json(prefs.settings_path,old_audio))
+		prefs.load_and_apply()
+		assert(is_equal_approx(prefs.values.music_volume,level) and is_equal_approx(prefs.values.stereo_volume,level))
+	assert(prefs.set_value("stereo_volume",0.6))
 	assert(int(prefs.values.bindings.rotate)==KEY_T)
 	assert(prefs.action_label("rotate")=="T")
 	# An old complete map has no camera action. Keep custom keys and swaps,

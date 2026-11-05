@@ -62,14 +62,21 @@ starts paused, and **P** resumes its saved pace. Hosting, joining, leaving a
 session, or starting a new neighborhood resets to 1×. Ordinary clock controls
 are unavailable in shared play so one household cannot pause everyone else.
 
-**Settings** persists separate Master/Music/Effects/Ambience volumes, fullscreen,
-VSync, frame cap, scenery detail, UI scale, reduced motion, and key bindings.
+**Settings** persists separate Master, Background music, Household stereos,
+Effects and Ambience volumes, fullscreen, VSync, frame cap, scenery detail,
+UI scale, reduced motion, and key bindings.
 Conflicting bindings are rejected. Escape and F1 remain recovery shortcuts.
 Original menu/live/build music, garden ambience, UI cues, and quiet positional
 footsteps and household activity sounds are included. Effects volume controls
 household sounds too; menus, construction, offscreen sources, and stopped play
-keep them quiet. Reduced motion preserves audio feedback;
-see [the sound palette](assets/audio/README.md).
+keep them quiet. Old combined music settings initialize both new music controls
+at the saved level, including zero. Reduced motion stops menu fades, decorative
+resident animation, smooth camera focus and movement/turn interpolation. It keeps
+activity poses, cues, manual camera control and simulation timing; music context
+fades are shortened and audio feedback remains available.
+See [the accessibility review](docs/ACCESSIBILITY_REVIEW.md) for verified behavior
+and remaining screen-reader, text-reflow and listening checks, and
+[the sound palette](assets/audio/README.md) for audio sources.
 
 **Save neighborhood** creates named copies or explicitly overwrites a selected
 slot. **Load neighborhood** displays the current autosave and named saves with
