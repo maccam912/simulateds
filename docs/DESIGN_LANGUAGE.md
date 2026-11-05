@@ -1,5 +1,15 @@
 # Simulateds design language
 
+## Shower occupancy
+
+During an accepted shower activity, the clothed resident stands in the tray and
+faces the mixer. Lower the opaque enclosure like the house's cutaway walls so
+the occupant remains visible and selectable, including children. Restore the
+full enclosure when use ends. Sparse water geometry and a small washing gesture
+follow simulation time; reduced motion keeps a steady cue. Positions used for
+pathfinding and reservations remain authoritative approach cells. Entry/exit
+choreography is still open; see [the shower review](SHOWER_QA.md).
+
 ## 3D asset production
 
 The world is rendered with mesh models, a true orthographic 3D camera, depth and

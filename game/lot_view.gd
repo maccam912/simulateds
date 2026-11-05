@@ -1021,8 +1021,11 @@ func _activity_pose(member: Dictionary) -> Dictionary:
 	return ResidentFacing.activity(world,member)
 
 func resident_anchor(member: Dictionary) -> Vector2:
-	var display := motion.position(member)+Vector2(0.5,0.5)
 	var pose := _activity_pose(member)
+	var node: Node3D=projection.scene.resident_nodes.get(str(member.id))
+	if node!=null and pose.get("kind")=="shower":
+		return projection.project(node.global_position)
+	var display := motion.position(member)+Vector2(0.5,0.5)
 	if pose.get("kind","") in ["bed","sofa"]:
 		var object: Dictionary=pose.object
 		var size: Array=Catalog.ITEMS[object.kind].size

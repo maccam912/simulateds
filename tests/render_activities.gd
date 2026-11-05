@@ -21,6 +21,9 @@ func _pose(index: int, kind: String) -> void:
 	var object := _object(kind)
 	var adjacent: Vector2i=session.world._interaction_cells(lot,object)[0]
 	member.x=adjacent.x; member.y=adjacent.y
+	# Fixture relocation is not an accepted walk. A paused review cannot finish
+	# interpolating a fictitious route from the previous activity's location.
+	game.lot_view.motion.tracks.clear()
 	assert(session.world.apply_command(session.profile_id,{"type":"interact","member_id":member.id,"lot_id":lot.id,"target_id":object.id}).ok)
 	session.world.step(0.1)
 
