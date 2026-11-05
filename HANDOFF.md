@@ -1,3 +1,25 @@
+# Shower occupancy — November 5, 2026
+
+- Focused issue #4 / POSE-02 fix: visible occupants stand inside the tray, face
+  the mixer and remain selectable through an active cutaway enclosure. Sparse
+  water and arm motion follow simulation time; reduced motion is steady.
+- Rendering and the shower label anchor only: approach cells, reservations,
+  pathfinding, task timing, commands and saves are unchanged. No binary assets.
+  Cancellation/completion/building/missing targets clear the presentation.
+- Issue #4 remains open. POSE-02 entry/exit choreography and the other seven
+  findings remain pending; scope and reproduction are in `docs/SHOWER_QA.md`.
+- Local `python3 tools/check.py` exited 0: 128 gameplay/UI suites, both save
+  continuity processes, eight real Iroh scenarios and dedicated-server smoke.
+  Final focused headless and native shower checks also passed. Logs/audit:
+  ignored `build/issue4/check.log`, `final-focused.log`, `validation.json`.
+- Native macOS Godot 4.7.2/OpenGL review passed: four body profiles × four
+  rotations, actual camera, day/night, 1440×900 and 1280×720/125% UI, and the
+  furnished starter-house activity review. Captures: `build/shower-*.png`,
+  `build/activities-*.png`; logs: `build/issue4/native-final.log`, `activities.log`.
+  The older review fixture now clears interpolation after direct relocation.
+- Staged asset-storage and whitespace checks pass. Hosted CI is separate and
+  unverified at this checkpoint. No exports, physical-device or human playtests.
+
 # Household creator safety and usability — November 5, 2026
 
 - Issue #5: dirty drafts now require explicit discard; Keep editing and Escape

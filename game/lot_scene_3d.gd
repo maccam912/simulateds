@@ -89,6 +89,7 @@ func sync(view: Control, _delta: float) -> void:
 	# edits and changed meals remain immediately visible even when paused.
 	for object: Dictionary in lot.get("objects",[]): _update_object(object)
 	_update_residents(view)
+	_update_showers(view)
 	_update_ghost(view)
 	_update_room_ghost(view)
 	_update_light(view)
@@ -532,6 +533,16 @@ func _update_residents(view: Control) -> void:
 				model.rotation.z = stride*0.08
 				if arm_left != null: arm_left.rotation = Vector3(-0.65,0,0.65+stride*0.18)
 				if arm_right != null: arm_right.rotation = Vector3(-0.65,0,-0.65+stride*0.18)
+			elif kind=="shower":
+				# The reserved approach cell remains authoritative. As with a bed,
+				# only the visible body occupies the furnishing while using it.
+				var shower: Node3D = object_nodes.get(str(pose.object.id))
+				if shower != null:
+					resident.position = shower.position + Vector3(0,0.175,0)
+					resident.rotation.y = shower.rotation.y + PI
+					var wash := 0.0 if reduced else sin(view._time*2.0)*0.07
+					if arm_left != null: arm_left.rotation = Vector3(-1.15+wash,0,0.12)
+					if arm_right != null: arm_right.rotation = Vector3(-1.3-wash,0,-0.12)
 			elif kind in ["chat","bookshelf","table","game_table","easel","garden_bed","meal_eat","meal_prepare","admire_art"]:
 				var gesture := 0.0 if reduced else sin(view._time*3.5)*0.08
 				if arm_left != null: arm_left.rotation.x = -0.7+gesture
@@ -547,6 +558,42 @@ func _update_residents(view: Control) -> void:
 	for id: String in resident_nodes.keys():
 		if not seen.has(id):
 			var resident: Node3D = resident_nodes[id]; pick_nodes.erase(resident); resident.get_parent().remove_child(resident); resident.queue_free(); resident_nodes.erase(id)
+
+func _update_showers(view: Control) -> void:
+	var occupied := {}
+	for family: Dictionary in view.world.get("families",{}).values():
+		for member: Dictionary in family.get("members",[]):
+			if member.lot_id != view.lot_id: continue
+			var pose: Dictionary = view._activity_pose(member)
+			if pose.get("kind") == "shower": occupied[str(pose.object.id)] = true
+	for object: Dictionary in view.world.get("lots",{}).get(view.lot_id,{}).get("objects",[]):
+		if object.kind != "shower" or not object_nodes.has(str(object.id)): continue
+		var model: Node3D = object_nodes[str(object.id)]
+		var active := occupied.has(str(object.id))
+		# Lower the opaque enclosure during use, like the house's cutaway walls.
+		# These are per-instance transforms of the original solid model; picking
+		# uses the same visible geometry. No shared mesh/material is modified.
+		for mesh: MeshInstance3D in _meshes(model):
+			var source := mesh.mesh.surface_get_material(0)
+			if source == null or source.resource_name not in ["custom_wall_panel","linen","frosted_glass"]: continue
+			if not mesh.has_meta("shower_rest_transform"): mesh.set_meta("shower_rest_transform",mesh.transform)
+			mesh.transform = mesh.get_meta("shower_rest_transform")
+			if active: mesh.scale.y *= 0.38
+		var water := model.get_node_or_null("RunningWater") as Node3D
+		if water == null and active:
+			water = Node3D.new(); water.name = "RunningWater"; model.add_child(water)
+			for index in range(9):
+				var drop := _sphere(water,Vector3.ZERO,Vector3(0.012,0.055,0.012),Color("c2e1df"))
+				drop.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		if water == null: continue
+		water.visible = active
+		for drop: Node3D in water.get_children(): drop.visible = active
+		if not active: continue
+		var time := 0.0 if bool(Preferences.values.get("reduced_motion",false)) else float(view._time)
+		for index in water.get_child_count():
+			var fall := fposmod(float(index)/9.0+time*0.7,1.0)
+			var angle := float(index)*TAU/3.0
+			water.get_child(index).position = Vector3(0.19+cos(angle)*0.07,1.77-fall*1.50,-0.10+sin(angle)*0.07)
 
 func _update_ghost(view: Control) -> void:
 	var kind: String = view.build_kind
