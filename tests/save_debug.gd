@@ -90,7 +90,7 @@ func _run() -> void:
 	assert(session.set_play_speed(0).ok)
 	assert(session.load_slot(id).ok)
 	assert(session.state.lots[home].funds==42000)
-	assert(session.debug_speed==1 and session._resume_speed==1 and session._simulation_clock==0,"Loading starts with a normal private clock")
+	assert(session.debug_speed==0 and session._resume_speed==1 and session._simulation_clock==0,"Loading pauses the private clock before the first tick")
 	var copies: Array=session.list_saves()
 	assert(copies.size()>=3,"Loading did not retain current world recovery copy and autosave")
 	var safety_found:=false

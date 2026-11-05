@@ -178,6 +178,27 @@ A save migration is an explicit function from one schema version to the next,
 with a fixture test. Unknown future versions must not be silently overwritten.
 Player display names are presentation; they are not ownership credentials.
 
+Continuing an autosave or loading a named slot in solo play starts paused before
+the first tick. The saved 1×, 2×, or 4× pace is restored on resume. A save keeps
+the selected resident, lot, floor and camera framing as optional local metadata
+for the saving profile. Older saves use the default framing and resume at 1×.
+New neighborhoods start at 1×. Shared sessions retain their own clock and
+disconnect rules.
+
+The local household keeps walkable positions, including upstairs and on visits.
+An unsafe position returns its resident to the home entrance. Ordinary walks
+and single-furnishing plans continue with their route, timing and active
+reservation after revalidation. Conversations, shared recreation, stair
+orders, meals, painting, gardening, artwork admiration and courtesy movement
+stop on load. Completed effects and already saved work remain. The load notice
+summarizes interruptions, with details on hover and deliberate plans recorded
+in Recent activity. Absent households start caretaker behavior at their saved
+positions. Unfinished construction still rolls back.
+
+Replacing an active world first saves a named recovery copy. The load notice
+links to that exact copy, and the Load menu offers it again while that world is
+open. Recovering the previous world leaves the original named slot intact.
+
 ## Next design decisions
 
 The immediate playtest should answer whether ordinary home life is enjoyable,

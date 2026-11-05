@@ -4,6 +4,7 @@ signal pause_requested
 signal save_menu_requested
 signal household_requested
 signal mail_requested
+signal recovery_requested
 
 const Style = preload("res://game/style.gd")
 const Icons = preload("res://game/ui_icons.gd")
@@ -64,6 +65,7 @@ var _radial_member := ""
 var _radial_session := ""
 var viewed_lot := ""
 var selected_member := ""
+var _applied_solo_view := -1
 var selected_tool := "floor"
 var build_rotation := 0
 var lot_view: Control
@@ -151,6 +153,7 @@ var _care_options: Dictionary = {}
 var connection_label: Label
 var notice_label: Label
 var notice_people_button: Button
+var notice_recovery_button: Button
 var _notice_people := {}
 var notice_commission_button: Button
 var _notice_commission := {}
@@ -233,6 +236,7 @@ func _ready() -> void:
 		return
 	theme = Style.make_theme()
 	_build_ui()
+	Session.capture_solo_view=_capture_solo_view
 	Session.status_changed.connect(func(_message): _refresh())
 	Session.action_result.connect(_notice)
 	Session.command_completed.connect(_window_completed)
@@ -518,6 +522,10 @@ func _build_ui() -> void:
 	notice_row.add_child(notice_people_button); notice_people_button.hide()
 	notice_commission_button=_button("Review originals ›",_open_notice_commission); notice_commission_button.add_theme_font_size_override("font_size",13); notice_commission_button.size_flags_vertical=Control.SIZE_SHRINK_CENTER
 	notice_row.add_child(notice_commission_button); notice_commission_button.hide()
+	notice_recovery_button=_button("Recovery save ›",func(): recovery_requested.emit())
+	notice_recovery_button.add_theme_font_size_override("font_size",13)
+	notice_recovery_button.size_flags_vertical=Control.SIZE_SHRINK_CENTER
+	notice_row.add_child(notice_recovery_button); notice_recovery_button.hide()
 	routine_panel=_hud_panel(Rect2(-290,-230,580,440),Vector2(0.5,0.5)); routine_panel.hide()
 	routine_editor=RoutinePanel.new(); routine_panel.add_child(routine_editor)
 	routine_editor.command_requested.connect(_send)
@@ -611,21 +619,41 @@ func _member() -> Dictionary:
 		if str(member.id)==selected_member: return member
 	return {}
 
+func _capture_solo_view() -> Dictionary:
+	var view: Dictionary=lot_view.saved_framing()
+	view.merge({"member":selected_member,"lot":viewed_lot,"level":view_level})
+	return view
+
 func _refresh() -> void:
 	if lot_view == null: return
-	if floor_caption!=null: floor_caption.text="Floor %d" % (view_level+1)
 	var state: Dictionary = Session.state
 	neighborhood_title.text=str(state.get("neighborhood_name","Linden Grove"))
 	var family := _family()
+	var restore_view: bool=Session.role=="offline" and Session.solo_view_generation==Session.world_generation and _applied_solo_view!=Session.world_generation
 	_commission_status=preload("res://game/art_commissions.gd").availability(state,Session.profile_id)
 	var view_context := str(Session.role) + ":" + str(family.get("home_lot",""))
-	if view_context != _view_context and Session.role != "joining" and not family.is_empty():
+	if (view_context != _view_context or restore_view) and Session.role != "joining" and not family.is_empty():
 		_view_context = view_context
 		viewed_lot = str(family.home_lot)
 		_selected_object = ""; _space_request={}; _space_ack=false
 		_art_source=""; _art_entry.clear(); _art_request.clear()
 		_moving_object = ""; _move_request.clear(); _wish_seen.clear(); _friend_feedback.reset(); _commission_feedback.reset(); _hobby_seen.clear(); _room_anchor=Vector2i(-1,-1); _room_request.clear()
 		_paint_anchor=Vector2i(-1,-1); _paint_request.clear(); _window_request.clear(); _color_request.clear(); _copy_source=Vector2i(-1,-1); _copy_request.clear(); _blueprint_id=""
+	var framing: Dictionary={}
+	if restore_view:
+		_applied_solo_view=Session.world_generation
+		var view: Dictionary=Session.solo_view
+		selected_member=str(view.get("member",""))
+		var saved_lot := str(view.get("lot",""))
+		if state.lots.has(saved_lot):
+			viewed_lot=saved_lot
+			framing=view
+		var level := int(framing.get("level",0))
+		view_level=level if state.lots.get(viewed_lot,{}).get("storeys",{}).has(str(level)) else 0
+		if _applied_solo_view>0:
+			for tray: Control in [context_panel,plan_panel,neighborhood_panel,more_panel,routine_panel]: tray.hide()
+			radial_menu.dismiss()
+	if floor_caption!=null: floor_caption.text="Floor %d" % (view_level+1)
 	if viewed_lot.is_empty() or not state.get("lots",{}).has(viewed_lot):
 		viewed_lot = str(family.get("home_lot","lot_1"))
 	if selected_member.is_empty() and not family.get("members",[]).is_empty():
@@ -713,6 +741,7 @@ func _refresh() -> void:
 
 
 	lot_view.world=Storeys.display_world(state,viewed_lot,view_level); lot_view.lot_id=viewed_lot; lot_view.selected_member=selected_member
+	if restore_view: lot_view.restore_framing(framing)
 	lot_view.brush_size=brush_size
 	lot_view.build_object_id=_moving_object
 	lot_view.building=building and mine; lot_view.build_kind=selected_tool; lot_view.build_rotation=build_rotation
@@ -1644,8 +1673,10 @@ func _show_notice(message: String) -> void:
 	if notice_label!=null:
 		notice_label.text=message
 		notice_label.tooltip_text=""
+		notice_label.mouse_filter=Control.MOUSE_FILTER_IGNORE
 		notice_people_button.hide(); _notice_people.clear()
 		notice_commission_button.hide(); _notice_commission.clear()
+		notice_recovery_button.hide()
 		_notice_time=7.0
 		notice_panel.show()
 

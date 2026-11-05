@@ -28,9 +28,9 @@ static func _read(path: String, id: String) -> Dictionary:
 		if not (value is int or value is float) or not is_finite(float(value)) or float(value) < 0.0:
 			return {"ok":false, "message":"Save timestamp is invalid."}
 	var candidate = WorldModel.new()
-	if not candidate.restore(envelope.world):
+	if not candidate.restore_saved(envelope.world):
 		return {"ok":false, "message":"World data is invalid or from an unsupported version."}
-	return {"ok":true, "message":"Save is ready.", "data":envelope, "world":candidate.snapshot(), "name":envelope.name}
+	return {"ok":true, "message":"Save is ready.", "data":envelope, "world":candidate.state, "name":envelope.name, "view":envelope.get("view",{})}
 
 static func read_slot(directory: String, id: String) -> Dictionary:
 	if not valid_id(id):
@@ -45,7 +45,7 @@ static func read_slot(directory: String, id: String) -> Dictionary:
 		return backup
 	return result
 
-static func list_slots(directory: String) -> Array:
+static func list_slots(directory: String, profile_id: String = "") -> Array:
 	var result: Array = []
 	var dir := DirAccess.open(directory)
 	if dir == null:
@@ -66,16 +66,17 @@ static func list_slots(directory: String) -> Array:
 			summary.minutes = float(saved.world.day_minutes)
 			summary.modified = int(saved.data.modified)
 			summary.valid = true
+			summary.merge(identity(saved.world,profile_id))
 		result.append(summary)
 	result.sort_custom(func(a,b): return int(a.modified) > int(b.modified))
 	return result
 
-static func write_slot(directory: String, name: String, world: Dictionary, id: String = "") -> Dictionary:
+static func write_slot(directory: String, name: String, world: Dictionary, id: String = "", view: Dictionary = {}) -> Dictionary:
 	name = name.strip_edges()
 	if name.is_empty() or name.length() > 48:
 		return {"ok":false, "message":"Choose a save name between 1 and 48 characters."}
 	var candidate = WorldModel.new()
-	if not candidate.restore(world):
+	if not candidate.restore_saved(world):
 		return {"ok":false, "message":"The current world is not valid and was not saved."}
 	var previous: Dictionary = {}
 	if id.is_empty():
@@ -91,6 +92,25 @@ static func write_slot(directory: String, name: String, world: Dictionary, id: S
 		previous = old.data
 	var now := int(Time.get_unix_time_from_system())
 	var envelope := {"format":FORMAT, "id":id, "name":name, "created":int(previous.get("created",now)), "modified":now, "world":world}
+	if not view.is_empty(): envelope.view=view
 	if not Persistence.write_json(_path(directory,id),envelope,previous):
 		return {"ok":false, "message":"Could not write the save. Check disk space and folder permissions."}
-	return {"ok":true, "message":"Saved “%s”." % name, "id":id}
+	return {"ok":true, "message":"Saved “%s”." % name, "id":id, "name":name}
+
+static func identity(world: Dictionary, profile_id: String) -> Dictionary:
+	var summary := {"neighborhood":str(world.get("neighborhood_name","Linden Grove"))}
+	var family: Dictionary=world.families.get(profile_id,{})
+	if not family.is_empty():
+		summary.household=str(family.name)
+		summary.home=str(world.lots[family.home_lot].name)
+		summary.residents=family.members.size()
+		summary.funds=int(world.lots[family.home_lot].funds)
+	return summary
+
+static func display_time(timestamp: int, offset_minutes: int) -> Dictionary:
+	# Godot exposes the current system offset, not the historical offset for a
+	# date. Show the offset used explicitly and keep the exact saved UTC instant.
+	var local := Time.get_datetime_string_from_unix_time(timestamp+offset_minutes*60).replace("T"," ")
+	var offset := absi(offset_minutes)
+	return {"local":local.left(16)+" UTC%s%02d:%02d" % ["−" if offset_minutes<0 else "+",offset/60,offset%60],
+		"utc":Time.get_datetime_string_from_unix_time(timestamp).replace("T"," ")+" UTC"}
