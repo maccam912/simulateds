@@ -29,6 +29,10 @@ func _find(entries: Array, id: String) -> Dictionary:
 
 func _run() -> void:
 	_fresh()
+	for kind: String in ["easel","garden_bed","dining_table","game_table","stereo"]:
+		assert("inspect choices" in Actions.primary_hint(kind,member) and "No order" in Actions.primary_hint(kind,member))
+	assert("start activity" in Actions.primary_hint("shower",member))
+	assert("add to plan" in Actions.primary_hint("shower",member,true))
 	for object: Dictionary in lot.objects:
 		var use := _find(_entries({"type":"object","id":object.id}),"use")
 		assert(not use.disabled and use.command.target_id==object.id and use.command.member_id==member.id)

@@ -23,7 +23,9 @@ func _run() -> void:
 		for resident: Dictionary in family.members: resident.autonomy=false
 	var member: Dictionary=world.state.families.a.members[0]
 	for index in range(World.MAX_QUEUE+1):
-		assert(world.apply_command("a",{"type":"move","member_id":member.id,"x":index,"y":0}).ok)
+		var reply := world.apply_command("a",{"type":"move","member_id":member.id,"x":index,"y":0})
+		assert(reply.ok and str(member.name) in reply.message and "Walk to %d, 0" % index in reply.message)
+		assert(("Starting" if index==0 else "Queued") in reply.message,"Accepted feedback distinguishes current from upcoming orders")
 	assert(member.queue.size()==World.MAX_QUEUE)
 	var active: Dictionary=member.task.duplicate(true)
 	var original := _ids(member.queue)

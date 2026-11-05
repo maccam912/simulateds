@@ -38,6 +38,7 @@ func _ready() -> void:
 	surface.content_margin_top=8; surface.content_margin_bottom=8
 	_center_panel.add_theme_stylebox_override("panel",surface)
 	add_child(_center_panel)
+	_center_panel.minimum_size_changed.connect(func(): call_deferred("_place"))
 	var column := VBoxContainer.new(); column.add_theme_constant_override("separation",4)
 	_center_panel.add_child(column)
 	title_label=Label.new(); title_label.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
@@ -83,6 +84,7 @@ func _make_button(label: String, callback: Callable) -> Button:
 	var button := Button.new()
 	button.text=label
 	Icons.action(button,label)
+	button.text=label; button.icon_alignment=HORIZONTAL_ALIGNMENT_LEFT
 	button.add_theme_font_size_override("font_size",14)
 	button.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	button.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -121,6 +123,7 @@ func _rebuild() -> void:
 		button.disabled=bool(entry.get("disabled",false))
 		var icon_id := str(entry.get("icon",""))
 		if not icon_id.is_empty(): Icons.apply(button,icon_id,str(entry.label))
+		button.text=str(entry.get("label",id)); button.icon_alignment=HORIZONTAL_ALIGNMENT_LEFT
 		button.tooltip_text=str(entry.get("label",id))+"\n"+str(entry.get("tooltip",""))
 		button.mouse_entered.connect(func(): _show_hint(button.tooltip_text))
 		button.focus_entered.connect(func(): _show_hint(button.tooltip_text))
@@ -136,6 +139,20 @@ func _rebuild() -> void:
 func _place() -> void:
 	if _center_panel==null: return
 	var available := size
+	if _entries.size()<=3:
+		# A short choice list sits beside the target, leaving the house exposed.
+		var width := 252.0
+		_center_panel.size=Vector2(width,maxf(176,_center_panel.get_combined_minimum_size().y))
+		var height := _center_panel.size.y+float(_buttons.size())*62.0
+		var left := _anchor.x+24.0
+		if left+width>available.x-12: left=_anchor.x-width-24.0
+		var top := Vector2(clampf(left,12,maxf(12,available.x-width-12)),clampf(_anchor.y-height/2.0,12,maxf(12,available.y-height-12)))
+		_center_panel.position=top
+		for index in range(_buttons.size()):
+			_buttons[index].size=Vector2(width,56)
+			_buttons[index].position=top+Vector2(0,_center_panel.size.y+6+index*62)
+		queue_redraw()
+		return
 	_center=Vector2(clampf(_anchor.x,EXTENT.x+12,maxf(EXTENT.x+12,available.x-EXTENT.x-12)),clampf(_anchor.y,EXTENT.y+12,maxf(EXTENT.y+12,available.y-EXTENT.y-12)))
 	_center_panel.size=Vector2(176,maxf(136,_center_panel.get_combined_minimum_size().y))
 	_center_panel.position=_center-_center_panel.size/2.0
@@ -150,12 +167,12 @@ func _place() -> void:
 	queue_redraw()
 
 func _show_hint(text: String) -> void:
-	subtitle_label.text=text if not text.is_empty() else _default_subtitle
+	subtitle_label.text=_default_subtitle+("\n"+text if not text.is_empty() and text!=_default_subtitle else "")
 	subtitle_label.tooltip_text=subtitle_label.text
 	call_deferred("_place")
 
 func _draw() -> void:
-	if not visible: return
+	if not visible or _entries.size()<=3: return
 	var points := PackedVector2Array()
 	for step in range(65):
 		var angle := float(step)*TAU/64.0

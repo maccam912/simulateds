@@ -1079,3 +1079,34 @@ Lot sheltered separately identifies construction. Context trays use the existing
 need, garden, palette, meal, wish, hobby, people and travel pictograms. These are
 UI surfaces and do not change world geometry, saves, routing or simulation rules.
 See [the issue #2 dispositions](HUD_QA.md) for validation and remaining boundaries.
+
+
+## Choosing actions safely — November 5, 2026
+
+One to three contextual choices use a compact list beside the target. Longer
+menus keep the paged ring. Keep text labels on these actions, including Cancel,
+and retain the target and acting resident while showing Order or Inspect hints.
+Click/tap hover copy distinguishes an activity order from opening choices; the
+existing right-click/hold route always permits review without a primary order.
+Quick-click behavior remains unchanged; a separate inspect-first mode is deferred.
+
+The ordinary resident strip shares Plan's accepted-state timing: a thin progress
+track and approximate neighborhood minutes for timed activities, plain travel,
+waiting or idle text otherwise. It never advances on a presentation timer.
+Accepted single orders name the resident/activity and distinguish Starting from
+Queued, including busy furnishings. Plan remains the recovery control: its cancel
+buttons bind to individual accepted action IDs, without a new ambiguous undo.
+
+Painting controls retain their action identities. Capture the canvas revision,
+resident and world/session at press-down; release must match that review before
+ordering or navigating. Completion can update the available actions, but a held
+mouse/touch/keyboard activation cannot become another action or sell a replacement
+canvas. When the focused action disappears, move focus to the Painting hobby link.
+A fresh press is required for the new choice.
+
+Pause-on-choice and a combined recent-moments feed are explicitly deferred.
+Keep the visible solo clock controls and existing manual pause binding, with no
+implicit pace changes from trays. Shared simulation continues. Retain the saved
+Little Moments journal, Plan → Recent, hobby cards and People records; do not
+introduce another notification stream or invent saved milestone history.
+See [issue #3 dispositions](ACTION_QA.md) for scope and validation boundaries.

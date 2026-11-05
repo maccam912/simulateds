@@ -38,7 +38,7 @@ func _ready() -> void:
 	practice=_label("",11,Style.GREEN)
 	for key: String in ["meadow","harbor","flowers","resume","sell"]:
 		var button := Button.new(); button.custom_minimum_size.y=36; button.add_theme_font_size_override("font_size",12)
-		button.pressed.connect(func(): _request(key))
+		_guard(button,func(): _request(key),key)
 		if Paintings.SUBJECTS.has(key):
 			button.mouse_entered.connect(func(): _preview_subject=key; refresh(_lot,_object,_member))
 			button.mouse_exited.connect(func(): _preview_subject=""; refresh(_lot,_object,_member))
@@ -46,9 +46,9 @@ func _ready() -> void:
 			button.focus_exited.connect(func(): _preview_subject=""; refresh(_lot,_object,_member))
 		add_child(button); buttons[key]=button
 	hang_button=Button.new(); hang_button.text="Hang on wall · Build mode"; hang_button.add_theme_font_size_override("font_size",12); hang_button.custom_minimum_size.y=32; add_child(hang_button)
-	hang_button.pressed.connect(func(): display_requested.emit("easel:"+_object))
-	hobby_button=Button.new(); hobby_button.custom_minimum_size.y=28; hobby_button.add_theme_font_size_override("font_size",11); hobby_button.pressed.connect(func(): hobbies_requested.emit()); add_child(hobby_button)
-	commission_button=Button.new(); commission_button.text="Art commissions"; commission_button.custom_minimum_size.y=28; commission_button.add_theme_font_size_override("font_size",11); commission_button.pressed.connect(func(): commissions_requested.emit()); add_child(commission_button)
+	_guard(hang_button,func(): display_requested.emit("easel:"+_object),"hang")
+	hobby_button=Button.new(); hobby_button.custom_minimum_size.y=28; hobby_button.add_theme_font_size_override("font_size",11); _guard(hobby_button,func(): hobbies_requested.emit(),"hobby"); add_child(hobby_button)
+	commission_button=Button.new(); commission_button.text="Art commissions"; commission_button.custom_minimum_size.y=28; commission_button.add_theme_font_size_override("font_size",11); _guard(commission_button,func(): commissions_requested.emit(),"commission"); add_child(commission_button)
 	note=_label("",12,Style.MUTED); feedback=_label("",12,Style.GOLD)
 	Session.command_completed.connect(_completed); Soundscape.attach_controls(self)
 
@@ -57,8 +57,9 @@ func _label(text: String,font_size: int,color: Color) -> Label:
 	label.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; label.custom_minimum_size.x=200; add_child(label); return label
 
 func refresh(lot_id: String,object_id: String,member_id: String) -> void:
+	var focused := get_viewport().gui_get_focus_owner()
 	_lot=lot_id; _object=object_id; _member=member_id
-	var context := str([Session.role,Session.profile_id,lot_id,object_id,member_id])
+	var context := str([Session.world_generation,Session.role,Session.profile_id,lot_id,object_id,member_id])
 	if context!=_context: pending={}; _acknowledged=false; _reply_error=""; _preview_subject=""; _context=context
 	var lot: Dictionary=Session.state.lots.get(lot_id,{})
 	var object: Dictionary=Session.world._object(lot,object_id) if not lot.is_empty() else {}
@@ -125,6 +126,8 @@ func refresh(lot_id: String,object_id: String,member_id: String) -> void:
 	hang_button.tooltip_text="Enter build mode to hang this picture. Your household pauses; the transfer is free and undoable."
 	feedback.text="Waiting for the neighborhood…" if display_pending or not pending.is_empty() else _reply_error if not _reply_error.is_empty() else unavailable
 	feedback.visible=not feedback.text.is_empty()
+	if is_instance_valid(focused) and is_ancestor_of(focused) and not focused.is_visible_in_tree() and hobby_button.is_visible_in_tree():
+		hobby_button.grab_focus()
 
 func _request(key: String) -> void:
 	if not pending.is_empty() or not _options.get(key,{}).get("ok",false): return
@@ -138,3 +141,26 @@ func _completed(intent: Dictionary,ok: bool,message: String) -> void:
 	if ok: _acknowledged=true
 	else: pending={}; _acknowledged=false; _reply_error=message
 	refresh(_lot,_object,_member)
+
+## Capture the reviewed target on press, before a refresh can replace it. Each
+## button keeps its action identity; releases and held keys cannot retarget it.
+func _guard(button: Button, callback: Callable, key: String) -> void:
+	var press := {"armed":false,"context":""}
+	button.button_down.connect(func():
+		press.armed=true; press.context=_review_key(key))
+	button.pressed.connect(func():
+		var armed: bool=press.armed
+		var accepted: bool=armed and press.context==_review_key(key)
+		press.armed=false
+		if accepted: callback.call()
+		elif armed:
+			_reply_error="This choice changed. Choose again at the easel."
+			refresh(_lot,_object,_member))
+	button.visibility_changed.connect(func(): press.armed=false)
+
+func _review_key(key: String) -> String:
+	var lot: Dictionary=Session.state.get("lots",{}).get(_lot,{})
+	var object: Dictionary=Session.world._object(lot,_object) if not lot.is_empty() else {}
+	var picture: Dictionary=object.get("painting",Paintings.create())
+	return str([Session.world_generation,Session.role,Session.profile_id,_lot,_object,_member,key,
+		picture.get("revision",-1),picture.get("subject",""),Paintings.finished(picture)])

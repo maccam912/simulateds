@@ -950,6 +950,17 @@ func _draw_hover() -> void:
 				if object.id==hover_target.id: detail=Gardens.summary(object.garden)+" · Click to inspect"; break
 		var dimensions := Catalog.footprint(str(hover_target.kind),int(hover_target.rotation))
 		_diamond(float(hover_target.x),float(hover_target.y),dimensions.x,dimensions.y,Color(0.95,0.95,0.75,0.14),2,Color("fff2bd"))
+	if hover_target.type=="object":
+		var family: Dictionary=world.families.get(Session.profile_id,{})
+		var actor: Dictionary={}
+		for resident: Dictionary in family.get("members",[]):
+			if resident.id==selected_member: actor=resident; break
+		# Keep live descriptive details, but give every primary click explicit intent.
+		var descriptions := PackedStringArray()
+		for line: String in detail.split("\n"):
+			descriptions.append(line.split(" · Click")[0])
+		detail="\n".join(descriptions)+"\n"+preload("res://game/context_actions.gd").primary_hint(str(hover_target.kind),actor,detail.contains("In use by"))
+		detail+="\nRight-click / hold: review actions"
 	var lines := detail.split("\n")
 	var width := _font.get_string_size(title,HORIZONTAL_ALIGNMENT_LEFT,-1,14).x+24
 	for line: String in lines: width=maxf(width,_font.get_string_size(line,HORIZONTAL_ALIGNMENT_LEFT,-1,12).x+24)

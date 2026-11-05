@@ -33,13 +33,18 @@ func _named(node: Node,title: String) -> Button:
 	return null
 
 func _point(id: String) -> Vector2:
-	for region: Dictionary in game.lot_view._hit_regions:
-		if region.target.get("type")!="object" or region.target.get("id")!=id: continue
-		var point := Vector2.ZERO
-		for corner: Vector2 in region.polygon: point+=corner
-		point/=region.polygon.size()
-		if game.lot_view.hit_target(point).get("id")==id and not game.lot_view.overlay_rects.any(func(rect): return rect.has_point(point)): return point
-	assert(false,"Furnishing must have a visible click surface"); return Vector2.ZERO
+	# Pick a visible portion of the real model, not a guessed floor cell.
+	game.lot_view.projection.register_targets()
+	for pick: Dictionary in game.lot_view.projection.picks:
+		if pick.target.get("id")!=id: continue
+		var bounds := Rect2(pick.polygon[0],Vector2.ZERO)
+		for point: Vector2 in pick.polygon: bounds=bounds.expand(point)
+		for x in range(1,10):
+			for y in range(1,10):
+				var point := bounds.position+bounds.size*Vector2(float(x)/10.0,float(y)/10.0)
+				if game.lot_view.hit_target(point).get("id")==id and game.lot_view._point_available(point): return point
+	assert(false,"No exposed model surface for "+id)
+	return Vector2.ZERO
 
 func _tile(x: int,y: int,click: bool=false) -> void: await _mouse(game.lot_view.grid_point(x+0.5,y+0.5),click)
 
@@ -93,13 +98,33 @@ func _run() -> void:
 	assert(float(easel.painting.progress)>0 and float(easel.painting.progress)<24 and game.lot_view._activity_pose(member).kind=="easel")
 	await _button(game.queue_label); await _capture("plan")
 	assert(game._plan_detail.text.contains("Paint morning meadow") and game._plan_detail.tooltip_text.contains("Painting finishes"))
-	await _button(game.plan_controls[member.task.id].cancel); game.plan_panel.hide(); game._refresh(); await _mouse(_point(id),true)
+	await _button(game.plan_controls[member.task.id].cancel); game.plan_panel.hide(); game._refresh(); await process_frame; await process_frame; await _mouse(_point(id),true)
 	var partial: Dictionary=easel.painting.duplicate(true)
 	await _advance(3); assert(easel.painting==partial and not game.painting_panel.buttons.resume.disabled)
 	await _capture("paused-canvas")
-	await _button(game.painting_panel.buttons.resume); await _advance(30); await _capture("finished-meadow")
+	await _button(game.painting_panel.buttons.resume)
+	# Hold a navigation press across completion. It cannot turn into a sale or
+	# navigate a replacement canvas, even when its button moves under the pointer.
+	var held_button: Button=game.painting_panel.hobby_button
+	held_button.grab_focus()
+	var held := InputEventMouseButton.new(); held.button_index=MOUSE_BUTTON_LEFT; held.position=held_button.get_global_rect().get_center(); held.pressed=true
+	root.push_input(held,true); await process_frame
+	await _advance(30)
+	assert(held_button==game.painting_panel.hobby_button and held_button.has_focus(),"Completion preserves navigation identity and focus")
+	var finished_state: Dictionary=session.world.snapshot()
+	held.pressed=false; root.push_input(held,true); await process_frame
+	assert(session.world.snapshot()==finished_state and game._context_page=="painting","A held click across completion cannot become a sale or a different action")
+	await _capture("finished-meadow")
 	assert(preload("res://game/paintings.gd").finished(easel.painting) and game.painting_panel.artist.text=="By Alex")
 	assert(not game.painting_panel.buttons.sell.disabled and not game.painting_panel.buttons.meadow.visible)
+	# Keyboard activation also binds to the generation at key-down.
+	game.painting_panel.buttons.sell.grab_focus()
+	var held_key := InputEventKey.new(); held_key.keycode=KEY_SPACE; held_key.physical_keycode=KEY_SPACE; held_key.pressed=true
+	root.push_input(held_key,true); await process_frame
+	session.world_generation+=1
+	var replacement_state: Dictionary=session.world.snapshot()
+	held_key.pressed=false; root.push_input(held_key,true); await process_frame
+	assert(session.world.snapshot()==replacement_state,"A key released after world replacement cannot sell a reused target ID")
 	var finished: Dictionary=easel.painting.duplicate(true)
 	await _button(game.mode_button)
 	var budget_before: int=lot.funds

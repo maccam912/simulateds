@@ -117,7 +117,8 @@ def gameplay_checks(binary, shard):
         if not (ROOT / "tests" / f"{script}.gd").is_file():
             raise RuntimeError(f"Required test script missing: tests/{script}.gd")
         output = run(binary, ["--script", f"res://tests/{script}.gd", "--log-file", str(work / f"{script}-engine.log"),
-                              "--", f"--save-path={work / f'{script}-save.json'}", f"--profile-path={work / f'{script}-profile.json'}"])
+                              "--", f"--save-path={work / f'{script}-save.json'}", f"--profile-path={work / f'{script}-profile.json'}",
+                              f"--settings-path={work / f'{script}-settings.json'}"])
         if marker not in output:
             raise RuntimeError(script + " assertions did not finish")
         if script == "save_debug":

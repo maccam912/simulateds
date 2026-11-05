@@ -82,6 +82,7 @@ func _run() -> void:
 	game=load("res://game/main.tscn").instantiate(); root.add_child(game); game._show_tray(game.plan_panel,true)
 	await _capture("travel")
 	assert(game._plan_detail.text=="On the way" and not game._plan_progress.visible)
+	assert(game.activity_timing.text=="On the way" and not game.activity_progress.visible)
 	var cancel: Button=game.plan_controls[first.task.id].cancel
 	var control_id := cancel.get_instance_id(); var detail_id: int=game._plan_detail.get_instance_id()
 	cancel.grab_focus()
@@ -92,9 +93,13 @@ func _run() -> void:
 	assert(game._plan_progress.visible and game._plan_progress.value>0 and game._plan_progress.value<1)
 	assert(game._plan_detail.get_instance_id()==detail_id and game.plan_controls[first.task.id].cancel.get_instance_id()==control_id and cancel.has_focus(),"Travel-to-activity updates preserve control identity and keyboard focus")
 	await _capture("meal")
+	var day_minutes: float=session.state.day_minutes
+	session.state.day_minutes=1320; await _capture("meal-night"); session.state.day_minutes=day_minutes
+	assert(game.activity_progress.visible and is_equal_approx(game.activity_progress.value,game._plan_progress.value))
+	assert(game.activity_timing.text in game._plan_detail.text)
 	var progress: float=game._plan_progress.value
 	await create_timer(0.3).timeout; game._refresh()
-	assert(game._plan_progress.value==progress,"Presentation time cannot advance paused or stale-snapshot progress")
+	assert(game.activity_progress.value==progress and game._plan_progress.value==progress,"Presentation time cannot advance paused or stale-snapshot progress")
 	var replica := World.new(); assert(replica.restore(session.world.snapshot(),true)); replica.step(0.5)
 	session.world=replica; first=session.state.families[session.profile_id].members[0]; second=session.state.families[session.profile_id].members[1]
 	var accepted: Dictionary=session.world.snapshot(); game._refresh()
