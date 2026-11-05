@@ -1640,19 +1640,61 @@ func _object_user(lot_id: String, object: Dictionary, except_member: String = ""
 	return {}
 
 func _layout_issue(lot: Dictionary) -> String:
+	return str(home_access(lot).message)
+
+func home_access(lot: Dictionary, viewed_level: int=0) -> Dictionary:
+	# One complete report drives Finish and Access. Only overlay cells belong to
+	# the viewed floor; issue targets carry their own level for Find.
+	var layers: Array[Dictionary]=[]
+	var routes: Array[Dictionary]=[]
+	var blocks: Array[Dictionary]=[]
 	for level in range(Storeys.MAX_LEVEL+1):
-		var layer := Storeys.view(lot,level)
-		if level>0 and layer.floors.is_empty() and layer.objects.is_empty(): continue
-		if level>0 and layer.entrances.is_empty(): return "Add stairs and a clear upper landing to floor %d." % (level+1)
+		var layer := Storeys.view(lot,level).duplicate()
+		layer.entrances=[BuildAccess.GATE] if level==0 else []
+		layers.append(layer); blocks.append(BuildAccess.obstacles(layer))
+		routes.append(BuildAccess.reachable_from(blocks[level],BuildAccess.GATE) if level==0 else {})
+	# Traverse both ways: a second staircase can reconnect a downstairs room
+	# through the upper floor. Each pass adds reachable cells, so this terminates.
+	var changed := true
+	while changed:
+		changed=false
+		for level in range(Storeys.MAX_LEVEL):
+			for stair: Dictionary in Storeys.stairs(lot,level):
+				for upward: bool in [true,false]:
+					var source := level if upward else level+1
+					var target := level+1 if upward else level
+					var start := Storeys.landing(stair,not upward)
+					var arrival := Storeys.landing(stair,upward)
+					if not routes[source].has(start) or routes[target].has(arrival) or blocks[target].has(arrival): continue
+					var connected := BuildAccess.reachable_from(blocks[target],arrival)
+					if connected.is_empty(): continue
+					layers[target].entrances.append(arrival); routes[target].merge(connected); changed=true
+	var reports: Array[Dictionary]=[]
+	var issues: Array[Dictionary]=[]
+	for level in range(Storeys.MAX_LEVEL+1):
+		var layer := layers[level]
+		var report := BuildAccess.inspect(layer,[]) if lot.get("building",false) else build_access(layer)
+		reports.append(report)
+		for issue: Dictionary in report.issues:
+			issue.level=level
+			if level>0: issue.key="floor:%d:" % level+str(issue.key)
+			issues.append(issue)
 		for object: Dictionary in layer.objects:
 			for cell: Vector2i in _object_cells(object):
-				if [cell.x,cell.y] in layer.get("stairwells",[]): return "Move furnishings away from the stairwell on floor %d." % (level+1)
-		var issue := str(build_access(layer).message)
-		if not issue.is_empty(): return issue
+				if [cell.x,cell.y] in layer.get("stairwells",[]):
+					var issue := BuildAccess._issue("opening:"+str(object.id),"Stair opening",cell,Vector2i.ONE,"Move furnishings away from the stairwell on floor %d." % (level+1))
+					issue.level=level; issues.append(issue); break
 		for stair: Dictionary in Storeys.stairs(lot,level):
-			if level==Storeys.MAX_LEVEL: return "The top floor cannot have an upward staircase."
-			if not _walkable(layer,Storeys.landing(stair,false)) or not _walkable(Storeys.view(lot,level+1),Storeys.landing(stair,true)): return "Keep both staircase landings clear and add flooring upstairs."
-	return ""
+			for upper: bool in [false,true]:
+				var target_level := level+1 if upper else level
+				var at := Storeys.landing(stair,upper)
+				if target_level<=Storeys.MAX_LEVEL and _walkable(Storeys.view(lot,target_level),at): continue
+				var issue := BuildAccess._issue("landing:%s:%s" % [stair.id,upper],"Upper landing" if upper else "Lower landing",at,Vector2i.ONE,"Floor %d: add flooring and keep the stair landing clear." % (target_level+1) if target_level<=Storeys.MAX_LEVEL else "The top floor cannot have an upward staircase.")
+				issue.level=mini(target_level,Storeys.MAX_LEVEL); issues.append(issue)
+	var result: Dictionary=reports[clampi(viewed_level,0,Storeys.MAX_LEVEL)].duplicate()
+	result.issues=issues; result.ok=issues.is_empty()
+	result.message="" if issues.is_empty() else str(issues[0].message)
+	return result
 
 func build_access(lot: Dictionary) -> Dictionary:
 	var residents: Array=[]
@@ -2410,9 +2452,10 @@ func _build_storey(lot: Dictionary,command: Dictionary) -> Dictionary:
 	if outcome.ok and int(level)>0: Storeys.commit(lot,layer,int(level))
 	return outcome
 
-func _use_stairs(member: Dictionary,lot: Dictionary,command: Dictionary) -> Dictionary:
+func stair_option(member: Dictionary,lot: Dictionary,direction: int) -> Dictionary:
+	if member.is_empty(): return _result(false,"Choose a resident first.")
+	if Character.is_baby(member): return _result(false,"Babies rest at home. Choose an older resident.")
 	if member.lot_id!=lot.id or lot.building: return _result(false,"Finish building and visit this home first.")
-	var direction: Variant=command.get("direction",1)
 	if not _integer(direction) or int(direction) not in [-1,1]: return _result(false,"Choose upstairs or downstairs.")
 	var level := int(member.get("level",0)); var destination := level+int(direction)
 	if destination<0 or destination>Storeys.MAX_LEVEL: return _result(false,"There is no floor in that direction.")
@@ -2423,7 +2466,14 @@ func _use_stairs(member: Dictionary,lot: Dictionary,command: Dictionary) -> Dict
 		var arrival := Storeys.landing(stair,int(direction)>0)
 		if not _walkable(Storeys.view(lot,destination),arrival) or not _walkable(current,start): continue
 		if start!=_position(member) and _path(current,_position(member),[start]).is_empty(): continue
-		_queue_action(member,{"type":"move","x":start.x,"y":start.y,"stairs_to":destination,"stairs_id":stair.id,"title":"Go upstairs" if int(direction)>0 else "Go downstairs"})
-		if member.task.get("automatic",false): _end_task(member,"cancelled","Using the stairs.")
-		return _result(true,"Stairs added to the plan.")
+		return {"ok":true,"message":"Add stair travel to this resident’s plan.","action":{"type":"move","x":start.x,"y":start.y,"stairs_to":destination,"stairs_id":stair.id,"title":"Go upstairs" if direction>0 else "Go downstairs"}}
 	return _result(false,"No reachable staircase with clear landings connects these floors.")
+
+func _use_stairs(member: Dictionary,lot: Dictionary,command: Dictionary) -> Dictionary:
+	var direction: Variant=command.get("direction",1)
+	if not _integer(direction) or int(direction) not in [-1,1]: return _result(false,"Choose upstairs or downstairs.")
+	var option := stair_option(member,lot,int(direction))
+	if not option.ok: return option
+	_queue_action(member,option.action)
+	if member.task.get("automatic",false): _end_task(member,"cancelled","Using the stairs.")
+	return _result(true,"Stairs added to the plan.")

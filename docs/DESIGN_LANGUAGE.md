@@ -98,8 +98,12 @@ with the existing rotation button/keyboard option retained. Residents remain
 visible while paused and move to the street only when construction displaces
 them. They never make a placement preview invalid.
 
-Floor minus/plus selects among three storeys; separate down/up controls send the
-selected resident to a reachable staircase in live mode. Higher-floor views
+The View row selects among three storeys with minus/plus, without issuing an
+order. A separate live Travel group names the selected resident and their floor;
+Go downstairs/upstairs adds an explicit order, with host-shared availability
+reasons. The location heading always names the viewed floor. Accepted Finish or
+Discard returns to the selected resident’s floor, reframing when the floor or lot
+changes and otherwise preserving the player’s camera. Higher-floor views
 retain lower geometry and a real stair opening. Pools, 45-degree walls and round
 terrain brushes use the same warm preview/cost/undo language as room building.
 Brushes follow the pointer stroke and preserve level foundations. Windows have
@@ -142,6 +146,12 @@ the world to a scrollable list, so color alone never carries the diagnosis. Keep
 badges separate and connect displaced markers to their objects. Find centers the
 camera without changing resident selection; reduced motion makes it immediate.
 The report shares the host's reachability rules and updates with accepted edits.
+It checks all three floors, while tint and markers belong to the viewed floor.
+Find names and switches to the problem’s floor. Untouched upper levels say
+Unbuilt, with no entrance defect; stair openings and landings have their own
+locations. Sheltered residents are moved safely aside on Finish and do not block
+a valid draft. The optional Guide → Building checklist explains flooring, stair
+openings, landings and access without purchasing or creating an example home.
 Inspection absorbs placement clicks, while repair tools return to editing with
 the overlay still visible. Escape or the close button leaves inspection. A
 rejected Finish building opens the same report instead of leaving a text-only

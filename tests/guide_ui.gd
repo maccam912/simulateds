@@ -104,6 +104,13 @@ func _run() -> void:
 	for id: String in ["care","wishes","hobbies","people"]: assert(app.guide_panel.action_buttons[id][0].disabled)
 	before=session.world.snapshot(); app._guide_action("care")
 	assert(app.page=="guide" and session.world.state==before,"Blocked guide links cannot direct a frozen family")
+	await _tab(1)
+	before=session.world.snapshot()
+	for label: Label in app.guide_panel.find_children("*","Label",true,false):
+		if label.text=="Your first upstairs · checklist":
+			app.guide_panel.tabs.get_child(1).ensure_control_visible(label)
+			await _capture("upstairs-checklist")
+	assert(session.world.snapshot()==before,"Reading the upstairs checklist never purchases or edits")
 	await _action("move",1)
 	assert(app.page=="game" and session.state.lots[home].building and app.game.selected_tool=="move","Build links preserve an existing draft instead of toggling it off")
 	app.open_guide(); await _action("decorate",1)
