@@ -728,6 +728,7 @@ func _draw_access_ground(lot: Dictionary) -> void:
 		if reachable.has(cell): _diamond(cell.x,cell.y,1,1,Color(0.52,0.79,0.61,0.25),1)
 	for cell: Vector2i in report.get("unreachable",[]):
 		_diamond(cell.x,cell.y,1,1,Color(0.89,0.40,0.32,0.30),1,Color("efab91"))
+	if int(lot.get("level",0))>0: return
 	_diamond(8,14,1,1,Color(0.93,0.79,0.55,0.45),2,Color("ffe3a2"))
 	var gate := grid_point(8.5,14.5)+Vector2(0,18)
 	draw_string(_font,gate-Vector2(27,0),"Entrance",HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("fff0bf"))
@@ -738,6 +739,7 @@ func _draw_access_issues(s: float) -> void:
 	var bounds := Rect2(Vector2(8,64),Vector2(size.x-16,maxf(32,size.y-240)))
 	for issue: Dictionary in access_report.get("issues",[]):
 		index+=1
+		if int(issue.get("level",0))!=int(world.lots.get(lot_id,{}).get("level",0)): continue
 		var selected: bool=str(issue.key)==access_focus
 		_diamond(issue.cell.x,issue.cell.y,issue.footprint.x,issue.footprint.y,Color(0.90,0.35,0.27,0.30),4,Color("ffe3a2") if selected else Color("ffae92"))
 		var point := grid_point(issue.center.x,issue.center.y)+Vector2(0,-43*s)

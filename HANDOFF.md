@@ -1,3 +1,26 @@
+# Storey access and floor context — November 5, 2026
+
+- Issue #7: all four findings implemented; dispositions in `docs/STOREY_QA.md`.
+  Empty upper levels are unbuilt. Access/Finish share whole-home connectivity,
+  stair/landing targets and floor-aware Find; overlays stay on their own level.
+- Finish/Discard returns to the selected resident’s floor and lot, reframing only
+  when that context changes. The location heading retains the viewed floor.
+  Separate View and Travel groups use read-only host-shared stair availability.
+  Guide → Building has an optional upstairs checklist, with no purchase actions.
+- Native macOS Godot 4.7.2/OpenGL review passed at 1440×900 and 1280×720/125% UI,
+  day/night, plus the compact Guide. Captures: `build/storey-*.png` and
+  `build/guide-upstairs-checklist-compact.png`; logs: `build/issue7/` (ignored).
+- Local validation: all 125 gameplay/UI suites, save-continuity restart checks,
+  eight real Iroh scenarios and dedicated-server smoke passed across the required
+  `tools/check.py` run and resumed failed/remaining checks. Final focused checks,
+  staged asset-storage and whitespace checks pass. Logs: `build/issue7/check.log`,
+  `check-remaining.log`, `check-resumed.log`, `final-focused.log`, and
+  `final-floor-ui.log`. Earlier failures exposed assumptions about Finish framing;
+  same-floor framing is now preserved, and the visiting-resident construction
+  test explicitly navigates home before building again.
+- Hosted CI is separate from local evidence. No local exports, physical-device
+  testing or human playtest were performed. No binary assets or protocol changes.
+
 # Context action feedback — November 5, 2026 (issue #3)
 
 - Short context menus use a compact list beside the target; long menus retain

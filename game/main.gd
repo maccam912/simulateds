@@ -102,6 +102,12 @@ var catalog_thumbnails
 var brush_size := 1
 var view_level := 0
 var floor_controls: HBoxContainer
+var floor_down: Button
+var floor_up: Button
+var stair_controls: VBoxContainer
+var stair_caption: Label
+var stair_down: Button
+var stair_up: Button
 var floor_caption: Label
 var catalog_detail: Label
 var _catalog_category := "all"
@@ -504,11 +510,15 @@ func _build_ui() -> void:
 	activity_label = _label("Activities",15); activity_label.size_flags_horizontal=Control.SIZE_EXPAND_FILL; activity_label.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; context_head.add_child(activity_label)
 	context_head.add_child(_button("×",_close_context))
 	floor_controls=HBoxContainer.new(); context.add_child(floor_controls)
-	var down := _button("−",func(): _set_view_level(view_level-1)); down.tooltip_text="View floor below"; floor_controls.add_child(down)
-	floor_caption=_label("Floor 1",12,Style.GOLD); floor_caption.size_flags_horizontal=Control.SIZE_EXPAND_FILL; floor_controls.add_child(floor_caption)
-	var up := _button("+",func(): _set_view_level(view_level+1)); up.tooltip_text="View floor above"; floor_controls.add_child(up)
-	var descend := _button("↓",func(): _send({"type":"use_stairs","member_id":selected_member,"lot_id":viewed_lot,"direction":-1})); descend.tooltip_text="Resident: go downstairs"; floor_controls.add_child(descend)
-	var ascend := _button("↑",func(): _send({"type":"use_stairs","member_id":selected_member,"lot_id":viewed_lot,"direction":1})); ascend.tooltip_text="Resident: go upstairs"; floor_controls.add_child(ascend)
+	floor_down=_button("−",func(): _set_view_level(view_level-1)); floor_down.tooltip_text="View floor below · Does not move residents"; floor_down.accessibility_name="View floor below"; floor_controls.add_child(floor_down)
+	floor_caption=_label("View · Floor 1",12,Style.GOLD); floor_caption.size_flags_horizontal=Control.SIZE_EXPAND_FILL; floor_controls.add_child(floor_caption)
+	floor_up=_button("+",func(): _set_view_level(view_level+1)); floor_up.tooltip_text="View floor above · Does not move residents"; floor_up.accessibility_name="View floor above"; floor_controls.add_child(floor_up)
+	stair_controls=VBoxContainer.new(); context.add_child(stair_controls)
+	stair_caption=_label("",12); stair_caption.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; stair_controls.add_child(stair_caption)
+	var travel_row := HBoxContainer.new(); stair_controls.add_child(travel_row)
+	stair_down=_button("Go downstairs",func(): _send({"type":"use_stairs","member_id":selected_member,"lot_id":viewed_lot,"direction":-1})); travel_row.add_child(stair_down)
+	stair_up=_button("Go upstairs",func(): _send({"type":"use_stairs","member_id":selected_member,"lot_id":viewed_lot,"direction":1})); travel_row.add_child(stair_up)
+	for control: Button in [stair_down,stair_up]: control.add_theme_font_size_override("font_size",12); control.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	catalog_filters=HBoxContainer.new(); catalog_filters.add_theme_constant_override("separation",6); context.add_child(catalog_filters)
 	catalog_category=OptionButton.new(); catalog_category.custom_minimum_size.x=60; catalog_category.fit_to_longest_item=false; catalog_category.add_theme_font_size_override("font_size",12)
 	for category: String in BuildCatalog.CATEGORIES:
@@ -680,7 +690,6 @@ func _refresh() -> void:
 		if _applied_solo_view>0:
 			for tray: Control in [context_panel,plan_panel,neighborhood_panel,more_panel,routine_panel]: tray.hide()
 			radial_menu.dismiss()
-	if floor_caption!=null: floor_caption.text="Floor %d" % (view_level+1)
 	if viewed_lot.is_empty() or not state.get("lots",{}).has(viewed_lot):
 		viewed_lot = str(family.get("home_lot","lot_1"))
 	if selected_member.is_empty() and not family.get("members",[]).is_empty():
@@ -693,6 +702,13 @@ func _refresh() -> void:
 	routines_button.disabled=member.is_empty() or Session.role=="joining"
 	find_button.disabled=member.is_empty() or Session.role=="joining"
 	find_button.tooltip_text="Center on the selected resident · "+Preferences.action_label("focus_resident")+" · Middle-drag to pan again"
+	# React to accepted local or remote Build completion, including Discard.
+	var leaving_build: bool=_last_build_mode and not restore_view and not state.lots.get(str(family.get("home_lot","")),{}).get("building",false)
+	var refocus_after_build: bool=leaving_build and not member.is_empty() and (viewed_lot!=str(member.lot_id) or view_level!=int(member.get("level",0)))
+	if leaving_build:
+		if not member.is_empty(): viewed_lot=str(member.lot_id); view_level=int(member.get("level",0))
+		else: view_level=0
+		lot_view.motion.tracks.clear()
 	var lot: Dictionary = _view_lot()
 	household_button.disabled=family.is_empty() or Session.role=="joining"
 	mail_button.disabled=family.is_empty() or Session.role=="joining"
@@ -703,7 +719,18 @@ func _refresh() -> void:
 	mail_button.add_theme_color_override("font_color",Style.GOLD if unread>0 or news_pending else Style.TEXT)
 	var mine := str(lot.get("owner",""))==str(Session.profile_id)
 	var building := bool(lot.get("building",false))
-	floor_controls.visible=building or not Session.state.get("lots",{}).get(viewed_lot,{}).get("storeys",{}).is_empty()
+	floor_controls.visible=building or view_level>0 or not Session.state.get("lots",{}).get(viewed_lot,{}).get("storeys",{}).is_empty()
+	floor_caption.text="View · Floor %d" % (view_level+1)
+	floor_down.disabled=view_level==0; floor_up.disabled=view_level==Storeys.MAX_LEVEL
+	floor_down.tooltip_text="Already viewing Floor 1." if floor_down.disabled else "View floor below · Does not move residents"
+	floor_up.tooltip_text="Floor 3 is the top floor." if floor_up.disabled else "View floor above · Does not move residents"
+	stair_controls.visible=floor_controls.visible and not building
+	stair_caption.text="Travel · %s · Floor %d" % [member.get("name","Resident"),int(member.get("level",0))+1]
+	stair_caption.tooltip_text=stair_caption.text
+	for control: Button in [stair_down,stair_up]:
+		var option := Session.world.stair_option(member,Session.state.lots.get(viewed_lot,{}),-1 if control==stair_down else 1)
+		control.disabled=not option.ok or Session.role=="joining"
+		control.tooltip_text="Joining a neighborhood…" if Session.role=="joining" else str(option.message)
 	if not building or not mine or (_space_request.get("lot_id",viewed_lot)!=viewed_lot): _space_request={}; _space_ack=false
 	elif _space_ack and not _space_request.is_empty():
 		var applied: bool=_space_request.orders.all(func(row):
@@ -711,7 +738,7 @@ func _refresh() -> void:
 			return resident.get("lot_id")==viewed_lot and int(resident.get("next_action",0))>int(row.next_action))
 		if applied: _space_request={}; _space_ack=false
 	if building and mine:
-		_access_report=Session.world.build_access(lot)
+		_access_report=Session.world.home_access(Session.state.lots[viewed_lot],view_level)
 		var found := false
 		for issue: Dictionary in _access_report.issues:
 			if issue.key==_access_focus: found=true; break
@@ -769,6 +796,7 @@ func _refresh() -> void:
 
 	lot_view.world=Storeys.display_world(state,viewed_lot,view_level); lot_view.lot_id=viewed_lot; lot_view.selected_member=selected_member
 	if restore_view: lot_view.restore_framing(framing)
+	elif refocus_after_build: lot_view.focus_resident(member)
 	lot_view.brush_size=brush_size
 	lot_view.build_object_id=_moving_object
 	lot_view.building=building and mine; lot_view.build_kind=selected_tool; lot_view.build_rotation=build_rotation
@@ -778,7 +806,7 @@ func _refresh() -> void:
 	lot_view.area_pending=not _area_intent.is_empty()
 	lot_view.access_report=_access_report; lot_view.access_visible=_access_visible
 	lot_view.access_inspecting=_access_visible and _context_page=="access"; lot_view.access_focus=_access_focus
-	lot_title.text=str(lot.get("name","Linden Grove")); lot_title.tooltip_text=lot_title.text
+	lot_title.text="Floor %d · %s" % [view_level+1,str(lot.get("name","Linden Grove"))]; lot_title.tooltip_text=lot_title.text
 	lot_subtitle.text=str(state.get("families",{}).get(str(lot.get("owner","")),{}).get("name","Neighbor’s home"))
 	if building: lot_subtitle.text="Under construction · "+lot_subtitle.text
 	lot_subtitle.tooltip_text=lot_subtitle.text
@@ -896,7 +924,7 @@ func _refresh() -> void:
 		if control.has_meta("nav_caption"): Icons.navigation(control,str(control.get_meta("nav_caption")),labeled)
 	palette_button.tooltip_text="Art commission · %d %s ready to review\nOpen Activities → Art commissions." % [_commission_status.ready.size(),"original" if _commission_status.ready.size()==1 else "originals"] if art_ready and not build_mode else "Building tools and furnishings" if build_mode else "Things to do and optional art commissions"
 	var tools_signature := _art_source+str(_art_request.is_empty())+str(building and mine)+selected_tool+_moving_object+str(_move_request.is_empty())+_selected_object+str(build_rotation)+viewed_lot+str(lot.get("revision",0))+_context_page+selected_member+str(_room_anchor)+str(_room_request.is_empty())
-	if build_mode: tools_signature+=_catalog_category+":"+_catalog_query+":"+str(lot.get("funds",0))+str(_access_visible)+str(_access_report.get("issues",[]))
+	if build_mode: tools_signature+=str(view_level)+_catalog_category+":"+_catalog_query+":"+str(lot.get("funds",0))+str(_access_visible)+str(_access_report.get("issues",[]))
 	tools_signature+=window_style+str(_window_request.is_empty())+furniture_color+str(_color_request.is_empty())
 	tools_signature+=str(_copy_source)+str(_copy_request.is_empty())
 	tools_signature+=str(_paint_anchor)+str(_paint_request.is_empty())+str(finish_choice)+_floor_selection
@@ -1616,7 +1644,7 @@ func _chat_with_family() -> void:
 func _toggle_build() -> void:
 	if _clear_busy(): return
 	var lot: Dictionary=_view_lot()
-	if lot.get("building",false) and str(lot.get("owner",""))==str(Session.profile_id) and not Session.world.build_access(lot).ok:
+	if lot.get("building",false) and str(lot.get("owner",""))==str(Session.profile_id) and not Session.world.home_access(Session.state.lots[viewed_lot],view_level).ok:
 		_access_visible=true; _context_page="access"
 	_send({"type":"build_end" if lot.get("building",false) else "build_begin","lot_id":viewed_lot})
 	if lot.get("building",false) and _context_page=="access": _show_tray(context_panel,true)
@@ -1638,6 +1666,9 @@ func _close_context() -> void:
 func _focus_access_issue(key: String) -> void:
 	for issue: Dictionary in _access_report.get("issues",[]):
 		if issue.key==key:
+			var level := int(issue.get("level",0))
+			if view_level!=level:
+				_set_view_level(level); _context_page="access"; _access_visible=true; _refresh()
 			_access_focus=key; lot_view.access_focus=key; lot_view.focus_cell(issue.center)
 			return
 	_notice("That access issue is resolved.")
@@ -2181,14 +2212,14 @@ func _build_edit_controls(lot: Dictionary) -> void:
 func _build_access_list() -> void:
 	activity_label.text="Home access"; access_buttons.clear()
 	var issues: Array=_access_report.get("issues",[])
-	var summary := _label("Everyone can leave, and every furnishing is reachable." if issues.is_empty() else "1 thing needs a clear path." if issues.size()==1 else "%d things need a clear path." % issues.size(),14,Style.GREEN if issues.is_empty() else Style.GOLD)
+	var summary := _label("Floor %d is unbuilt. Nothing here needs access yet." % (view_level+1) if issues.is_empty() and _access_report.get("unbuilt",false) else "All built floors have clear access." if issues.is_empty() else "1 thing needs a clear path." if issues.size()==1 else "%d things need a clear path." % issues.size(),14,Style.GREEN if issues.is_empty() else Style.GOLD)
 	summary.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; summary.custom_minimum_size.x=200; tools_box.add_child(summary)
-	var legend := _label("Green floor connects to the entrance. Coral floor is cut off. Find a numbered item, then add a door or clear a path.",12,Style.MUTED)
+	var legend := _label("Checks all floors. Green connects to the entrance; coral is cut off. Find switches floors. Sheltered residents move safely aside when you finish. Upstairs help: Guide & controls → Building.",12,Style.MUTED)
 	legend.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; legend.custom_minimum_size.x=200; tools_box.add_child(legend)
 	var index := 0
 	for issue: Dictionary in issues:
 		index+=1
-		var button := _button("%d. Find %s" % [index,str(issue.name)],func(): _focus_access_issue(str(issue.key)))
+		var button := _button("%d. Floor %d · Find %s" % [index,int(issue.get("level",0))+1,str(issue.name)],func(): _focus_access_issue(str(issue.key)))
 		button.clip_text=true; button.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; button.tooltip_text=str(issue.message)
 		tools_box.add_child(button); access_buttons[issue.key]=button
 		var reason := _label(str(issue.message),11,Style.MUTED); reason.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; reason.custom_minimum_size.x=200; tools_box.add_child(reason)

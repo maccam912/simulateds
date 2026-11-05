@@ -110,6 +110,8 @@ func _run() -> void:
 	await _button(game.mode_button)
 	var housemate: Dictionary=session.state.families[session.profile_id].members[1]
 	_command({"type":"visit","lot_id":"lot_2","member_id":housemate.id})
+	# Finish follows the selected visitor; explicitly inspect home to build again.
+	game._select_lot("lot_1")
 	await _button(game.mode_button); assert(game.space_button.disabled and game.space_button.tooltip_text.contains("Nobody"))
 	await _capture("family-away")
 	await _button(game.mode_button)

@@ -1,16 +1,22 @@
 extends RefCounted
-## Shared construction diagnosis. One entrance flood serves both the host's
-## commit decision and the player's overlay; no inspection mutates the draft.
+## Floor-level construction diagnosis. Shared reachability serves both the
+## host and the player’s overlay; no inspection mutates the draft.
 const Catalog = preload("res://game/catalog.gd")
 const GATE := Vector2i(8,14)
 const DIRECTIONS := [Vector2i.RIGHT,Vector2i.DOWN,Vector2i.LEFT,Vector2i.UP]
 
 static func inspect(lot: Dictionary, residents: Array) -> Dictionary:
+	var level := int(lot.get("level",0))
+	var unbuilt: bool=level>0 and lot.floors.is_empty() and lot.objects.is_empty() and lot.walls.is_empty() and lot.doors.is_empty() and residents.is_empty()
+	if unbuilt: return {"ok":true,"message":"","issues":[],"reachable":{},"unreachable":[],"unbuilt":true}
 	var blocked := obstacles(lot)
 	var reachable := {}
 	var issues: Array[Dictionary]=[]
 	var entrances: Array=lot.get("entrances",[GATE])
-	if entrances.is_empty() or (int(lot.get("level",0))==0 and blocked.has(GATE)):
+	if level>0 and (entrances.is_empty() or entrances.all(func(at): return blocked.has(at))):
+		var at := Vector2i(int(lot.floors[0][0]),int(lot.floors[0][1])) if not lot.floors.is_empty() else Vector2i(8,8)
+		issues.append(_issue("connection","Stair connection",at,Vector2i.ONE,"Add stairs with clear landings connecting floor %d to the entrance." % (level+1)))
+	elif level==0 and blocked.has(GATE):
 		issues.append(_issue("gate","Entrance",GATE,Vector2i.ONE,"Keep the lot entrance clear."))
 	else:
 		for entrance: Vector2i in entrances: reachable.merge(reachable_from(blocked,entrance))
