@@ -484,20 +484,10 @@ func _update_residents(view: Control) -> void:
 				pick_nodes.erase(resident); resident.get_parent().remove_child(resident); resident.queue_free(); resident = null
 			if resident == null:
 				resident = Node3D.new(); resident.name = id; residents.add_child(resident)
-				var model: Node3D
-				if member.has("character"):
-					model=_character_model.build(member)
-					if Character.is_baby(member): resident.add_child(_character_model.bassinet())
-				else:
-					var kind: String = ["resident","resident_bob","resident_curls","resident_shaved"][int(look.style)]
-					model = _model(kind)
-					for mesh: MeshInstance3D in _meshes(model):
-						for surface in mesh.mesh.get_surface_count():
-							var source := mesh.get_active_material(surface) as StandardMaterial3D
-							if source == null or source.resource_name not in ["skin","hair","shirt"]: continue
-							var material := source.duplicate() as StandardMaterial3D
-							material.albedo_color = Appearance.SKIN[int(look.skin)] if source.resource_name=="skin" else Appearance.HAIR[int(look.hair)] if source.resource_name=="hair" else Appearance.SHIRT[int(look.shirt)]
-							mesh.set_surface_override_material(surface,material)
+				# Legacy appearance choices project through the same art direction without
+				# adding a character profile to a save or changing authoritative state.
+				var model: Node3D=_character_model.build(member)
+				if Character.is_baby(member): resident.add_child(_character_model.bassinet())
 				model.name = "Body"; resident.add_child(model)
 				resident.set_meta("look",look_key)
 				var ring := MeshInstance3D.new(); ring.name = "Selection"

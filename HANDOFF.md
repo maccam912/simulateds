@@ -1,3 +1,30 @@
+# Sculpted character art — November 4, 2026
+
+- Reworked creator and world residents toward a warm illustrated cast: continuous
+  jaw/cheeks/nose, fitted almond eyes, curved brows, swept/fitted hair, smooth
+  arms and shoulders, tailored hems/collars/pockets and shaped shoes. Existing
+  households use the same generator without rewriting saved profiles or colors.
+- Editable original geometry remains `game/character_model.gd`; lighting is in
+  `game/character_studio.gd`. No binary assets or external art were added. Old
+  Blender resident GLBs remain archived and unchanged. Design/provenance and
+  regeneration instructions are updated in the two design/asset guides.
+- Checked matrix: 32,268 creator / 12,732 world triangles; both levels preserve
+  animation pivots, picking and read-only state projection. Regression coverage
+  now checks both levels and legacy-profile rendering. New native contact-sheet
+  runner: `tests/character_art_review.gd`.
+- Local validation: `python3 tools/check.py` exited 0 (all 121 gameplay/UI suites,
+  eight Iroh peer scenarios and dedicated-server smoke). Final geometry/budget,
+  renderer and creator checks also passed after the last visual refinements.
+  Log: `build/character-style-check.log`. Asset-storage and diff checks pass.
+- Native macOS Godot 4.7.2/OpenGL review passed at 1440×900 and 1280×720/125% UI,
+  including low scenery, day/night, all hair cuts and outfit occasions, age/body
+  variation, eight facings, walking, furniture poses and mesh selection.
+  Evidence: `build/character-art-*.png`, `build/creator-*.png`, `build/facing-*.png`;
+  same-light native comparison: `build/character-before-after.png`.
+- Hosted CI: not run. Exports: not produced. Physical Android/other-device and
+  family play: not performed. Animation rigs and activity placements retain their
+  existing limits. Captures and build outputs remain ignored.
+
 # Build & buy overhaul — November 4, 2026
 
 - Residents stay visible and paused in construction. Neither placement validation

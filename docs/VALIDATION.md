@@ -1600,3 +1600,35 @@ not run for this overhaul. The house supports three floors and explicit stair
 travel; climbing animation is not authored. Pools block walking and are not
 swimmable. Wall diagonals are 45 degrees, furniture turns are 90 degrees, and
 terrain height stays within −0.75 to +1.5 tiles with foundation protection.
+
+
+## Sculpted character art — November 4, 2026
+
+The full local `python3 tools/check.py` run exited 0: all 121 gameplay/UI suites,
+eight real-Iroh host/two-client scenarios and dedicated-server smoke passed.
+Evidence: `build/character-style-check.log`. Focused model, renderer and native
+creator checks were rerun after final mesh simplification and visual refinement.
+Both geometry detail levels now run the age/hair/body/outfit matrix, with measured
+maxima of 32,268 studio and 12,732 world triangles. Legacy profiles receive the
+new geometry without acquiring character data or changing authoritative state.
+This supersedes the earlier 24,480-triangle creator measurement for this source.
+
+Native macOS Godot 4.7.2/OpenGL renders were inspected in the creator and furnished
+neighborhood, daylight and evening, 1440×900 and compact 1280×720 at 125% UI scale,
+including the low scenery setting. Contact sheets cover all ten hairstyles,
+six skin/hair colors, varied face/body proportions, seven outfit occasions,
+accessories and reverse views. Existing creator checks cover child/baby/elder,
+blinks, reduced motion, draft cancellation, accepted edits and reload. Native
+resident-facing and renderer checks pass for eight directions, walking, furniture
+poses, selection, camera transforms and unchanged authority. These establish
+local visual/integration evidence, not cross-platform performance measurements.
+
+Native evidence stays ignored in `build/character-art-*.png`, `build/creator-*.png`
+and `build/facing-*.png`. `build/character-before-after.png` compares the original
+and revised generator under the same native studio lighting. The editable source
+and provenance stay in Git; no new binary asset was introduced. Worktree asset
+storage validation passes for all 81 hydrated LFS assets.
+
+Hosted CI was not run, exports were not produced, and physical Android/other-device
+or family play was not performed for this pass. Existing activity pose/animation
+limitations remain separate from this geometry and studio-lighting change.

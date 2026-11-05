@@ -30,6 +30,7 @@ func _run() -> void:
 	root.size=Vector2i(1280,720) if compact else Vector2i(1440,900)
 	var preferences := root.get_node("Preferences"); preferences.reset_defaults()
 	if compact: suffix="-compact"; preferences.set_value("ui_scale",1.25)
+	if "--low" in OS.get_cmdline_user_args(): suffix+="-low"; preferences.set_value("quality","low")
 	session=root.get_node("Session"); session.saving_enabled=false; session.world.initialize(); session.world.ensure_family(session.profile_id,"Alex"); session.world.set_online(session.profile_id,true)
 	session.set_physics_process(false)
 	app=load("res://game/app.tscn").instantiate(); root.add_child(app)

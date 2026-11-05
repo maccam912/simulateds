@@ -75,6 +75,8 @@ func _run() -> void:
 		model.free()
 	assert(view.projection.scene.object_nodes.size()==session.state.lots.lot_1.objects.size())
 	assert(view.projection.scene.resident_nodes.size()==2)
+	for resident: Node3D in view.projection.scene.resident_nodes.values():
+		assert(resident.has_node("Body/Head/Eye_L"),"Existing residents use the same character geometry as the creator")
 	assert(_model_meshes(view.projection.scene)>20)
 	for pan: Vector2 in [Vector2.ZERO,Vector2(120,-55)]:
 		view.pan=pan

@@ -36,10 +36,10 @@ func _ready() -> void:
 	var world_environment := WorldEnvironment.new()
 	environment=Environment.new(); environment.background_mode=Environment.BG_COLOR; environment.background_color=Color("c8c4ae")
 	environment.tonemap_mode=Environment.TONE_MAPPER_LINEAR
-	environment.ambient_light_source=Environment.AMBIENT_SOURCE_COLOR; environment.ambient_light_color=Color("ffffff"); environment.ambient_light_energy=0.38
+	environment.ambient_light_source=Environment.AMBIENT_SOURCE_COLOR; environment.ambient_light_color=Color("ffffff"); environment.ambient_light_energy=0.28
 	world_environment.environment=environment; stage.add_child(world_environment)
-	sun=DirectionalLight3D.new(); sun.rotation_degrees=Vector3(-28,-32,0); sun.light_energy=0.52; sun.light_color=Color("ffffff"); sun.shadow_enabled=true; stage.add_child(sun)
-	var fill := DirectionalLight3D.new(); fill.rotation_degrees=Vector3(-20,145,0); fill.light_energy=0.16; fill.light_color=Color("ffffff"); stage.add_child(fill)
+	sun=DirectionalLight3D.new(); sun.rotation_degrees=Vector3(-28,-32,0); sun.light_energy=0.30; sun.light_color=Color("ffffff"); sun.shadow_enabled=true; sun.directional_shadow_max_distance=8.0; sun.shadow_bias=0.15; sun.shadow_normal_bias=2.0; stage.add_child(sun)
+	var fill := DirectionalLight3D.new(); fill.rotation_degrees=Vector3(-20,145,0); fill.light_energy=0.12; fill.light_color=Color("ffffff"); stage.add_child(fill)
 	camera=Camera3D.new(); camera.projection=Camera3D.PROJECTION_ORTHOGONAL; camera.size=2.15; camera.current=true; stage.add_child(camera)
 	_room()
 	turntable=Node3D.new(); stage.add_child(turntable)
@@ -81,9 +81,9 @@ func set_close_up(value: bool) -> void:
 	close_up=value; _camera()
 
 func set_night(value: bool) -> void:
-	night=value; sun.light_energy=0.30 if night else 0.52
+	night=value; sun.light_energy=0.20 if night else 0.30
 	sun.light_color=Color("d5dded") if night else Color("ffffff")
-	environment.ambient_light_energy=0.30 if night else 0.38
+	environment.ambient_light_energy=0.23 if night else 0.28
 	environment.ambient_light_color=Color("e3d6c7") if night else Color("ffffff")
 
 func _process(delta: float) -> void:

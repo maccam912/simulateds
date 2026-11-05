@@ -1003,3 +1003,21 @@ needs, and hands-on infant care is not yet simulated. Family cards in People sho
 the chosen tie separately from earned friendship. Drafts preserve edits after
 rejection, ignore unrelated acknowledgements, and cannot apply across a changed
 session/world generation. Existing residents are never deleted by this mode.
+
+
+### Residents as an illustrated cast — November 4, 2026
+
+Residents use a warm, sculpted illustration style. A shaped jaw and cheek contour,
+an integrated nose, fitted almond eyelids and curved brows give the face its
+expression. Keep the mouth understated. Hair uses coherent swept masses and
+recognizable cuts; clothing uses a deliberate shoulder line, open neckline,
+cuffs, hems and small practical details. Smooth shading supports those shapes.
+Avoid the assembled-toy appearance of separate eyeballs, nose beads, elbow balls
+and floating sleeves. Match this direction in the creator and neighborhood,
+including households loaded from older saves.
+
+Keep the existing skin, hair and wardrobe palette. The creator's daylight must
+retain detail in pale swatches; evening is a comparison, not a recoloring. Review
+full bodies and faces, side/back views, children and elders, all outfits, and the
+normal gameplay camera before accepting a model change. Faces stay readable
+without photoreal textures or a new visual effect imposed on the whole world.

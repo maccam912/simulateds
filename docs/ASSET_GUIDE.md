@@ -177,25 +177,31 @@ by the repository MIT license. It generates solid `ArrayMesh` surfaces directly
 in Godot for detailed creator profiles. `character_studio.gd` supplies the review
 room/camera, and `character_voice.gd` synthesizes an original nonverbal greeting.
 No outside art, pretrained output, recorded voice or additional binary source is
-used. Existing Blender-authored resident GLBs remain the legacy-save fallback.
-Do not replace or re-export those unchanged GLBs when editing this generator.
+used. Existing Blender-authored resident GLBs remain archived in the collection;
+live residents now all use this generator, including legacy saves. Legacy appearance
+colors and hair choices are projected without adding profiles to saved state. Do
+not replace or re-export those unchanged GLBs when editing this generator.
 
 Rebuild this asset by reopening the creator/changing a draft choice; the same
 source regenerates neighborhood meshes on accepted profile changes. Body, head,
 arms and legs retain the established named pivots. Geometry is merged by material
 within each articulated part; eyes stay independent for blinks. Creator meshes
-are bounded at 24,480 triangles in the checked age/hair/body matrix. World meshes
-use fewer sphere/loft segments; this explicit detail exception serves the large
-creator camera and keeps the distant world cheaper. Shape changes do not modify
-navigation footprints. Baby bassinets belong to the resident presentation and
+reach 32,268 triangles and world meshes 12,732 in the checked age/hair/body/outfit
+matrix, with regression ceilings of 36,000 / 14,000 and at most ten mesh instances
+per character. The world uses fewer head/loft segments and sampled curves. This
+explicit detail exception serves the large creator camera and keeps distant
+residents cheaper. Both detail levels retain the same silhouette and pivots. Shape
+changes do not modify navigation footprints. Baby bassinets belong to the resident presentation and
 are not independently purchasable furniture or pathfinding blockers.
 
 Regeneration/review commands (screenshots stay in ignored `build/`):
 
 ```sh
 python3 tools/godot.py --headless --script res://tests/character_models.gd
+python3 tools/godot.py --script res://tests/character_art_review.gd
 python3 tools/godot.py --script res://tests/character_creator_ui.gd
 python3 tools/godot.py --script res://tests/character_creator_ui.gd -- --compact
+python3 tools/godot.py --script res://tests/character_creator_ui.gd -- --compact --low
 ```
 
 Inspect full body, face, back, wardrobe slots, child/baby/elder proportions, actual
@@ -203,3 +209,25 @@ neighborhood lighting and compact layout. Native images are `build/creator-*.png
 The studio uses neutral daylight for faithful palette selection and a warmer
 night comparison. Any screenshot or exported mesh added to Git still requires
 LFS; this runtime pipeline itself produces no committed binaries.
+
+
+### Sculpted resident direction — November 4, 2026
+
+Use softly illustrated people with a continuous jaw, cheeks and nose bridge;
+almond eyes with fitted lids; gently curved brows and a quiet mouth. Hair follows
+the skull in broad combed masses, with distinct bob, long, gathered, braided and
+textured silhouettes. Keep shoulders covered by their sleeves, wrists tapered,
+cloth hems/collars/pockets legible, and footwear grounded. Avoid exposed spherical
+eyeballs, bead noses, ball-joint elbows and stacked ellipsoids as a hairstyle.
+
+The indexed mesh helpers author smooth normals around seams. Hair, face details,
+collars and hems remain actual geometry. Small lids/brows/lips do not cast
+oversized shadow-map artifacts; the head and hair still cast real shadows. The
+creator uses bounded studio light energy so pale skin and silver hair keep their
+color. No painted highlights, raster textures or new external sources are used.
+
+`tests/character_art_review.gd` produces native contact sheets for every hairstyle,
+all six skin/hair colors, face/nose variation, all seven outfit occasions,
+accessories and reverse evening angles. They supplement, rather than replace,
+the creator UI, furnished neighborhood and movement/picking checks. Review both
+mesh detail levels; creator close-ups alone cannot establish gameplay quality.
