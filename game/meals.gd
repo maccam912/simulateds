@@ -29,6 +29,18 @@ static func available(world: Dictionary,lot: Dictionary,table: Dictionary,except
 		if task.meal_action=="eat" and int(task.meal_batch)==int(table.meal.batch) and not task.get("meal_taken",false): portions-=1
 	return maxi(0,portions)
 
+static func participants(world: Dictionary,lot: Dictionary,table: Dictionary) -> Array[Dictionary]:
+	var rows: Array[Dictionary]=[]
+	for plan: Dictionary in plans(world,str(lot.id),str(table.id)):
+		var task: Dictionary=plan.task; var member: Dictionary=plan.member
+		if task.meal_action!="eat" or task.meal_batch!=table.meal.batch or task.meal_recipe!=table.meal.recipe: continue
+		var active: bool=member.task.get("id","")==task.id
+		var status := "Queued"
+		if active:
+			status="Eating" if task.get("meal_taken",false) else "Walking" if not task.get("path",[]).is_empty() else "Waiting"
+		rows.append({"member_id":str(member.id),"name":str(member.name),"status":status,"taken":bool(task.get("meal_taken",false)),"automatic":bool(task.get("automatic",false))})
+	return rows
+
 static func can_autoeat(world: Dictionary,lot: Dictionary,member: Dictionary) -> bool:
 	var family: Dictionary=world.get("families",{}).get(lot.get("owner",""),{})
 	return not lot.get("building",false) and family.get("online",false) and family.get("home_lot")==lot.id and member.get("lot_id")==lot.id and member.get("autonomy",false) and family.get("members",[]).has(member)

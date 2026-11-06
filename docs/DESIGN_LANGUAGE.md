@@ -1,5 +1,23 @@
 # Simulateds design language
 
+## Activity commitments and progress
+
+Keep wish flavor titles, but show the concrete activity and target, selected
+resident, queue commitment and game-time bound before activation. Meal wishes
+state that they open a table or Build without buying food or furnishings.
+Suggestions use the host's selection rules and reject a changed reviewed target.
+
+Garden readiness uses game time with continued-watering, dry and pause qualifiers.
+Meal portions distinguish available, reserved and taken, with named participants
+and their actual plan status. These panels read accepted state; refresh cannot
+consume food, reserve a place or advance growth.
+
+Art originals use furnishing/collection locations and a camera-only Find action;
+coordinates belong in optional details. After delivery, a modest recipient note
+uses the actual receipt and artist credit. Preserve exact-original review and
+the permanent-removal warning. See [the activity review](ACTIVITY_CLARITY_QA.md)
+for findings, validation and explicitly deferred content/animation expansions.
+
 ## Watching television
 
 Use a nearby reachable seat facing the screen when available. The host reserves

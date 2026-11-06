@@ -7,6 +7,11 @@ const MAX_REVISION := 1000000000
 const HISTORY_LIMIT := 4
 ## Published terms are immutable; add new IDs for future offer versions.
 const ORDER := ["reading_room_1","canal_cafe_1","garden_club_1"]
+const RECIPIENT_NOTES := {
+	"reading_room_1":"Your meadow is going beside the books, ready for someone to linger over a page.",
+	"canal_cafe_1":"Your harbor scene has a place by our coffee nook. Thank you for bringing the water indoors.",
+	"garden_club_1":"Your flowers will brighten our meeting room, even between growing seasons."
+}
 const OFFERS := {
 	"reading_room_1":{"client":"The reading room","subject":"meadow","reward":180,"request":"A calm meadow for the corner beside our books."},
 	"canal_cafe_1":{"client":"The canal café","subject":"harbor","reward":180,"request":"A little harbor scene for our coffee nook."},
@@ -82,7 +87,12 @@ static func candidates(world: Dictionary,owner: String) -> Array[Dictionary]:
 		if chosen.picture.subject!=terms.subject: continue
 		var intent: Dictionary={"type":"commission_deliver","lot_id":str(home.id),"offer":str(family.commissions.active.offer),"commission_revision":int(family.commissions.revision),"revision":int(home.revision),"art_source":key,"art_id":str(chosen.art_id)}
 		var option:=delivery_option(world,owner,intent)
-		result.append({"intent":intent,"picture":chosen.picture.duplicate(true),"location":str(chosen.location),"available":bool(option.ok),"message":str(option.get("message",""))})
+		var cell := Vector2i(int(chosen.get("x",-1)),int(chosen.get("y",-1)))
+		if not str(chosen.object_id).is_empty():
+			for object: Dictionary in home.objects:
+				if object.id==chosen.object_id: cell=Vector2i(object.x,object.y); break
+		var location := "In your collection" if cell.x<0 else ("Daydream easel" if not str(chosen.object_id).is_empty() else "Hanging on a wall")+" · Ground floor"
+		result.append({"intent":intent,"picture":chosen.picture.duplicate(true),"location":location,"location_detail":str(chosen.location),"findable":cell.x>=0,"available":bool(option.ok),"message":str(option.get("message",""))})
 	return result
 
 ## Derived presentation state; availability always uses the authority's transfer checks.

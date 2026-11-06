@@ -100,7 +100,7 @@ func refresh(lot_id: String,object_id: String,member_id: String) -> void:
 	practice.text="Your contribution · %d / 12 game minutes" % floori(contributed*3.0)
 	if contributed>=4.0: practice.text="Your part is ready · Finish this canvas to earn practice."
 	if Hobbies.remaining(entry,int(Session.state.day))==0: practice.text="Painting for enjoyment · More practice tomorrow" if Hobbies.rank(entry)<5 else "Mastered · Yours to enjoy"
-	note.text="Free supplies · 72 game minutes\nRestores fun and comfort." if blank else "Unfinished work keeps. Either resident in this household can continue it." if not finished else "Finished on day %d. Keep it here, hang it on a wall, or sell it for a fresh canvas." % int(picture.day)
+	note.text="Free supplies · 72 game minutes\nRestores fun and comfort." if blank else "Unfinished work keeps. A household member old enough to paint can continue it." if not finished else "Finished on day %d. Keep it here, hang it on a wall, or sell it for a fresh canvas." % int(picture.day)
 	if lot.owner!=Session.profile_id: note.text="You can enjoy your neighbor's artwork. Only their household can paint or sell it."
 	_options.clear()
 	var unavailable := ""

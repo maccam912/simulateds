@@ -8,6 +8,7 @@ var summary: Label
 var growth: ProgressBar
 var water: ProgressBar
 var water_label: Label
+var readiness: Label
 var pantry_label: Label
 var meals_button: Button
 var overview_button: Button
@@ -29,6 +30,7 @@ func _ready() -> void:
 	add_theme_constant_override("separation",8)
 	summary=_label("",14,Style.GOLD)
 	growth=_bar(Style.GREEN); water_label=_label("",12,Style.MUTED); water=_bar(Color("8cbbb7"))
+	readiness=_label("",13,Style.TEXT)
 	pantry_label=_label("",11,Style.GREEN)
 	for key: String in ["radish","tomato","water","harvest","keep"]:
 		var button := Button.new(); button.custom_minimum_size.y=38; button.add_theme_font_size_override("font_size",12)
@@ -66,7 +68,7 @@ func refresh(lot_id: String,object_id: String,member_id: String) -> void:
 		overview_button.disabled=not pending.is_empty() or Session.role=="joining"
 	if meals_button!=null: meals_button.visible=exists
 	for button: Button in buttons.values(): button.visible=exists
-	for control: Control in [growth,water,water_label,note,pantry_label]: control.visible=exists
+	for control: Control in [growth,water,water_label,readiness,note,pantry_label]: control.visible=exists
 	if not exists: summary.text="This garden bed is no longer here."; return
 	var bed: Dictionary=object.garden
 	if int(bed.revision)!=_revision:
@@ -74,6 +76,10 @@ func refresh(lot_id: String,object_id: String,member_id: String) -> void:
 		_revision=int(bed.revision)
 	var planted: bool=not str(bed.crop).is_empty()
 	summary.text=Gardens.summary(bed)
+	readiness.visible=planted
+	readiness.text=Gardens.readiness(bed,Session.world.MINUTES_PER_SECOND)
+	if planted and not Gardens.ripe(bed) and (lot.building or Session.effective_speed()==0.0): readiness.text="Paused · "+readiness.text
+	readiness.tooltip_text="Game time, not real time. Growth waits during pause or construction; play speed changes how quickly game time passes."
 	growth.visible=planted; growth.value=float(bed.growth)/float(Gardens.CROPS[bed.crop].seconds)*100.0 if planted else 0.0
 	water.visible=planted and not Gardens.ripe(bed); water_label.visible=water.visible
 	water.value=float(bed.water)/Gardens.WATER_CAP*100.0

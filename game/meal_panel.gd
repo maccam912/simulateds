@@ -8,6 +8,7 @@ var summary: Label
 var credit: Label
 var preview: Control
 var status: Label
+var diners: Label
 var pantry_label: Label
 var overview_button: Button
 var note: Label
@@ -40,7 +41,7 @@ func _ready() -> void:
 		if Meals.RECIPES.has(key):
 			button.mouse_entered.connect(func(): _preview_recipe=key; refresh(_lot,_object,_member))
 			button.focus_entered.connect(func(): _preview_recipe=key; refresh(_lot,_object,_member))
-	note=_label(12,Style.MUTED); feedback=_label(12,Style.GOLD)
+	note=_label(12,Style.MUTED); diners=_label(12,Style.TEXT); feedback=_label(12,Style.GOLD)
 	Session.command_completed.connect(_completed); Soundscape.attach_controls(self)
 func _label(font_size: int,color: Color) -> Label:
 	var label:=Label.new(); label.add_theme_font_size_override("font_size",font_size); label.add_theme_color_override("font_color",color)
@@ -64,7 +65,7 @@ func refresh(lot_id: String,object_id: String,member_id: String) -> void:
 	if overview_button!=null:
 		overview_button.visible=exists and lot.owner==Session.profile_id
 		overview_button.disabled=not pending.is_empty() or Session.role=="joining"
-	for control: Control in [preview,status,credit,note,feedback,pantry_label]: control.visible=exists
+	for control: Control in [preview,status,credit,note,diners,feedback,pantry_label]: control.visible=exists
 	if not exists:
 		for button: Button in buttons.values(): button.visible=false
 		summary.text="This dining table is no longer here."; return
@@ -79,6 +80,12 @@ func refresh(lot_id: String,object_id: String,member_id: String) -> void:
 	preview.custom_minimum_size.y=36 if get_viewport_rect().size.y<800 else 66
 	var free := Meals.available(Session.state,lot,table)
 	status.text="%d available · %d reserved" % [free,int(meal.servings)-free] if ready else "Four portions · Prepare at your fridge"
+	if meal.recipe!="": status.text="%d available · %d reserved · %d taken" % [free,int(meal.servings)-free,Meals.PORTIONS-int(meal.servings)]
+	status.tooltip_text="Reserved portions stay on the platter until the diner arrives. Taken portions include diners still eating and those who have left."
+	var participant_lines: PackedStringArray=[]
+	for row: Dictionary in Meals.participants(Session.state,lot,table):
+		participant_lines.append(str(row.name)+" · "+str(row.status)+(" · Has portion" if row.taken else " · Portion reserved")+(" (autonomy)" if row.automatic else ""))
+	diners.text="\n".join(participant_lines); diners.visible=not participant_lines.is_empty()
 	var plans:=Meals.plans(Session.state,lot_id,object_id)
 	var dining: bool=plans.any(func(plan): return plan.task.meal_action=="eat" and plan.task.meal_batch==meal.batch and plan.task.meal_recipe==meal.recipe)
 	var choice: Dictionary=Session.world.meal_option(Session.profile_id,member_id,lot_id,object_id,"choose")
@@ -86,7 +93,7 @@ func refresh(lot_id: String,object_id: String,member_id: String) -> void:
 	if not ready and dining:
 		pantry_label.hide()
 		summary.text=str(Meals.RECIPES[meal.recipe].name)+" · Last portions at the table"
-		status.text="0 available · Diners have their portions"
+		status.text="0 available · 0 reserved · %d taken" % Meals.PORTIONS
 	for plan: Dictionary in plans:
 		if plan.task.meal_action=="prepare":
 			summary.text="Preparing "+str(Meals.RECIPES[plan.task.meal_recipe].name).to_lower(); credit.visible=false

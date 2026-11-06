@@ -56,7 +56,7 @@ func refresh(member_id: String) -> void:
 		if resident.id==member_id: member=resident; break
 	if member.is_empty(): return
 	_capture=Routines.capture_plan(member,Session.state.lots[member.lot_id])
-	subtitle.text="For "+str(member.name)+" · Saved routines are shared by both residents."
+	subtitle.text="For "+str(member.name)+" · Saved routines are shared by your household."
 	_options={}
 	for entry: Dictionary in board.entries: _options[entry.id]=Session.world.routine_option(Session.profile_id,member_id,str(entry.id))
 	if _acknowledged and not pending.is_empty():

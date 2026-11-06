@@ -1,5 +1,6 @@
 extends VBoxContainer
 signal command_requested(command: Dictionary)
+signal find_requested(intent: Dictionary)
 signal easel_requested
 signal back_requested
 const Jobs=preload("res://game/art_commissions.gd")
@@ -19,6 +20,8 @@ var cancel_button: Button
 var confirm: Button
 var back: Button
 var review_buttons := {}
+var find_buttons := {}
+var find_review: Button
 var review := {}
 var pending := {}
 var _ack := false
@@ -33,7 +36,9 @@ func _ready() -> void:
 	add_theme_constant_override("separation",6)
 	home_label=_label(self,11,Style.MUTED); heading=_label(self,14,Style.TEXT); subject=_label(self,14,Style.GOLD)
 	preview=preload("res://game/painting_preview.gd").new(); preview.mouse_filter=Control.MOUSE_FILTER_IGNORE; add_child(preview)
-	detail=_label(self,12,Style.MUTED); note=_label(self,12,Style.MUTED); feedback=_label(self,12,Style.GOLD)
+	detail=_label(self,12,Style.MUTED); note=_label(self,12,Style.MUTED)
+	find_review=_button(self,"Find original",func(): find_requested.emit(review.intent.duplicate(true)))
+	feedback=_label(self,12,Style.GOLD)
 	originals=VBoxContainer.new(); originals.add_theme_constant_override("separation",8); add_child(originals)
 	cancel_button=_button(self,"Put commission aside",func(): _request("commission_cancel"))
 	cancel_button.tooltip_text="No fee. Your artwork stays, and the same request remains available."
@@ -80,28 +85,36 @@ func refresh() -> void:
 	preview.picture=review.picture if reviewing else {"subject":_terms.subject,"progress":Paintings.DURATION}; preview.queue_redraw()
 	detail.text=Paintings.credit(review.picture)+"\n"+str(review.location) if reviewing else str(_terms.request)
 	detail.visible=reviewing or not active or rows.is_empty()
+	detail.tooltip_text=str(review.get("location_detail","")) if reviewing else ""
+	find_review.visible=reviewing and review.get("findable",false)
+	find_review.disabled=busy
+	find_review.tooltip_text="Center the view on this original. No resident order or delivery."
 	note.text="This original leaves your home.\nDelivery cannot be undone." if reviewing else "No deadline · No fee.\nExisting originals welcome."
 	if active and not reviewing and not rows.is_empty(): note.text="Choose an original · No deadline."
 	if finished_today:
 		var delivered: Dictionary=Jobs.OFFERS[_board.history[0].offer]
 		heading.text=str(delivered.client); subject.text="Delivered · §%d earned" % int(delivered.reward)
 		heading.tooltip_text=str(delivered.request)
-		detail.text="Your original has a new home."
+		detail.text=str(Jobs.RECIPIENT_NOTES[_board.history[0].offer])+"\n"+str(_board.history[0].credit)
 		note.text="Today's commission is complete.\nA new request is available tomorrow."
 	var option:=Jobs.delivery_option(Session.state,Session.profile_id,review.intent) if reviewing else {}
 	feedback.text="Waiting for the neighborhood…" if busy else str(option.message) if reviewing and not option.ok else _error
 	feedback.visible=not feedback.text.is_empty()
-	_clear(originals); review_buttons.clear(); _clear(history)
+	_clear(originals); review_buttons.clear(); find_buttons.clear(); _clear(history)
 	if active and not reviewing:
 		var caption:=_label(originals,12,Style.GREEN); caption.text="Matching originals · %d" % rows.size()
 		if rows.is_empty():
-			var empty:=_label(originals,12,Style.MUTED); empty.text="No finished original at home yet. Either housemate can paint this subject."
+			var empty:=_label(originals,12,Style.MUTED); empty.text="No finished original at home yet. A household member old enough to paint can make this subject."
 		for row: Dictionary in rows:
 			var card:=VBoxContainer.new(); originals.add_child(card)
-			var info:=_label(card,11,Style.MUTED); info.text=Paintings.credit(row.picture)+"\n"+str(row.location)
+			var info:=_label(card,11,Style.MUTED); info.text=Paintings.credit(row.picture)+"\n"+str(row.location); info.tooltip_text=str(row.location_detail)
 			var button:=_button(card,"Review this original",func(): _review(row))
 			button.disabled=busy or not row.available or Session.role=="joining"; button.tooltip_text=str(row.message)
 			review_buttons[row.intent.art_source]=button
+			if row.findable:
+				var find_button:=_button(card,"Find original",func(): find_requested.emit(row.intent.duplicate(true)))
+				find_button.disabled=busy; find_button.tooltip_text="Center the view without moving a resident or delivering the painting."
+				find_buttons[row.intent.art_source]=find_button
 	cancel_button.visible=active and not reviewing; cancel_button.disabled=busy or Session.role=="joining"
 	if not reviewing and not _board.history.is_empty():
 		var label:=_label(history,11,Style.MUTED); label.text="RECENT DELIVERIES"

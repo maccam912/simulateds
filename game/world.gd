@@ -262,25 +262,11 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 		if activity.is_empty(): return _result(false,"That wish is already complete or unavailable.")
 		if wish_id in Wishes.MEALS: return _result(false,"Open this wish to find a dining table, then choose a recipe or meal. Ingredients are paid only when served.")
 		if not wish_status(member,activity).is_empty(): return _result(false,"That activity is already in this resident’s plan.")
-		var destination: Dictionary=_member_lot(member)
-		var target := ""
-		var best_score := 100000.0
-		if activity=="chat":
-			for other: Dictionary in state.families.values():
-				for companion: Dictionary in other.members:
-					if companion.id==member.id or companion.lot_id!=member.lot_id: continue
-					var goals := _social_cells(destination,companion)
-					if goals.has(_position(member)) or not _path(destination,_position(member),goals).is_empty():
-						target=str(companion.id); break
-		else:
-			for object: Dictionary in destination.objects:
-				if object.kind!=activity or not _can_reach_object(destination,_position(member),object): continue
-				var score := _position(member).distance_to(Vector2i(int(object.x),int(object.y)))
-				if not _object_user(str(destination.id),object,str(member.id)).is_empty(): score+=1000.0
-				if score<best_score: target=str(object.id); best_score=score
-		if target.is_empty():
-			return _result(false,"Find another resident to chat with." if activity=="chat" else "There is no reachable " + str(Catalog.ITEMS[activity].name) + " here. Build one or visit a neighbor.")
-		return apply_command(profile_id,{"type":"interact","member_id":member.id,"lot_id":member.lot_id,"target_id":target})
+		var option := wish_option(profile_id,str(member.id),wish_id)
+		if not option.available: return _result(false,str(option.detail))
+		if command.has("target_id") and command.target_id!=option.target_id:
+			return _result(false,"The suggested activity changed. Review this wish again.")
+		return apply_command(profile_id,{"type":"interact","member_id":member.id,"lot_id":member.lot_id,"target_id":option.target_id})
 	if type == "autonomy":
 		if not command.get("enabled") is bool:
 			return _result(false, "Choose whether this resident acts on their own.")
@@ -1370,6 +1356,45 @@ func care_option(member: Dictionary, need: String) -> Dictionary:
 					best={"available":true,"status":"","label":"Chat with "+str(other.name),"detail":"A little company"+(" · They have a plan first" if busy else " · Here on this lot"),"target_id":other.id,"busy":busy}
 	if best.is_empty(): return {"available":false,"status":"Unavailable here","label":"No reachable activity","detail":"No reachable "+str(Wellbeing.FURNISHINGS.get(need,"activity"))+" here. Build one or visit a neighbor."}
 	return best
+
+func wish_option(profile_id: String,member_id: String,wish_id: String) -> Dictionary:
+	# The card and command resolve the same suggestion; reading never queues it.
+	var result := {"available":false,"detail":"Choose an unfinished wish.","target_id":"","label":"Unavailable","commitment":""}
+	var family: Dictionary=state.families.get(profile_id,{})
+	var member := _member(family,member_id) if not family.is_empty() else {}
+	if member.is_empty() or not Wishes.CATALOG.has(wish_id) or wish_id in Wishes.MEALS: return result
+	if not member.wishes.wishes.any(func(wish): return wish.id==wish_id and not wish.done): return result
+	if Character.is_baby(member): result.detail="Choose an older household member for activities."; return result
+	var activity: String=Wishes.CATALOG[wish_id].activity
+	var status := wish_status(member,activity)
+	if not status.is_empty(): result.detail=status; result.label=status; return result
+	var lot := _member_lot(member)
+	if lot.building: result.detail="Finish construction before planning an activity."; return result
+	if member.queue.size()>=MAX_QUEUE: result.detail="The action queue is full."; return result
+	var target := ""; var target_name := ""; var best_score := INF
+	if activity=="chat":
+		for other: Dictionary in state.families.values():
+			for companion: Dictionary in other.members:
+				if companion.id==member.id or companion.lot_id!=member.lot_id or int(companion.get("level",0))!=int(member.get("level",0)): continue
+				var goals := _social_cells(lot,companion)
+				if goals.has(_position(member)) or not _path(lot,_position(member),goals).is_empty():
+					target=str(companion.id); target_name=str(companion.name); break
+	else:
+		for object: Dictionary in lot.objects:
+			if object.kind!=activity or not _can_reach_object(lot,_position(member),object): continue
+			if activity=="tv" and Television.choose(state,lot,member,object,_path).is_empty(): continue
+			var score := _position(member).distance_to(Vector2i(int(object.x),int(object.y)))
+			if not _object_user(str(lot.id),object,str(member.id)).is_empty(): score+=1000.0
+			if score<best_score: target=str(object.id); target_name=str(Catalog.ITEMS[activity].name); best_score=score
+	if target.is_empty():
+		result.detail="Find another resident to chat with." if activity=="chat" else "No reachable "+str(Catalog.ITEMS[activity].name)+" here with a usable place."
+		return result
+	var duration := 10.0 if activity=="chat" else float(Catalog.ITEMS[activity].duration)
+	result.available=true; result.target_id=target
+	result.label=("Chat with " if activity=="chat" else str(ACTION_NAMES[activity])+" · ")+target_name
+	result.commitment="Queue for "+str(member.name)+" · Free"
+	result.detail="Up to %d game min, plus travel or waiting. Adds one activity to Plan; deliberate orders stay first." % ceili(duration*MINUTES_PER_SECOND)
+	return result
 
 func meal_wish_option(profile_id: String,member_id: String,wish_id: String) -> Dictionary:
 	var result := {"available":false,"label":"Unavailable","detail":"Choose an unfinished meal wish.","action":""}
