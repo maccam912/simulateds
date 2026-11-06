@@ -82,4 +82,5 @@ static func requirement(kind: String) -> String:
 	if kind in ["floor","wall","door"]: return "Level ground · Inside lot"
 	if Catalog.ITEMS[kind].get("outdoor",kind=="garden_bed"): return "Outdoors · Inside lot"
 	if kind=="stairs": return "Floor below · Clear landings & upper opening"
+	if kind=="easel": return "Floor beneath · Clear canvas side"
 	return "Floor beneath entire footprint"

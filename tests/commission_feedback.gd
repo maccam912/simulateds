@@ -61,7 +61,8 @@ func _run() -> void:
 	assert(_sample(1200).is_empty() and Jobs.availability(world.state,"a").ready.size()==1)
 	# Multiple qualifying originals are summarized without choosing one.
 	_fresh(); _command("commission_accept"); _sample(100); _paint()
-	easel=world._new_object("easel",9,7,0); home.objects.append(easel); _paint()
+	# Face away from the starter tea table so the canvas side remains reachable.
+	easel=world._new_object("easel",9,7,2); home.objects.append(easel); _paint()
 	_sample(200); notice=_sample(600)
 	assert(notice.message.begins_with("2 originals are ready") and notice.detail.begins_with("Open 2 matching originals"))
 	# Loading/reconnecting establishes a quiet baseline; unchanged saved art still has a durable ready status.

@@ -172,6 +172,17 @@ asset through the LFS filter, never a manually written pointer. See
 
 ## Parametric creator residents
 
+`game/painting_pose.gd` is the editable original source for the runtime solid oak
+step and held paintbrush. It uses the existing resident arm pivot and unchanged
+easel canvas face (local Z=0.134m) to solve hand/brush contact at each body height.
+The support stays stationary through the stroke. Step surfaces batch by material;
+step and brush together add at most five mesh instances to an active painter.
+This source uses the repository MIT license, with no external assets or binary
+export. Godot rebuilds the props when an accepted painter first arrives, and
+profile changes rebuild the resident and props together. Run
+`tests/painting_pose.gd` for the native rotation/height/day/night/compact review.
+The Blender easel and existing character mesh geometry remain unchanged.
+
 The runtime rig includes `Leg_L/Knee_L` and `Leg_R/Knee_R`. Straight legs retain
 their original geometry and bounds; the two knee pivots allow dining feet to
 point down. They add two mesh groups without increasing the measured triangle

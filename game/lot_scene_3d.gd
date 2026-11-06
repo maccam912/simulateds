@@ -8,6 +8,7 @@ const FurnitureColors = preload("res://game/furniture_colors.gd")
 const Character = preload("res://game/character_profile.gd")
 const CharacterModel = preload("res://game/character_model.gd")
 const DiningPose = preload("res://game/dining_pose.gd")
+const PaintingPose = preload("res://game/painting_pose.gd")
 var _character_model = CharacterModel.new()
 const Appearance = preload("res://game/appearance.gd")
 const Gardens = preload("res://game/gardens.gd")
@@ -552,6 +553,7 @@ func _update_residents(view: Control) -> void:
 			var model := resident.get_node("Body") as Node3D
 			model.position = Vector3.ZERO; model.rotation = Vector3.ZERO
 			DiningPose.clear(self,resident)
+			PaintingPose.clear(self,resident)
 			for side: String in ["L","R"]:
 				model.get_node("Leg_"+side+"/Knee_"+side).rotation=Vector3.ZERO
 			var reduced := bool(Preferences.values.get("reduced_motion",false))
@@ -612,7 +614,9 @@ func _update_residents(view: Control) -> void:
 					if arm_right != null: arm_right.rotation = Vector3(-1.3-wash,0,-0.12)
 			elif kind=="meal_eat":
 				DiningPose.apply(self,resident,member,pose.object,view._time,reduced)
-			elif kind in ["chat","bookshelf","table","game_table","easel","garden_bed","meal_prepare","admire_art"]:
+			elif kind=="easel":
+				PaintingPose.apply(self,resident,member,pose.object,view._time,reduced)
+			elif kind in ["chat","bookshelf","table","game_table","garden_bed","meal_prepare","admire_art"]:
 				var gesture := 0.0 if reduced else sin(view._time*3.5)*0.08
 				if arm_left != null: arm_left.rotation.x = -0.7+gesture
 				if arm_right != null: arm_right.rotation.x = -0.9-gesture

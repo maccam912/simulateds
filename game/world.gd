@@ -830,7 +830,7 @@ func painting_option(profile_id: String,member_id: String,lot_id: String,target_
 				if task.has("tv_place"): task.tv_place=[int(task.tv_place[0]),int(task.tv_place[1])]
 				if task.get("target_id")==target_id and task.has("paint_action"): return _result(false,"Already in "+str(resident.name)+"'s plan.")
 	if member.queue.size()>=MAX_QUEUE: return _result(false,"The action queue is full (8 actions).")
-	if not _can_reach_object(lot,_position(member),object): return _result(false,"There is no path to this easel.")
+	if not _can_reach_object(lot,_position(member),object): return _result(false,"Leave a clear path to the front of this easel.")
 	return option
 
 func _painting_task_option(member: Dictionary,lot: Dictionary,object: Dictionary,task: Dictionary) -> Dictionary:
@@ -842,6 +842,15 @@ func _tick_painting(member: Dictionary,lot: Dictionary,object: Dictionary,task: 
 	var option := _painting_task_option(member,lot,object,task)
 	if not option.ok:
 		_end_task(member,"failed",str(option.message),str(option.message)); return
+	# Older active snapshots may approach from a side. Re-route on the host,
+	# preserving the original canvas and remaining work; rendering never moves it.
+	var goals := _interaction_cells(lot,object)
+	if not goals.has(_position(member)):
+		var route := _path(lot,_position(member),goals)
+		if route.is_empty():
+			_end_task(member,"failed","Leave a clear path to the front of this easel."); return
+		task.path=route; task.elapsed=0.0; member.walk_clock=0.0
+		return
 	var picture: Dictionary=object.painting
 	member.action=str(option.label)
 	if task.paint_action=="sell":
@@ -1950,6 +1959,9 @@ func _object_cells(object: Dictionary) -> Array:
 	return result
 
 func _interaction_cells(lot: Dictionary, object: Dictionary) -> Array:
+	if object.kind=="easel":
+		var front := Paintings.front_cell(object)
+		return [front] if _walkable(lot,front) else []
 	var result: Array = []
 	for tile: Vector2i in _object_cells(object):
 		for direction: Vector2i in DIRECTIONS:

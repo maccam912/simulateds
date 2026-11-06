@@ -1,3 +1,31 @@
+# Painting contact — November 5, 2026
+
+- Issue #4 / POSE-04, easel scope: the host routes painting/packing to the clear
+  canvas side. Blocked approaches explain the required space; construction
+  diagnosis and catalog copy agree. Legacy active side approaches reroute before
+  adding work, preserving the original canvas. No save/protocol fields changed.
+- Arrived painters hold a solid brush at the canvas. Height-aware oak steps
+  support shorter residents without rescaling bodies; feet remain still through
+  strokes. Paused/reduced-motion poses are steady, and cancellation/completion,
+  packing, construction and stale targets clear props. Picking/labels follow the
+  body; render updates preserve authoritative state. Original editable source:
+  `game/painting_pose.gd`; no binary assets. Keep issue #4 open for its other work.
+- Native macOS Godot 4.7.2/OpenGL review passed at 1440×900 and 1280×720/125%,
+  all four rotations, varied ages/builds, every playable age's height endpoints,
+  daylight/night, low scenery and furnished starter-home painting. Captures:
+  ignored `build/painting-*.png`; log: `build/issue4-painting/native.log`.
+- All four `python3 tools/check.py --shard N/4` runs exited 0: 135 gameplay/UI
+  suites, both save-continuity processes, eight real Iroh peer scenarios and
+  dedicated-server smoke. Audit/logs: `build/issue4-painting/validation.json` and
+  `shard-*.log`. The initial run caught a second commission easel facing into
+  the tea table; that fixture now faces its clear side. Exact-progress painting
+  assertions begin at the proper front cell. The clean rerun supersedes that run.
+- Staged asset storage (81 hydrated LFS assets) and whitespace checks pass.
+  Preserved concurrent MCP documentation and incorporated its published main
+  commit `6acdc68`. Hosted CI is separate; no local exports, physical-device or
+  human family playtests were performed. Scope and reproduction:
+  `docs/PAINTING_CONTACT_QA.md`.
+
 # MCP design — November 5, 2026
 
 - Added `docs/MCP_SERVER_DESIGN.md` and a README link. Proposal covers a managed
