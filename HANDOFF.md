@@ -1,3 +1,31 @@
+# Television seating — November 5, 2026
+
+- Issue #4 / POSE-01: the host chooses an available screen-facing seat and
+  reserves it while walking/watching, or selects a distinct standing place.
+  Ordinary seat use waits for the viewer. The existing activity strip names
+  Seated/Standing; no clear front place rejects without changing plans.
+- Cancellation, completion, travel, construction and disconnect release the
+  task reservation. Optional snapshot/save fields validate and normalize;
+  solo continuation revalidates the route and place. New starter TVs face their
+  sofa. Existing saved furniture and legacy active TV routes are preserved.
+- The renderer poses arrived viewers on existing cushions/slats with bent knees,
+  following the host's choice. Native picking and labels follow the visible body.
+  No binary/model geometry changes; no rendering writes to world state.
+- Native macOS Godot 4.7.2/OpenGL review passed at normal/compact sizes, starter
+  day/night, six seating models through four rotations, adult/child/elder/body
+  variations and frontal child contact checks. Evidence: ignored `build/tv-*.png`
+  and `build/issue4-tv/native-final.log`. Focused authority tests pass.
+- All 131 local gameplay/UI suites and both save-continuity processes passed
+  across `tools/check.py` and resumed checks. The existing facing/timing fixtures
+  now use the accepted TV destination. All eight real Iroh peer scenarios and
+  dedicated-server smoke also pass. Staged LFS/whitespace audits pass. Local logs
+  and the coverage audit are in ignored `build/issue4-tv/` (`check.log`,
+  `resumed.log`, `resumed-final.log`, `validation.json`).
+- Keep issue #4 open. Each furnishing currently seats one TV viewer; cushion
+  capacity, shared-TV social rewards and entry/exit choreography remain separate.
+  See `docs/TELEVISION_QA.md`. Hosted CI, exports and physical-device play are
+  separate; no exports or physical-device/human playtests were run here.
+
 # Shared dining places — November 5, 2026
 
 - Issue #4 / POSE-03: arrived diners sit at their accepted places, face the

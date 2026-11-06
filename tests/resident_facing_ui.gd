@@ -35,7 +35,11 @@ func _start(member: Dictionary,object: Dictionary) -> void:
 	member.x=cell.x; member.y=cell.y
 	for need: String in member.needs: member.needs[need]=40.0
 	assert(session.world.apply_command(session.profile_id,{"type":"interact","member_id":member.id,"lot_id":"lot_1","target_id":object.id}).ok)
-	session.world.step(0.1)
+	# TV viewing may use a seat/front place beyond the legacy adjacent fixture.
+	for tick in range(100):
+		session.world.step(0.1)
+		if member.task.get("elapsed",0)>0: break
+	assert(member.task.get("elapsed",0)>0,"The review must show an arrived activity")
 	view.motion.tracks.clear()
 
 func _run() -> void:

@@ -1,5 +1,6 @@
 extends RefCounted
 ## Derive attention from accepted activities. Nothing here changes the world.
+const Television = preload("res://game/television.gd")
 const Catalog = preload("res://game/catalog.gd")
 const REST := Vector2(0.70710678,0.70710678)
 
@@ -23,6 +24,9 @@ static func activity(world: Dictionary, member: Dictionary) -> Dictionary:
 			if preload("res://game/art_admiration.gd").current(lot,task): return {"kind":"admire_art","art":lot.artworks[task.target_id]}
 		else:
 			for object: Dictionary in lot.objects:
+				if object.id==task.get("target_id") and task.has("tv_place"):
+					if not Television.current(lot,task) or Vector2i(member.x,member.y)!=Vector2i(task.tv_place[0],task.tv_place[1]): return {}
+					return {"kind":"tv","object":object,"seat":Television.object(lot,str(task.tv_seat))}
 				if object.id==task.get("target_id"): return {"kind":"sofa" if object.kind in ["armchair","loveseat","long_sofa","wood_chair","garden_bench"] else object.kind,"object":object}
 	elif task.is_empty() and member.get("queue",[]).is_empty():
 		for family: Dictionary in world.get("families",{}).values():

@@ -20,6 +20,10 @@ func _estimate(kind: String, need_value: float, automatic: bool, rank_up: bool=f
 	for candidate: Dictionary in lot.objects:
 		if candidate.kind==kind: object=candidate; break
 	var cell: Vector2i=world._interaction_cells(lot,object)[0]
+	if kind=="tv":
+		var viewing: Dictionary=preload("res://game/television.gd").choose(world.state,lot,member,object,world._path)
+		assert(not viewing.is_empty())
+		cell=Vector2i(viewing.tv_place[0],viewing.tv_place[1])
 	member.x=cell.x; member.y=cell.y
 	for need: String in member.needs: member.needs[need]=100.0
 	member.needs[Catalog.ITEMS[kind].need]=need_value

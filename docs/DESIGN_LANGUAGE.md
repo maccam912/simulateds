@@ -1,5 +1,20 @@
 # Simulateds design language
 
+## Watching television
+
+Use a nearby reachable seat facing the screen when available. The host reserves
+the seating furnishing while the viewer walks and watches; ordinary seat use
+waits, and other viewers can stand at a clear front-side place. Name Seated or
+Standing in the existing activity strip. If no viewing place exists, explain
+that the television needs clear space in front. New starter TVs face the sofa.
+
+After arrival, show the resident resting on the actual cushion/slats with bent
+knees, unchanged body proportions and relaxed arms. Labels and mesh picking
+follow the visible body. Cancellation clears the pose immediately, while world
+positions, routing and task timing remain authoritative. Reduced motion holds
+the same steady pose. See [the TV review](TELEVISION_QA.md) for reservation limits,
+legacy-save behavior and the separate entry/exit choreography work.
+
 ## Places at the dining table
 
 Accepted eaters use a small oak stool at their reserved dining cell, facing its
@@ -1002,15 +1017,12 @@ authority. Construction retains its tools.
 
 ### Deferred physical activity polish
 
-Requested November 4: residents should visibly enter the shower while showering
-and sit on the couch when watching television, with similar placement/contact
-polish for other furniture use. This UI pass records the direction only. Follow
-up with furniture interaction anchors, entry/exit transitions, appropriate poses
-and animation, and a clear fallback when seating is absent or occupied. Keep
-rendered poses separate from authoritative positions, routing and reservations;
-any actual gameplay change to seating must use the command/simulation layer.
-Review in the real camera, daylight, night and a compact window before claiming
-that physical interaction polish is complete.
+The November 4 request now has shower occupancy, authored dining places and TV
+seating implementations described above. Entry/exit transitions and contact polish
+for other activities remain separate work. Keep rendered poses separate from
+authoritative positions, routing and reservations; gameplay seating choices use
+the command/simulation layer. Review in the real camera, daylight, night and a
+compact window before claiming further physical interaction polish is complete.
 
 
 ## Icons first — November 4, 2026 (superseded by the navigation review below)
