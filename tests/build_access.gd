@@ -24,6 +24,7 @@ func _legacy_message() -> String:
 			var position := Vector2i(int(member.x),int(member.y))
 			if member.lot_id==lot.id and position!=gate and world._path(lot,position,[gate]).is_empty(): return "A resident cannot reach the entrance. Add a door or clear a path."
 	for object: Dictionary in lot.objects:
+		if str(World.Catalog.ITEMS[object.kind].need).is_empty(): continue
 		if not world._can_reach_object(lot,gate,object): return "Leave a clear path to the "+str(World.Catalog.ITEMS[object.kind].name)+"."
 	return ""
 
@@ -68,6 +69,9 @@ func _run() -> void:
 		if not world._walkable(lot,Access.GATE): continue
 		var keys := _keys(report)
 		for object: Dictionary in lot.objects:
+			if str(World.Catalog.ITEMS[object.kind].need).is_empty():
+				assert(not keys.has("object:"+str(object.id)),"Decorative lamps need no interaction approach")
+				continue
 			assert(keys.has("object:"+str(object.id))==not world._can_reach_object(lot,Access.GATE,object))
 	print("BUILD_ACCESS_PASS")
 	quit()

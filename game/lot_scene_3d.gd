@@ -392,6 +392,17 @@ func _build_house(lot: Dictionary, full_walls: bool, view: Control) -> void:
 		var illumination: Array=Catalog.ITEMS[object.kind].get("light",[])
 		if not illumination.is_empty():
 			for mesh: MeshInstance3D in _meshes(model): mesh.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			# A lit linen shade transmits a little light instead of looking like an
+			# opaque dark cone above its pool. Preserve the chosen fabric color and
+			# keep this material local to the instance (including color previews).
+			if object.kind=="floor_lamp":
+				for mesh: MeshInstance3D in _meshes(model):
+					for surface in mesh.mesh.get_surface_count():
+						var source := mesh.get_active_material(surface) as StandardMaterial3D
+						if source==null or source.resource_name!="custom_lamp_shade": continue
+						var shade := source.duplicate() as StandardMaterial3D
+						shade.emission_enabled=true; shade.emission=shade.albedo_color; shade.emission_energy_multiplier=0.35
+						mesh.set_surface_override_material(surface,shade)
 			var lamp := OmniLight3D.new(); lamp.name="Light"
 			lamp.position=Vector3(0,float(illumination[0]),0); lamp.omni_range=float(illumination[1]); lamp.omni_attenuation=1.1
 			lamp.light_color=Color(illumination[3]); lamp.shadow_enabled=true; lamp.shadow_bias=0.05

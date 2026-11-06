@@ -71,7 +71,7 @@ func initialize() -> void:
 						lot.doors.append([x,y])
 					else:
 						lot.walls.append([x,y])
-		for item in [["bed",4,4], ["bed",6,4], ["fridge",10,4], ["shower",11,6], ["toilet",11,8], ["sofa",4,8], ["tv",4,10], ["bookshelf",10,10], ["plant",10,6], ["table",7,8]]:
+		for item in [["bed",4,4], ["bed",6,4], ["fridge",10,4], ["shower",11,6], ["toilet",11,8], ["sofa",4,8], ["tv",4,10], ["bookshelf",10,10], ["plant",10,6], ["table",7,8], ["floor_lamp",4,7]]:
 			lot.objects.append(_new_object(str(item[0]), int(item[1]), int(item[2]), 2 if item[0]=="tv" else 0))
 		state.lots[id] = lot
 		lot.finishes=Finishes.create()

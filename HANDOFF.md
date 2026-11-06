@@ -1,3 +1,25 @@
+# Starter interior light — November 5, 2026
+
+- Issue #8 / WORLD-04: new starter homes include the existing Linen floor lamp
+  beside the sofa with unchanged §12,000 funds and reachable care furnishings.
+  Existing saves are never refurnished. The actual movable fixture supplies the
+  warm local pool; ambient balance stays unchanged. Its shade has a restrained,
+  color-preserving glow on an instance-local material. No binary assets changed.
+- Native macOS Godot 4.7.2/OpenGL review passed at 1440×900 and 1280×720/125% UI,
+  matched day/dusk/night, low scenery, fabric colors and fixture movement. Tests
+  cover old/new save layouts, read-only rendering, source-material isolation,
+  move/sell/Undo/Discard. Scope/reproduction: `docs/STARTER_LIGHTING_QA.md`.
+- All four final `tools/check.py --shard N/4` runs exited 0: 138 gameplay/UI
+  suites, both save-continuity processes, eight real Iroh scenarios and dedicated
+  server smoke. Earlier failures exposed starter-count/refund assumptions, a
+  decorative-item access oracle and an overlapping pantry fixture; final reruns
+  supersede them. Audit/logs: ignored `build/issue8-lighting/validation.json` and
+  its four named logs. Native captures: ignored `build/starter-light-*.png`.
+- Staged asset storage (81 hydrated LFS assets) and whitespace checks pass.
+  Keep #8 open for its remaining findings. Hosted CI is separate; exports,
+  physical-device and human family playtests, and frame-time benchmarks were not
+  performed.
+
 # Home overview — November 5, 2026
 
 - Issue #8 / WORLD-01: fresh entry and loads without camera metadata fit the

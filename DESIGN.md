@@ -40,6 +40,10 @@ The foundation prioritizes four things:
 6. Visit another household when its lot is open. Return home whenever desired.
 7. Leave and return to the same household while the host keeps the world alive.
 
+New starter homes include a movable linen floor lamp beside the sofa. It uses
+the ordinary catalog fixture and leaves the §12,000 starting funds intact;
+loading an existing neighborhood never adds or replaces its furnishings.
+
 Life stages and family ties are chosen in the household creator. There is no
 automatic aging, death, wedding, career simulation, or elaborate economy in this slice. Initial funds, a $600 per simulated day household allowance, and
 modest object costs make building possible. The allowance also accrues for absent
