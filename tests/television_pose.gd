@@ -10,6 +10,7 @@ var lot: Dictionary
 var tv: Dictionary
 var seat: Dictionary
 var native := false
+var capture_prefix := "tv-"
 
 func _initialize() -> void: call_deferred("_run")
 func _settle() -> void:
@@ -18,7 +19,7 @@ func _settle() -> void:
 func _capture(label: String) -> void:
 	if not native: return
 	await _settle(); await RenderingServer.frame_post_draw
-	assert(root.get_texture().get_image().save_png("res://build/tv-"+label+".png")==OK)
+	assert(root.get_texture().get_image().save_png("res://build/"+capture_prefix+label+".png")==OK)
 func _watch(member: Dictionary) -> void:
 	var result: Dictionary=session.world.apply_command(session.profile_id,{"type":"interact","member_id":member.id,"lot_id":lot.id,"target_id":tv.id})
 	assert(result.ok,str(result.message))
@@ -33,6 +34,15 @@ func _run() -> void:
 	root.get_node("Preferences").reset_defaults()
 	session=root.get_node("Session"); session.saving_enabled=false; session.menu_paused=true; session.set_physics_process(false)
 	session.world.initialize(); session.world.ensure_family(session.profile_id,"Alex"); session.world.set_online(session.profile_id,true)
+	if "--legacy-starter" in OS.get_cmdline_user_args():
+		capture_prefix="tv-legacy-"
+		var saved: Dictionary=session.world.snapshot_for_save()
+		for home: Dictionary in saved.lots.values():
+			home.objects=home.objects.filter(func(item): return item.kind!="floor_lamp")
+			for item: Dictionary in home.objects:
+				if item.kind=="tv": item.rotation=0
+		assert(session.world.restore_saved(JSON.parse_string(JSON.stringify(saved))))
+		assert(session.world.prepare_continuation(session.profile_id).interrupted==0)
 	family=session.state.families[session.profile_id]; lot=session.state.lots[family.home_lot]
 	for item: Dictionary in lot.objects:
 		if item.kind=="tv": tv=item
@@ -41,7 +51,8 @@ func _run() -> void:
 	game=load("res://game/main.tscn").instantiate(); root.add_child(game); view=game.lot_view
 	await _settle()
 	var first: Dictionary=family.members[0]; var second: Dictionary=family.members[1]
-	await _watch(first); await _watch(second)
+	await _watch(first); await _capture("starter-seated")
+	await _watch(second)
 	assert(first.task.tv_seat==seat.id and second.task.tv_seat=="")
 	await _capture("starter-day")
 	session.state.day_minutes=0; await _capture("starter-night")

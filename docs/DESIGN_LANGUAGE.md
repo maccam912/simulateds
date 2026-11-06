@@ -40,7 +40,9 @@ Use a nearby reachable seat facing the screen when available. The host reserves
 the seating furnishing while the viewer walks and watches; ordinary seat use
 waits, and other viewers can stand at a clear front-side place. Name Seated or
 Standing in the existing activity strip. If no viewing place exists, explain
-that the television needs clear space in front. New starter TVs face the sofa.
+that the television needs clear space in front and can be turned in Build.
+New starter TVs face the sofa. Disk loading repairs the backward TV only in an
+untouched original starter layout; any construction history protects the home.
 
 After arrival, show the resident resting on the actual cushion/slats with bent
 knees, unchanged body proportions and relaxed arms. Labels and mesh picking

@@ -43,6 +43,8 @@ The foundation prioritizes four things:
 New starter homes include a movable linen floor lamp beside the sofa. It uses
 the ordinary catalog fixture and leaves the §12,000 starting funds intact;
 loading an existing neighborhood never adds or replaces its furnishings.
+Loading an untouched original starter layout repairs its backward-facing TV
+to face the sofa. Homes with construction history retain their chosen layout.
 
 Life stages and family ties are chosen in the household creator. There is no
 automatic aging, death, wedding, career simulation, or elaborate economy in this slice. Initial funds, a $600 per simulated day household allowance, and
