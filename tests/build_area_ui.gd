@@ -75,6 +75,7 @@ func _run() -> void:
 	await process_frame; await process_frame
 	var view: Control=game.lot_view
 	# Pan the right-hand work area clear of the wider catalog before dragging.
+	view.center_lot()
 	view.pan.x-=120; view._layout()
 	await process_frame; await process_frame
 	var first := _cell(7,2)
@@ -166,6 +167,8 @@ func _run() -> void:
 	assert(not _command("erase_area",{"x":7,"y":1,"end_x":8,"end_y":2,"refund":refund+1}).ok and session.world.snapshot()==before)
 	# Room and finish tools share the gesture while keeping their existing plans.
 	game._select_build_tool("room")
+	# The simulated world replacement above applies fresh-world framing.
+	view.center_lot(); view.pan.x-=120; view._layout()
 	first=_cell(13,3); last=_cell(15,5)
 	await _begin(first,last)
 	assert(view.preview_result.ok and view.preview_result.width==3)
