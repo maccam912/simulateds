@@ -82,7 +82,7 @@ func sync(view: Control, _delta: float) -> void:
 	var structure: Array = []
 	for object: Dictionary in lot.get("objects",[]):
 		structure.append([object.id,object.kind,object.x,object.y,object.rotation,object.get("color_style","original")])
-	var signature := str([view.lot_id,lot.get("level",0),lot.get("storeys",{}),lot.get("floors",[]),lot.get("walls",[]),lot.get("doors",[]),lot.get("finishes",{}),lot.get("windows",{}),lot.get("artworks",{}),lot.get("landscape",{}),lot.get("diagonal_walls",{}),structure,full_walls,view._paint_cells,view._preview_finish,view.color_preview,view.art_preview,view.hover_cell if view.build_kind=="window" else Vector2i(-1,-1),view.window_style if view.build_kind=="window" else "",view.preview_result if view.build_kind=="window" else {}]).sha256_text()
+	var signature := str([view.lot_id,lot.get("level",0),lot.get("storeys",{}),lot.get("floors",[]),lot.get("stairwells",[]),lot.get("walls",[]),lot.get("doors",[]),lot.get("finishes",{}),lot.get("windows",{}),lot.get("artworks",{}),lot.get("landscape",{}),lot.get("diagonal_walls",{}),structure,full_walls,view._paint_cells,view._preview_finish,view.color_preview,view.art_preview,view.hover_cell if view.build_kind=="window" else Vector2i(-1,-1),view.window_style if view.build_kind=="window" else "",view.preview_result if view.build_kind=="window" else {}]).sha256_text()
 	if signature != _signature:
 		_signature = signature; _build_house(lot,full_walls,view)
 		_build_lower_floors(view,lot)
@@ -212,36 +212,81 @@ func _wall_boxes(center: Vector3, parts: Array[Rect2], height: float, color: Col
 		var middle := part.get_center()
 		_batch_box(center+Vector3(middle.x,0,middle.y),Vector3(part.size.x,height,part.size.y),color)
 
+# Wall cells include the supporting floor. Trim only their exposed outer edges;
+# bare floor/deck edges and floors continuing beyond a wall keep their whole tile.
+func _floor_bounds(lot: Dictionary, at: Vector2i, floors: Dictionary) -> Rect2:
+	var bounds := Rect2(Vector2(at),Vector2.ONE)
+	var cell := [at.x,at.y]
+	if (cell not in lot.walls and cell not in lot.doors) or lot.get("diagonal_walls",{}).has("%d,%d" % [at.x,at.y]): return bounds
+	var mounted := not Windows.at(lot,at.x,at.y).is_empty()
+	for artwork: Dictionary in lot.get("artworks",{}).values():
+		if int(artwork.x)==at.x and int(artwork.y)==at.y: mounted=true
+	var connected := {}
+	for cells: Array in [lot.walls,lot.doors]:
+		for entry: Array in cells: connected[Vector2i(int(entry[0]),int(entry[1]))]=true
+	var parts := _wall_footprint(at,connected,Windows.along_x(lot,at.x,at.y),mounted,0.24)
+	var support: Rect2=parts[0]
+	for part: Rect2 in parts: support=support.merge(part)
+	support.position+=Vector2(at)+Vector2(0.5,0.5)
+	if not floors.has(at+Vector2i.LEFT) and floors.has(at+Vector2i.RIGHT):
+		bounds.size.x-=support.position.x-bounds.position.x; bounds.position.x=support.position.x
+	if not floors.has(at+Vector2i.RIGHT) and floors.has(at+Vector2i.LEFT): bounds.end.x=support.end.x
+	if not floors.has(at+Vector2i.UP) and floors.has(at+Vector2i.DOWN):
+		bounds.size.y-=support.position.y-bounds.position.y; bounds.position.y=support.position.y
+	if not floors.has(at+Vector2i.DOWN) and floors.has(at+Vector2i.UP): bounds.end.y=support.end.y
+	return bounds
+
+func _floor_box(center: Vector3, size: Vector3, color: Color, bounds: Rect2) -> void:
+	var clipped := Rect2(Vector2(center.x-size.x*0.5,center.z-size.z*0.5),Vector2(size.x,size.z)).intersection(bounds)
+	if not clipped.has_area(): return
+	var middle := clipped.get_center()
+	_batch_box(Vector3(middle.x,center.y,middle.y),Vector3(clipped.size.x,size.y,clipped.size.y),color)
+
+func _ceiling_bounds(at: Vector2i, connected: Dictionary) -> Rect2:
+	var bounds := Rect2(Vector2(at),Vector2.ONE)
+	# Interior tiles reach through their neighboring wall cells to the outer face.
+	# The same expansion in both axes closes corners without covering stair holes.
+	var reach := 0.5+0.24*0.5
+	if connected.has(at+Vector2i.LEFT): bounds.position.x-=reach; bounds.size.x+=reach
+	if connected.has(at+Vector2i.RIGHT): bounds.size.x+=reach
+	if connected.has(at+Vector2i.UP): bounds.position.y-=reach; bounds.size.y+=reach
+	if connected.has(at+Vector2i.DOWN): bounds.size.y+=reach
+	return bounds
+
 func _build_house(lot: Dictionary, full_walls: bool, view: Control) -> void:
 	_clear(architecture); object_nodes.clear(); window_nodes.clear(); pick_nodes.clear(); _object_state.clear(); _boxes.clear(); furnishing_lights.clear(); daylight_windows.clear()
 	if int(lot.get("level",0))==0: _build_ground(lot)
 	var floors := {}
 	for cell: Array in lot.get("floors",[]): floors[Vector2i(int(cell[0]),int(cell[1]))] = true
+	var connected := {}
+	for key: String in ["walls","doors"]:
+		for cell: Array in lot.get(key,[]): connected[Vector2i(int(cell[0]),int(cell[1]))]=true
 	for cell: Array in lot.get("floors",[]):
 		if cell in lot.get("stairwells",[]): continue
 		var x := int(cell[0]); var z := int(cell[1])
+		var bounds := _floor_bounds(lot,Vector2i(x,z),floors)
 		var finish: Dictionary = Finishes.PALETTES.floor[view._surface_finish(lot,"floor",x,z)]
 		var color := Color(finish.color)
-		_batch_box(Vector3(x+0.5,-0.012,z+0.5),Vector3(1,0.08,1),color.darkened(0.19))
+		_floor_box(Vector3(x+0.5,-0.012,z+0.5),Vector3(1,0.08,1),color.darkened(0.19),bounds)
 		if finish.pattern == "boards":
 			for plank in range(4):
 				var shade := color.lightened(float(posmod(x*17+z*7+plank*3,7)-3)*0.018)
-				_batch_box(Vector3(x+0.125+plank*0.25,0.025,z+0.5),Vector3(0.244,0.012,0.992),shade)
+				_floor_box(Vector3(x+0.125+plank*0.25,0.025,z+0.5),Vector3(0.244,0.012,0.992),shade,bounds)
 		elif finish.pattern in ["tiles","checkers"]:
 			for xx in range(2):
 				for zz in range(2):
 					var shade := color if finish.pattern=="tiles" or (xx+zz)%2==0 else Color("e6e0ca")
-					_batch_box(Vector3(x+0.25+xx*0.5,0.025,z+0.25+zz*0.5),Vector3(0.488,0.012,0.488),shade)
-		else: _batch_box(Vector3(x+0.5,0.025,z+0.5),Vector3(0.998,0.012,0.998),color)
+					_floor_box(Vector3(x+0.25+xx*0.5,0.025,z+0.25+zz*0.5),Vector3(0.488,0.012,0.488),shade,bounds)
+		else: _floor_box(Vector3(x+0.5,0.025,z+0.5),Vector3(0.998,0.012,0.998),color,bounds)
 	for cell: Array in lot.get("floors",[]):
 		var at := Vector2i(int(cell[0]),int(cell[1]))
 		if cell in lot.walls or cell in lot.doors or cell in lot.get("stairwells",[]): continue
 		if not (floors.has(at+Vector2i.LEFT) and floors.has(at+Vector2i.RIGHT) and floors.has(at+Vector2i.UP) and floors.has(at+Vector2i.DOWN)): continue
-		var roof := _box(architecture,Vector3(at.x+0.5,2.48,at.y+0.5),Vector3(1,0.05,1),Color("e4dac2"))
+		var ceiling := _ceiling_bounds(at,connected)
+		var middle := ceiling.get_center()
+		# Hidden cutaway ceiling meets the full-height window/wall tops (2.1m).
+		var roof := _box(architecture,Vector3(middle.x,2.125,middle.y),Vector3(ceiling.size.x,0.05,ceiling.size.y),Color("e4dac2"))
 		roof.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
-	var connected := {}
-	for key: String in ["walls","doors"]:
-		for cell: Array in lot.get(key,[]): connected[Vector2i(int(cell[0]),int(cell[1]))]=true
 	var art_walls := {}
 	for entry: Dictionary in lot.get("artworks",{}).values():
 		if int(entry.x)>=0: art_walls[Vector2i(int(entry.x),int(entry.y))]=true
@@ -762,28 +807,49 @@ func _build_lower_floors(view: Control,lot: Dictionary) -> void:
 	for index in range(level):
 		var layer := Storeys.view(root,index)
 		var shell := Node3D.new(); lower_floors.add_child(shell); shell.position.y=(index-level)*Storeys.HEIGHT
+		var floors := {}
+		var connected := {}
+		for cell: Array in layer.floors: floors[Vector2i(int(cell[0]),int(cell[1]))]=true
+		for cells: Array in [layer.walls,layer.doors]:
+			for cell: Array in cells: connected[Vector2i(int(cell[0]),int(cell[1]))]=true
 		for cell: Array in layer.floors:
-			_box(shell,Vector3(float(cell[0])+0.5,0,float(cell[1])+0.5),Vector3(1,0.1,1),Color("b6a386"))
+			if cell in layer.get("stairwells",[]): continue
+			var bounds := _floor_bounds(layer,Vector2i(int(cell[0]),int(cell[1])),floors)
+			var middle := bounds.get_center()
+			_box(shell,Vector3(middle.x,-0.012,middle.y),Vector3(bounds.size.x,0.08,bounds.size.y),Color("b6a386"))
 		if index==0:
 			var active := architecture; architecture=shell; _build_ground(root); _finish_boxes(shell); architecture=active
+		# Lower storeys are not cut away. Their walls meet the next slab underside.
+		var wall_top := Storeys.HEIGHT-0.052
 		for cell: Array in layer.walls:
 			var x := int(cell[0]); var z := int(cell[1]); var center := Vector3(x+0.5,0,z+0.5)
 			var along := Windows.along_x(layer,x,z)
 			var color := Color(Finishes.PALETTES.wall[Finishes.at(layer,"wall",x,z)].color)
 			var window_style := Windows.at(layer,x,z)
+			var diagonal := int(layer.get("diagonal_walls",{}).get("%d,%d" % [x,z],0))
 			if window_style.is_empty():
-				var wall := _box(shell,center+Vector3.UP*1.1,Vector3(1,2.2,0.24) if along else Vector3(0.24,2.2,1),color)
-				var diagonal := int(layer.get("diagonal_walls",{}).get("%d,%d" % [x,z],0))
-				if diagonal!=0: wall.scale.x=1.414; wall.rotation.y=-diagonal*PI/4
+				if diagonal!=0:
+					var wall := _box(shell,center+Vector3.UP*(wall_top*0.5),Vector3(1.414,wall_top,0.24),color)
+					wall.rotation.y=-diagonal*PI/4
+				else:
+					for part: Rect2 in _wall_footprint(Vector2i(x,z),connected,along,false,0.24):
+						var middle := part.get_center()
+						_box(shell,center+Vector3(middle.x,wall_top*0.5,middle.y),Vector3(part.size.x,wall_top,part.size.y),color)
 			else:
-				_window_wall(center,along,2.1,color,shell)
+				_window_wall(center,along,wall_top,color,shell)
 				var window := _model("window_"+window_style); window.position=center+Vector3(0,0.035,0.135) if along else center+Vector3(0.135,0.035,0)
 				if not along: window.rotation.y=PI/2
 				shell.add_child(window)
 		for cell: Array in layer.doors:
-			var door := _model("door_frame"); door.position=Vector3(float(cell[0])+0.5,0.04,float(cell[1])+0.5)
-			if not Windows.along_x(layer,int(cell[0]),int(cell[1])): door.rotation.y=PI/2
+			var center := Vector3(float(cell[0])+0.5,0,float(cell[1])+0.5)
+			var along := Windows.along_x(layer,int(cell[0]),int(cell[1]))
+			var door := _model("door_frame"); door.position=center+Vector3.UP*0.04
+			if not along: door.rotation.y=PI/2
 			shell.add_child(door)
+			var color := Color(Finishes.PALETTES.wall[Finishes.at(layer,"wall",int(cell[0]),int(cell[1]))].color)
+			# Door-frame asset is 2.11m high, placed 0.04m above the floor.
+			var header_bottom := 2.15
+			_box(shell,center+Vector3.UP*((header_bottom+wall_top)*0.5),Vector3(1,wall_top-header_bottom,0.24) if along else Vector3(0.24,wall_top-header_bottom,1),color)
 		for object: Dictionary in layer.objects:
 			if object.kind=="stairs": continue
 			var model := _model(str(object.kind)); var size := Catalog.footprint(str(object.kind),int(object.rotation))

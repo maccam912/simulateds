@@ -1,3 +1,35 @@
+# Floor and wall joins — November 5, 2026
+
+- Isolated branch `codex/floor-wall-shadow-review`, based on `main` at `1293bd4`.
+  Worktree: `/private/tmp/simulateds-floor-wall-shadow-review`. Parallel TV work
+  in the original checkout was not edited or staged by this task.
+- Confirmed in matched native day renders: floors reached the walls but extended
+  0.38 m beyond exterior faces; lower walls stopped 0.388 m below the upper slab;
+  an undersized/high hidden ceiling caused the first-floor daylight stripe too.
+- Renderer clips exterior wall-cell floors/finishes to wall footprints, extends
+  lower shells/headers to the next slab, shares joined corners and closes ceiling
+  shadow seams. Decks and diagonal support tiles retain their existing bounds.
+  Stairwell changes invalidate the render cache, preserving newly added openings.
+  Commands, world state, navigation and saves are unchanged. No binary assets.
+- Native macOS Godot 4.7.2/OpenGL review covers matched first/second floors,
+  day/night, 1440×900 and compact 1280×720/125%, plus an accepted stair placement.
+  Final focused native/headless runs pass: `build/floor-wall-final3-native.log`,
+  `build/floor-wall-final-headless.log`. Existing native renderer suite passes:
+  `build/floor-renderer-native.log`. Screenshots stay in ignored `build/floor-wall-*`.
+- Full local `python3 tools/check.py` exited 0: 130 gameplay/UI suites, both
+  save-continuity processes, eight real Iroh scenarios and dedicated-server smoke.
+  Evidence: `build/floor-wall-check.log`. Final cache/header changes also passed
+  focused native/headless floor, renderer and storey UI checks. Staged asset and
+  whitespace checks pass (81 hydrated LFS assets).
+- Optional legacy daylight pixel assertion fails on both this branch and the
+  unchanged main renderer; see `docs/FLOOR_WALL_QA.md` and
+  `build/baseline-daylight-clean.log`. Do not describe that suite as passing.
+- Hosted CI, exports and physical-device play were not run for this change.
+- PR #24 integration: merged `main` at `cb56697`, preserving the TV checkpoint
+  and both sets of registered tests. Seven focused headless suites and the native
+  floor review pass after resolution (`build/floor-wall-merge-check.log`,
+  `build/merge-floor-native.log`). The full-suite results above precede this merge.
+
 # Television seating — November 5, 2026
 
 - Issue #4 / POSE-01: the host chooses an available screen-facing seat and

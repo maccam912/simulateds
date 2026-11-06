@@ -247,3 +247,15 @@ all six skin/hair colors, face/nose variation, all seven outfit occasions,
 accessories and reverse evening angles. They supplement, rather than replace,
 the creator UI, furnished neighborhood and movement/picking checks. Review both
 mesh detail levels; creator close-ups alone cannot establish gameplay quality.
+
+
+### Procedural floor and wall joins
+
+Exterior wall-cell floor surfaces end at the wall footprint, including corners;
+open floor/deck tiles keep their whole tile. The hidden cutaway ceiling reaches
+wall faces at wall-top height so gaps cannot create false interior sunlight
+bands. Lower-storey walls meet the next floor slab underside. These solids are
+original runtime geometry from `game/lot_scene_3d.gd`; regenerate by reopening
+the scene. No Blender or binary export is needed. Run
+`tests/floor_wall_render.gd` for matched day/night and compact native review;
+see [floor/wall QA](FLOOR_WALL_QA.md) for evidence and diagonal-floor limits.
