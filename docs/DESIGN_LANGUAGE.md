@@ -1299,7 +1299,7 @@ compare real lighting. Leave simulation, saves and networking unchanged, and
 reset the setting when leaving construction or changing the viewed lot/session.
 Undo/Redo tooltips identify the accepted transaction and the next exact cost or
 refund from bounded host-provided runtime descriptions. See
-[issue #6 dispositions](BUILD_CATALOG_QA.md), including the outstanding human
+[issue #6 dispositions](BUILD_CATALOG_QA.md), including the explicitly deferred human
 mouse/trackpad check.
 
 
@@ -1317,3 +1317,19 @@ keep the roster and Find resident available. This presentation cannot rearrange
 residents, change reservations or make hidden geometry selectable. See
 [the crowded-label review](RESIDENT_LABELS_QA.md) for validation and the remaining
 POSE-07 silhouette/spacing work.
+
+
+## House shadows and cutaway doorways — November 5, 2026
+
+Fit directional shadows to the visible orthographic view, including terrain and
+pan/zoom margins. Keep one shadow map and the existing texture budget, colors
+and contact bias. A tall doorway should not float above a cutaway front wall:
+near/interior jamb ends meet that low wall, while their real hidden frame retains
+its shadow. Keep the threshold open; never squash a lintel across the passage.
+Rear doors and raised-wall construction tools retain complete frames.
+
+Quarter-turn orbit, additional neighborhood planting/props and starter-room
+rezoning are explicitly deferred to coordinated interaction/content reviews.
+Preserve the current camera controls, editable lawn, reachable starter layout
+and existing saved homes. See [issue #8 dispositions](WORLD_POLISH_QA.md) for the
+complete batch, reproduction, native comparisons and validation boundaries.

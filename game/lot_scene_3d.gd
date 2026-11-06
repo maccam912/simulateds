@@ -65,7 +65,8 @@ func _ready() -> void:
 	sun.rotation_degrees = Vector3(-52,-32,0)
 	sun.light_color = Color("fff1dc"); sun.light_energy = 0.68
 	sun.shadow_enabled = true; sun.directional_shadow_max_distance = 55.0
-	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
+	# One map suits the orthographic dollhouse; perspective splits waste detail.
+	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
 	sun.shadow_blur = 1.8; sun.shadow_bias = 0.04; add_child(sun)
 	fill = DirectionalLight3D.new(); fill.rotation_degrees = Vector3(-38,140,0)
 	fill.light_color = Color("c5d3df"); fill.light_energy = 0.12; add_child(fill)
@@ -213,6 +214,9 @@ func _wall_boxes(center: Vector3, parts: Array[Rect2], height: float, color: Col
 		var middle := part.get_center()
 		_batch_box(center+Vector3(middle.x,0,middle.y),Vector3(part.size.x,height,part.size.y),color)
 
+func _rear_wall(at: Vector2i, floors: Dictionary) -> bool:
+	return (floors.has(at+Vector2i.RIGHT) and not floors.has(at+Vector2i.LEFT)) or (floors.has(at+Vector2i.DOWN) and not floors.has(at+Vector2i.UP))
+
 # Wall cells include the supporting floor. Trim only their exposed outer edges;
 # bare floor/deck edges and floors continuing beyond a wall keep their whole tile.
 func _floor_bounds(lot: Dictionary, at: Vector2i, floors: Dictionary) -> Rect2:
@@ -294,7 +298,7 @@ func _build_house(lot: Dictionary, full_walls: bool, view: Control) -> void:
 	if view.art_preview.get("ok",false): art_walls[Vector2i(int(view.art_preview.x),int(view.art_preview.y))]=true
 	for cell: Array in lot.get("walls",[]):
 		var x := int(cell[0]); var z := int(cell[1]); var at := Vector2i(x,z)
-		var rear: bool = (floors.has(at+Vector2i.RIGHT) and not floors.has(at+Vector2i.LEFT)) or (floors.has(at+Vector2i.DOWN) and not floors.has(at+Vector2i.UP))
+		var rear := _rear_wall(at,floors)
 		var height := 2.1 if rear or full_walls else 0.28
 		var along := Windows.along_x(lot,x,z)
 		var window_style := Windows.at(lot,x,z)
@@ -376,7 +380,17 @@ func _build_house(lot: Dictionary, full_walls: bool, view: Control) -> void:
 		if lot.get("diagonal_walls",{}).has("%d,%d" % [x,z]): frame.rotation.y=-int(lot.diagonal_walls["%d,%d" % [x,z]])*PI/4
 		elif not Windows.along_x(lot,x,z): frame.rotation.y = PI/2
 		# Doorways remain open and do not block the host's walkable threshold.
+		frame.name="Door_%d_%d" % [x,z]
 		architecture.add_child(frame)
+		var cutaway := not full_walls and not _rear_wall(Vector2i(x,z),floors)
+		frame.set_meta("cutaway",cutaway)
+		if cutaway:
+			# Keep the real frame/leaf's shadows, but show just low jamb ends that
+			# meet the adjacent wall caps. Never squash the lintel across the path.
+			for mesh: MeshInstance3D in _meshes(frame): mesh.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
+			for side in [-1,1]:
+				_box(frame,Vector3(side*0.46,0.14,0),Vector3(0.09,0.28,0.20),Color("eee4c9"))
+			_box(frame,Vector3(0,0.025,0),Vector3(0.90,0.05,0.27),Color("72553e"))
 	_finish_boxes(architecture)
 	for object: Dictionary in lot.get("objects",[]):
 		var model := _model(str(object.kind)); model.name = str(object.id)

@@ -270,3 +270,11 @@ original runtime geometry from `game/lot_scene_3d.gd`; regenerate by reopening
 the scene. No Blender or binary export is needed. Run
 `tests/floor_wall_render.gd` for matched day/night and compact native review;
 see [floor/wall QA](FLOOR_WALL_QA.md) for evidence and diagonal-floor limits.
+
+
+Near/interior doorways follow the low wall cutaway with solid low jamb ends and
+an open threshold. The unchanged `door_frame.glb` remains the full rear/raised
+model and a hidden shadow caster in the cutaway view. The three procedural boxes
+are original MIT-licensed geometry in `game/lot_scene_3d.gd`; rebuild by reopening
+the scene, with no binary export. `tests/world_polish.gd` reviews normal/compact
+day/dusk/night views and rear/side/diagonal frames. See [world QA](WORLD_POLISH_QA.md).

@@ -1,8 +1,9 @@
 # Construction browsing and feedback (issue #6)
 
-Review date: November 5, 2026. Implements BUILD-01 through BUILD-09. Keep
-[issue #6](https://github.com/maccam912/simulateds/issues/6) open for BUILD-10's
-physical mouse/trackpad review; automated native gestures are separate evidence.
+Review date: November 5, 2026. BUILD-01 through BUILD-09 were implemented in
+[PR #19](https://github.com/maccam912/simulateds/pull/19). BUILD-10 is explicitly
+deferred at the user's request in the final batch review. All findings now have a
+disposition; automated native gestures are not human hardware verification.
 
 | Finding | Disposition |
 | --- | --- |
@@ -15,7 +16,7 @@ physical mouse/trackpad review; automated native gestures are separate evidence.
 | BUILD-07 | Selected-item text is larger and wraps use, rotated footprint, angle and requirements in the fixed footer. Cards retain visible prices; exact budget shortfalls remain text. |
 | BUILD-08 | Adopted an optional Daylight switch in the construction View row. The construction banner explicitly identifies the preview; switching it off restores actual night lighting. It changes only renderer lighting, resets on leaving construction or changing session/lot, and never changes clock, commands, snapshots or saves. |
 | BUILD-09 | Host-generated bounded Undo/Redo hints name the accepted transaction and affected furnishings/tiles/finishes/windows/art/ground changes, with the exact next cost/refund. They replicate as optional runtime text, remain compatible with older snapshots, and are omitted from committed saves. Undo/Redo still use the existing revision-checked transaction. |
-| BUILD-10 | Outstanding: a human must test physical mouse and trackpad card drag, furniture Move drag, floor rectangle drag, right-drag rotation and creator rotation. No physical-device or human-input claim is made here. Existing click/keyboard paths and automated native gestures remain available. |
+| BUILD-10 | Explicitly deferred by the user on November 5, 2026: physical mouse/trackpad card drag, furniture Move drag, floor rectangle drag, right-drag rotation and creator rotation. Automated native checks are retained, but do not establish human hardware behavior. Existing click/keyboard paths remain available. Revisit on a reported hardware failure or a future human playtest; no unverified defect is asserted. |
 
 ## Reproducible review
 
@@ -49,10 +50,28 @@ passed automated native card purchase, furniture Move and right-drag rotation.
 The compact native area test passed floor/wall rectangle dragging and cancellation.
 Headless assertions do not establish visual quality or physical drag behavior.
 
-The required `python3 tools/check.py` run initially stopped at an area-drag test
+PR #19's required `python3 tools/check.py` run initially stopped at an area-drag test
 whose old screen coordinates fell under the wider tray. The fixture was corrected
 to pan first; the same runner's remaining suites passed separately. All 127
 gameplay/UI suites, both save-continuity processes, eight real Iroh scenarios
 and dedicated-server smoke passed. `build/issue6/validation.json` audits suite
 coverage. Staged asset-storage and whitespace checks passed. Hosted CI, exports,
 physical devices and human playtests are separate validation boundaries.
+
+
+## Final batch review — November 5, 2026
+
+The user explicitly chose to defer BUILD-10's human hardware check. The batch
+can close with that recorded limitation; it does not certify physical input.
+Fresh native macOS runs passed `build_feedback_ui.gd` at normal/compact sizes,
+`build_overhaul_ui.gd`, compact `build_area_ui.gd` and compact
+`character_creator_ui.gd`. These cover catalog drag/drop, existing-object Move,
+floor rectangles, right-drag quarter turns and creator rotation through
+automated input. Stationary purchase success, repeated validation, search, exact
+costs/Undo and authoritative-state isolation also passed. Reviewed captures keep
+four complete compact choices, readable price/requirements and reachable Undo.
+
+Fresh logs are in ignored `build/finish-qa/*-native.log`; images use the existing
+`build/build-feedback-*.png`, `build/overhaul-*.png` and creator/area capture paths.
+See [world QA](WORLD_POLISH_QA.md) for the combined final regression result.
+No local export, physical-device play or human hardware test is claimed.
