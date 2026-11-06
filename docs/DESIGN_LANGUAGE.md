@@ -350,6 +350,21 @@ chatting rather than free. Keep all of this inside the optional Plan tray.
 
 ## Familiar routines
 
+Plan may offer one optional time-of-day idea from the household's saved recipes.
+Morning care, a daytime favorite pastime and evening/night wind-down are reasons
+to review an existing sequence, never an automatic schedule. Use the actual
+edited name and steps, omit an idea when no recipe fits, and let the library
+explain missing furnishings or a full plan. Review sends no command; only Add to
+plan starts work. Preserve an open draft and keyboard focus. Keep suggestions
+out of Recent and retain the selected resident's ordinary autonomy control.
+
+Automatic Plan rows may name matching favorites, traits and likes/dislikes from
+the saved profile. These describe affinities, not a claim about why a particular
+choice won: urgency, useful needs and available furnishings still matter. Keep
+full text on hover and avoid inventing relationship consequences. See
+[the daily rhythm review](DAILY_RHYTHM_QA.md) for measured full-day behavior and
+the deferred scheduling, economy, family-interaction and recap proposals.
+
 Recent outcomes belong inside the existing Plan tray. A **Recent / Upcoming**
 switch keeps the live queue as the default and adds no persistent HUD panel.
 Show eight deliberate actions at most, newest first, with plain status words,

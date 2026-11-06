@@ -138,6 +138,15 @@ func focus_entry() -> void:
 	if not draft.is_empty(): name_field.grab_focus(); scroll.ensure_control_visible(name_field)
 	elif is_instance_valid(new_button) and not new_button.disabled: new_button.grab_focus()
 
+func focus_routine(id: String) -> void:
+	# Opening a suggestion preserves an existing private edit or pending command.
+	if not draft.is_empty() or not pending.is_empty(): return
+	var button: Button=run_buttons.get(id)
+	if not is_instance_valid(button): return
+	if button.disabled: button=edit_buttons.get(id)
+	if not is_instance_valid(button) or button.disabled: return
+	button.grab_focus(); scroll.ensure_control_visible(button.get_parent().get_parent())
+
 func _editor() -> void:
 	_clear(); step_controls.clear(); step_buttons.clear(); source_note=null
 	if not draft_source.is_empty():

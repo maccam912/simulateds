@@ -1,3 +1,25 @@
+# Optional daily rhythm — November 5, 2026
+
+- Issue #9: Plan offers a time-of-day review of an existing saved routine. It
+  follows edited steps/names, preserves private drafts, and displays unavailable
+  recipes without issuing an order. Add to plan remains the explicit host command.
+  Automatic Plan rows name matching favorites, traits and likes/dislikes.
+- Twelve full-day observations cover 2/3/8 residents with autonomy on/off, one
+  chosen evening routine, and absence. Final measurements exactly match the
+  baseline; simulation, need decay, rewards, saves and protocol are unchanged.
+  Scope, measurements, reproduction and all five finding dispositions are in
+  `docs/DAILY_RHYTHM_QA.md`. Scheduling, budget scenarios, new family interactions
+  and a combined daily recap are explicitly deferred.
+- Native macOS Godot 4.7.2/OpenGL review passed in the actual camera, day/night,
+  1440×900 and 1280×720/125% UI. Focused headless and native tests pass; the full
+  `python3 tools/check.py` exited 0: all 136 gameplay/UI suites, both save-continuity
+  processes, eight real Iroh scenarios and dedicated-server smoke passed.
+  Logs, measured JSON, captures and `validation.json` are ignored under
+  `build/issue9/`. Final focused headless/native checks cover the helper cleanup.
+- Staged asset storage (81 hydrated LFS assets) and whitespace checks pass.
+- Hosted CI is separate. No exports, physical-device or human family playtests
+  were performed. No models or binary assets changed.
+
 # Painting contact — November 5, 2026
 
 - Issue #4 / POSE-04, easel scope: the host routes painting/packing to the clear
