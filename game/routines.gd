@@ -1,6 +1,7 @@
 extends RefCounted
 ## Small reusable activity recipes, shared by the household, not tied to objects.
 const Profile = preload("res://game/household_profile.gd")
+const Pastimes = preload("res://game/pastimes.gd")
 const MAX_ROUTINES := 4
 const MAX_STEPS := 6
 const ACTIVITIES := ["toilet","shower","fridge","bookshelf","tv","table","plant","game_table","sofa","bed","stereo"]
@@ -14,6 +15,30 @@ static func find(board: Dictionary,id: String) -> Dictionary:
 	for entry: Dictionary in board.get("entries",[]):
 		if entry.id==id: return entry
 	return {}
+
+static func daily_idea(board: Dictionary, member: Dictionary, minutes: float) -> Dictionary:
+	# Inspect existing recipes, not their editable names or initial IDs. This is
+	# navigation advice only: it never creates, queues, or schedules a routine.
+	if int(member.get("character",{}).get("age",5))==0: return {}
+	var period := "Morning" if minutes>=360.0 and minutes<660.0 else "Daytime" if minutes>=660.0 and minutes<1080.0 else "Evening" if minutes>=1080.0 and minutes<1320.0 else "Night"
+	var favorite: String=Pastimes.ACTIVITIES.get(Pastimes.of(member),"")
+	var best := {}; var best_score := 0
+	for entry: Dictionary in board.get("entries",[]):
+		var steps: Array=entry.steps
+		var score := 0
+		match period:
+			"Morning":
+				# Do not suggest a bedtime recipe just because it contains tea/food.
+				if "bed" not in steps:
+					for kind in ["toilet","shower","fridge"]:
+						if kind in steps: score+=1
+			"Daytime":
+				if not favorite.is_empty() and favorite in steps and "bed" not in steps: score=1
+			"Evening", "Night":
+				if not steps.is_empty() and steps[-1]=="bed": score=1
+		if score>best_score:
+			best_score=score; best={"id":str(entry.id),"name":str(entry.name),"period":period}
+	return best
 
 static func capture_plan(member: Dictionary, lot: Dictionary) -> Dictionary:
 	# A local draft of accepted work, never a mutation or a new simulation order.

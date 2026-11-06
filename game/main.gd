@@ -41,6 +41,7 @@ const Friendships = preload("res://game/friendships.gd")
 const Portrait = preload("res://game/resident_portrait.gd")
 const HomeNews = preload("res://game/home_news.gd")
 const Pastimes = preload("res://game/pastimes.gd")
+const Routines = preload("res://game/routines.gd")
 const Character = preload("res://game/character_profile.gd")
 const Appearance = preload("res://game/appearance.gd")
 const Wellbeing = preload("res://game/wellbeing.gd")
@@ -160,6 +161,7 @@ var plan_title: Label
 var autonomy_button: Button
 var find_button: Button
 var pastime_label: Label
+var routine_idea_button: Button
 var _plan_signature := ""
 var need_bars: Dictionary = {}
 var need_values: Dictionary = {}
@@ -438,6 +440,10 @@ func _build_ui() -> void:
 	find_button=_button("Find resident",_find_resident); plan_actions.add_child(find_button)
 	pastime_label=_label("",13,Style.MUTED); plan.add_child(pastime_label)
 	pastime_label.tooltip_text="Change this in Household. A favorite nudges free-time choices; urgent needs and your orders come first."
+	routine_idea_button=_button("",_review_daily_routine)
+	routine_idea_button.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS
+	routine_idea_button.custom_minimum_size.y=44
+	plan.add_child(routine_idea_button)
 	plan_scroll = ScrollContainer.new(); plan_scroll.size_flags_vertical=Control.SIZE_EXPAND_FILL; plan_scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED; plan.add_child(plan_scroll)
 	plan_box = _vbox(plan_scroll,5); plan_box.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	needs_details=_hud_panel(Rect2(218,-250,600,118),Vector2(0,1))
@@ -1058,12 +1064,19 @@ func _refresh_plan(member: Dictionary) -> void:
 	recent_button.tooltip_text="Return to the upcoming plan." if _plan_recent else "The last eight activities you planned for this resident, with their results."
 	pastime_label.text="Recent results · Your last eight planned activities" if _plan_recent else "Unwinds with: "+Pastimes.label(member)
 	pastime_label.tooltip_text="Most recent first. Autonomous activities stay out of this list." if _plan_recent else "Change this in Household. A favorite nudges free-time choices; urgent needs and your orders come first."
+	var idea := Routines.daily_idea(Session.state.families[Session.profile_id].routines,member,float(Session.state.day_minutes))
+	if (_plan_recent or idea.is_empty()) and routine_idea_button.has_focus(): routines_button.grab_focus()
+	routine_idea_button.visible=not _plan_recent and not idea.is_empty()
+	if not idea.is_empty():
+		routine_idea_button.text=str(idea.period)+" idea · Review "+str(idea.name)
+		routine_idea_button.tooltip_text="Optional: review “%s” for %s. Nothing starts or repeats automatically. Choose Add to plan in Routines to append its activities after your orders.\n%s" % [idea.name,member.name,str(Session.world.routine_option(Session.profile_id,str(member.id),str(idea.id)).detail)]
 	if _plan_recent:
 		_refresh_recent(member); return
 	var tasks: Array = []
 	if not member.task.is_empty(): tasks.append(member.task)
 	tasks.append_array(member.queue)
-	var signature := selected_member + Pastimes.of(member) + str(member.get("autonomy",true)) + str(member.task.get("id","")) + (str(member.action) if member.task.is_empty() else "")
+	var profile: Dictionary=member.get("character",{})
+	var signature := selected_member + Pastimes.of(member) + str([profile.get("traits",[]),profile.get("likes",[]),profile.get("dislikes",[])]) + str(member.get("autonomy",true)) + str(member.task.get("id","")) + (str(member.action) if member.task.is_empty() else "")
 	for task: Dictionary in tasks: signature += str(task.get("id",""))
 	if signature == _plan_signature:
 		_update_plan_feedback(member); return
@@ -1089,7 +1102,13 @@ func _refresh_plan(member: Dictionary) -> void:
 		var suffix := " · courtesy" if task.get("courtesy",false) else " · auto · favorite" if favorite else " · auto" if task.get("automatic",false) else ""
 		var label := _label(("NOW " if current else "WAIT " if waiting else "NEXT ") + str(tasks.find(task)+1) + " · " + title + suffix,13,Style.GREEN if current else Style.TEXT)
 		var content := _vbox(row,4); content.size_flags_horizontal=Control.SIZE_EXPAND_FILL
-		label.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; label.tooltip_text=title+(" · A favorite pastime, chosen autonomously." if favorite else ""); content.add_child(label)
+		label.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; label.tooltip_text=title; content.add_child(label)
+		if task.get("automatic",false) and not task.get("courtesy",false):
+			var affinities := Pastimes.affinity_detail(member,Session.world.task_activity(task,str(member.lot_id)))
+			if not affinities.is_empty():
+				label.tooltip_text+="\n"+affinities+". Preferences nudge useful choices; urgent needs and your orders come first."
+				var affinity_label := _label(affinities,12,Style.MUTED)
+				affinity_label.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; affinity_label.tooltip_text=label.tooltip_text; content.add_child(affinity_label)
 		if task.has("routine_name"): label.tooltip_text+="\nFrom routine: "+str(task.routine_name)
 		var action_id := str(task.get("id",""))
 		plan_titles[action_id]=label
@@ -2296,6 +2315,11 @@ func _input(event: InputEvent) -> void:
 			catalog_search.release_focus()
 			_unhandled_key_input(event)
 		get_viewport().set_input_as_handled()
+
+func _review_daily_routine() -> void:
+	var idea := Routines.daily_idea(Session.state.families[Session.profile_id].routines,_member(),float(Session.state.day_minutes))
+	_open_routines()
+	if not idea.is_empty(): routine_editor.call_deferred("focus_routine",str(idea.id))
 
 func _open_routines() -> void:
 	plan_panel.hide(); context_panel.hide(); neighborhood_panel.hide()
