@@ -1,3 +1,15 @@
+# MCP design — November 5, 2026
+
+- Added `docs/MCP_SERVER_DESIGN.md` and a README link. Proposal covers a managed
+  MCP companion, local/remote access, command receipts, permissions, screenshots,
+  construction ownership and implementation/validation stages. No runtime code.
+- Rechecked headless rendering: local Godot 4.7.2 help lists only the dummy
+  renderer for `headless`; upstream source agrees. Linux Xvfb plus Mesa is a
+  proposed no-monitor rendering route, not yet tested for this game. Native
+  offscreen support remains an upstream proposal/draft at review time.
+- Documentation whitespace and local reference checks passed. No gameplay tests,
+  native renders, hosted CI, exports or physical-device checks run for this work.
+
 # Activity clarity — November 5, 2026
 
 - Issue #10: wish cards preview the actor, activity/target, queue commitment,

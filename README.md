@@ -450,6 +450,10 @@ model and command dispatcher, the Iroh session/persistence layer, and the separa
 (`lot_projection.gd`, `lot_view.gd`). Add game rules to the model, not the renderer or Rust
 transport. Clients send intentions; the host validates and applies them.
 
+The proposed [MCP agent interface](docs/MCP_SERVER_DESIGN.md) covers local and
+remote agent play, screenshots, and unattended rendering through a virtual
+display. This is a design document; the MCP integration is not implemented.
+
 See [THIRD_PARTY.md](THIRD_PARTY.md) for upstream transport attribution and
 [LICENSE](LICENSE) for the project license.
 
