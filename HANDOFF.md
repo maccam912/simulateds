@@ -1,3 +1,31 @@
+# Android first-connection replication — November 5, 2026
+
+- Issue #30 networking follow-up: a fresh Android host sent its welcome but no
+  snapshot chunks reached the client. Three baseline attempts timed out; a later
+  connection and a forced-relay control worked. This matches the pinned Iroh
+  1.4.1 GSO fallback problem documented in upstream issue #4555.
+- Both native host/client endpoints now share a builder that disables QUIC
+  segmentation offload on Android. Desktop defaults, direct discovery, relay
+  fallback, protocol, validation and authority are preserved. No binary assets
+  or dependencies changed. Revisit after the upstream fix reaches our pin.
+- Rebuilt ARM64 Android/universal macOS libraries; Rust fmt and Clippy passed.
+  Development APK export, signature verification and installation passed.
+  Two fresh Android app processes each passed their first connection plus two
+  reconnects, with accepted snapshots and acknowledged/replicated purchase,
+  Undo and Finish. A separate forced-relay run passed. Android also joined a
+  desktop host twice, performed the edits through actual emulator touch input,
+  and retained its family/home. Native phone captures were inspected.
+- `tests/android_peer.gd` provides the repeatable desktop companion in both
+  directions; it requires isolated paths and a running APK, so is intentionally
+  outside `tools/check.py`. Reproduction and evidence boundaries are in
+  `docs/ANDROID_QA.md`; local logs/captures are ignored under
+  `build/issue30-replication/`.
+- Full `python3 tools/check.py` exited 0: all 142 gameplay/UI suites, both
+  save-continuity processes, eight real desktop Iroh scenarios and dedicated-server
+  smoke passed. Staged asset-storage and whitespace checks passed.
+- Physical phones, Wi-Fi/mobile-data transitions, background hosting, throughput
+  and battery cost remain untested. Hosted CI is separate from local checks.
+
 # Android emulator playtest — November 5, 2026
 
 - Issue #30: played the ARM64 APK on an isolated Pixel 7 Android 15 emulator.

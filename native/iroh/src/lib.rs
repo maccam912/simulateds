@@ -12,6 +12,27 @@ mod client;
 mod connection;
 mod server;
 
+/// Keep host and client transports consistent, including Android's GSO workaround.
+fn endpoint_builder(relay_only: bool) -> iroh::endpoint::Builder {
+    let builder = iroh::Endpoint::builder(iroh::endpoint::presets::N0);
+    // Android can accept small packets then stall on the first snapshot burst.
+    // iroh 1.4.1 keeps a connection's cached GSO capability after a socket falls
+    // back, so only later connections recover. Disable batching on Android;
+    // direct paths, relay fallback, MTU discovery and wire limits stay intact.
+    // Revisit after https://github.com/n0-computer/iroh/issues/4555 is resolved.
+    #[cfg(target_os = "android")]
+    let builder = builder.transport_config(
+        iroh::endpoint::QuicTransportConfig::builder()
+            .enable_segmentation_offload(false)
+            .build(),
+    );
+    if relay_only {
+        builder.clear_ip_transports()
+    } else {
+        builder
+    }
+}
+
 // Android's DNS resolver needs an application context. Keep a global JNI ref
 // for the process lifetime; never retain an Activity or call Godot off-thread.
 #[cfg(target_os = "android")]
