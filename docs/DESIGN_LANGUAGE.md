@@ -1275,3 +1275,19 @@ Undo/Redo tooltips identify the accepted transaction and the next exact cost or
 refund from bounded host-provided runtime descriptions. See
 [issue #6 dispositions](BUILD_CATALOG_QA.md), including the outstanding human
 mouse/trackpad check.
+
+
+## Resident identity in a crowd — November 5, 2026
+
+Give the selected resident's name first choice of clear space, then place other
+household need cues in stable identity order. Keep labels outside visible HUD
+panels and actual posed body bounds; optional chat/TV bubbles yield to them.
+Thin leaders connect labels to heads and draw behind every nameplate. Brass
+identifies the selected name. Content residents otherwise keep the world quiet.
+
+Retain existing care actions and full names on hover. Only label rectangles are
+interactive; leader lines never capture input. If no clear label position exists,
+keep the roster and Find resident available. This presentation cannot rearrange
+residents, change reservations or make hidden geometry selectable. See
+[the crowded-label review](RESIDENT_LABELS_QA.md) for validation and the remaining
+POSE-07 silhouette/spacing work.
