@@ -434,7 +434,7 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 			if object.kind=="easel": return _result(false,"Open the easel to choose a subject or continue its painting.")
 			if object.kind=="garden_bed": return _result(false,"Open the garden bed to choose planting, watering, or harvesting.")
 			if object.kind=="tv" and Television.choose(state,lot,member,object,_path).is_empty():
-				return _result(false,"No clear viewing place. Leave space in front of the television.")
+				return _result(false,"No clear viewing place. In Build, turn the television toward the room and leave space in front of its screen.")
 			if object.kind!="tv" and not _can_reach_object(lot, _position(member), object):
 				return _result(false, "There is no path to use that furnishing.")
 			_queue_action(member, {"type":"interact", "target_id":target_id})
@@ -2046,6 +2046,7 @@ func _restore(data: Dictionary, preserve_runtime: bool, continuing: bool) -> boo
 	state = data.duplicate(true)
 	state.erase("solo_view")
 	_normalize_numbers()
+	if continuing: _repair_legacy_starter_televisions()
 	_build_backups.clear()
 	_build_history.clear()
 	if preserve_runtime:
@@ -2061,6 +2062,27 @@ func _restore(data: Dictionary, preserve_runtime: bool, continuing: bool) -> boo
 			if not _walkable(_member_lot(member), _position(member)):
 				_send_home(family, member)
 	return true
+
+func _repair_legacy_starter_televisions() -> void:
+	# Older starter content faced the TV into the south wall. Repair only validated
+	# disk saves with the original, never-edited layout. Network replicas must keep
+	# the host's exact state, and any construction history protects player choices.
+	var furniture := [["bed",4,4], ["bed",6,4], ["fridge",10,4], ["shower",11,6], ["toilet",11,8], ["sofa",4,8], ["tv",4,10], ["bookshelf",10,10], ["plant",10,6], ["table",7,8]]
+	var floors: Array=[]; var walls: Array=[]
+	for y in range(3,12):
+		for x in range(3,13):
+			floors.append([x,y])
+			if (x==3 or x==12 or y==3 or y==11) and Vector2i(x,y)!=Vector2i(8,11): walls.append([x,y])
+	for lot: Dictionary in state.lots.values():
+		if lot.revision!=0 or lot.building or not lot.storeys.is_empty(): continue
+		if not lot.diagonal_walls.is_empty() or lot.landscape!=Landscaping.empty(): continue
+		if lot.objects.size()!=furniture.size() or lot.doors!=[[8,11]]: continue
+		if lot.floors.size()!=floors.size() or not floors.all(func(cell): return lot.floors.has(cell)): continue
+		if lot.walls.size()!=walls.size() or not walls.all(func(cell): return lot.walls.has(cell)): continue
+		if not furniture.all(func(item): return lot.objects.any(func(object): return object.kind==item[0] and object.x==item[1] and object.y==item[2] and object.rotation==0)): continue
+		for object: Dictionary in lot.objects:
+			if object.kind=="tv": object.rotation=2
+		lot.revision+=1
 
 func prepare_continuation(profile_id: String) -> Dictionary:
 	# Connection lifetimes end at a disk load. Only the solo household continues

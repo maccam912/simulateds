@@ -1,3 +1,25 @@
+# Legacy starter television — November 5, 2026
+
+- Issue #33: old starter homes had a TV facing the south wall. Disk loading now
+  turns it toward the sofa only when the original ten-object layout, architecture,
+  terrain and revision 0 prove the home is untouched. Vacant homes are included.
+  Edited homes remain unchanged; rejection explains turning the TV in Build.
+- The repair follows validation/number normalization, changes only TV rotation
+  and lot revision, and is idempotent. Network snapshots never run it. No schema,
+  protocol, model or binary asset changes. Details: `docs/TELEVISION_QA.md`.
+- `tests/starter_television.gd` reproduces rejection, verifies actual two-resident
+  viewing, persistence, replication, earlier schemas, preservation guards and
+  the ordinary Build workaround. The full `python3 tools/check.py` exited 0:
+  141 gameplay/UI suites, both save-continuity processes, eight real Iroh
+  scenarios and dedicated-server smoke. Final guard/test additions also pass
+  the focused regression. Logs and coverage audit: ignored `build/issue33/`.
+- Native macOS Godot 4.7.2/OpenGL review passed at 1440×900 and 1280×720/125% UI,
+  daylight/night, using the restored old home. Reproduce with the existing
+  `tests/television_pose.gd` runner and `--legacy-starter` after `--`, with isolated
+  save/profile/settings paths. Captures: ignored `build/tv-legacy-*.png`.
+- Asset-storage and whitespace checks pass. Hosted CI is separate; no local
+  exports, physical-device play or human hardware playtest was performed.
+
 # Seating occupancy — November 5, 2026
 
 - Issue #32: sofas, armchairs, loveseats, long sofas, wooden chairs and garden
