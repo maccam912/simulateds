@@ -16,19 +16,19 @@ func _reject(command: Dictionary,owner: String="a") -> void:
 	var before: Dictionary=world.snapshot(); assert(not world.apply_command(owner,command).ok and world.snapshot()==before)
 func _run() -> void:
 	_fresh(); var before: Dictionary=world.snapshot(); var plan:=Clear.inspect(lot)
-	assert(plan.ok and plan.refund==2940 and plan.furniture_refund==1575 and plan.structure_refund==1257 and plan.window_refund==108 and world.snapshot()==before,str(plan))
+	assert(plan.ok and plan.refund==2997 and plan.furniture_refund==1632 and plan.structure_refund==1257 and plan.window_refund==108 and world.snapshot()==before,str(plan))
 	var intent:=_intent(); _reject(intent,"b")
-	for change: Dictionary in [{"revision":-1},{"revision":0.5},{"refund":null},{"refund":2940.5},{"refund":2941}]:
+	for change: Dictionary in [{"revision":-1},{"revision":0.5},{"refund":null},{"refund":2997.5},{"refund":2998}]:
 		var bad:=intent.duplicate(); bad.merge(change,true); _reject(bad)
-	assert(world.apply_command("a",intent).ok and Clear.empty(lot) and lot.funds==14940 and lot.build_undo==1)
+	assert(world.apply_command("a",intent).ok and Clear.empty(lot) and lot.funds==14997 and lot.build_undo==1)
 	assert(world.state.next_object==before.next_object and world.state.families==before.families and lot.building)
 	_reject(intent); _reject(_intent())
 	assert(_edit("build_undo").ok and lot.objects==before.lots.lot_1.objects and lot.funds==12000)
-	assert(_edit("build_redo").ok and Clear.empty(lot) and lot.funds==14940)
+	assert(_edit("build_redo").ok and Clear.empty(lot) and lot.funds==14997)
 	# Allowance and external money survive undo and draft recovery exactly once.
 	world.state.day_minutes=1439.5; world.step(1.0)
-	assert(lot.funds==15540 and _edit("build_undo").ok and lot.funds==12600)
-	assert(_edit("build_redo").ok and lot.funds==15540)
+	assert(lot.funds==15597 and _edit("build_undo").ok and lot.funds==12600)
+	assert(_edit("build_redo").ok and lot.funds==15597)
 	var disk: Dictionary=world.snapshot_for_save(); var restored:=World.new(); assert(restored.restore(JSON.parse_string(JSON.stringify(disk))))
 	assert(restored.state.lots.lot_1.objects==before.lots.lot_1.objects and restored.state.lots.lot_1.funds==12600)
 	assert(_edit("build_cancel").ok and lot.objects==before.lots.lot_1.objects and lot.funds==12600)
@@ -78,5 +78,5 @@ func _run() -> void:
 	var library: Dictionary=world.state.families.a.room_library.duplicate(true)
 	assert(world.apply_command("a",_intent()).ok and world.state.families.a.room_library==library)
 	assert(world.apply_command("a",{"type":"place_blueprint","lot_id":lot.id,"blueprint_id":"room_1","library_revision":1,"x":3,"y":3,"rotation":0,"revision":lot.revision}).ok)
-	assert(_edit("build_end").ok and lot.objects.size()==10)
+	assert(_edit("build_end").ok and lot.objects.size()==11)
 	print("CLEAR_LOT_PASS"); quit()

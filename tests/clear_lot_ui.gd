@@ -64,20 +64,20 @@ func _run() -> void:
 	await process_frame; await process_frame
 	await _button(game.catalog_buttons.clear_lot)
 	var panel: VBoxContainer=game.clear_panel
-	assert(panel.plan.refund==2940 and not panel.confirm.disabled and not game.catalog_filters.visible)
+	assert(panel.plan.refund==2997 and not panel.confirm.disabled and not game.catalog_filters.visible)
 	var before: Dictionary=session.world.snapshot()
 	await _tile(0,0); await _tile(7,7); await _tile(4,4); await _capture("review")
 	assert(session.world.snapshot()==before,"Review ground and furniture clicks cannot change the lot")
 	await _button(panel.back); assert(session.world.snapshot()==before and game.catalog_filters.visible)
 	await _button(game.catalog_buttons.clear_lot); panel=game.clear_panel
 	_command({"type":"place","kind":"floor","x":0,"y":0}); game._refresh()
-	assert(panel.review.visible and panel.confirm.disabled and panel.plan.refund==2940)
-	await _button(panel.review); assert(panel.plan.refund==2947 and not panel.confirm.disabled)
+	assert(panel.review.visible and panel.confirm.disabled and panel.plan.refund==2997)
+	await _button(panel.review); assert(panel.plan.refund==3004 and not panel.confirm.disabled)
 	_command({"type":"build_undo"}); game._refresh(); await _button(panel.review)
 	await _key(KEY_ESCAPE); assert(not game.context_panel.visible and game.selected_tool=="floor" and not Clear.empty(lot))
 	game._show_tray(game.context_panel,true); await _button(game.catalog_buttons.clear_lot); panel=game.clear_panel
 	# Only this exact acknowledgement releases the pending review, after a newer snapshot.
-	var intent: Dictionary={"type":"clear_lot","lot_id":lot.id,"revision":lot.revision,"refund":2940}
+	var intent: Dictionary={"type":"clear_lot","lot_id":lot.id,"revision":lot.revision,"refund":2997}
 	panel.pending=intent.duplicate(); game._refresh()
 	assert(game.mode_button.disabled and game.undo_button.disabled and game.clear_discard_button.disabled)
 	var unrelated:=intent.duplicate(); unrelated.refund=1
@@ -86,10 +86,10 @@ func _run() -> void:
 	panel._completed(intent,true,""); assert(not panel.pending.is_empty())
 	panel._completed(intent,false,"Review again"); assert(panel.pending.is_empty()); panel._review(); game._refresh()
 	await _button(panel.confirm); await _capture("cleared")
-	assert(Clear.empty(lot) and lot.funds==14940 and panel.pending.is_empty() and panel.rebuild.visible)
-	await _button(game.undo_button); assert(lot.objects.size()==10 and lot.funds==12000)
-	await _button(game.redo_button); assert(Clear.empty(lot) and lot.funds==14940)
-	await _button(game.clear_discard_button); assert(lot.objects.size()==10 and lot.funds==12000 and not lot.building)
+	assert(Clear.empty(lot) and lot.funds==14997 and panel.pending.is_empty() and panel.rebuild.visible)
+	await _button(game.undo_button); assert(lot.objects.size()==11 and lot.funds==12000)
+	await _button(game.redo_button); assert(Clear.empty(lot) and lot.funds==14997)
+	await _button(game.clear_discard_button); assert(lot.objects.size()==11 and lot.funds==12000 and not lot.building)
 	assert(session.state.families[session.profile_id].room_library.entries.size()==1)
 	await _button(game.mode_button); game._select_build_tool("floor")
 	_command({"type":"place","kind":"easel","x":9,"y":8})
@@ -115,10 +115,10 @@ func _run() -> void:
 	await _button(game.library_panel.buttons.room_1.place); game.lot_view.center_lot(); await process_frame; await process_frame
 	await _tile(3,3,false); await _capture("rebuild-preview")
 	assert(game.lot_view.copy_preview.ok,str(game.lot_view.copy_preview))
-	await _tile(3,3); assert(lot.objects.size()==10 and lot.artworks.size()==1)
+	await _tile(3,3); assert(lot.objects.size()==11 and lot.artworks.size()==1)
 	await _button(game.mode_button); assert(not lot.building)
 	var restored:=preload("res://game/world.gd").new(); assert(restored.restore(JSON.parse_string(JSON.stringify(session.world.snapshot_for_save()))))
-	assert(restored.state.lots.lot_1.objects.size()==10 and restored.state.lots.lot_1.artworks.size()==1)
+	assert(restored.state.lots.lot_1.objects.size()==11 and restored.state.lots.lot_1.artworks.size()==1)
 	await _capture("rebuilt")
 	print("CLEAR_LOT_UI_PASS")
 	await root.get_node("Soundscape").shutdown_and_wait(); quit()

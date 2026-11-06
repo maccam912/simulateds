@@ -52,7 +52,7 @@ func _run() -> void:
 	assert(game.catalog_buttons.has("sofa") and game.catalog_buttons.has("armchair") and game.catalog_buttons.size()==6)
 	if DisplayServer.get_name()!="headless": assert(game.catalog_thumbnails.cache.has("armchair"))
 	await capture("shopping-day")
-	assert(view.projection.scene.furnishing_lights.size()==3)
+	assert(view.projection.scene.furnishing_lights.size()==4)
 	assert(view.projection.scene.daylight_windows.size()==3)
 	# Pointer drag rotation changes only the pending furnishing until placement.
 	game._select_build_tool("wood_chair"); await settle()

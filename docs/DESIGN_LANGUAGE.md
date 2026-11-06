@@ -281,6 +281,14 @@ small pools of light. Construction brightens the property grid at night, while
 HUD controls and placement feedback retain their normal contrast. Lighting is
 presentation only; it does not create an electricity or visibility mechanic.
 
+New starter homes have a linen floor lamp beside the sofa, giving the sitting
+area a warm focal light at night. Keep the existing cool ambient balance and
+automatic readability fill; the actual movable fixture supplies the local pool
+and shadows. Its fabric shade has a restrained glow in its chosen material color,
+without recoloring neighboring furnishings or shared model materials. Low scenery
+retains indoor fixtures. Existing saved layouts remain the player's own; no lamp
+is silently inserted on load. See [the starter-light review](STARTER_LIGHTING_QA.md).
+
 ## Sound and music
 
 Sound should make the house feel inhabited without making prolonged play tiring.

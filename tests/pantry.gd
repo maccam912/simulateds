@@ -18,6 +18,8 @@ func _fresh() -> void:
 			resident.autonomy=false
 			for wish: Dictionary in resident.wishes.wishes: wish.done=true
 	family=world.state.families.a; home=world.state.lots.lot_1; member=family.members[0]; other=family.members[1]
+	# This two-table fixture uses the sitting corner for its second dining place.
+	home.objects=home.objects.filter(func(item): return item.kind!="floor_lamp")
 	other.x=8; other.y=14
 	table=world._new_object("dining_table",8,6,0); home.objects.append(table)
 	bed=world._new_object("garden_bed",5,13,0); home.objects.append(bed)
