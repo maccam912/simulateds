@@ -23,6 +23,11 @@ var settings_path := "user://settings.json"
 var last_error := ""
 var _loading := false
 
+func _defaults() -> Dictionary:
+	var result := DEFAULTS.duplicate(true)
+	if OS.has_feature("mobile"): result.ui_scale=1.25
+	return result
+
 func _ready() -> void:
 	for argument in OS.get_cmdline_user_args():
 		if argument.begins_with("--settings-path="):
@@ -37,7 +42,7 @@ func _ready() -> void:
 func load_and_apply() -> void:
 	last_error=""
 	_loading=true
-	values=DEFAULTS.duplicate(true)
+	values=_defaults()
 	var reply: Dictionary=Persistence.read_json(settings_path)
 	if reply.get("ok",false):
 		var data: Dictionary=reply.data
@@ -94,7 +99,7 @@ func bind_action(action: String,keycode: int) -> Dictionary:
 
 func reset_defaults() -> bool:
 	var previous:=values.duplicate(true)
-	values=DEFAULTS.duplicate(true)
+	values=_defaults()
 	if not save():
 		values=previous
 		return false
@@ -127,7 +132,8 @@ func apply() -> void:
 		if DisplayServer.window_get_vsync_mode()!=desired_vsync:
 			DisplayServer.window_set_vsync_mode(desired_vsync)
 		var window:=get_window()
-		var desired_mode:=Window.MODE_FULLSCREEN if values.fullscreen else Window.MODE_WINDOWED
+		# A desktop window preference must not disable Android's immersive view.
+		var desired_mode:=Window.MODE_FULLSCREEN if OS.has_feature("mobile") or values.fullscreen else Window.MODE_WINDOWED
 		if window.mode!=desired_mode:
 			window.mode=desired_mode
 		if not is_equal_approx(window.content_scale_factor,float(values.ui_scale)):

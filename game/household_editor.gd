@@ -73,7 +73,7 @@ func setup(family: Dictionary, context: String) -> void:
 	age_label=_label("",13); identity.add_child(age_label)
 	var roster_scroll := ScrollContainer.new(); roster_scroll.vertical_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED; roster_scroll.custom_minimum_size.y=56; preview_column.add_child(roster_scroll)
 	roster=HBoxContainer.new(); roster.add_theme_constant_override("separation",6); roster_scroll.add_child(roster)
-	var hint := _label("Drag to turn · Scroll to zoom",12); preview_column.add_child(hint)
+	var hint := _label("Drag to turn · − / + to zoom",12); preview_column.add_child(hint)
 	detail_panel=PanelContainer.new(); detail_panel.custom_minimum_size.x=380; body.add_child(detail_panel)
 	detail_panel.add_theme_stylebox_override("panel",Style.box(Color("20353b"),6,Style.EDGE))
 	var margin := MarginContainer.new()

@@ -42,6 +42,7 @@ func _ready() -> void:
 	_card(neighbors,"Leave a little kindness","Mail carries a postcard with money or a finished painting for someone to find later. A gifted painting leaves your home and keeps its artist credit. Collect it, then choose Hang this painting. Finish construction before sending or collecting artwork. Home news shows gifts still waiting.",[["mail","Open the mailbox"]])
 	_card(neighbors,"The neighborhood clock","The host must stay running for life to continue. Away households get forgiving care and keep their wishes, hobbies, and friendships. If the entire host stops, the world waits. Shared menus never pause everyone else.",[])
 	var controls := _page("Controls")
+	_card(controls,"Touch controls","Tap to select a resident, walk, or use furniture. Hold furniture or a resident briefly to review actions; release, then tap a choice. Drag the world to pan; use − / + beside the lot name to zoom. Tap a selected household name again to find them. In Build, select a card then tap a destination; Move selects a furnishing then its new position, and Rotate turns the selected piece. Floor and wall tools also accept a rectangle drag. Android Back closes the current choice or tray before opening the game menu; edited households still ask before discarding.",[])
 	controls.add_child(_text("YOUR KEY BINDINGS",12,Style.GOLD))
 	var grid := GridContainer.new(); grid.columns=2; grid.add_theme_constant_override("h_separation",22); grid.add_theme_constant_override("v_separation",9); controls.add_child(grid)
 	for action: String in Preferences.ACTION_NAMES:

@@ -116,6 +116,9 @@ func _process(delta: float) -> void:
 	if not baby: model.rotation.z=sin(t*0.65)*0.007
 
 func _input_preview(event: InputEvent) -> void:
+	# Android sends both the touch and its mouse emulation. Rotate only once.
+	if event.device==InputEvent.DEVICE_ID_EMULATION and (event is InputEventMouseButton or event is InputEventMouseMotion):
+		accept_event(); return
 	if event is InputEventMouseButton:
 		if event.button_index==MOUSE_BUTTON_LEFT: _dragging=event.pressed; accept_event()
 		elif event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP,MOUSE_BUTTON_WHEEL_DOWN]:
