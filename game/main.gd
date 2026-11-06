@@ -123,6 +123,7 @@ var location_find_button: Button
 var needs_title: Label
 var wish_buttons := {}
 var _meal_wish_options := {}
+var _wish_options := {}
 var wishes_button: Button
 var hobbies_button: Button
 var hobby_buttons: Dictionary = {}
@@ -957,10 +958,11 @@ func _refresh() -> void:
 	tools_signature+=str(_copy_source)+str(_copy_request.is_empty())
 	tools_signature+=str(_paint_anchor)+str(_paint_request.is_empty())+str(finish_choice)+_floor_selection
 	if _context_page=="wishes" and not build_mode:
-		_meal_wish_options.clear()
+		_meal_wish_options.clear(); _wish_options.clear()
 		for wish: Dictionary in member.get("wishes",{}).get("wishes",[]):
 			if wish.id in Wishes.MEALS: _meal_wish_options[wish.id]=Session.world.meal_wish_option(Session.profile_id,selected_member,str(wish.id))
-		tools_signature+=str(_meal_wish_options)
+			else: _wish_options[wish.id]=Session.world.wish_option(Session.profile_id,selected_member,str(wish.id))
+		tools_signature+=str(_meal_wish_options)+str(_wish_options)
 		tools_signature+=str(member.get("wishes",{}))+str(day)+str(member.get("task",{}).get("id",""))+str(member.get("queue",[]))
 	if _context_page=="people" and not build_mode:
 		_leisure_options.clear()
@@ -1251,6 +1253,7 @@ func _rebuild_context(building: bool, lot: Dictionary) -> void:
 		activity_label.text="Art commissions"
 		commission_panel=preload("res://game/commission_panel.gd").new(); tools_box.add_child(commission_panel); commission_panel.add_footer(context_box)
 		commission_panel.command_requested.connect(_send); commission_panel.easel_requested.connect(_commission_easel)
+		commission_panel.find_requested.connect(_find_commission_original)
 		commission_panel.back_requested.connect(func(): _context_page="activities"; _refresh())
 	elif _context_page=="painting":
 		activity_label.text="At the easel"
@@ -1373,9 +1376,24 @@ func _commission_easel() -> void:
 		catalog_category.select(BuildCatalog.CATEGORIES.keys().find("living")); catalog_search.text="easel"
 		_select_build_tool("easel"); _send({"type":"build_begin","lot_id":str(home.id)}); _show_tray(context_panel,true); call_deferred("_reset_catalog_scroll")
 
-func _pursue_wish(wish_id: String) -> void:
+func _find_commission_original(intent: Dictionary) -> void:
+	var family := _family()
+	if family.is_empty(): return
+	var home: Dictionary=Session.state.lots[family.home_lot]
+	var source: Dictionary=WallArt.source(home,str(intent.get("art_source","")))
+	if source.is_empty() or source.art_id!=intent.get("art_id"):
+		_notice("That original changed or left your home. Review the current collection."); return
+	var cell := Vector2(int(source.get("x",-1)),int(source.get("y",-1)))
+	if not str(source.object_id).is_empty():
+		var easel: Dictionary=Session.world._object(home,str(source.object_id))
+		cell=Vector2(easel.x,easel.y)
+	if cell.x<0: _notice("This original is stored in your collection."); return
+	_select_lot(str(home.id)); _set_view_level(0)
+	lot_view.focus_cell(cell+Vector2(0.5,0.5))
+
+func _pursue_wish(wish_id: String,target_id: String="") -> void:
 	if not wish_id in Wishes.MEALS:
-		_send({"type":"pursue_wish","member_id":selected_member,"wish_id":wish_id}); return
+		_send({"type":"pursue_wish","member_id":selected_member,"wish_id":wish_id,"target_id":target_id}); return
 	var option: Dictionary=Session.world.meal_wish_option(Session.profile_id,selected_member,wish_id)
 	if not option.available: _notice(str(option.detail)); return
 	_select_lot(str(option.lot_id))
@@ -1398,13 +1416,23 @@ func _rebuild_wishes() -> void:
 	for wish: Dictionary in board.get("wishes",[]):
 		var definition: Dictionary=Wishes.CATALOG[wish.id]
 		var status: String=Session.world.wish_status(member,str(definition.activity))
-		var detail := "Complete" if wish.done else (status if not status.is_empty() else "Try this")+" · § %d" % Wishes.REWARD
 		var meal_option: Dictionary=_meal_wish_options.get(wish.id,{})
-		if not wish.done and not meal_option.is_empty(): detail=str(meal_option.label)+" · Reward §%d" % Wishes.REWARD
-		var button := _button(("✓ " if wish.done else "♡ ")+str(definition.title)+"\n"+detail,func(): _pursue_wish(str(wish.id)))
+		var option: Dictionary=_wish_options.get(wish.id,{})
+		var target_id: String=str(option.get("target_id",""))
+		var detail := "Complete"
+		if not wish.done:
+			if not meal_option.is_empty():
+				detail=str(meal_option.label)+" · "+str(member.name)+"\n"+("Opens Build · No purchase yet" if meal_option.action=="build" else "View only · No order or spending")
+			else:
+				detail=str(option.get("label",status))+"\n"+(str(option.commitment) if option.get("available",false) else str(option.get("detail","Unavailable")))
+			if option.get("available",false): detail+="\n"+str(option.detail).split(". ")[0]+"."
+			detail+="\nReward §%d" % Wishes.REWARD
+		var button := _button(("✓ " if wish.done else "♡ ")+str(definition.title)+"\n"+detail,func(): _pursue_wish(str(wish.id),target_id))
 		wish_buttons[wish.id]=button
 		button.alignment=HORIZONTAL_ALIGNMENT_LEFT; button.add_theme_font_size_override("font_size",12)
-		button.custom_minimum_size.y=60; button.disabled=bool(wish.done) or not status.is_empty(); button.tooltip_text=str(definition.description)
+		button.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+		button.custom_minimum_size.y=60; button.disabled=bool(wish.done) or not option.get("available",false)
+		button.tooltip_text=str(definition.description)+"\n"+str(option.get("detail",""))
 		if not meal_option.is_empty():
 			button.disabled=bool(wish.done) or not meal_option.available; button.tooltip_text+="\n"+str(meal_option.detail)
 		if wish.done: button.add_theme_color_override("font_disabled_color",Style.GREEN)
@@ -2323,7 +2351,7 @@ func _rebuild_hobbies() -> void:
 		benefit.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; benefit.custom_minimum_size.x=200; body.add_child(benefit)
 		var option: Dictionary=_hobby_options.get(hobby,{"available":false,"status":"Unavailable here","detail":""})
 		if hobby=="painting":
-			var rule := _label("Finish a canvas after contributing 12 game minutes. Both housemates can earn practice.",11,Style.MUTED)
+			var rule := _label("Finish a canvas after contributing 12 game minutes. Each contributing household member can earn practice.",11,Style.MUTED)
 			rule.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; rule.custom_minimum_size.x=200; body.add_child(rule)
 		var button := _button(str(option.get("label",definition.action)) if option.available else str(option.status),func(): _choose_hobby(hobby))
 		button.disabled=not option.available; button.tooltip_text=str(option.detail); button.add_theme_font_size_override("font_size",12); body.add_child(button); hobby_buttons[hobby]=button

@@ -60,6 +60,7 @@ func _run() -> void:
 	var before_funds: int=home.funds; var picture: Dictionary=easel.painting.duplicate(true)
 	var receipt_id: String=Art.source(home,"easel:"+str(easel.id)).art_id
 	var choices:=Jobs.candidates(world.state,"a"); assert(choices.size()==1 and choices[0].available and choices[0].picture==picture)
+	assert(choices[0].findable and choices[0].location=="Daydream easel · Ground floor" and choices[0].location_detail.contains("9, 9"))
 	var delivery:=_delivery()
 	for change: Dictionary in [{"art_id":"wrong"},{"art_source":[]},{"revision":-1},{"revision":0.5},{"lot_id":"lot_2"},{"commission_revision":0}]:
 		var bad:=delivery.duplicate(true); bad.merge(change,true); _reject(bad)
@@ -84,6 +85,7 @@ func _run() -> void:
 	assert(world.apply_command("a",{"type":"build_begin","lot_id":home.id}).ok)
 	assert(world.apply_command("a",{"type":"art_hang","lot_id":home.id,"source":"easel:"+str(easel.id),"x":8,"y":3,"revision":home.revision}).ok)
 	assert(world.apply_command("a",{"type":"build_end","lot_id":home.id}).ok)
+	assert(Jobs.candidates(world.state,"a")[0].location=="Hanging on a wall · Ground floor" and Jobs.candidates(world.state,"a")[0].findable)
 	var art_id: String=home.artworks.keys()[0]; var walls: Array=home.walls.duplicate(true)
 	assert(world.apply_command("a",_delivery("art:"+art_id)).ok and home.artworks.is_empty() and home.walls==walls)
 	assert(not world.apply_command("a",{"type":"build_undo","lot_id":home.id}).ok)
@@ -115,7 +117,7 @@ func _run() -> void:
 	var card: Dictionary=world.state.families.a.mailbox.items[0]
 	assert(world.apply_command("a",{"type":"mail_read","id":card.id}).ok)
 	assert(world.apply_command("a",{"type":"mail_claim","id":card.id}).ok)
-	assert(Jobs.candidates(world.state,"a")[0].location=="In collection")
+	assert(Jobs.candidates(world.state,"a")[0].location=="In your collection" and not Jobs.candidates(world.state,"a")[0].findable)
 	assert(world.apply_command("a",_delivery("art:"+gift_id)).ok and home.artworks.is_empty())
 	assert(board.history[0].credit=="By B" and member.hobbies.painting.sessions==0 and card.claimed)
 	assert(replica.restore(JSON.parse_string(JSON.stringify(world.snapshot_for_save()))),"A claimed mail receipt may remember an original that was subsequently delivered")

@@ -60,6 +60,15 @@ static func summary(bed: Dictionary) -> String:
 	if float(bed.water)<=0.000001: return name+" · Needs water"
 	return name+" · Growing %d%%" % floori(float(bed.growth)/float(CROPS[bed.crop].seconds)*100)
 
+static func readiness(bed: Dictionary,minutes_per_second: float) -> String:
+	if not CROPS.has(bed.get("crop")): return "Choose seeds to start growing."
+	if ripe(bed): return "Ready to harvest · Ripe crops keep."
+	var remaining := float(CROPS[bed.crop].seconds)-float(bed.growth)
+	var minutes := ceili(remaining*minutes_per_second)
+	var duration := "%d game h %02d min" % [minutes/60,minutes%60] if minutes>=60 else "%d game min" % minutes
+	if float(bed.water)<=0.000001: return "Needs water · Growth stopped.\nAbout "+duration+" of watered growth left."
+	return "Ready in about "+duration+(" if kept watered." if float(bed.water)<remaining else " · Enough water.")
+
 static func valid(value: Variant) -> bool:
 	if not value is Dictionary or value.size()!=5 or not value.get("crop") is String: return false
 	if not _integer(value.get("revision"),0,MAX_REVISION) or not _integer(value.get("harvests"),0,int(value.revision)): return false

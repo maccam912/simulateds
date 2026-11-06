@@ -39,9 +39,14 @@ func _run() -> void:
 	assert(world.apply_command("a",JSON.parse_string(JSON.stringify(call))).ok,"JSON numeric normalization preserves the previewed group")
 	assert(first.task.meal_action=="eat" and second.task.meal_action=="eat" and first.task.id!=second.task.id and table.meal.servings==4)
 	assert(Meals.available(world.state,lot,table)==2 and world.state.families.b==foreign and lot.funds==funds)
+	var roster_before: Dictionary=world.snapshot()
+	var participants := Meals.participants(world.state,lot,table)
+	assert(participants.size()==2 and participants.all(func(row): return not row.taken and row.status in ["Walking","Waiting"]))
+	assert(world.snapshot()==roster_before,"Reading the roster cannot consume food or change plans")
 	_reject(call); assert(not _option().ok)
 	var replica:=World.new(); assert(replica.restore(JSON.parse_string(JSON.stringify(world.snapshot())),true))
 	_advance(4); assert(first.action=="Eating together" and second.action=="Eating together" and table.meal.servings==2)
+	assert(Meals.participants(world.state,lot,table).all(func(row): return row.taken and row.status=="Eating"))
 	for tick in range(40): replica.step(0.1)
 	assert(replica.state.lots.lot_1.objects[-1].meal.servings==2)
 	# Existing deliberate plans keep running, and their queue order stays intact.
@@ -51,6 +56,7 @@ func _run() -> void:
 	var task: Dictionary=first.task.duplicate(true); var queue: Array=first.queue.duplicate(true)
 	assert(_option().rows[0].detail.begins_with("After their plan")); assert(world.apply_command("a",_intent()).ok)
 	assert(first.task==task and first.queue.size()==queue.size()+1 and first.queue[0]==queue[0] and first.queue[-1].meal_action=="eat")
+	assert(Meals.participants(world.state,lot,table).any(func(row): return row.member_id==first.id and row.status=="Queued" and not row.taken))
 	# Changed plans or newly claimed food reject before touching either resident.
 	_fresh(); call=_intent(); assert(world.apply_command("a",{"type":"move","member_id":second.id,"lot_id":lot.id,"x":0,"y":14}).ok); _reject(call)
 	_fresh(2); call=_intent(); var guest: Dictionary=world.state.families.b.members[0]
@@ -65,6 +71,7 @@ func _run() -> void:
 	_fresh(2)
 	for member: Dictionary in [first,second]: member.autonomy=true; member.idle_clock=2; member.needs.hunger=10
 	_advance(3); assert(table.meal.servings==0)
+	assert(Meals.participants(world.state,lot,table).all(func(row): return row.automatic and row.taken))
 	var first_time: float=first.task.remaining; var second_time: float=second.task.remaining
 	call=_intent(); assert(call.orders.all(func(order): return order.action=="choose")); assert(world.apply_command("a",call).ok)
 	assert(not first.task.get("automatic",false) and not second.task.get("automatic",false) and first.task.remaining==first_time and second.task.remaining==second_time and table.meal.servings==0)
@@ -91,4 +98,9 @@ func _run() -> void:
 	_fresh(); call=_intent(); assert(world.apply_command("a",{"type":"build_begin","lot_id":lot.id}).ok); _reject(call)
 	assert(not _option().ok)
 	_fresh(0); assert(not _option().ok); _reject(_intent())
+	_fresh(); assert(world.apply_command("a",_intent()).ok)
+	assert(world.apply_command("a",{"type":"cancel","member_id":second.id}).ok)
+	assert(Meals.participants(world.state,lot,table).size()==1 and Meals.available(world.state,lot,table)==3)
+	table.meal.batch+=1
+	assert(Meals.participants(world.state,lot,table).is_empty(),"Stale plans do not identify current diners")
 	print("MEAL_CALL_PASS"); quit()

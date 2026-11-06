@@ -26,6 +26,12 @@ func _run() -> void:
 	var lot: Dictionary=world.state.lots.lot_1
 	var funds: int=lot.funds
 	for need: String in member.needs: member.needs[need]=100.0
+	var before: Dictionary=world.snapshot()
+	var suggestion: Dictionary=world.wish_option("wish",member.id,"story")
+	assert(suggestion.available and suggestion.label.contains("Reading") and suggestion.commitment.contains(member.name))
+	assert(world.snapshot()==before,"Previewing a wish cannot order or reward it")
+	assert(not world.apply_command("wish",{"type":"pursue_wish","member_id":member.id,"wish_id":"story","target_id":"stale"}).ok)
+	assert(world.snapshot()==before,"A changed preview cannot switch targets or complete a wish")
 	assert(_request("story").ok)
 	# Even at full fun, a directed leisure session lasts long enough to read.
 	for index in range(10): world.step(0.1)

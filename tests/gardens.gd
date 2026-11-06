@@ -46,6 +46,15 @@ func _advance(seconds: float) -> void:
 
 func _run() -> void:
 	_setup()
+	var preview_bed := {"crop":"tomato","growth":0.0,"water":45.0}
+	assert(Gardens.readiness(preview_bed,World.MINUTES_PER_SECOND).contains("9 game h 00 min if kept watered"))
+	Gardens.grow(preview_bed,45)
+	assert(Gardens.readiness(preview_bed,World.MINUTES_PER_SECOND).contains("Needs water"))
+	assert(Gardens.readiness(preview_bed,World.MINUTES_PER_SECOND).contains("6 game h 45 min"))
+	preview_bed.water=120.0; preview_bed.growth=100.0
+	assert(Gardens.readiness(preview_bed,World.MINUTES_PER_SECOND).contains("Enough water"))
+	Gardens.grow(preview_bed,80)
+	assert(Gardens.readiness(preview_bed,World.MINUTES_PER_SECOND).begins_with("Ready to harvest"))
 	var original: Dictionary=world.snapshot()
 	var preview: Dictionary=world.garden_option("a",member.id,"lot_1",bed.id,"plant","radish")
 	assert(preview.ok and preview.cost==10 and preview.duration==8 and world.snapshot()==original)

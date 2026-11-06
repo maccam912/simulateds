@@ -1,3 +1,32 @@
+# Activity clarity — November 5, 2026
+
+- Issue #10: wish cards preview the actor, activity/target, queue commitment,
+  free cost and game-time bound. The host shares the suggestion logic and
+  rejects a changed reviewed target. Meal wishes identify navigation-only
+  actions. Existing wish rewards and deliberate plan priority remain.
+- Garden status shows conditional game-time readiness, dry stops and pause.
+  Meals name current diners with queued/walking/waiting/eating status and
+  distinguish available, reserved and taken portions without consuming food.
+- Easel/commission/hobby/guide/routine copy supports larger households and
+  preserves painting eligibility. Art locations use furnishing/collection names,
+  optional coordinates and camera-only Find. Delivery shows a recipient note
+  and original artist credit, keeping exact-original removal/payment checks.
+- All ten dispositions: `docs/ACTIVITY_CLARITY_QA.md`. Personal wish reactions,
+  multi-bed tending, serving choreography and artist/stage visual variants are
+  explicitly deferred. No model, binary asset, save-schema or protocol change.
+- Native macOS Godot 4.7.2/OpenGL review passed at 1440×900 and 1280×720/125%,
+  day/night, dry/paused/watered crops, three staggered diners and compact art
+  review/delivery. Native compact pantry and meal-wish loops also passed.
+  Logs: ignored `build/issue10/native.log`, `native-reviews.log`; captures:
+  `build/activity-clarity-*.png`, `commissions-*.png`, `pantry-*.png` and
+  `meal-wishes-*.png`. New UI review is registered in `tools/check.py`.
+- Full local `python3 tools/check.py` exited 0: all 133 gameplay/UI suites,
+  both save-continuity processes, eight real Iroh peer scenarios and dedicated
+  server smoke. Logs/audit: ignored `build/issue10/check.log`, `validation.json`.
+  Staged asset storage and whitespace checks pass (81 hydrated LFS assets).
+- Hosted CI is separate. Exports, physical-device and human playtests were not
+  performed for this change.
+
 # Floor and wall joins — November 5, 2026
 
 - Isolated branch `codex/floor-wall-shadow-review`, based on `main` at `1293bd4`.

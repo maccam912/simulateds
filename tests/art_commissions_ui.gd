@@ -103,9 +103,14 @@ func _run() -> void:
 	await _button(game.painting_panel.commission_button); panel=game.commission_panel
 	var source: String="easel:"+str(easel.id)
 	assert(panel.review_buttons.size()==1)
-	before=session.world.snapshot(); await _button(panel.review_buttons[source]); await _capture("review")
+	before=session.world.snapshot()
+	var selected: String=game.selected_member
+	await _button(panel.find_buttons[source]); panel=game.commission_panel
+	assert(session.world.snapshot()==before and game.selected_member==selected and game.viewed_lot==home.id and game.view_level==0,"Find only moves the camera")
+	await _button(panel.review_buttons[source]); await _capture("review")
 	assert(session.world.snapshot()==before and panel.preview.picture==easel.painting)
 	assert(panel.detail.text.contains(member.name) and panel.note.text.contains("cannot be undone"))
+	assert(panel.detail.text.contains("Ground floor") and not panel.detail.text.contains("9, 9") and panel.detail.tooltip_text.contains("9, 9"))
 	assert(game.tools_box.get_parent().get_global_rect().encloses(panel.note.get_global_rect()),"The removal consequence must be visible without scrolling")
 	assert(game.context_panel.get_global_rect().encloses(panel.confirm.get_global_rect()))
 	await _button(panel.back); assert(panel.review.is_empty() and session.world.snapshot()==before)
@@ -131,6 +136,7 @@ func _run() -> void:
 	await _button(panel.confirm); await _capture("delivered")
 	assert(home.funds==funds+180 and easel.painting.subject=="" and panel.pending.is_empty() and panel.review.is_empty())
 	assert(family.commissions.completed==1 and family.commissions.history[0].credit.contains(member.name))
+	assert(panel.detail.text.contains(preload("res://game/art_commissions.gd").RECIPIENT_NOTES[terms.id]) and panel.detail.text.contains(member.name))
 	assert(panel.heading.tooltip_text==terms.request,"The delivered recipient keeps its own request wording, not tomorrow's offer")
 	assert(panel.confirm.disabled and panel.note.text.contains("tomorrow") and panel.history.get_child_count()==2)
 	assert(not session.world.apply_command(session.profile_id,intent).ok and home.funds==funds+180)
