@@ -1,7 +1,8 @@
 # Android emulator playtest — November 5, 2026
 
 Issue #30 was exercised on a fresh, isolated Android emulator. This change fixes
-five observed input/layout problems and records the remaining networking failure.
+five observed input/layout problems. The networking follow-up below resolves the
+subsequently reproduced first-connection snapshot failure.
 It is not a physical-device or performance certification.
 
 ## Environment and reproduction
@@ -46,9 +47,9 @@ The Controls guide now describes touch holds, panning, zoom, construction and Ba
 | Room-code, household name, catalog search and save-name typing | Active field visible with keyboard open; Back dismisses keyboard and restores controls. |
 | Named save/load and restart | Created and loaded `Linden Grove · Day 2QA`, restoring day 2 at 04:21, funds 12,460, original names and the placed bench. Save survived APK replacement/restart. |
 | Multiplayer room creation | Android generated a four-character room code through the configured discovery service. |
-| Android host → macOS headless client | **Failed** snapshot replication after successful handshake; see below. |
+| Android host → macOS headless client | Failed in the original UI pass; passed after the transport workaround below. |
 
-## Networking follow-up
+## Original networking failure
 
 A separate headless desktop probe joined the Android host by its displayed room
 code. It reached `Connected · your family is ready`, but the final run never
@@ -62,11 +63,103 @@ does not establish validity of the transmitted runtime snapshot.
 The probe used the ordinary `Rooms.join(code)` interface and waited for a snapshot
 containing `Session.profile_id` before issuing commands. Local diagnostic logs are
 `build/issue30/android-peer-final.log`; its temporary script is
-`build/issue30/android_peer.gd`. Root cause remains undetermined. No network,
-protocol, identity or save-validation rules were changed as part of these UI
-fixes. Do not infer Android multiplayer success from the passing desktop Iroh
-suite. Follow up with snapshot assembly/validation diagnostics on an Android host,
-then verify join, acknowledged command, leave and reconnect on both platforms.
+`build/issue30/android_peer.gd`. At the end of that UI pass, the cause was still
+undetermined, and no network, protocol, identity or save-validation rules had
+changed. The passing desktop Iroh suite did not establish Android multiplayer
+success. The follow-up below investigates that gap with the actual APK.
+
+## First-connection transport fix — November 5, 2026
+
+Reproduced on base `6764379` using the same isolated AVD and saved neighborhood.
+Three default-transport first connections received the welcome packet but no
+snapshot chunks before the 20-second stale-connection timeout. Temporary host
+diagnostics showed bounded snapshots being queued and their sends returning OK;
+client diagnostics saw only the welcome packet. A later connection to the same
+host worked, as did a fresh connection with the desktop client forced to relay.
+This places the observed failure before snapshot assembly or world validation.
+Diagnostic packet logging and captured world data are not shipped.
+
+The pattern matches Iroh's [cached GSO capability failure](https://github.com/n0-computer/iroh/issues/4555)
+and its [Android upload report](https://github.com/n0-computer/iroh/issues/4647):
+small packets arrive, burst traffic stalls, and later connections can recover
+after the socket disables segmentation offload. These upstream reports are
+supporting evidence, not a physical-phone reproduction of our emulator result.
+
+The shared native endpoint builder disables QUIC segmentation offload on Android
+for both hosting and joining. Desktop defaults, direct-path discovery, relay
+fallback, MTU discovery, packet bounds, protocol, snapshot validation and identity
+rules remain unchanged. No dependency upgrade or relay-only mobile policy is
+introduced. Revisit this workaround after the upstream fix reaches the pinned
+Iroh version. Extra send calls may cost CPU under heavy traffic; throughput and
+battery impact have not been measured.
+
+### Repeatable APK / desktop check
+
+Rebuild the Android native library before exporting; `--skip-build` alone cannot
+pick up a Rust change. Install the resulting development-signed APK on a dedicated
+AVD. Restart its app process before testing its **first** connection, because
+reconnecting to an already-used endpoint masked the original failure.
+
+```sh
+python3 tools/build_native.py android
+python3 tools/export.py android --skip-build
+```
+
+`tests/android_peer.gd` is a desktop companion to the actual APK. It is excluded
+from exports and intentionally not registered in `tools/check.py`, which cannot
+claim emulator coverage. Start Android hosting through Play together, then run:
+
+```sh
+python3 tools/godot.py --headless --script res://tests/android_peer.gd -- \
+  --join-code=CODE \
+  --save-path=build/android-client-world.json \
+  --profile-path=build/android-client-profile.json \
+  --settings-path=build/android-client-settings.json
+```
+
+Use a test household with a clear tile at (0,0). The companion waits for accepted
+snapshots, disables one resident's autonomy, enters construction, purchases that
+floor tile, undoes it and finishes. Every command must be acknowledged and its
+result must replicate. It leaves and reconnects twice, checking the same home,
+resident identities and family count; success prints
+`ANDROID_HOST_DESKTOP_CLIENT_PASS`. Add `--relay-only` to test the relay separately.
+
+For the reverse direction, use fresh desktop paths and replace `--join-code=CODE`
+with `--host-code-path=build/android-host-code.txt`. Join that code on Android,
+perform at least two commands, leave, and repeat. The host checks accepted
+commands, disconnect cleanup and stable identity/home across both joins, then
+prints `DESKTOP_HOST_ANDROID_CLIENT_PASS`. On-device review must additionally
+confirm that the phone displays replicated edits; a host acknowledgement alone
+does not prove the receiving UI updated.
+
+### Transport validation
+
+- Rebuilt Android ARM64 and universal macOS extensions; Rust formatting and
+  Clippy with warnings denied passed. Android APK export/signature verification
+  and installation passed.
+- First fixed Android host: initial snapshot in 1,004 ms; both reconnects in about
+  one second. All three rounds acknowledged and replicated construction,
+  purchase, Undo and Finish, with 5–6 snapshots per round and no duplicate family.
+- A second fresh Android app process also passed all three rounds with the default
+  transport; its first snapshot arrived in 1,002 ms (reconnects: 836 and 1,036 ms).
+- A separate forced-relay desktop client passed all three rounds against the fixed
+  Android host (`fixed-relay-client.log`). Default-transport success does not by
+  itself measure which Iroh path was selected.
+- Android client → fresh macOS host: two joins restored Willow House and the same
+  identity. Actual Android taps purchased a §12 floor tile, displayed §11,988,
+  undid it back to §12,000, and finished. Host logs confirmed all eight commands
+  and both disconnects. Native Android captures were inspected.
+- Full `python3 tools/check.py` exited 0 against the rebuilt desktop extension:
+  142 gameplay/UI suites, both save-continuity processes, eight real desktop Iroh
+  scenarios and dedicated-server smoke (`check.log`). Staged asset-storage and
+  whitespace checks passed; no binary assets were added.
+- Evidence remains ignored under `build/issue30-replication/`: baseline and
+  diagnostic logs, `fixed-client.log`, `fixed-second-client.log`,
+  `desktop-host.log`, build/export logs and `phone-*.png`. These files are local
+  evidence, not required fresh-clone inputs.
+- Physical Android, mobile-data/Wi-Fi transitions, background hosting, sustained
+  performance/battery and other desktop runtimes remain untested. Hosted CI is
+  separate from local build, regression and emulator results.
 
 ## Regression and visual boundaries
 

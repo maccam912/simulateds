@@ -6,7 +6,7 @@ use bytes::{Buf, Bytes};
 use godot::{classes::multiplayer_peer::TransferMode, global::Error};
 use iroh::{
     Endpoint, EndpointAddr, EndpointId,
-    endpoint::{Connection, VarInt, presets},
+    endpoint::{Connection, VarInt},
 };
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -23,12 +23,7 @@ pub struct IrohListener {
 
 impl IrohListener {
     pub async fn new(relay_only: bool) -> anyhow::Result<Self> {
-        let builder = Endpoint::builder(presets::N0);
-        let builder = if relay_only {
-            builder.clear_ip_transports()
-        } else {
-            builder
-        };
+        let builder = crate::endpoint_builder(relay_only);
         let endpoint = builder.alpns(vec![ALPN.to_vec()]).bind().await?;
 
         // Accept connection loop
