@@ -62,7 +62,7 @@ func load_and_apply() -> void:
 	elif reply.get("exists",false):
 		last_error="Settings could not be read; defaults are active."
 	_loading=false
-	apply()
+	apply(true)
 	changed.emit()
 
 func set_value(key: String,value: Variant) -> bool:
@@ -74,7 +74,7 @@ func set_value(key: String,value: Variant) -> bool:
 	if not save():
 		values[key]=previous
 		return false
-	apply()
+	apply(key=="fullscreen" and previous!=value)
 	changed.emit()
 	return true
 
@@ -103,7 +103,7 @@ func reset_defaults() -> bool:
 	if not save():
 		values=previous
 		return false
-	apply()
+	apply(true)
 	changed.emit()
 	return true
 
@@ -118,7 +118,7 @@ func save() -> bool:
 	last_error=""
 	return true
 
-func apply() -> void:
+func apply(apply_window_mode: bool=false) -> void:
 	_ensure_audio_buses()
 	for key in VOLUMES:
 		var index:=AudioServer.get_bus_index(VOLUMES[key])
@@ -134,7 +134,9 @@ func apply() -> void:
 		var window:=get_window()
 		# A desktop window preference must not disable Android's immersive view.
 		var desired_mode:=Window.MODE_FULLSCREEN if OS.has_feature("mobile") or values.fullscreen else Window.MODE_WINDOWED
-		if window.mode!=desired_mode:
+		# Ordinary settings (including the new-neighborhood guide choice) must
+		# preserve window-manager maximize/fullscreen and the player's sizing.
+		if apply_window_mode and window.mode!=desired_mode:
 			window.mode=desired_mode
 		if not is_equal_approx(window.content_scale_factor,float(values.ui_scale)):
 			window.content_scale_factor=float(values.ui_scale)

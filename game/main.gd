@@ -252,6 +252,15 @@ var _window_request: Dictionary={}
 func _ready() -> void:
 	if "--native-smoke" in OS.get_cmdline_user_args():
 		if Session.available():
+			# Exercise the shipped release template, where assertions are stripped.
+			# Editor-only UI tests cannot catch missing rasterization in that build.
+			for icon_id: String in Icons.PATHS:
+				var icon := Icons.texture(icon_id)
+				if icon==null or icon.get_width()!=28 or icon.get_height()!=28:
+					push_error("Exported UI icon is missing: "+icon_id)
+					get_tree().quit(1)
+					return
+			print("UI_ICONS_RUNTIME_PASS")
 			print("NATIVE_RUNTIME_PASS")
 			get_tree().quit()
 		else: get_tree().quit(1)
