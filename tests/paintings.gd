@@ -18,7 +18,8 @@ func _fresh() -> void:
 	assert(world.apply_command("a",{"type":"place","lot_id":lot.id,"kind":"easel","x":9,"y":9,"rotation":0}).ok)
 	easel=lot.objects[-1]
 	assert(world.apply_command("a",{"type":"build_end","lot_id":lot.id}).ok)
-	member.x=8; member.y=9
+	# Exact progress assertions start at the canvas-side interaction cell.
+	member.x=9; member.y=10
 
 func _order(action: Variant,subject: Variant="",resident: Dictionary={}) -> Dictionary:
 	if resident.is_empty(): resident=member

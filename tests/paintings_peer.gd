@@ -148,6 +148,8 @@ func _client(index: String) -> void:
 		if float(_easel(home,id).painting.progress)>=4.2: break
 		await create_timer(0.1).timeout
 	assert(float(_easel(home,id).painting.progress)>=4.2)
+	var painter: Dictionary=session.state.families[identity].members[0]
+	assert(Vector2i(painter.x,painter.y)==preload("res://game/paintings.gd").front_cell(_easel(home,id)),"Clients receive the host's canvas-side arrival before painting progresses")
 	await _command({"type":"cancel","member_id":member})
 	for attempt in range(40):
 		if session.state.families[identity].members[0].task.is_empty(): break

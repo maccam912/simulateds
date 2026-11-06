@@ -38,8 +38,9 @@ static func inspect(lot: Dictionary, residents: Array) -> Dictionary:
 				for x in range(int(object.x),int(object.x)+size.x):
 					for direction: Vector2i in DIRECTIONS:
 						if reachable.has(Vector2i(x,y)+direction): usable=true; break
+			if object.kind=="easel": usable=reachable.has(preload("res://game/paintings.gd").front_cell(object))
 			if not usable:
-				issues.append(_issue("object:"+str(object.id),str(Catalog.ITEMS[object.kind].name),Vector2i(int(object.x),int(object.y)),size,"Leave a clear path to the "+str(Catalog.ITEMS[object.kind].name)+"."))
+				issues.append(_issue("object:"+str(object.id),str(Catalog.ITEMS[object.kind].name),Vector2i(int(object.x),int(object.y)),size,"Leave a clear path to the "+("front of the " if object.kind=="easel" else "")+str(Catalog.ITEMS[object.kind].name)+"."))
 	var unreachable: Array[Vector2i]=[]
 	for cell: Array in lot.floors:
 		var position := Vector2i(int(cell[0]),int(cell[1]))

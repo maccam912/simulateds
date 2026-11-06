@@ -7,6 +7,10 @@ const SELL_TIME := 4.0
 const VALUE := 60
 const MAX_REVISION := 1000000000
 
+static func front_cell(easel: Dictionary) -> Vector2i:
+	# Match the model's +Z canvas side through its four quarter turns.
+	return Vector2i(int(easel.x),int(easel.y))+[Vector2i.DOWN,Vector2i.LEFT,Vector2i.UP,Vector2i.RIGHT][int(easel.rotation)]
+
 static func create() -> Dictionary:
 	return {"subject":"","progress":0.0,"artists":[],"day":0,"revision":0}
 

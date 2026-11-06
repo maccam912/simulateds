@@ -1023,7 +1023,7 @@ func _activity_pose(member: Dictionary) -> Dictionary:
 func resident_anchor(member: Dictionary) -> Vector2:
 	var pose := _activity_pose(member)
 	var node: Node3D=projection.scene.resident_nodes.get(str(member.id))
-	if node!=null and pose.get("kind") in ["shower","meal_eat","tv"]:
+	if node!=null and pose.get("kind") in ["shower","meal_eat","tv","easel"]:
 		return projection.project(node.global_position)
 	var display := motion.position(member)+Vector2(0.5,0.5)
 	if pose.get("kind","") in ["bed","sofa"]:

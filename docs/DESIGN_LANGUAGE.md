@@ -18,6 +18,22 @@ uses the actual receipt and artist credit. Preserve exact-original review and
 the permanent-removal warning. See [the activity review](ACTIVITY_CLARITY_QA.md)
 for findings, validation and explicitly deferred content/animation expansions.
 
+## Painting at the canvas
+
+Route deliberate painting and packing to the easel's open canvas side. The host
+checks that side and construction access explains it; rotating or clearing space
+repairs an inaccessible easel. Existing pictures and artist credit are retained.
+Older active side approaches reroute on the host before adding work.
+
+Arrived painters face the canvas with a held solid brush touching its surface.
+Use an oak step for shorter residents, preserving their body proportions. Feet
+and the step stay still while the wrist and brush make a small stroke driven by
+game time; pause and reduced motion hold it steady. Props clear immediately on
+cancellation, completion, packing, construction or stale targets. Rendering,
+labels and picking follow the visible body without changing paths or canvas
+progress. Step entry/exit choreography remains separate. See
+[the painting contact review](PAINTING_CONTACT_QA.md).
+
 ## Watching television
 
 Use a nearby reachable seat facing the screen when available. The host reserves
