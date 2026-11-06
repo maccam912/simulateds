@@ -1087,6 +1087,22 @@ household batch. Changing sessions or replacing a world cancels open wheels and
 pending touch gestures, even when target IDs are reused. The host remains the
 authority. Construction retains its tools.
 
+### Android navigation and typing
+
+Android Back follows Escape's existing console, draft, choice, tray and menu
+priority. It must never silently quit or apply an edited household. Back dismisses
+the system keyboard first; the next Back leaves the current screen. Keep explicit
+Quit in the menu. Mobile uses immersive fullscreen and defaults to 125% UI scale;
+saved scale preferences still win. The lot header includes 44px minus/plus zoom
+buttons, sharing the mouse-wheel camera limits without issuing world commands.
+
+When the landscape keyboard covers the active text field or caret, pan only its
+UI layer upward and restore it when the keyboard closes. Account for embedded
+popup coordinates and viewport scaling. This cannot move the world camera, change
+simulation state or commit a draft. Resident preview drags process native touch
+once, ignoring the duplicate emulated mouse events. The Controls guide explains
+touch selection, holds, panning, zoom, building and Back.
+
 ### Deferred physical activity polish
 
 The November 4 request now has shower occupancy, authored dining places and TV

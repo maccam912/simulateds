@@ -42,6 +42,8 @@ var guide_panel: Control
 var _guide_return := "main"
 var _guide_tab := 0
 var _guide_welcome := false
+var _keyboard_root: Control
+var _keyboard_position := Vector2.ZERO
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -197,7 +199,7 @@ func open_pause() -> void:
 	_navigation_grid([
 		["Resume",show_game,true], ["Save neighborhood",func(): open_saves("save")], ["Load neighborhood",func(): open_saves("load")],
 		["Edit household",open_household], ["Settings",func(): open_settings()], ["Guide & controls",func(): open_guide()],
-		["Developer console",_open_console], ["Main menu",_request_main], ["Quit to desktop",_request_quit]
+		["Developer console",_open_console], ["Main menu",_request_main], ["Quit" if OS.has_feature("mobile") else "Quit to desktop",_request_quit]
 	])
 
 func _request_main() -> void:
@@ -366,7 +368,7 @@ func open_settings(selected_tab: String = "") -> void:
 		_volume_row(audio_page,str(entry[0]),str(entry[1]))
 	audio_page.add_child(_button("Preview sound",func(): Soundscape.play_ui("confirm")))
 	var display:=_settings_tab(tabs,"Display")
-	_check_setting(display,"fullscreen","Fullscreen")
+	if not OS.has_feature("mobile"): _check_setting(display,"fullscreen","Fullscreen")
 	_check_setting(display,"vsync","Vertical sync")
 	_option_setting(display,"fps_limit","Frame limit",[30,60,120,0],["30 FPS","60 FPS","120 FPS","Unlimited"])
 	_option_setting(display,"quality","Scenery detail",["high","low"],["High","Low"])
@@ -439,6 +441,57 @@ func _option_setting(parent: Node,key: String,title: String,values: Array,labels
 			for i in range(values.size()):
 				if str(Preferences.values[key])==str(values[i]): option.select(i)
 			_feedback(Preferences.last_error,false))
+
+func _notification(what: int) -> void:
+	if what==NOTIFICATION_WM_GO_BACK_REQUEST and _booted and is_instance_valid(console):
+		_android_back.call_deferred()
+
+func _process(_delta: float) -> void:
+	if not OS.has_feature("mobile") or not is_instance_valid(game): return
+	var height := DisplayServer.virtual_keyboard_get_height()
+	_avoid_keyboard(float(DisplayServer.window_get_size().y-height) if height>0 else -1.0)
+
+func _restore_keyboard_pan() -> void:
+	if is_instance_valid(_keyboard_root):
+		_keyboard_root.position=_keyboard_position
+	_keyboard_root=null
+
+func _avoid_keyboard(top: float) -> void:
+	# Pan only the UI layer containing the active field. The world/camera stays put,
+	# and dismissing the keyboard restores the original layout and touch targets.
+	_restore_keyboard_pan()
+	if top<0 or not is_instance_valid(menu_root): return
+	var window: Window=game.connection_dialog if is_instance_valid(game.connection_dialog) and game.connection_dialog.visible else get_window()
+	var focused := window.gui_get_focus_owner()
+	if not is_instance_valid(focused) or not focused.is_visible_in_tree() or not (focused is LineEdit or focused is TextEdit): return
+	var target: Control=window.get_child(0) if window!=get_window() else console if console.is_open() else menu_root if menu_root.visible else game.hud
+	if not target.is_ancestor_of(focused): return
+	var bottom := Vector2(0,focused.size.y)
+	if focused is TextEdit: bottom=focused.get_caret_draw_pos()+Vector2(0,focused.get_line_height())
+	var screen_bottom := get_viewport().get_screen_transform()*focused.get_global_transform_with_canvas()*bottom
+	if window!=get_window():
+		# Embedded Window screen transforms omit the parent viewport stretch.
+		screen_bottom=get_viewport().get_screen_transform()*(Vector2(window.position)+focused.get_global_transform_with_canvas()*bottom)
+	var overlap: float=screen_bottom.y-top+24.0
+	if overlap<=0: return
+	_keyboard_root=target; _keyboard_position=Vector2(target.position)
+	var scale_y := get_viewport().get_screen_transform().get_scale().y
+	var shifted := _keyboard_position-Vector2(0,ceilf(overlap/scale_y))
+	target.position=shifted
+
+func _android_back() -> void:
+	if is_instance_valid(game.connection_dialog) and game.connection_dialog.visible:
+		game.connection_dialog.hide()
+		return
+	if page in ["save","load"] and not console.is_open():
+		_back_from_saves()
+		return
+	# Use the same input priority as Escape: console, draft/gesture, tray, menu.
+	# Going back must never bypass a household draft or issue a world command.
+	for pressed: bool in [true,false]:
+		var event := InputEventKey.new()
+		event.keycode=KEY_ESCAPE; event.physical_keycode=KEY_ESCAPE; event.pressed=pressed
+		Input.parse_input_event(event)
 
 func _input(event: InputEvent) -> void:
 	# LineEdit consumes its cancel key before unhandled input. Household Escape

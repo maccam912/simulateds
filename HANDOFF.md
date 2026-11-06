@@ -1,3 +1,31 @@
+# Android emulator playtest — November 5, 2026
+
+- Issue #30: played the ARM64 APK on an isolated Pixel 7 Android 15 emulator.
+  Fixed Back exiting the app, missing touch zoom, duplicate creator rotation,
+  nonimmersive mobile preferences and landscape keyboards covering text inputs.
+  Mobile defaults to 125% UI scale; existing scale preferences are preserved.
+- Keyboard avoidance moves only the active UI layer and restores it on dismissal.
+  Back reuses the existing draft/tray/menu priority. No authority, save schema,
+  network protocol, model or binary asset changes. Touch instructions are in the
+  Controls guide and the contract is in `docs/DESIGN_LANGUAGE.md`.
+- `docs/ANDROID_QA.md` records device/build, concrete playtest results, reproduction
+  and limits. Native day/night and compact 1280×720/125% captures were inspected.
+  Android APK export, signature verification, installation, solo play, building,
+  named save/load, restart and text entry passed. No physical-device play.
+- `tests/android_navigation.gd` covers Back priority, dirty-draft protection,
+  focused fields, bounded zoom, duplicate touch/mouse rotation and stable keyboard
+  offsets without changing world snapshots or camera framing. Local evidence is
+  ignored `build/issue30/` and `build/android-navigation-*.png`.
+- Full `python3 tools/check.py` exited 0: 142 gameplay/UI suites, both
+  save-continuity processes, eight real desktop Iroh scenarios and dedicated-server
+  smoke. The final keyboard-coordinate adjustment also passed focused navigation,
+  creator, catalog and app-flow regressions plus native review. Staged asset and
+  whitespace checks pass. Hosted CI is separate from these local results.
+- Follow-up: Android room-code creation/desktop handshake succeeded, but the
+  desktop probe timed out awaiting accepted snapshots from the Android host.
+  An immediate rejoin also once reported an already-connected family. Root cause
+  remains open; desktop Iroh test success does not establish Android replication.
+
 # Legacy starter television — November 5, 2026
 
 - Issue #33: old starter homes had a TV facing the south wall. Disk loading now

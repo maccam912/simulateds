@@ -70,6 +70,8 @@ var selected_member := ""
 var _applied_solo_view := -1
 var _framed_world := -1
 var overview_button: Button
+var zoom_out_button: Button
+var zoom_in_button: Button
 var selected_tool := "floor"
 var build_rotation := 0
 var lot_view: Control
@@ -354,7 +356,7 @@ func _build_ui() -> void:
 	hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-	var location := _hud_panel(Rect2(16,16,290,64))
+	var location := _hud_panel(Rect2(16,16,394,64))
 	var location_row := HBoxContainer.new(); location.add_child(location_row)
 	lot_title = _label("Clover Cottage",15)
 	lot_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -363,6 +365,13 @@ func _build_ui() -> void:
 	neighborhood_button=_button("⌂",func(): _show_tray(neighborhood_panel,not neighborhood_panel.visible))
 	neighborhood_button.tooltip_text="Neighborhood · "+Preferences.action_label("neighborhood")
 	_compact_control(neighborhood_button); neighborhood_button.custom_minimum_size=Vector2(44,44); location_row.add_child(neighborhood_button)
+	zoom_out_button=_button("−",func(): lot_view.zoom_by(-0.1))
+	zoom_in_button=_button("+",func(): lot_view.zoom_by(0.1))
+	for control: Button in [zoom_out_button,zoom_in_button]:
+		control.custom_minimum_size=Vector2(44,44)
+		control.accessibility_name="Zoom out" if control==zoom_out_button else "Zoom in"
+		control.tooltip_text=control.accessibility_name
+		location_row.add_child(control)
 	lot_subtitle = _label("Your household",12,Style.MUTED)
 	lot_subtitle.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; lot_subtitle.clip_text=true
 	neighborhood_panel = _hud_panel(Rect2(16,86,260,394))

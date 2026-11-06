@@ -2,6 +2,7 @@ config_version=5
 
 [application]
 config/name="Simulateds"
+config/quit_on_go_back=false
 run/main_scene="res://game/app.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"

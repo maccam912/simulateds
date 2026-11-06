@@ -490,6 +490,10 @@ func _primary_click(point: Vector2, double_click: bool=false) -> void:
 		tile_clicked.emit(Vector2i(int(target.x),int(target.y)))
 	elif _in_bounds(cell): tile_clicked.emit(cell)
 
+func zoom_by(amount: float) -> void:
+	stop_camera_motion()
+	zoom=clampf(zoom+amount,0.65,1.8)
+
 func _gui_input(event: InputEvent) -> void:
 	_layout()
 	if event is InputEventScreenTouch:
@@ -512,11 +516,9 @@ func _gui_input(event: InputEvent) -> void:
 			_dragging = event.pressed
 		if event.pressed:
 			if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-				stop_camera_motion()
-				zoom = minf(1.8, zoom + 0.1)
+				zoom_by(0.1)
 			elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-				stop_camera_motion()
-				zoom = maxf(0.65, zoom - 0.1)
+				zoom_by(-0.1)
 			elif event.button_index == MOUSE_BUTTON_LEFT:
 				if not _start_furniture(event.position,false) and not _start_area(event.position): _primary_click(event.position,event.double_click)
 			elif event.button_index==MOUSE_BUTTON_RIGHT:
