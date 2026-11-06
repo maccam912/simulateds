@@ -24,10 +24,31 @@ static func need(member: Dictionary, lot: Dictionary, world: Dictionary={}) -> D
 			result={"need":key,"value":value,"label":Wellbeing.URGENT[key] if value<20.0 else Wellbeing.LOW[key]}
 	return result
 
-static func fit(preferred: Rect2, bounds: Rect2, occupied: Array[Rect2]) -> Rect2:
+static func fit(preferred: Rect2, bounds: Rect2, occupied: Array[Rect2], crowded: bool=false) -> Rect2:
 	if bounds.size.x<preferred.size.x or bounds.size.y<preferred.size.y: return Rect2()
 	var gap := preferred.size.y+6.0
-	for offset: Vector2 in [Vector2.ZERO,Vector2(0,-gap),Vector2(0,gap),Vector2(-preferred.size.x-6,0),Vector2(preferred.size.x+6,0),Vector2(0,-gap*2),Vector2(0,gap*2)]:
+	var offsets: Array[Vector2]=[Vector2.ZERO,Vector2(0,-gap),Vector2(0,gap),Vector2(-preferred.size.x-6,0),Vector2(preferred.size.x+6,0),Vector2(0,-gap*2),Vector2(0,gap*2)]
+	if crowded:
+		# Bounded search for an eight-person household, including narrow spaces
+		# beside a tray. Keep ordinary inspection/placement fitting unchanged.
+		for row in range(-8,9):
+			for column in range(-1,2): offsets.append(Vector2(column*(preferred.size.x+6),row*gap))
+		for used: Rect2 in occupied:
+			offsets.append(Vector2(used.position.x-preferred.end.x-6,0))
+			offsets.append(Vector2(used.end.x-preferred.position.x+6,0))
+			offsets.append(Vector2(0,used.position.y-preferred.end.y-6))
+			offsets.append(Vector2(0,used.end.y-preferred.position.y+6))
+		# Coordinate tie-breaking keeps equal-distance choices deterministic.
+		var positions: Array[Vector2]=[]
+		for offset: Vector2 in offsets:
+			var position := (preferred.position+offset).clamp(bounds.position,bounds.end-preferred.size)
+			if not positions.has(position): positions.append(position)
+		positions.sort_custom(func(a: Vector2,b: Vector2):
+			var da := a.distance_squared_to(preferred.position); var db := b.distance_squared_to(preferred.position)
+			return da<db if da!=db else (a.y<b.y if a.y!=b.y else a.x<b.x))
+		offsets.clear()
+		for position: Vector2 in positions: offsets.append(position-preferred.position)
+	for offset: Vector2 in offsets:
 		var position := preferred.position+offset
 		position.x=clampf(position.x,bounds.position.x,bounds.end.x-preferred.size.x)
 		position.y=clampf(position.y,bounds.position.y,bounds.end.y-preferred.size.y)

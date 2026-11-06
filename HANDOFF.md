@@ -1,3 +1,25 @@
+# Crowded resident labels — November 5, 2026
+
+- Issue #4 / POSE-07, label/selection scope: selected names get first choice of
+  space; other need labels use stable identity order. Labels avoid posed bodies
+  and HUD/trays. Noninteractive leaders draw behind all nameplates. Existing
+  care/selection commands, world positions, paths and saves are unchanged.
+- Native macOS Godot 4.7.2/OpenGL review passed at 1440×900 and compact
+  1280×720/125% UI, day/night, eight residents on verified walkable cells, long
+  names, Plan, selected children and reduced motion. Existing native cue input,
+  queueing, double-click, sleeping and cleanup regression also passed. Scope and
+  reproduction: `docs/RESIDENT_LABELS_QA.md`. Captures/logs are ignored under
+  `build/resident-labels-*.png`, `build/resident-cues-*-compact.png` and
+  `build/issue4-labels/`.
+- All four final `tools/check.py --shard N/4` runs exited 0: 139 gameplay/UI
+  suites, both save-continuity processes, eight real Iroh scenarios and dedicated
+  server smoke passed. Audit: `build/issue4-labels/validation.json`. Staged asset
+  storage and whitespace checks passed.
+- Keep #4 open: body spacing, furniture/foliage occlusion and other activity
+  findings remain. No models or binary assets changed. Hosted CI is separate;
+  no exports, physical-device play, human hardware playtest or frame-time
+  benchmarks were performed.
+
 # Starter interior light — November 5, 2026
 
 - Issue #8 / WORLD-04: new starter homes include the existing Linen floor lamp

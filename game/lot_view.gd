@@ -1079,18 +1079,76 @@ func _trim_label(text: String, maximum: float) -> String:
 	while not text.is_empty() and _font.get_string_size(text+"…",HORIZONTAL_ALIGNMENT_LEFT,-1,13).x>maximum: text=text.left(text.length()-1)
 	return text+"…"
 
+func resident_body_rect(member: Dictionary) -> Rect2:
+	var node: Node3D=projection.scene.resident_nodes.get(str(member.id))
+	if node==null: return Rect2(resident_head(member)-Vector2(12,12),Vector2(24,48))
+	var body: AABB=projection.Scene3D.bounds(node.get_node("Body"))
+	var rect := Rect2(projection.project(body.position),Vector2.ZERO)
+	for index in range(8): rect=rect.expand(projection.project(body.get_endpoint(index)))
+	return rect.grow(3)
+
 func _draw_resident_overlays(entities: Array, s: float) -> void:
 	if not show_cues or building or world.lots[lot_id].building or Session.role=="joining": return
-	var occupied: Array[Rect2]=[]
+	var occupied: Array[Rect2]=overlay_rects.duplicate()
 	var bounds := Rect2(Vector2(8,8),size-Vector2(16,16))
-	# Labels must not hide another resident's face or intercept their body click.
+	# Protect the actual posed bodies, including children and seated residents.
+	# The selected name gets first choice of space, before other needs or bubbles.
 	for entity: Dictionary in entities:
 		if not entity.has("member"): continue
 		var member: Dictionary=entity.member
 		var head := resident_head(member)
-		occupied.append(Rect2(head-Vector2(11,10)*s,Vector2(22,22)*s))
-	# Shared chat bubbles sit above the pair, never over either face. Reserve
-	# their space before placing name/need labels, just like the residents' bodies.
+		occupied.append(resident_body_rect(member))
+		if str(member.id)==selected_member:
+			occupied.append(Rect2(head+Vector2(-5,-24)*s,Vector2(10,32)*s))
+	var ordered := entities.filter(func(entity: Dictionary): return entity.has("member"))
+	ordered.sort_custom(func(a: Dictionary,b: Dictionary):
+		if (str(a.member.id)==selected_member)!=(str(b.member.id)==selected_member): return str(a.member.id)==selected_member
+		return str(a.member.id)<str(b.member.id))
+	var labels: Array[Dictionary]=[]
+	for entity: Dictionary in ordered:
+		if not entity.has("member") or entity.family.id!=Session.profile_id or world.lots[entity.family.home_lot].building: continue
+		var member: Dictionary=entity.member
+		var anchor := resident_anchor(member)
+		if not Rect2(Vector2.ZERO,size).has_point(anchor): continue
+		var head := resident_head(member)
+		var selected: bool=str(member.id)==selected_member
+		if selected:
+			var q := head+Vector2(0,-16)*s
+			_poly([q+Vector2(0,-7)*s,q+Vector2(4,0)*s,q+Vector2(0,7)*s,q+Vector2(-4,0)*s],Color("e9d695"),Color("fff3b4"))
+		var cue := ResidentCues.need(member,world.lots[lot_id],world)
+		if cue.is_empty() and not selected: continue
+		var caption := _trim_label(str(member.name),180.0)
+		if not cue.is_empty(): caption=_trim_label(str(member.name),90.0)+" · "+str(cue.label)
+		caption=_trim_label(caption,240.0)
+		var width := _font.get_string_size(caption,HORIZONTAL_ALIGNMENT_LEFT,-1,13).x+(36.0 if not cue.is_empty() else 18.0)
+		var dimensions := Vector2(width,30.0 if not cue.is_empty() else 24.0)
+		var center := head+Vector2(0,-42)*s if not cue.is_empty() else anchor+Vector2(0,18)*s
+		var box := ResidentCues.fit(Rect2(center-dimensions*0.5,dimensions),bounds,occupied,true)
+		if not box.has_area(): continue
+		occupied.append(box)
+		labels.append({"entity":entity,"cue":cue,"caption":caption,"box":box,"head":head,"selected":selected})
+	# Draw every leader first so none can strike through another nameplate.
+	for label: Dictionary in labels:
+		var head: Vector2=label.head; var box: Rect2=label.box
+		var tail := head.clamp(box.position+Vector2(4,4),box.end-Vector2(4,4))
+		draw_line(head,tail,Color("142329"),3.0,true)
+		draw_line(head,tail,Color("edc98b") if label.selected else Color("f4e8cd"),1.0,true)
+	for label: Dictionary in labels:
+		var member: Dictionary=label.entity.member; var cue: Dictionary=label.cue
+		var box: Rect2=label.box; var caption: String=label.caption
+		var color := Color("f4e8cd") if not cue.is_empty() else Color("203339")
+		var edge := Color("edc98b") if label.selected else Color("c58670")
+		draw_style_box(preload("res://game/style.gd").box(color,6,edge),box)
+		var text_point := box.position+Vector2(28,20) if not cue.is_empty() else box.position+Vector2(9,17)
+		draw_string(_font,text_point,caption,HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("30423b") if not cue.is_empty() else Color("f4eedf"))
+		var target := {"type":"member","id":member.id,"owner":label.entity.family.id,"name":member.name}
+		if not cue.is_empty():
+			_draw_need_icon(box.position+Vector2(14,15),str(cue.need))
+			target.type="care"; target.need=cue.need; target.name=str(member.name)+" · "+str(cue.label)
+		var polygon := PackedVector2Array([box.position,Vector2(box.end.x,box.position.y),box.end,Vector2(box.position.x,box.end.y)])
+		_hit_regions.append({"polygon":polygon,"target":target})
+		resident_labels[str(member.id)]={"rect":box,"need":str(cue.get("need","")),"text":caption}
+	# Optional activity bubbles yield space to names and care controls.
 	var conversations := {}
 	for entity: Dictionary in entities:
 		if not entity.has("member"): continue
@@ -1117,43 +1175,6 @@ func _draw_resident_overlays(entities: Array, s: float) -> void:
 				var rise := 0.0 if Preferences.values.reduced_motion else sin(_time*4.0+index)*1.2
 				draw_circle(box.position+Vector2(6+index*7,8+rise)*s,1.5*s,Color("57736a"))
 		else: draw_line(box.position+Vector2(7,6)*s,box.position+Vector2(20,6)*s,Color("b9d69f"),2*s,true)
-	for entity: Dictionary in entities:
-		if not entity.has("member") or entity.family.id!=Session.profile_id or world.lots[entity.family.home_lot].building: continue
-		var member: Dictionary=entity.member
-		var anchor := resident_anchor(member)
-		if not Rect2(Vector2.ZERO,size).has_point(anchor): continue
-		var head := resident_head(member)
-		var selected: bool=str(member.id)==selected_member
-		if selected:
-			var q := head+Vector2(0,-16)*s
-			_poly([q+Vector2(0,-7)*s,q+Vector2(4,0)*s,q+Vector2(0,7)*s,q+Vector2(-4,0)*s],Color("e9d695"),Color("fff3b4"))
-		var cue := ResidentCues.need(member,world.lots[lot_id],world)
-		if cue.is_empty() and not selected: continue
-		var caption := _trim_label(str(member.name),180.0)
-		if not cue.is_empty(): caption=_trim_label(str(member.name),90.0)+" · "+str(cue.label)
-		caption=_trim_label(caption,240.0)
-		var width := _font.get_string_size(caption,HORIZONTAL_ALIGNMENT_LEFT,-1,13).x+(36.0 if not cue.is_empty() else 18.0)
-		var dimensions := Vector2(width,30.0 if not cue.is_empty() else 24.0)
-		var center := head+Vector2(0,-42)*s if not cue.is_empty() else anchor+Vector2(0,18)*s
-		var box := ResidentCues.fit(Rect2(center-dimensions*0.5,dimensions),bounds,occupied)
-		if not box.has_area(): continue
-		occupied.append(box)
-		var color := Color("f4e8cd") if not cue.is_empty() else Color("203339")
-		var edge := Color("c58670") if not cue.is_empty() else Color("c6d6a4")
-		if not cue.is_empty():
-			var tail := Vector2(clampf(head.x,box.position.x+8,box.end.x-8),box.end.y)
-			draw_circle(head.lerp(tail,0.45),2.0,color)
-			draw_circle(head.lerp(tail,0.72),3.0,color)
-		draw_style_box(preload("res://game/style.gd").box(color,6,edge),box)
-		var text_point := box.position+Vector2(28,20) if not cue.is_empty() else box.position+Vector2(9,17)
-		draw_string(_font,text_point,caption,HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("30423b") if not cue.is_empty() else Color("f4eedf"))
-		var target := {"type":"member","id":member.id,"owner":entity.family.id,"name":member.name}
-		if not cue.is_empty():
-			_draw_need_icon(box.position+Vector2(14,15),str(cue.need))
-			target.type="care"; target.need=cue.need; target.name=str(member.name)+" · "+str(cue.label)
-		var polygon := PackedVector2Array([box.position,Vector2(box.end.x,box.position.y),box.end,Vector2(box.position.x,box.end.y)])
-		_hit_regions.append({"polygon":polygon,"target":target})
-		resident_labels[str(member.id)]={"rect":box,"need":str(cue.get("need","")),"text":caption}
 
 func _draw_need_icon(at: Vector2, need: String) -> void:
 	var ink := Color("405b50")
