@@ -1,3 +1,29 @@
+# Seating occupancy — November 5, 2026
+
+- Issue #32: sofas, armchairs, loveseats, long sofas, wooden chairs and garden
+  benches reserve the whole furnishing during approach and use. A second
+  deliberate user waits with the occupant's name; autonomy skips the busy seat.
+  Ordinary relaxation and TV viewing share the existing host reservation rules.
+  Cancellation, completion, travel, construction and disconnect release use.
+- Independent cushion capacity remains deferred. This fixes shared-furnishing
+  occupancy, not general walking collisions. No model, binary asset, command or
+  save-schema change. Old overlapping solo activities are revalidated on load;
+  one stops with the existing interruption notice and Recent entry.
+- `tests/seat_occupancy.gd` reproduces the original failure and covers all six
+  seat kinds/four rotations, waiting benefits, release, TV use in both orders,
+  visitors, snapshots and continuation. Native macOS Godot 4.7.2/OpenGL review
+  passed at 1440×900 and 1280×720/125% UI, day/night: one seated resident, a
+  separate waiting resident and readable status. Rendering preserves state.
+  Reproduce with `tools/godot.py --script res://tests/seat_occupancy.gd`, isolated
+  save/profile/settings paths, and optional `--compact` after `--`.
+- The full `python3 tools/check.py` exited 0: all 140 gameplay/UI suites, both
+  save-continuity processes, eight real Iroh scenarios and dedicated-server
+  smoke passed. Native logs, full local log and coverage audit: ignored
+  `build/issue32/`; captures: `build/seat-occupancy-*.png`.
+  Staged asset storage and whitespace checks pass.
+- Hosted CI is separate; no local exports, physical-device play or human
+  hardware playtest was performed.
+
 # Crowded resident labels — November 5, 2026
 
 - Issue #4 / POSE-07, label/selection scope: selected names get first choice of

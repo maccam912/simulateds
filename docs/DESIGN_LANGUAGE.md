@@ -49,6 +49,14 @@ positions, routing and task timing remain authoritative. Reduced motion holds
 the same steady pose. See [the TV review](TELEVISION_QA.md) for reservation limits,
 legacy-save behavior and the separate entry/exit choreography work.
 
+Ordinary relaxation shares the same single-user seating reservation. A second
+resident waits in place, with the current user's name and furnishing in their
+activity strip and Plan. Cancellation or completion releases the furnishing;
+waiting does not restore comfort. This applies to sofas, chairs and benches,
+including wide furnishings until independent cushion positions are supported.
+Existing overlapping saved activities are revalidated on solo load, with the
+interrupted activity explained through the normal load notice and Recent history.
+
 ## Places at the dining table
 
 Accepted eaters use a small oak stool at their reserved dining cell, facing its
