@@ -1336,3 +1336,15 @@ rezoning are explicitly deferred to coordinated interaction/content reviews.
 Preserve the current camera controls, editable lawn, reachable starter layout
 and existing saved homes. See [issue #8 dispositions](WORLD_POLISH_QA.md) for the
 complete batch, reproduction, native comparisons and validation boundaries.
+
+## Moving the camera — November 6, 2026
+
+Mouse-wheel and trackpad-pinch zoom preserve the ground beneath the pointer.
+Two-finger trackpad scroll pans horizontally and vertically. Middle-drag and
+Alt+left-drag pan without selecting residents or placing furnishings; releasing
+the mouse or losing window focus ends the drag. Touch retains world dragging
+and the visible minus/plus buttons. Camera shortcuts default to WASD for panning
+and the equals/plus and minus keys for zoom, with key repeat and rebinding in
+Controls. Older custom bindings retain their keys. Typing, menus and contextual
+choices keep input priority. Find resident and Home overview remain recovery
+controls, and camera changes never issue world commands.

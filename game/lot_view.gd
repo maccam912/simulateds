@@ -109,6 +109,7 @@ var pan := Vector2.ZERO
 var _camera_tween: Tween
 var hover_cell := Vector2i(-1, -1)
 var _dragging := false
+var _pan_button := MOUSE_BUTTON_NONE
 var _furniture_gesture: Dictionary={}
 var _area_context: Array = []
 var _area_origin := Vector2.ZERO
@@ -328,8 +329,9 @@ func _input(event: InputEvent) -> void:
 		_placement_success.clear(); _placement_request.clear()
 	if not _furniture_gesture.is_empty() and _furniture_input(event): return
 	# An overlay can receive the release even when the drag began on the lawn.
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_MIDDLE and not event.pressed:
+	if event is InputEventMouseButton and event.button_index == _pan_button and not event.pressed:
 		_dragging = false
+		_pan_button = MOUSE_BUTTON_NONE
 	if not _area_context.is_empty() and _area_input(event): return
 	if _touch_index<0: return
 	if event is InputEventKey and event.pressed:
@@ -427,7 +429,9 @@ func _area_input(event: InputEvent) -> bool:
 	return true
 
 func _notification(what: int) -> void:
-	if what==NOTIFICATION_WM_WINDOW_FOCUS_OUT: _area_context.clear()
+	if what==NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+		_area_context.clear(); _dragging=false; _pan_button=MOUSE_BUTTON_NONE
+		_touch_cancelled=true
 
 func _touch_context_unchanged() -> bool:
 	return _touch_lot==lot_id and _touch_building==building and _touch_generation==Session.world_generation and _touch_profile==Session.profile_id and _touch_role==Session.role
@@ -490,12 +494,36 @@ func _primary_click(point: Vector2, double_click: bool=false) -> void:
 		tile_clicked.emit(Vector2i(int(target.x),int(target.y)))
 	elif _in_bounds(cell): tile_clicked.emit(cell)
 
-func zoom_by(amount: float) -> void:
+func zoom_by(amount: float, anchor: Vector2=Vector2.INF) -> void:
 	stop_camera_motion()
+	_layout()
+	var previous_zoom := zoom
+	var previous_origin := _origin
 	zoom=clampf(zoom+amount,0.65,1.8)
+	_layout()
+	if anchor.is_finite():
+		# Preserve the ground beneath the pointer across orthographic scaling.
+		pan+=anchor-(_origin+(anchor-previous_origin)*(zoom/previous_zoom))
+		_layout()
+	queue_redraw()
+
+func pan_by(amount: Vector2) -> void:
+	stop_camera_motion()
+	pan+=amount
+	_layout(); queue_redraw()
 
 func _gui_input(event: InputEvent) -> void:
 	_layout()
+	if event is InputEventMagnifyGesture:
+		if _point_available(event.position):
+			zoom_by(zoom*(event.factor-1.0),event.position)
+			accept_event()
+		return
+	if event is InputEventPanGesture:
+		if _point_available(event.position):
+			pan_by(-event.delta*32.0)
+			accept_event()
+		return
 	if event is InputEventScreenTouch:
 		if event.pressed and _touch_index<0 and _point_available(event.position):
 			if _start_area(event.position,event.index):
@@ -511,14 +539,15 @@ func _gui_input(event: InputEvent) -> void:
 		# before the player has had time to hold for the radial menu.
 		if event.device==InputEvent.DEVICE_ID_EMULATION:
 			accept_event(); return
-		if event.button_index == MOUSE_BUTTON_MIDDLE:
-			if event.pressed: stop_camera_motion()
-			_dragging = event.pressed
+		if event.button_index==MOUSE_BUTTON_MIDDLE or (event.button_index==MOUSE_BUTTON_LEFT and event.alt_pressed):
+			if event.pressed:
+				stop_camera_motion(); _pan_button=event.button_index; _dragging=true
+			accept_event(); return
 		if event.pressed:
 			if event.button_index == MOUSE_BUTTON_WHEEL_UP:
-				zoom_by(0.1)
+				zoom_by(0.1*event.factor,event.position)
 			elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-				zoom_by(-0.1)
+				zoom_by(-0.1*event.factor,event.position)
 			elif event.button_index == MOUSE_BUTTON_LEFT:
 				if not _start_furniture(event.position,false) and not _start_area(event.position): _primary_click(event.position,event.double_click)
 			elif event.button_index==MOUSE_BUTTON_RIGHT:

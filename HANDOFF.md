@@ -1,3 +1,23 @@
+# Camera navigation — November 6, 2026
+
+- Added trackpad pan/pinch, pointer-anchored wheel zoom (including fractional
+  wheel deltas), Alt+left-drag panning, and repeatable/rebindable WASD and =/−
+  camera shortcuts. Existing middle-drag, touch dragging, zoom buttons, Find
+  resident and Home overview remain available. Updated the Controls guide.
+- Older settings retain custom keys; new bindings choose unused keys. Camera
+  shortcuts yield to typing and menus. Mouse release and window-focus loss stop
+  panning. No binary assets, world commands, protocol or save-schema changes.
+- Native macOS camera regression passed at 1440×900 and 1280×720/125% UI;
+  inspected normal daylight and compact daylight/night captures. Automated input
+  covers pointer anchoring, fractional wheel input, trackpad gestures, Alt-drag,
+  shortcut rebinding, typing, hidden HUD and authoritative-state isolation.
+- Full `python3 tools/check.py` exited 0: 144 gameplay/UI suites, both save
+  continuity processes, all eight real Iroh scenarios and dedicated-server smoke.
+  Whitespace checks pass. Hosted CI, exports, physical-device and human trackpad
+  tests were not run.
+  Local logs: ignored `build/camera-check.log`; camera captures:
+  ignored `build/camera-*.png`. Camera navigation is ready for publication.
+
 # Window preservation and release icons — November 6, 2026
 
 - Issues #39/#40: creating neighborhoods and changing unrelated settings preserve

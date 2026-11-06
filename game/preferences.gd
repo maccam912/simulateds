@@ -7,6 +7,9 @@ const ACTION_NAMES := {
 	"pause":"Pause / game menu", "console":"Developer console", "rotate":"Rotate furnishing",
 	"quick_save":"Quick save", "fullscreen":"Toggle fullscreen", "neighborhood":"Neighborhood",
 	"build":"Build / live mode", "home":"Go home", "cancel":"Cancel resident actions",
+	"camera_left":"Pan camera left", "camera_right":"Pan camera right",
+	"camera_up":"Pan camera up", "camera_down":"Pan camera down",
+	"zoom_in":"Zoom in", "zoom_out":"Zoom out",
 	"focus_resident":"Find selected resident", "play_pause":"Pause / resume solo time",
 	"speed_normal":"Normal time (1×)", "speed_fast":"Fast time (2×)", "speed_faster":"Faster time (4×)"
 }
@@ -14,7 +17,7 @@ const DEFAULTS := {
 	"master_volume":0.8, "music_volume":0.35, "stereo_volume":0.35, "effects_volume":0.7, "ambience_volume":0.35,
 	"fullscreen":false, "vsync":true, "fps_limit":60, "ui_scale":1.0,
 	"reduced_motion":false, "quality":"high", "first_day_guide":true, "navigation_labels":true,
-	"bindings":{"pause":KEY_ESCAPE,"console":KEY_QUOTELEFT,"rotate":KEY_R,
+	"bindings":{"camera_left":KEY_A,"camera_right":KEY_D,"camera_up":KEY_W,"camera_down":KEY_S,"zoom_in":KEY_EQUAL,"zoom_out":KEY_MINUS,"pause":KEY_ESCAPE,"console":KEY_QUOTELEFT,"rotate":KEY_R,
 		"quick_save":KEY_F5,"fullscreen":KEY_F11,"neighborhood":KEY_N,"build":KEY_B,"home":KEY_H,"cancel":KEY_X,"focus_resident":KEY_F,"play_pause":KEY_P,"speed_normal":KEY_1,"speed_fast":KEY_2,"speed_faster":KEY_3}
 }
 const VOLUMES := {"master_volume":"Master","music_volume":"Music","stereo_volume":"Stereos","effects_volume":"Effects","ambience_volume":"Ambience"}
@@ -180,7 +183,7 @@ func _upgraded_bindings(saved: Dictionary) -> Dictionary:
 			bindings[action]=int(saved[action])
 	# Reserve every saved key before upgrading older complete maps. New actions
 	# receive an unused key; a missing original action still fails validation.
-	var introduced := {"focus_resident":[KEY_F,KEY_C,KEY_G],"play_pause":[KEY_P,KEY_0],"speed_normal":[KEY_1,KEY_F6],"speed_fast":[KEY_2,KEY_F7],"speed_faster":[KEY_3,KEY_F8]}
+	var introduced := {"camera_left":[KEY_A],"camera_right":[KEY_D],"camera_up":[KEY_W],"camera_down":[KEY_S],"zoom_in":[KEY_EQUAL],"zoom_out":[KEY_MINUS],"focus_resident":[KEY_F,KEY_C,KEY_G],"play_pause":[KEY_P,KEY_0],"speed_normal":[KEY_1,KEY_F6],"speed_fast":[KEY_2,KEY_F7],"speed_faster":[KEY_3,KEY_F8]}
 	for action: String in introduced:
 		if bindings.has(action): continue
 		var candidates: Array=introduced[action].duplicate()

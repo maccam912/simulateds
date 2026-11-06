@@ -1829,6 +1829,15 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if hud==null or not hud.visible or routine_panel.visible or radial_menu.visible: return
 	var focused := get_viewport().gui_get_focus_owner()
 	if focused is LineEdit or focused is TextEdit: return
+	if event is InputEventKey and event.pressed and not event.ctrl_pressed and not event.meta_pressed and not event.alt_pressed and not _clear_busy():
+		var camera_steps := {"camera_left":Vector2(36,0),"camera_right":Vector2(-36,0),"camera_up":Vector2(0,36),"camera_down":Vector2(0,-36)}
+		for action: String in camera_steps:
+			if event.is_action_pressed(action,true):
+				lot_view.pan_by(camera_steps[action]); get_viewport().set_input_as_handled(); return
+		for action: String in ["zoom_in","zoom_out"]:
+			if event.is_action_pressed(action,true):
+				lot_view.zoom_by(0.1 if action=="zoom_in" else -0.1,lot_view.camera_focus_point())
+				get_viewport().set_input_as_handled(); return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if _clear_busy(): get_viewport().set_input_as_handled(); return
 		if not lot_view.building and (event.keycode==KEY_MENU or (event.shift_pressed and event.keycode==KEY_F10)):

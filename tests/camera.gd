@@ -60,6 +60,49 @@ func _run() -> void:
 	game=load("res://game/main.tscn").instantiate(); root.add_child(game); view=game.lot_view
 	await process_frame; await process_frame
 	var before: Dictionary=session.world.snapshot()
+	# Real input dispatch: trackpad navigation, pointer anchoring and keyboard
+	# shortcuts must never select a resident or issue an order.
+	var anchor := Vector2(view.size.x*0.6,view.size.y*0.45)
+	view.center_lot()
+	var ground: Vector2=view.projection.ground_at(anchor)
+	var pinch := InputEventMagnifyGesture.new(); pinch.position=anchor; pinch.factor=1.25
+	root.push_input(pinch,true); await process_frame
+	assert(is_equal_approx(view.zoom,1.25) and view.projection.ground_at(anchor).distance_to(ground)<0.001,"Pinch zoom keeps the pointed ground fixed")
+	var gesture := InputEventPanGesture.new(); gesture.position=anchor; gesture.delta=Vector2(2,-1)
+	var old_pan: Vector2=view.pan
+	root.push_input(gesture,true); await process_frame
+	assert(view.pan.is_equal_approx(old_pan+Vector2(-64,32)),"Trackpad scrolling pans in both axes")
+	var wheel := InputEventMouseButton.new(); wheel.position=anchor; wheel.button_index=MOUSE_BUTTON_WHEEL_UP; wheel.pressed=true; wheel.factor=0.5
+	ground=view.projection.ground_at(anchor)
+	root.push_input(wheel,true); await process_frame
+	wheel.pressed=false; root.push_input(wheel,true); await process_frame
+	assert(is_equal_approx(view.zoom,1.3) and view.projection.ground_at(anchor).distance_to(ground)<0.001,"Wheel respects fractional deltas and pointer anchoring")
+	view.center_lot()
+	await _key(KEY_W); await _key(KEY_A)
+	assert(view.pan==Vector2(36,36),"Keyboard pans the view")
+	await _key(KEY_S); await _key(KEY_D)
+	assert(view.pan==Vector2.ZERO)
+	await _key(KEY_EQUAL); assert(is_equal_approx(view.zoom,1.1))
+	await _key(KEY_MINUS); assert(is_equal_approx(view.zoom,1.0))
+	assert(prefs.bind_action("camera_up",KEY_U).ok)
+	old_pan=view.pan; await _key(KEY_W); assert(view.pan==old_pan)
+	await _key(KEY_U); assert(view.pan==old_pan+Vector2(0,36))
+	assert(prefs.bind_action("camera_up",KEY_W).ok)
+	# Alt-drag makes panning available with a primary-button-only mouse.
+	var press := InputEventMouseButton.new(); press.position=anchor; press.button_index=MOUSE_BUTTON_LEFT; press.alt_pressed=true; press.pressed=true
+	root.push_input(press,true); await process_frame
+	old_pan=view.pan
+	var alt_drag := InputEventMouseMotion.new(); alt_drag.position=anchor+Vector2(20,10); alt_drag.relative=Vector2(20,10); alt_drag.button_mask=MOUSE_BUTTON_MASK_LEFT; alt_drag.alt_pressed=true
+	root.push_input(alt_drag,true); await process_frame
+	assert(view.pan==old_pan+Vector2(20,10))
+	press.pressed=false; press.alt_pressed=false; root.push_input(press,true); await process_frame
+	assert(not view._dragging,"Releasing Alt before the mouse cannot leave a stuck pan")
+	assert(session.world.snapshot()==before,"Camera input cannot issue gameplay commands")
+	view.center_lot()
+	await _capture("navigation-day")
+	var daytime: float=session.state.day_minutes
+	session.state.day_minutes=1320; game._refresh(); await _capture("navigation-night")
+	session.state.day_minutes=daytime; game._refresh()
 	view.pan=Vector2(4000,3000); view.zoom=1.4
 	await _key(KEY_F); await _settle()
 	assert(_centered(first) and is_equal_approx(view.zoom,1.4),"F finds the selected resident without resetting zoom")
@@ -116,12 +159,15 @@ func _run() -> void:
 	await _key(KEY_F); assert(view.pan==manual)
 	await _key(KEY_G); assert(game.viewed_lot=="lot_2" and _centered(first))
 	game.hud.hide(); view.pan=Vector2(800,600); manual=view.pan
-	await _key(KEY_G); assert(view.pan==manual,"Menus do not operate the hidden game camera")
+	await _key(KEY_G); await _key(KEY_W); await _key(KEY_EQUAL)
+	assert(view.pan==manual and is_equal_approx(view.zoom,1.3),"Menus do not operate the hidden game camera")
 	game.hud.show(); game._select_lot("lot_1"); game._toggle_build()
 	view.pan=Vector2(80,60); manual=view.pan
 	await _key(KEY_F,0,true)
 	assert(game.catalog_search.has_focus() and view.pan==manual,"Ctrl/Cmd+F still opens catalog search")
 	await _key(KEY_G,103); assert(game.catalog_search.text=="g" and view.pan==manual,"Typing the rebound key cannot move the camera")
+	await _key(KEY_W,119); await _key(KEY_EQUAL,61)
+	assert(game.catalog_search.text=="gw=" and view.pan==manual and is_equal_approx(view.zoom,1.3),"Typing camera keys must stay in the search field")
 	await _capture("typing")
 	print("CAMERA_PASS")
 	await root.get_node("Soundscape").shutdown_and_wait()

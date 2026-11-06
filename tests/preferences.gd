@@ -75,6 +75,13 @@ func _run() -> void:
 	for action: String in old_clock.bindings: assert(int(prefs.values.bindings[action])==int(old_clock.bindings[action]))
 	assert(prefs.values.bindings.play_pause==KEY_0 and prefs.values.bindings.speed_normal==KEY_F6)
 	assert(prefs.values.bindings.speed_fast==KEY_F7 and prefs.values.bindings.speed_faster==KEY_F8)
+	var camera_legacy: Dictionary=prefs.values.duplicate(true)
+	for action: String in ["camera_left","camera_right","camera_up","camera_down","zoom_in","zoom_out"]: camera_legacy.bindings.erase(action)
+	camera_legacy.bindings.rotate=KEY_W
+	assert(prefs.Persistence.write_json(prefs.settings_path,camera_legacy))
+	prefs.load_and_apply()
+	for action: String in camera_legacy.bindings: assert(prefs.values.bindings[action]==camera_legacy.bindings[action])
+	assert(prefs.values.bindings.camera_up!=KEY_W and prefs._valid_bindings(prefs.values.bindings),"Camera keys upgrade without stealing saved shortcuts")
 	var upgraded: Dictionary=prefs.values.bindings.duplicate()
 	assert(prefs.save()); prefs.load_and_apply(); assert(prefs.values.bindings==upgraded)
 	legacy.bindings.rotate=KEY_C
