@@ -175,7 +175,10 @@ asset through the LFS filter, never a manually written pointer. See
 The runtime rig includes `Leg_L/Knee_L` and `Leg_R/Knee_R`. Straight legs retain
 their original geometry and bounds; the two knee pivots allow dining feet to
 point down. They add two mesh groups without increasing the measured triangle
-budget. Non-dining activities reset both knee rotations.
+budget. Activities reset both knee rotations before applying dining or TV seating poses.
+TV seating reuses the existing catalog meshes and articulated resident rig;
+`game/lot_scene_3d.gd` aligns the body to the accepted cushion/slat height.
+`tests/television_pose.gd` reviews those contacts and native picking.
 
 `game/dining_pose.gd` is the editable original source for runtime solid oak stools,
 child footrests, plates and recipe-colored food. It regenerates these activity

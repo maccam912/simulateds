@@ -1,6 +1,7 @@
 extends RefCounted
 ## Pure host-owned simulation: no networking, Nodes, clocks, or filesystem access.
 ## Commands are the only external mutations; the whole state is JSON-compatible.
+const Television = preload("res://game/television.gd")
 const Catalog = preload("res://game/catalog.gd")
 const BuildRules = preload("res://game/build_rules.gd")
 const RoomPlan = preload("res://game/room_plan.gd")
@@ -71,7 +72,7 @@ func initialize() -> void:
 					else:
 						lot.walls.append([x,y])
 		for item in [["bed",4,4], ["bed",6,4], ["fridge",10,4], ["shower",11,6], ["toilet",11,8], ["sofa",4,8], ["tv",4,10], ["bookshelf",10,10], ["plant",10,6], ["table",7,8]]:
-			lot.objects.append(_new_object(str(item[0]), int(item[1]), int(item[2]), 0))
+			lot.objects.append(_new_object(str(item[0]), int(item[1]), int(item[2]), 2 if item[0]=="tv" else 0))
 		state.lots[id] = lot
 		lot.finishes=Finishes.create()
 		lot.windows={"5,3":"cottage","10,3":"cottage","3,7":"cottage"}
@@ -446,7 +447,9 @@ func apply_command(profile_id: String, command: Dictionary) -> Dictionary:
 			if object.kind=="dining_table": return _result(false,"Open the dining table to prepare or choose a meal.")
 			if object.kind=="easel": return _result(false,"Open the easel to choose a subject or continue its painting.")
 			if object.kind=="garden_bed": return _result(false,"Open the garden bed to choose planting, watering, or harvesting.")
-			if not _can_reach_object(lot, _position(member), object):
+			if object.kind=="tv" and Television.choose(state,lot,member,object,_path).is_empty():
+				return _result(false,"No clear viewing place. Leave space in front of the television.")
+			if object.kind!="tv" and not _can_reach_object(lot, _position(member), object):
 				return _result(false, "There is no path to use that furnishing.")
 			_queue_action(member, {"type":"interact", "target_id":target_id})
 	else:
@@ -838,6 +841,7 @@ func painting_option(profile_id: String,member_id: String,lot_id: String,target_
 			if resident.lot_id!=lot_id: continue
 			var tasks: Array=resident.queue.duplicate(); tasks.append(resident.task)
 			for task: Dictionary in tasks:
+				if task.has("tv_place"): task.tv_place=[int(task.tv_place[0]),int(task.tv_place[1])]
 				if task.get("target_id")==target_id and task.has("paint_action"): return _result(false,"Already in "+str(resident.name)+"'s plan.")
 	if member.queue.size()>=MAX_QUEUE: return _result(false,"The action queue is full (8 actions).")
 	if not _can_reach_object(lot,_position(member),object): return _result(false,"There is no path to this easel.")
@@ -1143,6 +1147,8 @@ func _tick_member(member: Dictionary, lot: Dictionary, delta: float,keep_company
 	var task: Dictionary = member.task
 	if task.get("target_kind")=="art" and not ArtAdmiration.current(lot,task):
 		_end_task(member,"failed","The painting moved or left this home."); return
+	if task.has("tv_place") and not Television.current(lot,task):
+		_end_task(member,"failed","The television viewing place changed."); return
 	if not task.path.is_empty():
 		member.action = str(task.title) if task.get("courtesy",false) else "Walking" + (" · " + str(task.get("label", "")) if task.type == "interact" else "")
 		member.walk_clock += delta
@@ -1217,6 +1223,8 @@ func _tick_member(member: Dictionary, lot: Dictionary, delta: float,keep_company
 	if Leisure.KINDS.has(object.kind) and not task.has("social_started"): task.social_started=int(state.tick)
 	var definition: Dictionary = Catalog.ITEMS[object.kind]
 	member.action = ACTION_NAMES.get(object.kind, "Enjoying home")
+	if task.has("tv_place"):
+		member.action += " · Standing" if str(task.tv_seat).is_empty() else " · Seated"
 	var need: String = definition.need
 	var rates := personal_activity_rates(member,str(object.kind))
 	for restored: String in rates:
@@ -1627,6 +1635,13 @@ func _start_next(member: Dictionary, lot: Dictionary) -> void:
 			_record_activity(member,task,"failed","The furnishing is no longer here.")
 			return
 		goals = shared_places if Leisure.KINDS.has(object.kind) else _interaction_cells(lot, object)
+		if object.kind=="tv":
+			var viewing := Television.choose(state,lot,member,object,_path)
+			if viewing.is_empty():
+				member.action="No clear television viewing place"
+				_record_activity(member,task,"failed","Leave a reachable place in front of the television."); return
+			task.merge(viewing)
+			goals=[Vector2i(viewing.tv_place[0],viewing.tv_place[1])]
 		task.remaining = float(Catalog.ITEMS[object.kind].duration)
 		task.label = str(Catalog.ITEMS[object.kind].name)
 		if task.has("meal_action"):
@@ -1656,6 +1671,10 @@ func _shared_places(member: Dictionary, lot: Dictionary, object: Dictionary) -> 
 func _object_user(lot_id: String, object: Dictionary, except_member: String = "") -> Dictionary:
 	# Ownership is derived from accepted active tasks, so there are no stale locks
 	# to persist or release after cancel, travel, construction, or disconnect.
+	if object.get("kind") in Television.SEATS:
+		var layer := Storeys.view(state.lots[lot_id],int(_find_member(except_member).get("level",0)))
+		var viewer := Television.user(state,layer,str(object.id),except_member)
+		if viewer.get("task",{}).get("tv_seat")==object.id: return viewer
 	if object.is_empty() or not bool(Catalog.ITEMS[object.kind].get("exclusive", false)):
 		return {}
 	for family: Dictionary in state.families.values():
@@ -2075,6 +2094,10 @@ func _continuation_problem(member: Dictionary, lot: Dictionary, task: Dictionary
 		if str(Catalog.ITEMS[furnishing.kind].need).is_empty():
 			return "The saved furnishing no longer offers an activity."
 		goals=_interaction_cells(lot,furnishing)
+		if task.has("tv_place"):
+			if not Television.current(lot,task): return "The saved television viewing place changed."
+			if not str(task.tv_seat).is_empty() and not Television.user(state,lot,str(task.tv_seat),str(member.id)).is_empty(): return "The saved television seat is already in use."
+			goals=[Vector2i(task.tv_place[0],task.tv_place[1])]
 		if active and not _object_user(str(lot.id),furnishing,str(member.id)).is_empty():
 			return "The saved furnishing already has a resident using it."
 	var at := _position(member)
@@ -2275,6 +2298,7 @@ func _valid_state(data: Dictionary, continuing: bool = false) -> bool:
 					return false
 		if family.has("relations") and not Character.relations_valid(family.relations,family.members): return false
 	if data.has("friendships") and not Friendships.valid(data.friendships,members_seen,int(data.day),int(data.tick)): return false
+	if not continuing and not Television.valid_reservations(data): return false
 	if not Meals.valid_reservations(data): return false
 	if not Pantry.valid_reservations(data): return false
 	if not Mailbox.valid(data): return false
@@ -2304,6 +2328,7 @@ func _valid_task(value: Variant, active: bool) -> bool:
 	if not value is Dictionary or not value.get("type") in ["move", "interact"]:
 		return false
 	if not Recreation.valid_choice(value,active): return false
+	if not Television.valid_task(value,active): return false
 	if value.has("meal_action") or value.has("meal_table") or value.has("meal_recipe") or value.has("meal_batch") or value.has("meal_taken") or value.has("meal_phase") or value.has("meal_chosen_at"):
 		if not Meals.valid_task(value,active): return false
 	if value.get("target_kind")=="art":

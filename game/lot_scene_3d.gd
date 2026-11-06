@@ -579,6 +579,23 @@ func _update_residents(view: Control) -> void:
 					model.position.y = -0.17
 					if leg_left != null: leg_left.rotation.x = -PI/2
 					if leg_right != null: leg_right.rotation.x = -PI/2
+			elif kind=="tv":
+				var seat: Dictionary=pose.get("seat",{})
+				var television: Node3D=object_nodes.get(str(pose.object.id))
+				if not seat.is_empty():
+					var seat_node: Node3D=object_nodes.get(str(seat.id))
+					if seat_node!=null:
+						resident.position=seat_node.position+seat_node.basis*Vector3(0,0,0.12)
+						resident.rotation.y=seat_node.rotation.y
+						var height := 0.58 if seat.kind=="sofa" else 0.52 if seat.kind in ["wood_chair","garden_bench"] else 0.645
+						model.position.y=height-0.72*model.scale.y
+						for side: String in ["L","R"]:
+							model.get_node("Leg_"+side).rotation=Vector3(-PI/2,0,0)
+							model.get_node("Leg_"+side+"/Knee_"+side).rotation=Vector3(PI/2,0,0)
+							model.get_node("Arm_"+side).rotation=Vector3(-0.40,0,0.08 if side=="L" else -0.08)
+				elif television!=null:
+					var toward := television.position-resident.position
+					resident.rotation.y=atan2(toward.x,toward.z)
 			elif kind=="stereo":
 				model.rotation.z = stride*0.08
 				if arm_left != null: arm_left.rotation = Vector3(-0.65,0,0.65+stride*0.18)
