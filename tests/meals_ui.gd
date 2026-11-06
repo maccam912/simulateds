@@ -74,6 +74,8 @@ func _run() -> void:
 	var neighbor_id := _setup_neighbor()
 	for resident: Dictionary in [member,housemate]: resident.needs.hunger=20; resident.needs.social=20
 	game=load("res://game/main.tscn").instantiate(); root.add_child(game); await process_frame; await process_frame
+	# Keep this multi-lot click fixture at a fixed scale while trays are open.
+	game.lot_view.center_lot()
 	await _button(game.mode_button); await _button(game.catalog_buttons.dining_table); await _tile(8,6,true)
 	var lot: Dictionary=session.state.lots.lot_1; var table: Dictionary=lot.objects[-1]; var id: String=table.id
 	assert(table.kind=="dining_table"); await _capture("building")

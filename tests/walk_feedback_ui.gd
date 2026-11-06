@@ -45,6 +45,8 @@ func _run() -> void:
 			for need: String in resident.needs: resident.needs[need]=100.0
 	member=session.state.families[session.profile_id].members[0]
 	game=load("res://game/main.tscn").instantiate(); root.add_child(game); view=game.lot_view
+	# This route fixture uses lawn destinations at the far lot edge.
+	view.center_lot()
 	DirAccess.make_dir_recursive_absolute("res://build")
 	await _capture("idle")
 	var goal := Vector2i(8,14)

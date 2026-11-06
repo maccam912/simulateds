@@ -185,7 +185,10 @@ Continuing an autosave or loading a named slot in solo play starts paused before
 the first tick. The saved 1×, 2×, or 4× pace is restored on resume. A save keeps
 the selected resident, lot, floor and camera framing as optional local metadata
 for the saving profile. Older saves use the default framing and resume at 1×.
-New neighborhoods start at 1×. Shared sessions retain their own clock and
+New neighborhoods start at 1×. Without saved camera framing, the view fits the
+home's floor plan. More → Home overview repeats that camera-only framing on the
+home's ground floor; Find resident keeps zoom and shows their actual lot/floor.
+Shared sessions retain their own clock and
 disconnect rules.
 
 The local household keeps walkable positions, including upstairs and on visits.

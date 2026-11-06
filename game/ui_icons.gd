@@ -101,7 +101,7 @@ const ACTIONS := {
 	"Create a household":"household","Edit household":"household","Needs":"needs","Wishes":"heart","Hobbies":"star","Plan":"plan",
 	"Routines":"repeat","Recent":"history","Find resident":"find","More":"more","Build & furnish":"build",
 	"Activities":"activities","Visit lot":"visit","Go home":"home","Together…":"together","People":"people",
-	"Cancel actions":"stop","Mail":"mail","Play together":"network","Center view":"find","Save":"save",
+	"Cancel actions":"stop","Mail":"mail","Play together":"network","Home overview":"home","Center view":"find","Save":"save",
 	"People ›":"people","Review originals ›":"art","‹ Activities":"back","Garden ›":"plant",
 	"‹ Catalog":"back","Rotate ↻":"rotate","Move family":"together","Door":"door","Move":"move",
 	"Sell":"sell","Undo":"undo","Redo":"redo","Cancel area":"close","Cancel move":"close",

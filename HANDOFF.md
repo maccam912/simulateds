@@ -1,3 +1,26 @@
+# Home overview — November 5, 2026
+
+- Issue #8 / WORLD-01: fresh entry and loads without camera metadata fit the
+  home's architectural footprint. More → Home overview returns the camera to the
+  home ground floor without moving residents. Find resident preserves zoom and
+  resolves the resident's actual lot/floor; existing saved zoom/pan takes priority.
+- Native macOS Godot 4.7.2/OpenGL review passed at 1440×900 and compact
+  1280×720/125% UI, with matched noon/dusk/night views and the labeled More action.
+  New regression coverage checks read-only overview, saved framing, visiting
+  upstairs residents, off-center/full-lot homes, empty homes and ground picking.
+  Compact native area dragging also passes. Evidence: ignored
+  `build/home-framing-*.png`, `build/issue8/native.log`, `compact.log`, `area-native.log`.
+- The required aggregate run exposed three input fixtures that assumed the old
+  fixed camera. Area dragging (including simulated world replacement), lawn
+  walking and multi-lot meals now choose an explicit whole-lot view. All 137
+  gameplay/UI suites, both save-continuity processes, eight real Iroh scenarios
+  and dedicated-server smoke passed; all four final shards exited 0. Audit:
+  `build/issue8/validation.json`. Staged asset-storage and whitespace checks pass.
+- Scope and reproduction: `docs/HOME_FRAMING_QA.md`. Keep issue #8 open for its
+  other findings. No models, binary assets, save schema or protocol changed.
+  Hosted CI is separate; exports, physical-device and human family playtests
+  were not performed.
+
 # Optional daily rhythm — November 5, 2026
 
 - Issue #9: Plan offers a time-of-day review of an existing saved routine. It

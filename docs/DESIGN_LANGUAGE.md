@@ -330,7 +330,12 @@ zoom. Reduced motion snaps immediately. Selecting someone already visible keeps
 the composition; clicking the selected household name again explicitly centers
 them. The Plan tray and a rebindable shortcut provide the same action. Panning or
 zooming cancels the movement immediately. Changing lots resets the pan while
-retaining zoom, and Center restores both. Resolve current snapshot positions
+retaining zoom. More → Home overview returns the camera to the home's ground
+floor and fits its floors/walls between the fixed HUD rows, without moving the
+selected resident. Fresh entry and saves without camera framing use this fit;
+saved zoom/pan take priority. Empty homes use the whole-lot fallback. The fit is
+explicit, never a continuous follow or a reframe on ordinary snapshot updates.
+Resolve current snapshot positions
 when finding a visiting resident; camera actions never issue simulation orders.
 
 Plan arrows revise only upcoming activities. Keep the current activity visually

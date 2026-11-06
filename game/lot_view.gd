@@ -224,6 +224,40 @@ func center_lot() -> void:
 	zoom=1.0; pan=Vector2.ZERO
 	_layout(); queue_redraw()
 
+func overview_rect() -> Rect2:
+	# Reserve the clock/location and household dock, not optional floating trays.
+	return Rect2(Vector2(48,120),Vector2(maxf(1,size.x-96),maxf(1,size.y-270)))
+
+func house_bounds() -> Rect2:
+	# Project the viewed floor's architectural envelope through the actual camera.
+	# No scenery, temporary resident position or render cache defines the house.
+	var lot: Dictionary=world.get("lots",{}).get(lot_id,{})
+	var cells: Array=lot.get("floors",[])+lot.get("walls",[])+lot.get("doors",[])
+	if cells.is_empty() or projection.camera==null: return Rect2()
+	var low := Vector2(16,16); var high := Vector2.ZERO
+	for cell: Array in cells:
+		low=low.min(Vector2(cell[0],cell[1]))
+		high=high.max(Vector2(cell[0]+1,cell[1]+1))
+	var bounds := Rect2()
+	var first := true
+	for x: float in [low.x,high.x]:
+		for z: float in [low.y,high.y]:
+			for height: float in [0.0,2.4]:
+				var point: Vector2=projection.project(Vector3(x,height,z))
+				if first: bounds=Rect2(point,Vector2.ZERO); first=false
+				else: bounds=bounds.expand(point)
+	return bounds
+
+func frame_house() -> void:
+	center_lot()
+	var bounds := house_bounds()
+	if not bounds.has_area(): return
+	var safe := overview_rect()
+	zoom=clampf(minf(safe.size.x/bounds.size.x,safe.size.y/bounds.size.y),0.65,1.8)
+	_layout()
+	pan+=safe.get_center()-house_bounds().get_center()
+	_layout(); queue_redraw()
+
 func saved_framing() -> Dictionary:
 	var cell := _cell_size()
 	var offset := pan/cell if cell.x>0.0 else Vector2.ZERO

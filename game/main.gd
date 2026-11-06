@@ -68,6 +68,8 @@ var _radial_session := ""
 var viewed_lot := ""
 var selected_member := ""
 var _applied_solo_view := -1
+var _framed_world := -1
+var overview_button: Button
 var selected_tool := "floor"
 var build_rotation := 0
 var lot_view: Control
@@ -507,7 +509,9 @@ func _build_ui() -> void:
 	mail_button=_button("Mail",func(): mail_requested.emit())
 	# Social, household, travel, then utility controls keep related icons together.
 	var grid := GridContainer.new(); grid.columns=2; grid.add_theme_constant_override("h_separation",8); grid.add_theme_constant_override("v_separation",4); actions.add_child(grid)
-	for control: Button in [people_button,wishes_button,hobbies_button,household_button,mail_button,_button("Play together",_open_connection),visit_button,home_button,together_button,_button("Center view",func(): lot_view.center_lot()),_button("Save",_request_save_menu),cancel]:
+	overview_button=_button("Home overview",_home_overview)
+	overview_button.tooltip_text="View your home's ground floor and fit the house · Camera only; residents keep their plans. Find resident keeps your zoom and shows their actual location."
+	for control: Button in [people_button,wishes_button,hobbies_button,household_button,mail_button,_button("Play together",_open_connection),visit_button,home_button,together_button,overview_button,_button("Save",_request_save_menu),cancel]:
 		control.set_meta("nav_caption",control.accessibility_name)
 		control.size_flags_horizontal=Control.SIZE_EXPAND_FILL; grid.add_child(control)
 	actions.add_child(connection_label); actions.move_child(connection_label,0)
@@ -687,6 +691,7 @@ func _refresh() -> void:
 	var state: Dictionary = Session.state
 	neighborhood_title.text=str(state.get("neighborhood_name","Linden Grove"))
 	var family := _family()
+	overview_button.disabled=family.is_empty() or Session.role=="joining"
 	var restore_view: bool=Session.role=="offline" and Session.solo_view_generation==Session.world_generation and _applied_solo_view!=Session.world_generation
 	_commission_status=preload("res://game/art_commissions.gd").availability(state,Session.profile_id)
 	var view_context := str(Session.role) + ":" + str(family.get("home_lot",""))
@@ -816,8 +821,10 @@ func _refresh() -> void:
 
 
 	lot_view.world=Storeys.display_world(state,viewed_lot,view_level); lot_view.lot_id=viewed_lot; lot_view.selected_member=selected_member
-	if restore_view: lot_view.restore_framing(framing)
+	if restore_view and framing.has("zoom"): lot_view.restore_framing(framing)
+	elif Session.role!="joining" and not family.is_empty() and (_framed_world!=Session.world_generation or restore_view): lot_view.frame_house()
 	elif refocus_after_build: lot_view.focus_resident(member)
+	if Session.role!="joining" and not family.is_empty(): _framed_world=Session.world_generation
 	lot_view.brush_size=brush_size
 	lot_view.build_object_id=_moving_object
 	lot_view.building=building and mine; lot_view.build_kind=selected_tool; lot_view.build_rotation=build_rotation
@@ -1479,6 +1486,12 @@ func _select_lot(id: String) -> void:
 	_art_source=""; _art_request.clear(); _art_entry.clear()
 	_paint_anchor=Vector2i(-1,-1); _paint_request.clear(); _window_request.clear(); _color_request.clear(); _copy_source=Vector2i(-1,-1); _copy_request.clear(); _blueprint_id=""
 	viewed_lot=id; view_level=0; _selected_object=""; _room_anchor=Vector2i(-1,-1); _room_request.clear(); neighborhood_panel.hide(); _refresh()
+
+func _home_overview() -> void:
+	if Session.role=="joining" or _family().is_empty(): return
+	_select_lot(str(_family().home_lot))
+	lot_view.frame_house()
+	more_panel.hide()
 
 func _select_resident(id: String) -> void:
 	var same := selected_member==id
