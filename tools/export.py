@@ -25,9 +25,11 @@ def native_smoke(executable):
                                  f"--profile-path={work / 'profile.json'}",
                                  f"--save-path={work / 'world.json'}"],
                                 capture_output=True, text=True, timeout=30)
-        if result.returncode or "ERROR:" in result.stdout + result.stderr or "NATIVE_RUNTIME_PASS" not in result.stdout:
+        if (result.returncode or "ERROR:" in result.stdout + result.stderr
+                or any(marker not in result.stdout for marker in ("NATIVE_RUNTIME_PASS", "UI_ICONS_RUNTIME_PASS"))):
             raise RuntimeError(result.stdout + result.stderr)
         print("EXPORTED_NATIVE_RUNTIME_PASS", flush=True)
+        print("EXPORTED_UI_ICONS_PASS", flush=True)
 
 
 def export(platform, skip_build=False):

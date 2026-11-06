@@ -32,7 +32,11 @@ func _run() -> void:
 	if compact: prefs.set_value("ui_scale",1.25)
 	session=root.get_node("Session"); session.saving_enabled=false; session.set_physics_process(false)
 	session.world.initialize(); session.world.ensure_family(session.profile_id,"Alex"); session.world.set_online(session.profile_id,true)
-	for id: String in Icons.PATHS: assert(Icons.texture(id)!=null)
+	for id: String in Icons.PATHS:
+		for pixels: int in [20,28,40]:
+			var icon := Icons.texture(id,pixels)
+			assert(icon!=null and icon.get_width()==pixels and icon.get_height()==pixels)
+			assert(Icons.texture(id,pixels)==icon,"Icon sizes retain their cached texture")
 	for id: String in preload("res://game/build_catalog.gd").ORDER+preload("res://game/build_catalog.gd").CATEGORIES.keys():
 		assert(Icons.has_icon(id),"Catalog entries and categories should have a recognizable pictogram: "+id)
 	assert(Icons.texture("future_catalog_item")!=null,"New entries remain usable before bespoke art is added")

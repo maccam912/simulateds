@@ -121,7 +121,11 @@ static func texture(id: String, pixels: int=28) -> Texture2D:
 	if not _cache.has(cache_key):
 		var image := Image.new()
 		var svg := '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24"><g fill="none" stroke="white" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+str(PATHS[id])+'</g></svg>'
-		assert(image.load_svg_from_string(svg,float(pixels)/28.0)==OK)
+		# Release templates omit assert expressions, including their side effects.
+		var error := image.load_svg_from_string(svg,float(pixels)/28.0)
+		if error!=OK:
+			push_error("Could not rasterize UI icon %s: %s" % [id,error_string(error)])
+			return null
 		_cache[cache_key]=ImageTexture.create_from_image(image)
 	return _cache[cache_key]
 

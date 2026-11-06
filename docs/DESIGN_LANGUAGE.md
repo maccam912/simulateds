@@ -510,6 +510,9 @@ the authoritative host; a client must not silently edit its local replica.
   vertical sync, frame cap, interface scale, and scenery detail; low detail omits
   peripheral trees. Escape and F1 remain menu/console recovery keys even after
   rebinding their primary actions.
+  Creating a neighborhood and changing unrelated preferences preserve the current
+  window size, position and native maximize/fullscreen state. Apply window mode
+  only when loading/resetting preferences or changing the Fullscreen choice.
 - `game/audio_director.gd` selects original 24-second menu, live, and build loops,
   with a garden ambience track. Normal context crossfades take 1.1 seconds. Five
   effect voices allow overlapping short cues; hover cues are limited to one per

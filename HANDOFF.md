@@ -1,3 +1,23 @@
+# Window preservation and release icons — November 6, 2026
+
+- Issues #39/#40: creating neighborhoods and changing unrelated settings preserve
+  native window size/position/maximize/fullscreen. SVG icon rasterization now runs
+  outside assertions, so release templates produce the same icons as the editor.
+- Added a registered window/creation regression, multi-size icon checks, and a
+  required icon check in the exported native-runtime smoke. No binary assets,
+  authoritative simulation, save schema or protocol changes.
+- Original window failure reproduced against isolated baseline code. Fixed native
+  window and compact icon suites passed on macOS/Apple Silicon; day/night/compact
+  captures were inspected. Local macOS ZIP export, strict ad-hoc signing and
+  release-native/icon smoke passed. Direct extracted-app UI review confirmed
+  menu/guide icons and maximization retained after neighborhood creation.
+- Full `python3 tools/check.py` exited 0: 144 gameplay/UI suites, both save
+  continuity processes, eight real Iroh scenarios and dedicated-server smoke.
+  Staged asset-storage and whitespace checks pass. Hosted CI is separate.
+  No physical-device or other-platform UI playtest and no published release.
+  Reproduction and evidence:
+  `docs/RELEASE_UI_QA.md`; ignored `build/issues-39-40/`.
+
 # World/build QA completion — November 5, 2026
 
 - Issues #8 and #6 now have complete finding dispositions in
