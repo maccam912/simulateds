@@ -43,6 +43,19 @@ func update_camera() -> void:
 	camera.look_at(Vector3.ZERO)
 	camera.position+=camera.basis.x*(view.size.x*0.5-view._origin.x)/pixels_per_meter
 	camera.position+=camera.basis.y*(view._origin.y-view.size.y*0.5)/pixels_per_meter
+	# Orthographic directional shadows use the camera's far plane. The old 180m
+	# volume wasted shadow texels behind this small lot. Cover the visible ground
+	# down to the terrain minimum, plus a margin, including zoom/pan/resize.
+	var level := int(view.world.get("lots",{}).get(view.lot_id,{}).get("level",0))
+	var terrain_y := -1.0-level*Scene3D.Storeys.HEIGHT
+	var farthest := 0.0
+	for corner: Vector2 in [Vector2.ZERO,Vector2(view.size.x,0),view.size,Vector2(0,view.size.y)]:
+		var ray := camera.project_ray_origin(corner)
+		var direction := camera.project_ray_normal(corner)
+		var ground := ray+direction*((terrain_y-ray.y)/direction.y)
+		farthest=maxf(farthest,-camera.to_local(ground).z)
+	# Whole eight-metre steps avoid refitting the shadow map for every pan pixel.
+	camera.far=maxf(64.0,ceilf((farthest+8.0)/8.0)*8.0)
 	viewport.msaa_3d=Viewport.MSAA_4X if Preferences.values.get("quality","high")=="high" else Viewport.MSAA_DISABLED
 
 func sync(delta: float) -> void:

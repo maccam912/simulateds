@@ -1,3 +1,29 @@
+# World/build QA completion — November 5, 2026
+
+- Issues #8 and #6 now have complete finding dispositions in
+  `docs/WORLD_POLISH_QA.md` and `docs/BUILD_CATALOG_QA.md`. This supersedes the
+  earlier keep-open notes below. Orbit, extra outdoor content and starter-room
+  rezoning are explicitly deferred; the user explicitly deferred BUILD-10's
+  human mouse/trackpad test. Automated native input is not physical verification.
+- The orthographic shadow volume follows visible terrain, pan/zoom and all three
+  storeys instead of a fixed 180 m range. Near/interior doorways meet low cutaway
+  walls; rear/raised frames and hidden shadows remain. No binary assets, authority,
+  commands, paths, save schema or protocol changed. Source/reproduction and
+  matched native day/dusk/night/compact measurements are in the world QA document.
+- Full `python3 tools/check.py` exited 0: 143 gameplay/UI suites, both save
+  continuity processes, eight real Iroh scenarios and dedicated-server smoke.
+  Final camera/storey refinements passed focused headless/native regressions.
+  Native construction gestures, compact catalog, renderer, windows, artwork and
+  floor/wall checks passed; staged asset-storage and whitespace checks passed.
+  Local evidence: ignored `build/finish-qa/` and `build/world-polish-*.png`.
+- Hosted CI remains separate; no local exports, physical-device play or human
+  hardware test. Review branch: `codex/finish-world-build-qa`.
+- Cleanup verified every local topic tip against a merged PR, removed 22 merged
+  branches and two clean extra worktrees, and updated local main to `71491bf`.
+  Recovery bundle and archived worktree evidence (excluding Godot caches) are in
+  `../simulateds-cleanup-backups/20261105-222827/`. Remote topics were already
+  deleted; stale tracking refs were pruned.
+
 # Android first-connection replication — November 5, 2026
 
 - Issue #30 networking follow-up: a fresh Android host sent its welcome but no
